@@ -27,7 +27,8 @@ var Name = require('./name.js').Name; /** @ignore */
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var MetaInfo = require('./meta-info.js').MetaInfo; /** @ignore */
 var IncomingFaceId = require('./lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
+var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
+var Crypto = require('./crypto.js');
 
 /**
  * Create a new Data with the optional values.  There are 2 forms of constructor:
@@ -45,12 +46,13 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     // The copy constructor.
     var data = nameOrData;
 
-    // Copy the name.
+    // Copy the Data object.
     this.name_ = new ChangeCounter(new Name(data.getName()));
     this.metaInfo_ = new ChangeCounter(new MetaInfo(data.getMetaInfo()));
     this.signature_ = new ChangeCounter(data.getSignature().clone());
     this.content_ = data.content_;
     this.defaultWireEncoding_ = data.getDefaultWireEncoding();
+    this.defaultFullName_ = data.defaultFullName_;
     this.defaultWireEncodingFormat_ = data.defaultWireEncodingFormat_;
   }
   else {
@@ -81,6 +83,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
 
     this.signature_ = new ChangeCounter(new Sha256WithRsaSignature());
     this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultFullName_ = new Name();
     this.defaultWireEncodingFormat_ = null;
   }
 
@@ -93,7 +96,7 @@ exports.Data = Data;
 
 /**
  * Get the data packet's name.
- * @returns {Name} The name.
+ * @return {Name} The name. If not specified, the name size() is 0.
  */
 Data.prototype.getName = function()
 {
@@ -102,7 +105,7 @@ Data.prototype.getName = function()
 
 /**
  * Get the data packet's meta info.
- * @returns {MetaInfo} The meta info.
+ * @return {MetaInfo} The meta info.
  */
 Data.prototype.getMetaInfo = function()
 {
@@ -111,7 +114,7 @@ Data.prototype.getMetaInfo = function()
 
 /**
  * Get the data packet's signature object.
- * @returns {Signature} The signature object.
+ * @return {Signature} The signature object.
  */
 Data.prototype.getSignature = function()
 {
@@ -120,7 +123,7 @@ Data.prototype.getSignature = function()
 
 /**
  * Get the data packet's content.
- * @returns {Blob} The content as a Blob, which isNull() if unspecified.
+ * @return {Blob} The content as a Blob, which isNull() if unspecified.
  */
 Data.prototype.getContent = function()
 {
@@ -139,7 +142,7 @@ Data.prototype.getContentAsBuffer = function()
 /**
  * Return the default wire encoding, which was encoded with
  * getDefaultWireEncodingFormat().
- * @returns {SignedBlob} The default wire encoding, whose isNull() may be true
+ * @return {SignedBlob} The default wire encoding, whose isNull() may be true
  * if there is no default wire encoding.
  */
 Data.prototype.getDefaultWireEncoding = function()
@@ -156,7 +159,7 @@ Data.prototype.getDefaultWireEncoding = function()
 
 /**
  * Get the WireFormat which is used by getDefaultWireEncoding().
- * @returns {WireFormat} The WireFormat, which is only meaningful if the
+ * @return {WireFormat} The WireFormat, which is only meaningful if the
  * getDefaultWireEncoding() is not isNull().
  */
 Data.prototype.getDefaultWireEncodingFormat = function()
@@ -176,9 +179,43 @@ Data.prototype.getIncomingFaceId = function()
 };
 
 /**
+ * Get the Data packet's full name, which includes the final
+ * ImplicitSha256Digest component based on the wire encoding for a particular
+ * wire format.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @return {Name} The full name. You must not change the Name object - if you
+ * need to change it then make a copy.
+ */
+Data.prototype.getFullName = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  // The default full name depends on the default wire encoding.
+  if (!this.getDefaultWireEncoding().isNull() &&
+      this.defaultFullName_.size() > 0 &&
+      this.getDefaultWireEncodingFormat() == wireFormat)
+    // We already have a full name. A non-null default wire encoding means
+    // that the Data packet fields have not changed.
+    return this.defaultFullName_;
+
+  var fullName = new Name(this.getName());
+  var hash = Crypto.createHash('sha256');
+  // wireEncode will use the cached encoding if possible.
+  hash.update(this.wireEncode(wireFormat).buf());
+  fullName.appendImplicitSha256Digest(new Blob(hash.digest(), false));
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // wireEncode has already set defaultWireEncodingFormat_.
+    this.defaultFullName_ = fullName;
+
+  return fullName;
+};
+
+/**
  * Set name to a copy of the given Name.
  * @param {Name} name The Name which is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setName = function(name)
 {
@@ -191,7 +228,7 @@ Data.prototype.setName = function(name)
 /**
  * Set metaInfo to a copy of the given MetaInfo.
  * @param {MetaInfo} metaInfo The MetaInfo which is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setMetaInfo = function(metaInfo)
 {
@@ -204,7 +241,7 @@ Data.prototype.setMetaInfo = function(metaInfo)
 /**
  * Set the signature to a copy of the given signature.
  * @param {Signature} signature The signature object which is cloned.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setSignature = function(signature)
 {
@@ -219,7 +256,7 @@ Data.prototype.setSignature = function(signature)
  * @param {Blob|Buffer} content The content bytes. If content is not a Blob,
  * then create a new Blob to copy the bytes (otherwise take another pointer to
  * the same Blob).
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setContent = function(content)
 {
@@ -234,7 +271,7 @@ Data.prototype.setContent = function(content)
  * wire format, also set the defaultWireEncoding field to the encoded result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
+ * @return {SignedBlob} The encoded buffer in a SignedBlob object.
  */
 Data.prototype.wireEncode = function(wireFormat)
 {
@@ -269,10 +306,12 @@ Data.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  var result = wireFormat.decodeData(this, decodeBuffer);
+  var result;
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    result = wireFormat.decodeData(this, input.buf(), false);
+  else
+    result = wireFormat.decodeData(this, input, true);
 
   if (wireFormat == WireFormat.getDefaultWireFormat())
     // This is the default wire encoding.  In the Blob constructor, set copy
@@ -302,7 +341,7 @@ Data.prototype.setLpPacket = function(lpPacket)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Data.prototype.getChangeCount = function()
 {

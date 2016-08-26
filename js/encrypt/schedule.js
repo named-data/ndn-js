@@ -88,7 +88,7 @@ Schedule.prototype.addBlackInterval = function(repetitiveInterval)
  * member to access the data. If there is no interval covering the time stamp,
  * this returns false for isPositive and a negative interval.
  * @param {number} timeStamp The time stamp as milliseconds since Jan 1, 1970 UTC.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (isPositive, interval) where
  * isPositive is true if the returned interval is positive or false if negative,
  * and interval is the Interval covering the time stamp, or a negative interval
@@ -176,7 +176,7 @@ Schedule.prototype.wireEncode = function()
  * Decode the input and update this Schedule object.
  * @param {Blob|Buffer} input The input buffer to decode. For Buffer, this reads
  * from position() to limit(), but does not change the position.
- * @throws EncodingException For invalid encoding.
+ * @throws DecodingException For invalid encoding.
  */
 Schedule.prototype.wireDecode = function(input)
 {
@@ -317,7 +317,7 @@ Schedule.calculateIntervalResult_ = function
 /**
  * Convert a UNIX timestamp to ISO time representation with the "T" in the middle.
  * @param {number} msSince1970 Timestamp as milliseconds since Jan 1, 1970 UTC.
- * @returns {string} The string representation.
+ * @return {string} The string representation.
  */
 Schedule.toIsoString = function(msSince1970)
 {
@@ -334,7 +334,7 @@ Schedule.toIsoString = function(msSince1970)
 /**
  * A private method to zero pad an integer to 2 digits.
  * @param {number} x The number to pad.  Assume it is a non-negative integer.
- * @returns {string} The padded string.
+ * @return {string} The padded string.
  */
 Schedule.to2DigitString = function(x)
 {
@@ -346,7 +346,7 @@ Schedule.to2DigitString = function(x)
  * Convert an ISO time representation with the "T" in the middle to a UNIX
  * timestamp.
  * @param {string} timeString The ISO time representation.
- * @returns {number} The timestamp as milliseconds since Jan 1, 1970 UTC.
+ * @return {number} The timestamp as milliseconds since Jan 1, 1970 UTC.
  */
 Schedule.fromIsoString = function(timeString)
 {

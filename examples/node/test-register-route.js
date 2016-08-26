@@ -385,12 +385,9 @@ function processRegisterResponse(encodedControlResponse)
 
   // Success. Print the ControlParameters response.
   var controlParameters = controlResponse.control_parameters[0];
-  var name = "";
-  for (var i = 0; i < controlParameters.name.component.length; ++i)
-    name += "/" + controlParameters.name.component[i].toString("utf8");
-
   console.log
-    ("Successful in name registration: ControlParameters(Name: " + name +
+    ("Successful in name registration: ControlParameters(Name: " +
+     ProtobufTlv.toName(controlParameters.name.component).toUri() +
      ", FaceId: " + controlParameters.face_id +
      ", Origin: " + controlParameters.origin +
      ", Cost: " + controlParameters.cost +

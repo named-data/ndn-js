@@ -49,7 +49,7 @@ exports.DigestSha256Signature = DigestSha256Signature;
 
 /**
  * Create a new DigestSha256Signature which is a copy of this object.
- * @returns {DigestSha256Signature} A new object which is a copy of this object.
+ * @return {DigestSha256Signature} A new object which is a copy of this object.
  */
 DigestSha256Signature.prototype.clone = function()
 {
@@ -58,7 +58,7 @@ DigestSha256Signature.prototype.clone = function()
 
 /**
  * Get the signature bytes (which are only the digest).
- * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 DigestSha256Signature.prototype.getSignature = function()
 {
@@ -78,7 +78,7 @@ DigestSha256Signature.prototype.setSignature = function(signature)
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 DigestSha256Signature.prototype.getChangeCount = function()
 {

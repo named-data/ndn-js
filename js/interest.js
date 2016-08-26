@@ -117,9 +117,9 @@ Interest.CHILD_SELECTOR_RIGHT = 1;
  * Check if this interest's name matches the given name (using Name.match) and
  * the given name also conforms to the interest selectors.
  * @param {Name} name The name to check.
- * @returns {boolean} True if the name and interest selectors match, False otherwise.
+ * @return {boolean} True if the name and interest selectors match, False otherwise.
  */
-Interest.prototype.matchesName = function(/*Name*/ name)
+Interest.prototype.matchesName = function(name)
 {
   if (!this.getName().match(name))
     return false;
@@ -148,6 +148,89 @@ Interest.prototype.matches_name = function(/*Name*/ name)
 };
 
 /**
+ * Check if the given Data packet can satisfy this Interest. This method
+ * considers the Name, MinSuffixComponents, MaxSuffixComponents,
+ * PublisherPublicKeyLocator, and Exclude. It does not consider the
+ * ChildSelector or MustBeFresh. This uses the given wireFormat to get the
+ * Data packet encoding for the full Name.
+ * @param {Data} data The Data packet to check.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the Data packet to get its full Name. If omitted, use
+ * WireFormat.getDefaultWireFormat().
+ * @return {boolean} True if the given Data packet can satisfy this Interest.
+ */
+Interest.prototype.matchesData = function(data, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  // Imitate ndn-cxx Interest::matchesData.
+  var interestNameLength = this.getName().size();
+  var dataName = data.getName();
+  var fullNameLength = dataName.size() + 1;
+
+  // Check MinSuffixComponents.
+  var hasMinSuffixComponents = (this.getMinSuffixComponents() != null);
+  var minSuffixComponents =
+    hasMinSuffixComponents ? this.getMinSuffixComponents() : 0;
+  if (!(interestNameLength + minSuffixComponents <= fullNameLength))
+    return false;
+
+  // Check MaxSuffixComponents.
+  var hasMaxSuffixComponents = (this.getMaxSuffixComponents() != null);
+  if (hasMaxSuffixComponents &&
+      !(interestNameLength + this.getMaxSuffixComponents() >= fullNameLength))
+    return false;
+
+  // Check the prefix.
+  if (interestNameLength === fullNameLength) {
+    if (this.getName().get(-1).isImplicitSha256Digest()) {
+      if (!this.getName().equals(data.getFullName(wireFormat)))
+        return false;
+    }
+    else
+      // The Interest Name is the same length as the Data full Name, but the
+      //   last component isn't a digest so there's no possibility of matching.
+      return false;
+  }
+  else {
+    // The Interest Name should be a strict prefix of the Data full Name.
+    if (!this.getName().isPrefixOf(dataName))
+      return false;
+  }
+
+  // Check the Exclude.
+  // The Exclude won't be violated if the Interest Name is the same as the
+  //   Data full Name.
+  if (this.getExclude().size() > 0 && fullNameLength > interestNameLength) {
+    if (interestNameLength == fullNameLength - 1) {
+      // The component to exclude is the digest.
+      if (this.getExclude().matches
+          (data.getFullName(wireFormat).get(interestNameLength)))
+        return false;
+    }
+    else {
+      // The component to exclude is not the digest.
+      if (this.getExclude().matches(dataName.get(interestNameLength)))
+        return false;
+    }
+  }
+
+  // Check the KeyLocator.
+  var publisherPublicKeyLocator = this.getKeyLocator();
+  if (publisherPublicKeyLocator.getType()) {
+    var signature = data.getSignature();
+    if (!KeyLocator.canGetFromSignature(signature))
+      // No KeyLocator in the Data packet.
+      return false;
+    if (!publisherPublicKeyLocator.equals
+        (KeyLocator.getFromSignature(signature)))
+      return false;
+  }
+
+  return true;
+};
+
+/**
  * Return a new Interest with the same fields as this Interest.
  */
 Interest.prototype.clone = function()
@@ -157,13 +240,13 @@ Interest.prototype.clone = function()
 
 /**
  * Get the interest Name.
- * @returns {Name} The name.  The name size() may be 0 if not specified.
+ * @return {Name} The name.  The name size() may be 0 if not specified.
  */
 Interest.prototype.getName = function() { return this.name_.get(); };
 
 /**
  * Get the min suffix components.
- * @returns number} The min suffix components, or null if not specified.
+ * @return {number} The min suffix components, or null if not specified.
  */
 Interest.prototype.getMinSuffixComponents = function()
 {
@@ -172,7 +255,7 @@ Interest.prototype.getMinSuffixComponents = function()
 
 /**
  * Get the max suffix components.
- * @returns {number} The max suffix components, or null if not specified.
+ * @return {number} The max suffix components, or null if not specified.
  */
 Interest.prototype.getMaxSuffixComponents = function()
 {
@@ -181,7 +264,7 @@ Interest.prototype.getMaxSuffixComponents = function()
 
 /**
  * Get the interest key locator.
- * @returns {KeyLocator} The key locator. If its getType() is null,
+ * @return {KeyLocator} The key locator. If its getType() is null,
  * then the key locator is not specified.
  */
 Interest.prototype.getKeyLocator = function()
@@ -191,14 +274,14 @@ Interest.prototype.getKeyLocator = function()
 
 /**
  * Get the exclude object.
- * @returns {Exclude} The exclude object. If the exclude size() is zero, then
+ * @return {Exclude} The exclude object. If the exclude size() is zero, then
  * the exclude is not specified.
  */
 Interest.prototype.getExclude = function() { return this.exclude_.get(); };
 
 /**
  * Get the child selector.
- * @returns {number} The child selector, or null if not specified.
+ * @return {number} The child selector, or null if not specified.
  */
 Interest.prototype.getChildSelector = function()
 {
@@ -207,7 +290,7 @@ Interest.prototype.getChildSelector = function()
 
 /**
  * Get the must be fresh flag. If not specified, the default is true.
- * @returns {boolean} The must be fresh flag.
+ * @return {boolean} The must be fresh flag.
  */
 Interest.prototype.getMustBeFresh = function()
 {
@@ -217,7 +300,7 @@ Interest.prototype.getMustBeFresh = function()
 /**
  * Return the nonce value from the incoming interest.  If you change any of the
  * fields in this Interest object, then the nonce value is cleared.
- * @returns {Blob} The nonce. If not specified, the value isNull().
+ * @return {Blob} The nonce. If not specified, the value isNull().
  */
 Interest.prototype.getNonce = function()
 {
@@ -309,7 +392,7 @@ Interest.prototype.getSelectedDelegationIndex = function()
 
 /**
  * Get the interest lifetime.
- * @returns {number} The interest lifetime in milliseconds, or null if not
+ * @return {number} The interest lifetime in milliseconds, or null if not
  * specified.
  */
 Interest.prototype.getInterestLifetimeMilliseconds = function()
@@ -320,7 +403,7 @@ Interest.prototype.getInterestLifetimeMilliseconds = function()
 /**
  * Return the default wire encoding, which was encoded with
  * getDefaultWireEncodingFormat().
- * @returns {SignedBlob} The default wire encoding, whose isNull() may be true
+ * @return {SignedBlob} The default wire encoding, whose isNull() may be true
  * if there is no default wire encoding.
  */
 Interest.prototype.getDefaultWireEncoding = function()
@@ -337,7 +420,7 @@ Interest.prototype.getDefaultWireEncoding = function()
 
 /**
  * Get the WireFormat which is used by getDefaultWireEncoding().
- * @returns {WireFormat} The WireFormat, which is only meaningful if the
+ * @return {WireFormat} The WireFormat, which is only meaningful if the
  * getDefaultWireEncoding() is not isNull().
  */
 Interest.prototype.getDefaultWireEncodingFormat = function()
@@ -360,7 +443,7 @@ Interest.prototype.getIncomingFaceId = function()
  * Set the interest name.
  * Note: You can also call getName and change the name values directly.
  * @param {Name} name The interest name. This makes a copy of the name.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setName = function(name)
 {
@@ -374,7 +457,7 @@ Interest.prototype.setName = function(name)
  * Set the min suffix components count.
  * @param {number} minSuffixComponents The min suffix components count. If not
  * specified, set to undefined.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 {
@@ -387,11 +470,28 @@ Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
  * Set the max suffix components count.
  * @param {number} maxSuffixComponents The max suffix components count. If not
  * specified, set to undefined.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
   this.maxSuffixComponents_ = maxSuffixComponents;
+  ++this.changeCount_;
+  return this;
+};
+
+/**
+ * Set this interest to use a copy of the given KeyLocator object.
+ * Note: You can also call getKeyLocator and change the key locator directly.
+ * @param {KeyLocator} keyLocator The KeyLocator object. This makes a copy of the object.
+ * If no key locator is specified, set to a new default KeyLocator(), or to a
+ * KeyLocator with an unspecified type.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setKeyLocator = function(keyLocator)
+{
+  this.keyLocator_.set
+    (typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
+     new KeyLocator(keyLocator) : new KeyLocator());
   ++this.changeCount_;
   return this;
 };
@@ -402,7 +502,7 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
  * @param {Exclude} exclude The Exclude object. This makes a copy of the object.
  * If no exclude is specified, set to a new default Exclude(), or to an Exclude
  * with size() 0.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setExclude = function(exclude)
 {
@@ -462,7 +562,7 @@ Interest.prototype.setSelectedDelegationIndex = function(selectedDelegationIndex
  * Set the child selector.
  * @param {number} childSelector The child selector. If not specified, set to
  * undefined.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setChildSelector = function(childSelector)
 {
@@ -475,7 +575,7 @@ Interest.prototype.setChildSelector = function(childSelector)
  * Set the MustBeFresh flag.
  * @param {boolean} mustBeFresh True if the content must be fresh, otherwise
  * false. If you do not set this flag, the default value is true.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
@@ -487,8 +587,8 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
 /**
  * Set the interest lifetime.
  * @param {number} interestLifetimeMilliseconds The interest lifetime in
- * milliseconds. If not specified, set to -1.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * milliseconds. If not specified, set to undefined.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
 {
@@ -517,7 +617,7 @@ Interest.prototype.setNonce = function(nonce)
  * added the selectors as a query string.  For example "/test/name?ndn.ChildSelector=1".
  * Note: This is an experimental feature.  See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/interest.html#interest-touri-method .
- * @returns {string} The URI string.
+ * @return {string} The URI string.
  */
 Interest.prototype.toUri = function()
 {
@@ -551,7 +651,7 @@ Interest.prototype.toUri = function()
  * result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
+ * @return {SignedBlob} The encoded buffer in a SignedBlob object.
  */
 Interest.prototype.wireEncode = function(wireFormat)
 {
@@ -586,10 +686,12 @@ Interest.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-    input.buf() : input;
-  var result = wireFormat.decodeInterest(this, decodeBuffer);
+  var result;
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    result = wireFormat.decodeInterest(this, input.buf(), false);
+  else
+    result = wireFormat.decodeInterest(this, input, true);
 
   if (wireFormat == WireFormat.getDefaultWireFormat())
     // This is the default wire encoding.  In the Blob constructor, set copy
@@ -644,7 +746,7 @@ Interest.prototype.setLpPacket = function(lpPacket)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Interest.prototype.getChangeCount = function()
 {

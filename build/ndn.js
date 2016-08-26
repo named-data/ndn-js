@@ -8905,13 +8905,39 @@ NdnCommon.MAX_NDN_PACKET_SIZE = 8800;
 /**
  * Get the error message plus its stack trace.
  * @param {Error} error The error object.
- * @returns {string} The error message, plus the stack trace with each line
+ * @return {string} The error message, plus the stack trace with each line
  * separated by '\n'.
  */
 NdnCommon.getErrorWithStackTrace = function(error)
 {
   return error + '\n' + printStackTrace({e: error}).join('\n');
-}
+};
+
+/**
+ * Check for Indexed DB support and call onComplete with the result as described
+ * below. This has to use an onComplete callback since IndexedDB is async.
+ * @param {function} onComplete This calls onComplete(haveIndexedDb) where
+ * haveIndexedDb is true if the browser has Indexed DB support, otherwise false.
+ */
+NdnCommon.checkIndexedDb = function(onComplete)
+{
+  try {
+    var database = new Dexie("test-Dexie-support");
+    database.version(1).stores({});
+    database.open();
+
+    // Give Dexie a little time to open.
+    setTimeout(function() {
+      try {
+        onComplete(database.isOpen());
+      } catch (ex) {
+        onComplete(false);
+      }
+    }, 200);
+  } catch (ex) {
+    onComplete(false);
+  }
+};
 /**
  * Copyright (C) 2015-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -8987,7 +9013,7 @@ exports.ExponentialReExpress = ExponentialReExpress;
  * {
  *   maxInterestLifetime: 16000 // milliseconds
  * }
- * @returns {function} The onTimeout callback to pass to expressInterest.
+ * @return {function} The onTimeout callback to pass to expressInterest.
  */
 ExponentialReExpress.makeOnTimeout = function(face, onData, onTimeout, settings)
 {
@@ -9058,7 +9084,7 @@ ExponentialReExpress.prototype.onTimeout = function(interest)
  * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take
  * another pointer to the Buffer without copying. If value is a Buffer or byte
  * array, copy to create a new Buffer.  If omitted, buf() will return null.
- * @param {boolean} copy (optional) (optional) If true, copy the contents of
+ * @param {boolean} copy (optional) If true, copy the contents of
  * value into a new Buffer.  If false, just use the existing value without
  * copying. If omitted, then copy the contents (unless value is already a Blob).
  * IMPORTANT: If copy is false, if you keep a pointer to the value then you must
@@ -9102,7 +9128,7 @@ exports.Blob = Blob;
 
 /**
  * Return the length of the immutable byte array.
- * @returns {number} The length of the array.  If buf() is null, return 0.
+ * @return {number} The length of the array.  If buf() is null, return 0.
  */
 Blob.prototype.size = function()
 {
@@ -9115,7 +9141,7 @@ Blob.prototype.size = function()
 /**
  * Return the immutable byte array.  DO NOT change the contents of the Buffer.
  * If you need to change it, make a copy.
- * @returns {Buffer} The Buffer holding the immutable byte array, or null.
+ * @return {Buffer} The Buffer holding the immutable byte array, or null.
  */
 Blob.prototype.buf = function()
 {
@@ -9124,7 +9150,7 @@ Blob.prototype.buf = function()
 
 /**
  * Return true if the array is null, otherwise false.
- * @returns {boolean} True if the array is null.
+ * @return {boolean} True if the array is null.
  */
 Blob.prototype.isNull = function()
 {
@@ -9133,7 +9159,7 @@ Blob.prototype.isNull = function()
 
 /**
  * Return the hex representation of the bytes in the byte array.
- * @returns {string} The hex string.
+ * @return {string} The hex string.
  */
 Blob.prototype.toHex = function()
 {
@@ -9158,7 +9184,7 @@ Blob.prototype.toString = function()
 /**
  * Check if the value of this Blob equals the other blob.
  * @param {Blob} other The other Blob to check.
- * @returns {boolean} if this isNull and other isNull or if the bytes of this
+ * @return {boolean} if this isNull and other isNull or if the bytes of this
  * blob equal the bytes of the other.
  */
 Blob.prototype.equals = function(other)
@@ -9248,7 +9274,7 @@ exports.SignedBlob = SignedBlob;
 
 /**
  * Return the length of the signed portion of the immutable byte array.
- * @returns {number} The length of the signed portion.  If signedBuf() is null,
+ * @return {number} The length of the signed portion.  If signedBuf() is null,
  * return 0.
  */
 SignedBlob.prototype.signedSize = function()
@@ -9261,20 +9287,14 @@ SignedBlob.prototype.signedSize = function()
 
 /**
  * Return a the signed portion of the immutable byte array.
- * @returns {Buffer} A slice into the Buffer which is the signed portion.
+ * @return {Buffer} A slice into the Buffer which is the signed portion.
  * If the pointer to the array is null, return null.
  */
-SignedBlob.prototype.signedBuf = function()
-{
-  if (this.signedBuffer != null)
-    return this.signedBuffer;
-  else
-    return null;
-};
+SignedBlob.prototype.signedBuf = function() { return this.signedBuffer; };
 
 /**
  * Return the offset in the array of the beginning of the signed portion.
- * @returns {number} The offset in the array.
+ * @return {number} The offset in the array.
  */
 SignedBlob.prototype.getSignedPortionBeginOffset = function()
 {
@@ -9283,7 +9303,7 @@ SignedBlob.prototype.getSignedPortionBeginOffset = function()
 
 /**
  * Return the offset in the array of the end of the signed portion.
- * @returns {number} The offset in the array.
+ * @return {number} The offset in the array.
  */
 SignedBlob.prototype.getSignedPortionEndOffset = function()
 {
@@ -9350,7 +9370,7 @@ DynamicBuffer.prototype.ensureLength = function(length)
  * Copy the value to this.array at offset, reallocating if necessary.
  * @param {Buffer} value The buffer to copy.
  * @param {number} offset The offset in the buffer to start copying into.
- * @returns {number} The new offset which is offset + value.length.
+ * @return {number} The new offset which is offset + value.length.
  */
 DynamicBuffer.prototype.copy = function(value, offset)
 {
@@ -9411,7 +9431,7 @@ DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack)
  * Return this.array.slice(begin, end);
  * @param {number} begin The begin index for the slice.
  * @param {number} end (optional) The end index for the slice.
- * @returns {Buffer} The buffer slice.
+ * @return {Buffer} The buffer slice.
  */
 DynamicBuffer.prototype.slice = function(begin, end)
 {
@@ -9463,7 +9483,7 @@ exports.ChangeCounter = ChangeCounter;
 /**
  * Get the target object. If the target is changed, then checkChanged will
  * detect it.
- * @returns {object} The target, as an object with the method
+ * @return {object} The target, as an object with the method
  * getChangeCount().
  */
 ChangeCounter.prototype.get = function()
@@ -9489,7 +9509,7 @@ ChangeCounter.prototype.set = function(target)
  * meaning that the target has not changed. Also, if the target is null,
  * simply return false. This is useful since the target (or one of the target's
  * targets) may be changed and you need to find out.
- * @returns {boolean} True if the change count has been updated, false if not.
+ * @return {boolean} True if the change count has been updated, false if not.
  */
 ChangeCounter.prototype.checkChanged = function()
 {
@@ -9912,7 +9932,7 @@ DataUtils.toNumbersFromString = function(str)
  * If value is a string, then interpret it as a raw string and convert to
  * a Buffer. Otherwise assume it is a Buffer or array type and just return it.
  * @param {string|any} value
- * @returns {Buffer}
+ * @return {Buffer}
  */
 DataUtils.toNumbersIfString = function(value)
 {
@@ -10047,7 +10067,7 @@ DataUtils.shuffle = function(array)
 /**
  * Decode the base64-encoded private key PEM and return the binary DER.
  * @param {string} The PEM-encoded private key.
- * @returns {Buffer} The binary DER.
+ * @return {Buffer} The binary DER.
  *
  */
 DataUtils.privateKeyPemToDer = function(privateKeyPem)
@@ -10129,6 +10149,7 @@ exports.Tlv = Tlv;
 Tlv.Interest =         5;
 Tlv.Data =             6;
 Tlv.Name =             7;
+Tlv.ImplicitSha256DigestComponent = 1;
 Tlv.NameComponent =    8;
 Tlv.Selectors =        9;
 Tlv.Nonce =            10;
@@ -10232,7 +10253,7 @@ Tlv.Encrypt_Schedule = 143;
  * (This could be a general function, but we define it here so that the
  * Tlv encoder/decoder is self-contained.)
  * @param {number} x
- * @returns {number}
+ * @return {number}
  */
 Tlv.getHighBytes = function(x)
 {
@@ -10284,7 +10305,7 @@ exports.TlvEncoder = TlvEncoder;
  * Get the number of bytes that have been written to the output.  You can
  * save this number, write sub TLVs, then subtract the new length from this
  * to get the total length of the sub TLVs.
- * @returns {number} The number of bytes that have been written to the output.
+ * @return {number} The number of bytes that have been written to the output.
  */
 TlvEncoder.prototype.getLength = function()
 {
@@ -10420,7 +10441,7 @@ TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
  * If value is negative or null then do nothing, otherwise call
  * writeNonNegativeIntegerTlv.
  * @param {number} type The type of the TLV.
- * @param {number} value If negative or None do nothing, otherwise the integer
+ * @param {number} value If negative or null do nothing, otherwise the integer
  *   to encode.
  */
 TlvEncoder.prototype.writeOptionalNonNegativeIntegerTlv = function(type, value)
@@ -10478,7 +10499,7 @@ TlvEncoder.prototype.writeOptionalBlobTlv = function(type, value)
 
 /**
  * Get a slice of the encoded bytes.
- * @returns {Buffer} A slice backed by the encoding Buffer.
+ * @return {Buffer} A slice backed by the encoding Buffer.
  */
 TlvEncoder.prototype.getOutput = function()
 {
@@ -10521,7 +10542,7 @@ exports.TlvDecoder = TlvDecoder;
 
 /**
  * Decode VAR-NUMBER in NDN-TLV and return it. Update offset.
- * @returns {number} The decoded VAR-NUMBER.
+ * @return {number} The decoded VAR-NUMBER.
  */
 TlvDecoder.prototype.readVarNumber = function()
 {
@@ -10539,7 +10560,7 @@ TlvDecoder.prototype.readVarNumber = function()
  * which is >= 253.
  * @param {number} firstOctet The first octet which is >= 253, used to decode
  * the remaining bytes.
- * @returns {number} The decoded VAR-NUMBER.
+ * @return {number} The decoded VAR-NUMBER.
  */
 TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet)
 {
@@ -10582,7 +10603,7 @@ TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet)
  * sure the decoded length does not exceed the number of bytes remaining in the
  * input.
  * @param {number} expectedType The expected type.
- * @returns {number} The length of the TLV.
+ * @return {number} The length of the TLV.
  * @throws DecodingException if (did not get the expected TLV type or the TLV length
  * exceeds the buffer length.
  */
@@ -10606,7 +10627,7 @@ TlvDecoder.prototype.readTypeAndLength = function(expectedType)
  * of the end of this parent TLV, which is used in decoding optional nested
  * TLVs. After reading all nested TLVs, call finishNestedTlvs.
  * @param {number} expectedType The expected type.
- * @returns {number} The offset of the end of the parent TLV.
+ * @return {number} The offset of the end of the parent TLV.
  * @throws DecodingException if did not get the expected TLV type or the TLV
  * length exceeds the buffer length.
  */
@@ -10655,7 +10676,7 @@ TlvDecoder.prototype.finishNestedTlvs = function(endOffset)
  * @param {number} expectedType The expected type.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {boolean} true if the type of the next TLV is the expectedType,
+ * @return {boolean} true if the type of the next TLV is the expectedType,
  *  otherwise false.
  */
 TlvDecoder.prototype.peekType = function(expectedType, endOffset)
@@ -10677,7 +10698,7 @@ TlvDecoder.prototype.peekType = function(expectedType, endOffset)
  * Decode a non-negative integer in NDN-TLV and return it. Update offset by
  * length.
  * @param {number} length The number of bytes in the encoded integer.
- * @returns {number} The integer.
+ * @return {number} The integer.
  * @throws DecodingException if length is an invalid length for a TLV
  * non-negative integer.
  */
@@ -10719,7 +10740,7 @@ TlvDecoder.prototype.readNonNegativeInteger = function(length)
  * the type to be expectedType. Then decode a non-negative integer in NDN-TLV
  * and return it.  Update offset.
  * @param {number} expectedType The expected type.
- * @returns {number} The integer.
+ * @return {number} The integer.
  * @throws DecodingException if did not get the expected TLV type or can't
  * decode the value.
  */
@@ -10737,7 +10758,7 @@ TlvDecoder.prototype.readNonNegativeIntegerTlv = function(expectedType)
  * @param {number} expectedType The expected type.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {number} The integer or null if the next TLV doesn't have the
+ * @return {number} The integer or null if the next TLV doesn't have the
  * expected type.
  */
 TlvDecoder.prototype.readOptionalNonNegativeIntegerTlv = function
@@ -10754,7 +10775,7 @@ TlvDecoder.prototype.readOptionalNonNegativeIntegerTlv = function
  * the type to be expectedType. Then return an array of the bytes in the value.
  * Update offset.
  * @param {number} expectedType The expected type.
- * @returns {Buffer} The bytes in the value as a slice on the buffer.  This is
+ * @return {Buffer} The bytes in the value as a slice on the buffer.  This is
  * not a copy of the bytes in the input buffer.  If you need a copy, then you
  * must make a copy of the return value.
  * @throws DecodingException if did not get the expected TLV type.
@@ -10777,7 +10798,7 @@ TlvDecoder.prototype.readBlobTlv = function(expectedType)
  * @param {number} expectedType The expected type.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {Buffer} The bytes in the value as a slice on the buffer or null if
+ * @return {Buffer} The bytes in the value as a slice on the buffer or null if
  * the next TLV doesn't have the expected type.  This is not a copy of the bytes
  * in the input buffer.  If you need a copy, then you must make a copy of the
  * return value.
@@ -10798,7 +10819,7 @@ TlvDecoder.prototype.readOptionalBlobTlv = function(expectedType, endOffset)
  * @param {number} expectedType The expected type.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {boolean} true, or else false if the next TLV doesn't have the
+ * @return {boolean} true, or else false if the next TLV doesn't have the
  * expected type.
  */
 TlvDecoder.prototype.readBooleanTlv = function(expectedType, endOffset)
@@ -10815,7 +10836,7 @@ TlvDecoder.prototype.readBooleanTlv = function(expectedType, endOffset)
 
 /**
  * Get the offset into the input, used for the next read.
- * @returns {number} The offset.
+ * @return {number} The offset.
  */
 TlvDecoder.prototype.getOffset = function()
 {
@@ -10836,7 +10857,7 @@ TlvDecoder.prototype.seek = function(offset)
  * @param {number} beginOffset The offset in the input of the beginning of the
  * slice.
  * @param {number} endOffset The offset in the input of the end of the slice.
- * @returns {Buffer} The bytes in the value as a slice on the buffer.  This is
+ * @return {Buffer} The bytes in the value as a slice on the buffer.  This is
  * not a copy of the bytes in the input buffer.  If you need a copy, then you
  * must make a copy of the return value.
  */
@@ -10898,7 +10919,7 @@ TlvStructureDecoder.READ_VALUE_BYTES =  4;
  * false which means you should read more into input and call again.
  * @param {Buffer} input The input buffer. You have to pass in input each time
  * because the buffer could be reallocated.
- * @returns {boolean} true if found the element end, false if not.
+ * @return {boolean} true if found the element end, false if not.
  */
 TlvStructureDecoder.prototype.findElementEnd = function(input)
 {
@@ -11052,7 +11073,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
 
 /**
  * Get the current offset into the input buffer.
- * @returns {number} The offset.
+ * @return {number} The offset.
  */
 TlvStructureDecoder.prototype.getOffset = function()
 {
@@ -11089,7 +11110,8 @@ TlvStructureDecoder.prototype.seek = function(offset)
 /** @ignore */
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
 var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
-var Blob = require('../util/blob.js').Blob;
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
 
 /**
  * ProtobufTlv has static methods to encode and decode an Protobuf Message o
@@ -11135,7 +11157,7 @@ ProtobufTlv.establishField = function()
  * @param {ProtoBuf.Reflect.T} descriptor The reflection descriptor for the
  * message. For example, if the message is of type "MyNamespace.MyMessage" then
  * the descriptor is builder.lookup("MyNamespace.MyMessage").
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 ProtobufTlv.encode = function(message, descriptor)
 {
@@ -11291,6 +11313,26 @@ ProtobufTlv._decodeFieldValue = function(field, tlvType, decoder, endOffset)
   else
     throw new Error("ProtobufTlv.decode: Unknown field type");
 };
+
+/**
+ * Return a Name made from the component array in a Protobuf message object,
+ * assuming that it was defined with "repeated bytes". For example:
+ * message Name {
+ *   repeated bytes component = 8;
+ * }
+ * @param {Array} componentArray The array from the Protobuf message object
+ * representing the "repeated bytes" component array.
+ * @return A new Name.
+ */
+ProtobufTlv.toName = function(componentArray)
+{
+  var name = new Name();
+  for (var i = 0; i < componentArray.length; ++i)
+    name.append
+      (new Blob(new Buffer(componentArray[i].toBinary(), "binary")), false);
+
+  return name;
+};
 /**
  * Copyright (C) 2014-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -11396,7 +11438,7 @@ exports.WireFormat = WireFormat;
 /**
  * Encode name and return the encoding.  Your derived class should override.
  * @param {Name} name The Name to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeName = function(name)
@@ -11409,9 +11451,12 @@ WireFormat.prototype.encodeName = function(name)
  * Your derived class should override.
  * @param {Name} name The Name object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeName = function(name, input)
+WireFormat.prototype.decodeName = function(name, input, copy)
 {
   throw new Error("decodeName is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -11419,7 +11464,7 @@ WireFormat.prototype.decodeName = function(name, input)
 /**
  * Encode interest and return the encoding.  Your derived class should override.
  * @param {Interest} interest The Interest to encode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
  * the encoding of the beginning of the signed portion, and
@@ -11439,7 +11484,10 @@ WireFormat.prototype.encodeInterest = function(interest)
  * Your derived class should override.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -11448,7 +11496,7 @@ WireFormat.prototype.encodeInterest = function(interest)
  * assumed to be a signature for a signed interest).
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeInterest = function(interest, input)
+WireFormat.prototype.decodeInterest = function(interest, input, copy)
 {
   throw new Error("decodeInterest is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -11457,7 +11505,7 @@ WireFormat.prototype.decodeInterest = function(interest, input)
  * Encode data and return the encoding and signed offsets. Your derived class
  * should override.
  * @param {Data} data The Data object to encode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
  * the encoding of the beginning of the signed portion, and
@@ -11475,14 +11523,17 @@ WireFormat.prototype.encodeData = function(data)
  * the signed offsets.  Your derived class should override.
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
  * of the end of the signed portion.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeData = function(data, input)
+WireFormat.prototype.decodeData = function(data, input, copy)
 {
   throw new Error("decodeData is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -11492,7 +11543,7 @@ WireFormat.prototype.decodeData = function(data, input)
  * override.
  * @param {ControlParameters} controlParameters The ControlParameters object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeControlParameters = function(controlParameters)
@@ -11506,9 +11557,13 @@ WireFormat.prototype.encodeControlParameters = function(controlParameters)
  * @param {ControlParameters} controlParameters The ControlParameters object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
+WireFormat.prototype.decodeControlParameters = function
+  (controlParameters, input, copy)
 {
   throw new Error("decodeControlParameters is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -11518,7 +11573,7 @@ WireFormat.prototype.decodeControlParameters = function(controlParameters, input
  * override.
  * @param {ControlResponse} controlResponse The ControlResponse object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeControlResponse = function(controlResponse)
@@ -11532,9 +11587,13 @@ WireFormat.prototype.encodeControlResponse = function(controlResponse)
  * @param {ControlResponse} controlResponse The ControlResponse object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
+WireFormat.prototype.decodeControlResponse = function
+  (controlResponse, input, copy)
 {
   throw new Error("decodeControlResponse is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -11543,7 +11602,7 @@ WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
  * Encode signature as a SignatureInfo and return the encoding. Your derived
  * class should override.
  * @param {Signature} signature An object of a subclass of Signature to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeSignatureInfo = function(signature)
@@ -11558,11 +11617,14 @@ WireFormat.prototype.encodeSignatureInfo = function(signature)
  * @param {Buffer} signatureInfo The buffer with the signature info bytes to
  * decode.
  * @param {Buffer} signatureValue The buffer with the signature value to decode.
- * @returns {Signature} A new object which is a subclass of Signature.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @return {Signature} A new object which is a subclass of Signature.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.decodeSignatureInfoAndValue = function
-  (signatureInfo, signatureValue)
+  (signatureInfo, signatureValue, copy)
 {
   throw new Error("decodeSignatureInfoAndValue is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -11572,7 +11634,7 @@ WireFormat.prototype.decodeSignatureInfoAndValue = function
  * signature bits) and return the encoding. Your derived class should override.
  * @param {Signature} signature An object of a subclass of Signature with the
  * signature value to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeSignatureValue = function(signature)
@@ -11585,10 +11647,13 @@ WireFormat.prototype.encodeSignatureValue = function(signature)
  * Your derived class should override.
  * @param {LpPacket} lpPacket The LpPacket object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
-WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
+WireFormat.prototype.decodeLpPacket = function(lpPacket, input, copy)
 {
   throw new Error
     ("decodeLpPacket is unimplemented in the base WireFormat class. You should use a derived class.");
@@ -11599,7 +11664,7 @@ WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
  * should override.
  * @param {DelegationSet} delegationSet The DelegationSet object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
@@ -11615,10 +11680,13 @@ WireFormat.prototype.encodeDelegationSet = function(delegationSet)
  * @param {DelegationSet} delegationSet The DelegationSet object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
-WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
+WireFormat.prototype.decodeDelegationSet = function(delegationSet, input, copy)
 {
   throw new Error
     ("decodeDelegationSet is unimplemented in the base WireFormat class. You should use a derived class.");
@@ -11629,7 +11697,7 @@ WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
  * should override.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
@@ -11645,10 +11713,14 @@ WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
  * @param {EncryptedContent} encryptedContent The EncryptedContent object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
-WireFormat.prototype.decodeEncryptedContent = function(encryptedContent, input)
+WireFormat.prototype.decodeEncryptedContent = function
+  (encryptedContent, input, copy)
 {
   throw new Error
     ("decodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
@@ -11667,7 +11739,7 @@ WireFormat.setDefaultWireFormat = function(wireFormat)
 /**
  * Return the default WireFormat used by default encoding and decoding methods
  * which was set with setDefaultWireFormat.
- * @returns {WireFormat} An object of a subclass of WireFormat.
+ * @return {WireFormat} An object of a subclass of WireFormat.
  */
 WireFormat.getDefaultWireFormat = function()
 {
@@ -11968,7 +12040,7 @@ exports.DerNode = DerNode;
 
 /**
  * Return the number of bytes in DER
- * @returns {number}
+ * @return {number}
  */
 DerNode.prototype.getSize = function()
 {
@@ -12017,7 +12089,7 @@ DerNode.prototype.encodeHeader = function(size)
  * Extract the header from an input buffer and return the size.
  * @param {Buffer} inputBuf The input buffer to read from.
  * @param {number} startIdx The offset into the buffer.
- * @returns {number} The parsed size in the header.
+ * @return {number} The parsed size in the header.
  */
 DerNode.prototype.decodeHeader = function(inputBuf, startIdx)
 {
@@ -12057,7 +12129,7 @@ DerNode.prototype.decodeHeader = function(inputBuf, startIdx)
 
 /**
  * Get the raw data encoding for this node.
- * @returns {Blob} The raw data encoding.
+ * @return {Blob} The raw data encoding.
  */
 DerNode.prototype.encode = function()
 {
@@ -12102,7 +12174,7 @@ DerNode.prototype.payloadAppend = function(buffer)
  * object of a subclass of DerNode.
  * @param {type} inputBuf The input buffer to read from.
  * @param {type} startIdx (optional) The offset into the buffer. If omitted, use 0.
- * @returns {DerNode} An object of a subclass of DerNode.
+ * @return {DerNode} An object of a subclass of DerNode.
  */
 DerNode.parse = function(inputBuf, startIdx)
 {
@@ -12141,7 +12213,7 @@ DerNode.parse = function(inputBuf, startIdx)
 /**
  * Convert the encoded data to a standard representation. Overridden by some
  * subclasses (e.g. DerBoolean).
- * @returns {Blob} The encoded data as a Blob.
+ * @return {Blob} The encoded data as a Blob.
  */
 DerNode.prototype.toVal = function()
 {
@@ -12161,7 +12233,7 @@ DerNode.prototype.getPayload = function()
  * If this object is a DerNode.DerSequence, get the children of this node.
  * Otherwise, throw an exception. (DerSequence overrides to implement this
  * method.)
- * @returns {Array<DerNode>} The children as an array of DerNode.
+ * @return {Array<DerNode>} The children as an array of DerNode.
  * @throws DerDecodingException if this object is not a DerSequence.
  */
 DerNode.prototype.getChildren = function()
@@ -12212,7 +12284,7 @@ DerNode.DerStructure.prototype.name = "DerStructure";
 
 /**
  * Get the total length of the encoding, including children.
- * @returns {number} The total (header + payload) length.
+ * @return {number} The total (header + payload) length.
  */
 DerNode.DerStructure.prototype.getSize = function()
 {
@@ -12227,7 +12299,7 @@ DerNode.DerStructure.prototype.getSize = function()
 
 /**
  * Get the children of this node.
- * @returns {Array<DerNode>} The children as an array of DerNode.
+ * @return {Array<DerNode>} The children as an array of DerNode.
  */
 DerNode.DerStructure.prototype.getChildren = function()
 {
@@ -12279,7 +12351,7 @@ DerNode.DerStructure.prototype.setChildChanged = function()
 /**
  * Override the base encode to return raw data encoding for this node and its
  * children.
- * @returns {Blob} The raw data encoding.
+ * @return {Blob} The raw data encoding.
  */
 DerNode.DerStructure.prototype.encode = function()
 {
@@ -12346,7 +12418,7 @@ DerNode.DerByteString.prototype.name = "DerByteString";
 
 /**
  * Override to return just the byte string.
- * @returns {Blob} The byte string as a copy of the payload buffer.
+ * @return {Blob} The byte string as a copy of the payload buffer.
  */
 DerNode.DerByteString.prototype.toVal = function()
 {
@@ -12574,7 +12646,7 @@ DerNode.DerOid.prototype.prepareEncoding = function(value)
  * Compute the encoding for one part of an OID, where values greater than 128
  * must be encoded as multiple bytes.
  * @param {number} value A component of an OID.
- * @returns {Buffer} The encoded buffer.
+ * @return {Buffer} The encoded buffer.
  */
 DerNode.DerOid.encode128 = function(value)
 {
@@ -12608,7 +12680,7 @@ DerNode.DerOid.encode128 = function(value)
  * Convert an encoded component of the encoded OID to the original integer.
  * @param {number} offset The offset into this node's payload.
  * @param {Array<number>} skip Set skip[0] to the number of payload bytes to skip.
- * @returns {number} The original integer.
+ * @return {number} The original integer.
  */
 DerNode.DerOid.prototype.decode128 = function(offset, skip)
 {
@@ -12629,7 +12701,7 @@ DerNode.DerOid.prototype.decode128 = function(offset, skip)
 
 /**
  * Override to return the string representation of the OID.
- * @returns {string} The string representation of the OID.
+ * @return {string} The string representation of the OID.
  */
 DerNode.DerOid.prototype.toVal = function()
 {
@@ -12706,7 +12778,7 @@ DerNode.DerGeneralizedTime.prototype.name = "DerGeneralizedTime";
 /**
  * Convert a UNIX timestamp to the internal string representation.
  * @param {type} msSince1970 Timestamp as milliseconds since Jan 1, 1970.
- * @returns {string} The string representation.
+ * @return {string} The string representation.
  */
 DerNode.DerGeneralizedTime.toDerTimeString = function(msSince1970)
 {
@@ -12723,7 +12795,7 @@ DerNode.DerGeneralizedTime.toDerTimeString = function(msSince1970)
 /**
  * A private method to zero pad an integer to 2 digits.
  * @param {number} x The number to pad.  Assume it is a non-negative integer.
- * @returns {string} The padded string.
+ * @return {string} The padded string.
  */
 DerNode.DerGeneralizedTime.to2DigitString = function(x)
 {
@@ -12733,7 +12805,7 @@ DerNode.DerGeneralizedTime.to2DigitString = function(x)
 
 /**
  * Override to return the milliseconds since 1970.
- * @returns {number} The timestamp value as milliseconds since 1970.
+ * @return {number} The timestamp value as milliseconds since 1970.
  */
 DerNode.DerGeneralizedTime.prototype.toVal = function()
 {
@@ -12815,7 +12887,7 @@ BoostInfoTree.prototype.addSubtree = function(treeName, newTree)
  * Create a new BoostInfo and insert it as a sub-tree with the given name.
  * @param {string} treeName The name of the new sub-tree.
  * @param {string} value The value associated with the new sub-tree.
- * @returns {BoostInfoTree} The created sub-tree.
+ * @return {BoostInfoTree} The created sub-tree.
  */
 BoostInfoTree.prototype.createSubtree = function(treeName, value)
 {
@@ -12827,7 +12899,7 @@ BoostInfoTree.prototype.createSubtree = function(treeName, value)
 /**
  * Look up using the key and return a list of the subtrees.
  * @param {string} key The key which may be a path separated with '/'.
- * @returns {Array<BoostInfoTree>} A new array with pointers to the subtrees.
+ * @return {Array<BoostInfoTree>} A new array with pointers to the subtrees.
  */
 BoostInfoTree.prototype.get = function(key)
 {
@@ -12856,7 +12928,7 @@ BoostInfoTree.prototype.get = function(key)
 /**
  * Look up using the key and return string value of the first subtree.
  * @param {string} key The key which may be a path separated with '/'.
- * @returns {string} The string value or null if not found.
+ * @return {string} The string value or null if not found.
  */
 BoostInfoTree.prototype.getFirstValue = function(key)
 {
@@ -12912,7 +12984,7 @@ BoostInfoTree.prototype.toString = function()
  * Use treeName to find the array of BoostInfoTree in this.subtrees.
  * @param {string} treeName The key in this.subtrees to search for. This does a
  * flat search in subtrees_.  It does not split by '/' into a path.
- * @returns {Array<BoostInfoTree>} A array of BoostInfoTree, or null if not found.
+ * @return {Array<BoostInfoTree>} A array of BoostInfoTree, or null if not found.
  */
 BoostInfoTree.prototype.find = function(treeName)
 {
@@ -12988,7 +13060,7 @@ BoostInfoParser.prototype.getRoot = function() { return this.root; };
  * regardless of whitespace between the quotes. Also allow a backslash to escape
  * the next character.
  * @param {string} s The input string to split.
- * @returns {Array<string>} An array of strings.
+ * @return {Array<string>} An array of strings.
  */
 BoostInfoParser.shlex_split = function(s)
 {
@@ -13434,7 +13506,7 @@ MemoryContentCache.prototype.storePendingInterest = function(interest, face)
  * calls storePendingInterest() to store the interest that doesn't match a
  * Data packet. add(data) will check if the added Data packet satisfies any
  * pending interest and send it.
- * @returns {function} A callback to use for onDataNotFound in registerPrefix().
+ * @return {function} A callback to use for onDataNotFound in registerPrefix().
  */
 MemoryContentCache.prototype.getStorePendingInterest = function()
 {
@@ -13587,7 +13659,7 @@ MemoryContentCache.StaleTimeContent.prototype.name = "StaleTimeContent";
  * Check if this content is stale.
  * @param {number} nowMilliseconds The current time in milliseconds from
  * new Date().getTime().
- * @returns {boolean} True if this content is stale, otherwise false.
+ * @return {boolean} True if this content is stale, otherwise false.
  */
 MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds)
 {
@@ -13632,7 +13704,7 @@ MemoryContentCache.PendingInterest.prototype.getFace = function()
  * Check if this interest is timed out.
  * @param {number} nowMilliseconds The current time in milliseconds from
  * new Date().getTime().
- * @returns {boolean} True if this interest timed out, otherwise false.
+ * @return {boolean} True if this interest timed out, otherwise false.
  */
 MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMilliseconds)
 {
@@ -13679,7 +13751,7 @@ exports.NdnRegexMatcher = NdnRegexMatcher;
  * Determine if the provided NDN regex matches the given Name.
  * @param {string} pattern The NDN regex.
  * @param {Name} name The Name to match against the regex.
- * @returns {Object} The match object from String.match, or null if the pattern
+ * @return {Object} The match object from String.match, or null if the pattern
  * does not match.
  */
 NdnRegexMatcher.match = function(pattern, name)
@@ -13926,6 +13998,7 @@ SegmentFetcher.prototype.fetchNextSegment = function
   var interest = new Interest(originalInterest);
   // Changing a field clears the nonce so that the library will generate a new
   // one.
+  interest.setChildSelector(0);
   interest.setMustBeFresh(false);
   interest.setName(dataName.getPrefix(-1).appendSegment(segment));
   var thisSegmentFetcher = this;
@@ -14039,13 +14112,11 @@ SegmentFetcher.prototype.onTimeout = function(interest)
 /**
  * Check if the last component in the name is a segment number.
  * @param {Name} name The name to check.
- * @returns {boolean} True if the name ends with a segment number, otherwise false.
+ * @return {boolean} True if the name ends with a segment number, otherwise false.
  */
 SegmentFetcher.endsWithSegmentNumber = function(name)
 {
-  return name.size() >= 1 &&
-         name.get(-1).getValue().size() >= 1 &&
-         name.get(-1).getValue().buf()[0] == 0;
+  return name.size() >= 1 && name.get(-1).isSegment();
 };
 /**
  * Copyright (C) 2014-2016 Regents of the University of California.
@@ -14179,7 +14250,7 @@ MicroForwarderTransport.ConnectionInfo.prototype.name = "MicroForwarderTransport
  * Check if the fields of this MicroForwarderTransport.ConnectionInfo equal the other
  * MicroForwarderTransport.ConnectionInfo.
  * @param {MicroForwarderTransport.ConnectionInfo} The other object to check.
- * @returns {boolean} True if the objects have equal fields, false if not.
+ * @return {boolean} True if the objects have equal fields, false if not.
  */
 MicroForwarderTransport.ConnectionInfo.prototype.equals = function(other)
 {
@@ -14339,7 +14410,7 @@ WebSocketTransport.ConnectionInfo.prototype.name = "WebSocketTransport.Connectio
  * Check if the fields of this WebSocketTransport.ConnectionInfo equal the other
  * WebSocketTransport.ConnectionInfo.
  * @param {WebSocketTransport.ConnectionInfo} The other object to check.
- * @returns {boolean} True if the objects have equal fields, false if not.
+ * @return {boolean} True if the objects have equal fields, false if not.
  */
 WebSocketTransport.ConnectionInfo.prototype.equals = function(other)
 {
@@ -14388,7 +14459,7 @@ WebSocketTransport.prototype.isLocal = function(connectionInfo, onResult, onErro
  * @param {function} onopenCallback Once connected, call onopenCallback().
  * @param {type} onclosedCallback If the connection is closed by the remote host,
  * call onclosedCallback().
- * @returns {undefined}
+ * @return {undefined}
  */
 WebSocketTransport.prototype.connect = function
   (connectionInfo, elementListener, onopenCallback, onclosedCallback)
@@ -14538,6 +14609,7 @@ exports.TcpTransport = require("./transport/web-socket-transport").WebSocketTran
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
 var LOG = require('./log.js').Log.LOG;
+var DecodingException = require('./encoding/decoding-exception.js').DecodingException;
 
 /**
  * Create a new Name from components.
@@ -14573,15 +14645,21 @@ var Name = function Name(components)
 exports.Name = Name;
 
 /**
- * Create a new Name.Component with a copy of the given value.
+ * Create a new GENERIC Name.Component with a copy of the given value.
+ * (To create an ImplicitSha256Digest component, use fromImplicitSha256Digest.)
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer} value If the value is a string, encode it as utf8 (but don't unescape).
  * @constructor
  */
 Name.Component = function NameComponent(value)
 {
-  if (typeof value === 'object' && value instanceof Name.Component)
+  if (typeof value === 'object' && value instanceof Name.Component) {
+    // The copy constructor.
     this.value_ = value.value_;
-  else if (!value)
+    this.type_ = value.type_;
+    return;
+  }
+
+  if (!value)
     this.value_ = new Blob([]);
   else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&
            value instanceof ArrayBuffer)
@@ -14593,11 +14671,22 @@ Name.Component = function NameComponent(value)
   else
     // Blob will make a copy if needed.
     this.value_ = new Blob(value);
+
+  this.type_ = Name.Component.ComponentType.GENERIC;
+};
+
+/**
+ * A Name.Component.ComponentType specifies the recognized types of a name
+ * component.
+ */
+Name.Component.ComponentType = {
+  IMPLICIT_SHA256_DIGEST: 1,
+  GENERIC: 8
 };
 
 /**
  * Get the component value.
- * @returns {Blob} The component value.
+ * @return {Blob} The component value.
  */
 Name.Component.prototype.getValue = function()
 {
@@ -14623,71 +14712,98 @@ Object.defineProperty(Name.Component.prototype, "value",
 /**
  * Convert this component value to a string by escaping characters according to the NDN URI Scheme.
  * This also adds "..." to a value with zero or more ".".
- * @returns {string} The escaped string.
+ * This adds a type code prefix as needed, such as "sha256digest=".
+ * @return {string} The escaped string.
  */
 Name.Component.prototype.toEscapedString = function()
 {
-  return Name.toEscapedString(this.value_.buf());
+  if (this.type_ === Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST)
+    return "sha256digest=" + this.value_.toHex();
+  else
+    return Name.toEscapedString(this.value_.buf());
 };
 
 /**
  * Check if this component is a segment number according to NDN naming
  * conventions for "Segment number" (marker 0x00).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns {number}  True if this is a segment number.
+ * @return {number}  True if this is a segment number.
  */
 Name.Component.prototype.isSegment = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0x00;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0x00 &&
+         this.isGeneric();
 };
 
 /**
  * Check if this component is a segment byte offset according to NDN
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns  True if this is a segment byte offset.
+ * @return  True if this is a segment byte offset.
  */
 Name.Component.prototype.isSegmentOffset = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFB;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFB &&
+         this.isGeneric();
 };
 
 /**
  * Check if this component is a version number  according to NDN naming
  * conventions for "Versioning" (marker 0xFD).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns {number}  True if this is a version number.
+ * @return {number}  True if this is a version number.
  */
 Name.Component.prototype.isVersion = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFD;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFD &&
+         this.isGeneric();
 };
 
 /**
  * Check if this component is a timestamp  according to NDN naming
  * conventions for "Timestamp" (marker 0xFC).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns  True if this is a timestamp.
+ * @return  True if this is a timestamp.
  */
 Name.Component.prototype.isTimestamp = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFC;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFC &&
+         this.isGeneric();
 };
 
 /**
  * Check if this component is a sequence number according to NDN naming
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns  True if this is a sequence number.
+ * @return  True if this is a sequence number.
  */
 Name.Component.prototype.isSequenceNumber = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFE;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFE &&
+         this.isGeneric();
+};
+
+/**
+ * Check if this component is a generic component.
+ * @return {boolean} True if this is an generic component.
+ */
+Name.Component.prototype.isGeneric = function()
+{
+  return this.type_ === Name.Component.ComponentType.GENERIC;
+};
+
+/**
+ * Check if this component is an ImplicitSha256Digest component.
+ * @return {boolean} True if this is an ImplicitSha256Digest component.
+ */
+Name.Component.prototype.isImplicitSha256Digest = function()
+{
+  return this.type_ === Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST;
 };
 
 /**
  * Interpret this name component as a network-ordered number and return an integer.
- * @returns {number} The integer number.
+ * @return {number} The integer number.
  */
 Name.Component.prototype.toNumber = function()
 {
@@ -14698,7 +14814,7 @@ Name.Component.prototype.toNumber = function()
  * Interpret this name component as a network-ordered number with a marker and
  * return an integer.
  * @param {number} marker The required first byte of the component.
- * @returns {number} The integer number.
+ * @return {number} The integer number.
  * @throws Error If the first byte of the component does not equal the marker.
  */
 Name.Component.prototype.toNumberWithMarker = function(marker)
@@ -14713,7 +14829,7 @@ Name.Component.prototype.toNumberWithMarker = function(marker)
  * Interpret this name component as a segment number according to NDN naming
  * conventions for "Segment number" (marker 0x00).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns {number} The integer segment number.
+ * @return {number} The integer segment number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toSegment = function()
@@ -14725,7 +14841,7 @@ Name.Component.prototype.toSegment = function()
  * Interpret this name component as a segment byte offset according to NDN
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns The integer segment byte offset.
+ * @return The integer segment byte offset.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toSegmentOffset = function()
@@ -14738,7 +14854,7 @@ Name.Component.prototype.toSegmentOffset = function()
  * conventions for "Versioning" (marker 0xFD). Note that this returns
  * the exact number from the component without converting it to a time
  * representation.
- * @returns {number} The integer version number.
+ * @return {number} The integer version number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toVersion = function()
@@ -14750,7 +14866,7 @@ Name.Component.prototype.toVersion = function()
  * Interpret this name component as a timestamp  according to NDN naming
  * conventions for "Timestamp" (marker 0xFC).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns The number of microseconds since the UNIX epoch (Thursday,
+ * @return The number of microseconds since the UNIX epoch (Thursday,
  * 1 January 1970) not counting leap seconds.
  * @throws Error If the first byte of the component is not the expected marker.
  */
@@ -14763,7 +14879,7 @@ Name.Component.prototype.toTimestamp = function()
  * Interpret this name component as a sequence number according to NDN naming
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns The integer sequence number.
+ * @return The integer sequence number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toSequenceNumber = function()
@@ -14775,7 +14891,7 @@ Name.Component.prototype.toSequenceNumber = function()
  * Create a component whose value is the nonNegativeInteger encoding of the
  * number.
  * @param {number} number
- * @returns {Name.Component}
+ * @return {Name.Component}
  */
 Name.Component.fromNumber = function(number)
 {
@@ -14789,7 +14905,7 @@ Name.Component.fromNumber = function(number)
  * nonNegativeInteger encoding of the number.
  * @param {number} number
  * @param {number} marker
- * @returns {Name.Component}
+ * @return {Name.Component}
  */
 Name.Component.fromNumberWithMarker = function(number, marker)
 {
@@ -14864,8 +14980,28 @@ Name.Component.fromSequenceNumber = function(sequenceNumber)
 };
 
 /**
+ * Create a component of type ImplicitSha256DigestComponent, so that
+ * isImplicitSha256Digest() is true.
+ * @param {Blob|Buffer} digest The SHA-256 digest value.
+ * @return {Name.Component} The new Component.
+ * @throws DecodingException If the digest length is not 32 bytes.
+ */
+Name.Component.fromImplicitSha256Digest = function(digest)
+{
+  digestBlob = typeof digest === 'object' && digest instanceof Blob ?
+    digest : new Blob(digest, true);
+  if (digestBlob.size() !== 32)
+    throw new DecodingException
+      ("Name.Component.fromImplicitSha256Digest: The digest length must be 32 bytes");
+
+  var result = new Name.Component(digestBlob);
+  result.type_ = Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST;
+  return result;
+};
+
+/**
  * Get the successor of this component, as described in Name.getSuccessor.
- * @returns {Name.Component} A new Name.Component which is the successor of this.
+ * @return {Name.Component} A new Name.Component which is the successor of this.
  */
 Name.Component.prototype.getSuccessor = function()
 {
@@ -14897,18 +15033,18 @@ Name.Component.prototype.getSuccessor = function()
 /**
  * Check if this is the same component as other.
  * @param {Name.Component} other The other Component to compare with.
- * @returns {Boolean} true if the components are equal, otherwise false.
+ * @return {Boolean} true if the components are equal, otherwise false.
  */
 Name.Component.prototype.equals = function(other)
 {
   return typeof other === 'object' && other instanceof Name.Component &&
-    this.value_.equals(other.value_);
+    this.value_.equals(other.value_) && this.type_ === other.type_;
 };
 
 /**
  * Compare this to the other Component using NDN canonical ordering.
  * @param {Name.Component} other The other Component to compare with.
- * @returns {number} 0 if they compare equal, -1 if this comes before other in
+ * @return {number} 0 if they compare equal, -1 if this comes before other in
  * the canonical ordering, or 1 if this comes after other in the canonical
  * ordering.
  *
@@ -14916,6 +15052,11 @@ Name.Component.prototype.equals = function(other)
  */
 Name.Component.prototype.compare = function(other)
 {
+  if (this.type_ < other.type_)
+    return -1;
+  if (this.type_ > other.type_)
+    return 1;
+
   return Name.Component.compareBuffers(this.value_.buf(), other.value_.buf());
 };
 
@@ -14923,7 +15064,7 @@ Name.Component.prototype.compare = function(other)
  * Do the work of Name.Component.compare to compare the component buffers.
  * @param {Buffer} component1
  * @param {Buffer} component2
- * @returns {number} 0 if they compare equal, -1 if component1 comes before
+ * @return {number} 0 if they compare equal, -1 if component1 comes before
  * component2 in the canonical ordering, or 1 if component1 comes after
  * component2 in the canonical ordering.
  */
@@ -14986,17 +15127,25 @@ Name.createNameArray = function(uri)
   var array = uri.split('/');
 
   // Unescape the components.
+  var sha256digestPrefix = "sha256digest=";
   for (var i = 0; i < array.length; ++i) {
-    var value = Name.fromEscapedString(array[i]);
+    var component;
+    if (array[i].substr(0, sha256digestPrefix.length) == sha256digestPrefix) {
+      var hexString = array[i].substr(sha256digestPrefix.length).trim();
+      component = Name.Component.fromImplicitSha256Digest
+        (new Blob(new Buffer(hexString, 'hex')), false);
+    }
+    else
+      component = new Name.Component(Name.fromEscapedString(array[i]));
 
-    if (value.isNull()) {
+    if (component.getValue().isNull()) {
       // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
       array.splice(i, 1);
       --i;
       continue;
     }
     else
-      array[i] = new Name.Component(value);
+      array[i] = component;
   }
 
   return array;
@@ -15014,10 +15163,10 @@ Name.prototype.set = function(uri)
 };
 
 /**
- * Convert the component to a Buffer and append to this Name.
+ * Convert the component to a Buffer and append a GENERIC component to this Name.
  * Return this Name object to allow chaining calls to add.
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8 (but don't unescape).
- * @returns {Name}
+ * @return {Name}
  */
 Name.prototype.append = function(component)
 {
@@ -15032,6 +15181,9 @@ Name.prototype.append = function(component)
     for (var i = 0; i < components.length; ++i)
       this.components.push(new Name.Component(components[i]));
   }
+  else if (typeof component === 'object' && component instanceof Name.Component)
+    // The Component is immutable, so use it as is.
+    this.components.push(component);
   else
     // Just use the Name.Component constructor.
     this.components.push(new Name.Component(component));
@@ -15063,7 +15215,7 @@ Name.prototype.clear = function()
  * in the URI, e.g. "ndn:/example/name". If false, just return the path, e.g.
  * "/example/name". If ommitted, then just return the path which is the default
  * case where toUri() is used for display.
- * @returns {String}
+ * @return {String}
  */
 Name.prototype.toUri = function(includeScheme)
 {
@@ -15073,7 +15225,7 @@ Name.prototype.toUri = function(includeScheme)
   var result = includeScheme ? "ndn:" : "";
 
   for (var i = 0; i < this.size(); ++i)
-    result += "/"+ Name.toEscapedString(this.components[i].getValue().buf());
+    result += "/"+ this.components[i].toEscapedString();
 
   return result;
 };
@@ -15093,7 +15245,7 @@ Name.prototype.toString = function() { return this.toUri(); }
  * naming conventions for "Segment number" (marker 0x00).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} segment The segment number.
- * @returns {Name} This name so that you can chain calls to append.
+ * @return {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendSegment = function(segment)
 {
@@ -15105,7 +15257,7 @@ Name.prototype.appendSegment = function(segment)
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} segmentOffset The segment byte offset.
- * @returns {Name} This name so that you can chain calls to append.
+ * @return {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendSegmentOffset = function(segmentOffset)
 {
@@ -15118,7 +15270,7 @@ Name.prototype.appendSegmentOffset = function(segmentOffset)
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * Note that this encodes the exact value of version without converting from a time representation.
  * @param {number} version The version number.
- * @returns {Name} This name so that you can chain calls to append.
+ * @return {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendVersion = function(version)
 {
@@ -15131,7 +15283,7 @@ Name.prototype.appendVersion = function(version)
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} timestamp The number of microseconds since the UNIX epoch (Thursday,
  * 1 January 1970) not counting leap seconds.
- * @returns This name so that you can chain calls to append.
+ * @return This name so that you can chain calls to append.
  */
 Name.prototype.appendTimestamp = function(timestamp)
 {
@@ -15143,11 +15295,23 @@ Name.prototype.appendTimestamp = function(timestamp)
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} sequenceNumber The sequence number.
- * @returns This name so that you can chain calls to append.
+ * @return This name so that you can chain calls to append.
  */
 Name.prototype.appendSequenceNumber = function(sequenceNumber)
 {
   return this.append(Name.Component.fromSequenceNumber(sequenceNumber));
+};
+
+/**
+ * Append a component of type ImplicitSha256DigestComponent, so that
+ * isImplicitSha256Digest() is true.
+ * @param {Blob|Buffer} digest The SHA-256 digest value.
+ * @return This name so that you can chain calls to append.
+ * @throws DecodingException If the digest length is not 32 bytes.
+ */
+Name.prototype.appendImplicitSha256Digest = function(digest)
+{
+  return this.append(Name.Component.fromImplicitSha256Digest(digest));
 };
 
 /**
@@ -15166,7 +15330,7 @@ Name.prototype.addSegment = function(number)
  * @param {number} (optional) nComponents The number of components starting at
  * iStartComponent. If omitted or greater than the size of this name, get until
  * the end of the name.
- * @returns {Name} A new name.
+ * @return {Name} A new name.
  */
 Name.prototype.getSubName = function(iStartComponent, nComponents)
 {
@@ -15189,7 +15353,7 @@ Name.prototype.getSubName = function(iStartComponent, nComponents)
  * Return a new Name with the first nComponents components of this Name.
  * @param {number} nComponents The number of prefix components.  If nComponents is -N then return the prefix up
  * to name.size() - N. For example getPrefix(-1) returns the name without the final component.
- * @returns {Name} A new name.
+ * @return {Name} A new name.
  */
 Name.prototype.getPrefix = function(nComponents)
 {
@@ -15209,7 +15373,7 @@ Name.prototype.cut = function(nComponents)
 
 /**
  * Return the number of name components.
- * @returns {number}
+ * @return {number}
  */
 Name.prototype.size = function()
 {
@@ -15220,7 +15384,8 @@ Name.prototype.size = function()
  * Get a Name Component by index number.
  * @param {Number} i The index of the component, starting from 0.  However, if i is negative, return the component
  * at size() - (-i).
- * @returns {Name.Component}
+ * @return {Name.Component} The name component at the index. You must not
+ * change the returned Name.Component object.
  */
 Name.prototype.get = function(i)
 {
@@ -15228,14 +15393,14 @@ Name.prototype.get = function(i)
     if (i >= this.components.length)
       throw new Error("Name.get: Index is out of bounds");
 
-    return new Name.Component(this.components[i]);
+    return this.components[i];
   }
   else {
     // Negative index.
     if (i < -this.components.length)
       throw new Error("Name.get: Index is out of bounds");
 
-    return new Name.Component(this.components[this.components.length - (-i)]);
+    return this.components[this.components.length - (-i)];
   }
 };
 
@@ -15281,7 +15446,7 @@ Name.prototype.indexOfFileName = function()
  * Encode this Name for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 Name.prototype.wireEncode = function(wireFormat)
 {
@@ -15298,10 +15463,11 @@ Name.prototype.wireEncode = function(wireFormat)
 Name.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeName(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeName(this, input.buf(), false);
+  else
+    wireFormat.decodeName(this, input, true);
 };
 
 /**
@@ -15315,10 +15481,7 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * is intuitive because all names with the prefix /a are next to each other.
  * But it may be also be counter-intuitive because /c comes before /bb according
  * to NDN canonical ordering since it is shorter.
- * @param {Name} other The other Name to compare with.
- * @returns {boolean} If they compare equal, -1 if *this comes before other in
- * the canonical ordering, or 1 if *this comes after other in the canonical
- * ordering. The first form of compare is simply compare(other). The second form is
+ * The first form of compare is simply compare(other). The second form is
  * compare(iStartComponent, nComponents, other [, iOtherStartComponent] [, nOtherComponents])
  * which is equivalent to
  * self.getSubName(iStartComponent, nComponents).compare
@@ -15329,7 +15492,7 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * @param {number} nComponents The number of components starting at
  * iStartComponent. If greater than the size of this name, compare until the end
  * of the name.
- * @param {Name other: The other Name to compare with.
+ * @param {Name} other The other Name to compare with.
  * @param {number} iOtherStartComponent (optional) The index if the first
  * component of the other name to compare. If iOtherStartComponent is -N then
  * compare components starting from other.size() - N. If omitted, compare
@@ -15337,7 +15500,7 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * @param {number} nOtherComponents (optional) The number of components
  * starting at iOtherStartComponent. If omitted or greater than the size of this
  * name, compare until the end of the name.
- * @returns {number} 0 If they compare equal, -1 if self comes before other in
+ * @return {number} 0 If they compare equal, -1 if self comes before other in
  * the canonical ordering, or 1 if self comes after other in the canonical
  * ordering.
  * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html
@@ -15457,9 +15620,11 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
 
 /**
  * Return value as an escaped string according to NDN URI Scheme.
- * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
+ * We can't use encodeURIComponent because that doesn't encode all the 
+ * characters we want to.
+ * This does not add a type code prefix such as "sha256digest=".
  * @param {Buffer|Name.Component} component The value or Name.Component to escape.
- * @returns {string} The escaped string.
+ * @return {string} The escaped string.
  */
 Name.toEscapedString = function(value)
 {
@@ -15499,9 +15664,11 @@ Name.toEscapedString = function(value)
 
 /**
  * Make a blob value by decoding the escapedString according to NDN URI Scheme.
- * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
+ * If escapedString is "", "." or ".." then return null, which means to skip the 
+ * component in the name.
+ * This does not check for a type code prefix such as "sha256digest=".
  * @param {string} escapedString The escaped string to decode.
- * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
+ * @return {Blob} The unescaped Blob value. If the escapedString is not a valid
  * escaped component, then the Blob isNull().
  */
 Name.fromEscapedString = function(escapedString)
@@ -15549,7 +15716,7 @@ Name.fromEscapedStringAsBuffer = function(escapedString)
  * - The successor of /%00%01/%01%FF is /%00%01/%02%00
  * - The successor of /%00%01/%FF%FF is /%00%01/%00%00%00
  *
- * @returns {Name} A new name which is the successor of this.
+ * @return {Name} A new name which is the successor of this.
  */
 Name.prototype.getSuccessor = function()
 {
@@ -15567,7 +15734,7 @@ Name.prototype.getSuccessor = function()
  * Return true if the N components of this name are the same as the first N
  * components of the given name.
  * @param {Name} name The name to check.
- * @returns {Boolean} true if this matches the given name. This always returns
+ * @return {Boolean} true if this matches the given name. This always returns
  * true if this name is empty.
  */
 Name.prototype.match = function(name)
@@ -15593,14 +15760,14 @@ Name.prototype.match = function(name)
  * Return true if the N components of this name are the same as the first N
  * components of the given name.
  * @param {Name} name The name to check.
- * @returns {Boolean} true if this matches the given name. This always returns
+ * @return {Boolean} true if this matches the given name. This always returns
  * true if this name is empty.
  */
 Name.prototype.isPrefixOf = function(name) { return this.match(name); }
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Name.prototype.getChangeCount = function()
 {
@@ -15678,13 +15845,14 @@ exports.KeyLocator = KeyLocator;
  * Get the key locator type. If KeyLocatorType.KEYNAME, you may also
  * getKeyName().  If KeyLocatorType.KEY_LOCATOR_DIGEST, you may also
  * getKeyData() to get the digest.
- * @returns {number} The key locator type, or null if not specified.
+ * @return {number} The key locator type as a KeyLocatorType enum value,
+ * or null if not specified.
  */
 KeyLocator.prototype.getType = function() { return this.type_; };
 
 /**
  * Get the key name.  This is meaningful if getType() is KeyLocatorType.KEYNAME.
- * @returns {Name} The key name. If not specified, the Name is empty.
+ * @return {Name} The key name. If not specified, the Name is empty.
  */
 KeyLocator.prototype.getKeyName = function()
 {
@@ -15694,7 +15862,7 @@ KeyLocator.prototype.getKeyName = function()
 /**
  * Get the key data. If getType() is KeyLocatorType.KEY_LOCATOR_DIGEST, this is
  * the digest bytes.
- * @returns {Blob} The key data, or null if not specified.
+ * @return {Blob} The key data, or an isNull Blob if not specified.
  */
 KeyLocator.prototype.getKeyData = function()
 {
@@ -15714,7 +15882,8 @@ KeyLocator.prototype.getKeyDataAsBuffer = function()
  * Set the key locator type.  If KeyLocatorType.KEYNAME, you must also
  * setKeyName().  If KeyLocatorType.KEY_LOCATOR_DIGEST, you must also
  * setKeyData() to the digest.
- * @param {number} type The key locator type.  If null, the type is unspecified.
+ * @param {number} type The key locator type as a KeyLocatorType enum value.  If
+ * null, the type is unspecified.
  */
 KeyLocator.prototype.setType = function(type)
 {
@@ -15758,6 +15927,28 @@ KeyLocator.prototype.clear = function()
 };
 
 /**
+ * Check if this key locator has the same values as the given key locator.
+ * @param {KeyLocator} other The other key locator to check.
+ * @return {boolean} true if the key locators are equal, otherwise false.
+ */
+KeyLocator.prototype.equals = function(other)
+{
+    if (this.type_ != other.type_)
+      return false;
+
+    if (this.type_ == KeyLocatorType.KEYNAME) {
+      if (!this.getKeyName().equals(other.getKeyName()))
+        return false;
+    }
+    else if (this.type_ == KeyLocatorType.KEY_LOCATOR_DIGEST) {
+      if (!this.getKeyData().equals(other.getKeyData()))
+        return false;
+    }
+
+    return true;
+};
+
+/**
  * If the signature is a type that has a KeyLocator (so that,
  * getFromSignature will succeed), return true.
  * Note: This is a static method of KeyLocator instead of a method of
@@ -15765,7 +15956,7 @@ KeyLocator.prototype.clear = function()
  * with all the different kinds of information that various signature
  * algorithms may use.
  * @param {Signature} signature An object of a subclass of Signature.
- * @returns {boolean} True if the signature is a type that has a KeyLocator,
+ * @return {boolean} True if the signature is a type that has a KeyLocator,
  * otherwise false.
  */
 KeyLocator.canGetFromSignature = function(signature)
@@ -15778,7 +15969,7 @@ KeyLocator.canGetFromSignature = function(signature)
  * If the signature is a type that has a KeyLocator, then return it. Otherwise
  * throw an error.
  * @param {Signature} signature An object of a subclass of Signature.
- * @returns {KeyLocator} The signature's KeyLocator. It is an error if signature
+ * @return {KeyLocator} The signature's KeyLocator. It is an error if signature
  * doesn't have a KeyLocator.
  */
 KeyLocator.getFromSignature = function(signature)
@@ -15794,7 +15985,7 @@ KeyLocator.getFromSignature = function(signature)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 KeyLocator.prototype.getChangeCount = function()
 {
@@ -15903,7 +16094,7 @@ exports.MetaInfo = MetaInfo;
 
 /**
  * Get the content type.
- * @returns {number} The content type as an int from ContentType. If this is
+ * @return {number} The content type as an int from ContentType. If this is
  * ContentType.OTHER_CODE, then call getOtherTypeCode() to get the unrecognized
  * content type code.
  */
@@ -15925,7 +16116,7 @@ MetaInfo.prototype.getOtherTypeCode = function()
 
 /**
  * Get the freshness period.
- * @returns {number} The freshness period in milliseconds, or null if not
+ * @return {number} The freshness period in milliseconds, or null if not
  * specified.
  */
 MetaInfo.prototype.getFreshnessPeriod = function()
@@ -15935,7 +16126,7 @@ MetaInfo.prototype.getFreshnessPeriod = function()
 
 /**
  * Get the final block ID.
- * @returns {Name.Component} The final block ID as a Name.Component. If the
+ * @return {Name.Component} The final block ID as a Name.Component. If the
  * Name.Component getValue().size() is 0, then the final block ID is not specified.
  */
 MetaInfo.prototype.getFinalBlockId = function()
@@ -15972,6 +16163,13 @@ MetaInfo.prototype.setType = function(type)
   ++this.changeCount_;
 };
 
+/**
+ * Set the packet’s content type code to use when the content type enum is
+ * ContentType.OTHER_CODE. If the packet’s content type code is a recognized
+ * enum value, just call setType().
+ * @param {number} otherTypeCode The packet’s unrecognized content type code,
+ * which must be non-negative.
+ */
 MetaInfo.prototype.setOtherTypeCode = function(otherTypeCode)
 {
   if (otherTypeCode < 0)
@@ -15983,12 +16181,11 @@ MetaInfo.prototype.setOtherTypeCode = function(otherTypeCode)
 
 /**
  * Set the freshness period.
- * @param {type} freshnessPeriod The freshness period in milliseconds, or null
+ * @param {number} freshnessPeriod The freshness period in milliseconds, or null
  * for not specified.
  */
 MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
 {
-  // Use attribute freshnessSeconds for backwards compatibility.
   if (freshnessPeriod == null || freshnessPeriod < 0)
     this.freshnessPeriod_ = null;
   else
@@ -15996,6 +16193,12 @@ MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
   ++this.changeCount_;
 };
 
+/**
+ * Set the final block ID.
+ * @param {Name.Component} finalBlockId The final block ID as a Name.Component.
+ * If not specified, set to a new default Name.Component(), or to a
+ * Name.Component where getValue().size() is 0.
+ */
 MetaInfo.prototype.setFinalBlockId = function(finalBlockId)
 {
   this.finalBlockId_ = typeof finalBlockId === 'object' &&
@@ -16014,7 +16217,7 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 MetaInfo.prototype.getChangeCount = function()
 {
@@ -16104,7 +16307,7 @@ exports.Sha256WithRsaSignature = Sha256WithRsaSignature;
 
 /**
  * Create a new Sha256WithRsaSignature which is a copy of this object.
- * @returns {Sha256WithRsaSignature} A new object which is a copy of this object.
+ * @return {Sha256WithRsaSignature} A new object which is a copy of this object.
  */
 Sha256WithRsaSignature.prototype.clone = function()
 {
@@ -16113,7 +16316,7 @@ Sha256WithRsaSignature.prototype.clone = function()
 
 /**
  * Get the key locator.
- * @returns {KeyLocator} The key locator.
+ * @return {KeyLocator} The key locator.
  */
 Sha256WithRsaSignature.prototype.getKeyLocator = function()
 {
@@ -16122,7 +16325,7 @@ Sha256WithRsaSignature.prototype.getKeyLocator = function()
 
 /**
  * Get the data packet's signature bytes.
- * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 Sha256WithRsaSignature.prototype.getSignature = function()
 {
@@ -16164,7 +16367,7 @@ Sha256WithRsaSignature.prototype.setSignature = function(signature)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Sha256WithRsaSignature.prototype.getChangeCount = function()
 {
@@ -16243,7 +16446,7 @@ exports.GenericSignature = GenericSignature;
 
 /**
  * Create a new GenericSignature which is a copy of this object.
- * @returns {GenericSignature} A new object which is a copy of this object.
+ * @return {GenericSignature} A new object which is a copy of this object.
  */
 GenericSignature.prototype.clone = function()
 {
@@ -16252,7 +16455,7 @@ GenericSignature.prototype.clone = function()
 
 /**
  * Get the data packet's signature bytes.
- * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 GenericSignature.prototype.getSignature = function()
 { 
@@ -16271,7 +16474,7 @@ GenericSignature.prototype.getSignatureAsBuffer = function()
 /**
  * Get the bytes of the entire signature info encoding (including the type
  * code).
- * @returns {Blob} The encoding bytes. If not specified, the value isNull().
+ * @return {Blob} The encoding bytes. If not specified, the value isNull().
  */
 GenericSignature.prototype.getSignatureInfoEncoding = function()
 {
@@ -16283,7 +16486,7 @@ GenericSignature.prototype.getSignatureInfoEncoding = function()
  * setSignatureInfoEncoding, it sets the type code. Note that the type code
  * is ignored during wire encode, which simply uses getSignatureInfoEncoding()
  * where the encoding already has the type code.
- * @returns {number} The type code, or null if not known.
+ * @return {number} The type code, or null if not known.
  */
 GenericSignature.prototype.getTypeCode = function() { return this.typeCode_; };
 
@@ -16319,7 +16522,7 @@ GenericSignature.prototype.setSignatureInfoEncoding = function
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 GenericSignature.prototype.getChangeCount = function()
 {
@@ -16387,7 +16590,7 @@ exports.HmacWithSha256Signature = HmacWithSha256Signature;
 
 /**
  * Create a new HmacWithSha256Signature which is a copy of this object.
- * @returns {HmacWithSha256Signature} A new object which is a copy of this object.
+ * @return {HmacWithSha256Signature} A new object which is a copy of this object.
  */
 HmacWithSha256Signature.prototype.clone = function()
 {
@@ -16396,7 +16599,7 @@ HmacWithSha256Signature.prototype.clone = function()
 
 /**
  * Get the key locator.
- * @returns {KeyLocator} The key locator.
+ * @return {KeyLocator} The key locator.
  */
 HmacWithSha256Signature.prototype.getKeyLocator = function()
 {
@@ -16405,7 +16608,7 @@ HmacWithSha256Signature.prototype.getKeyLocator = function()
 
 /**
  * Get the data packet's signature bytes.
- * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 HmacWithSha256Signature.prototype.getSignature = function()
 {
@@ -16447,7 +16650,7 @@ HmacWithSha256Signature.prototype.setSignature = function(signature)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 HmacWithSha256Signature.prototype.getChangeCount = function()
 {
@@ -16521,7 +16724,7 @@ exports.DigestSha256Signature = DigestSha256Signature;
 
 /**
  * Create a new DigestSha256Signature which is a copy of this object.
- * @returns {DigestSha256Signature} A new object which is a copy of this object.
+ * @return {DigestSha256Signature} A new object which is a copy of this object.
  */
 DigestSha256Signature.prototype.clone = function()
 {
@@ -16530,7 +16733,7 @@ DigestSha256Signature.prototype.clone = function()
 
 /**
  * Get the signature bytes (which are only the digest).
- * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 DigestSha256Signature.prototype.getSignature = function()
 {
@@ -16550,7 +16753,7 @@ DigestSha256Signature.prototype.setSignature = function(signature)
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 DigestSha256Signature.prototype.getChangeCount = function()
 {
@@ -16593,7 +16796,8 @@ var Name = require('./name.js').Name; /** @ignore */
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var MetaInfo = require('./meta-info.js').MetaInfo; /** @ignore */
 var IncomingFaceId = require('./lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
+var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
+var Crypto = require('./crypto.js');
 
 /**
  * Create a new Data with the optional values.  There are 2 forms of constructor:
@@ -16611,12 +16815,13 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     // The copy constructor.
     var data = nameOrData;
 
-    // Copy the name.
+    // Copy the Data object.
     this.name_ = new ChangeCounter(new Name(data.getName()));
     this.metaInfo_ = new ChangeCounter(new MetaInfo(data.getMetaInfo()));
     this.signature_ = new ChangeCounter(data.getSignature().clone());
     this.content_ = data.content_;
     this.defaultWireEncoding_ = data.getDefaultWireEncoding();
+    this.defaultFullName_ = data.defaultFullName_;
     this.defaultWireEncodingFormat_ = data.defaultWireEncodingFormat_;
   }
   else {
@@ -16647,6 +16852,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
 
     this.signature_ = new ChangeCounter(new Sha256WithRsaSignature());
     this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultFullName_ = new Name();
     this.defaultWireEncodingFormat_ = null;
   }
 
@@ -16659,7 +16865,7 @@ exports.Data = Data;
 
 /**
  * Get the data packet's name.
- * @returns {Name} The name.
+ * @return {Name} The name. If not specified, the name size() is 0.
  */
 Data.prototype.getName = function()
 {
@@ -16668,7 +16874,7 @@ Data.prototype.getName = function()
 
 /**
  * Get the data packet's meta info.
- * @returns {MetaInfo} The meta info.
+ * @return {MetaInfo} The meta info.
  */
 Data.prototype.getMetaInfo = function()
 {
@@ -16677,7 +16883,7 @@ Data.prototype.getMetaInfo = function()
 
 /**
  * Get the data packet's signature object.
- * @returns {Signature} The signature object.
+ * @return {Signature} The signature object.
  */
 Data.prototype.getSignature = function()
 {
@@ -16686,7 +16892,7 @@ Data.prototype.getSignature = function()
 
 /**
  * Get the data packet's content.
- * @returns {Blob} The content as a Blob, which isNull() if unspecified.
+ * @return {Blob} The content as a Blob, which isNull() if unspecified.
  */
 Data.prototype.getContent = function()
 {
@@ -16705,7 +16911,7 @@ Data.prototype.getContentAsBuffer = function()
 /**
  * Return the default wire encoding, which was encoded with
  * getDefaultWireEncodingFormat().
- * @returns {SignedBlob} The default wire encoding, whose isNull() may be true
+ * @return {SignedBlob} The default wire encoding, whose isNull() may be true
  * if there is no default wire encoding.
  */
 Data.prototype.getDefaultWireEncoding = function()
@@ -16722,7 +16928,7 @@ Data.prototype.getDefaultWireEncoding = function()
 
 /**
  * Get the WireFormat which is used by getDefaultWireEncoding().
- * @returns {WireFormat} The WireFormat, which is only meaningful if the
+ * @return {WireFormat} The WireFormat, which is only meaningful if the
  * getDefaultWireEncoding() is not isNull().
  */
 Data.prototype.getDefaultWireEncodingFormat = function()
@@ -16742,9 +16948,43 @@ Data.prototype.getIncomingFaceId = function()
 };
 
 /**
+ * Get the Data packet's full name, which includes the final
+ * ImplicitSha256Digest component based on the wire encoding for a particular
+ * wire format.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @return {Name} The full name. You must not change the Name object - if you
+ * need to change it then make a copy.
+ */
+Data.prototype.getFullName = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  // The default full name depends on the default wire encoding.
+  if (!this.getDefaultWireEncoding().isNull() &&
+      this.defaultFullName_.size() > 0 &&
+      this.getDefaultWireEncodingFormat() == wireFormat)
+    // We already have a full name. A non-null default wire encoding means
+    // that the Data packet fields have not changed.
+    return this.defaultFullName_;
+
+  var fullName = new Name(this.getName());
+  var hash = Crypto.createHash('sha256');
+  // wireEncode will use the cached encoding if possible.
+  hash.update(this.wireEncode(wireFormat).buf());
+  fullName.appendImplicitSha256Digest(new Blob(hash.digest(), false));
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // wireEncode has already set defaultWireEncodingFormat_.
+    this.defaultFullName_ = fullName;
+
+  return fullName;
+};
+
+/**
  * Set name to a copy of the given Name.
  * @param {Name} name The Name which is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setName = function(name)
 {
@@ -16757,7 +16997,7 @@ Data.prototype.setName = function(name)
 /**
  * Set metaInfo to a copy of the given MetaInfo.
  * @param {MetaInfo} metaInfo The MetaInfo which is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setMetaInfo = function(metaInfo)
 {
@@ -16770,7 +17010,7 @@ Data.prototype.setMetaInfo = function(metaInfo)
 /**
  * Set the signature to a copy of the given signature.
  * @param {Signature} signature The signature object which is cloned.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setSignature = function(signature)
 {
@@ -16785,7 +17025,7 @@ Data.prototype.setSignature = function(signature)
  * @param {Blob|Buffer} content The content bytes. If content is not a Blob,
  * then create a new Blob to copy the bytes (otherwise take another pointer to
  * the same Blob).
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setContent = function(content)
 {
@@ -16800,7 +17040,7 @@ Data.prototype.setContent = function(content)
  * wire format, also set the defaultWireEncoding field to the encoded result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
+ * @return {SignedBlob} The encoded buffer in a SignedBlob object.
  */
 Data.prototype.wireEncode = function(wireFormat)
 {
@@ -16835,10 +17075,12 @@ Data.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  var result = wireFormat.decodeData(this, decodeBuffer);
+  var result;
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    result = wireFormat.decodeData(this, input.buf(), false);
+  else
+    result = wireFormat.decodeData(this, input, true);
 
   if (wireFormat == WireFormat.getDefaultWireFormat())
     // This is the default wire encoding.  In the Blob constructor, set copy
@@ -16868,7 +17110,7 @@ Data.prototype.setLpPacket = function(lpPacket)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Data.prototype.getChangeCount = function()
 {
@@ -17211,7 +17453,7 @@ exports.PublicKey = PublicKey;
 
 /**
  * Encode the public key into DER.
- * @returns {DerNode} The encoded DER syntax tree.
+ * @return {DerNode} The encoded DER syntax tree.
  */
 PublicKey.prototype.toDer = function()
 {
@@ -17220,7 +17462,7 @@ PublicKey.prototype.toDer = function()
 
 /**
  * Get the key type.
- * @returns {number} The key type as an int from KeyType.
+ * @return {number} The key type as an int from KeyType.
  */
 PublicKey.prototype.getKeyType = function()
 {
@@ -17231,7 +17473,7 @@ PublicKey.prototype.getKeyType = function()
  * Get the digest of the public key.
  * @param {number} digestAlgorithm (optional) The integer from DigestAlgorithm,
  * such as DigestAlgorithm.SHA256. If omitted, use DigestAlgorithm.SHA256 .
- * @returns {Blob} The digest value.
+ * @return {Blob} The digest value.
  */
 PublicKey.prototype.getDigest = function(digestAlgorithm)
 {
@@ -17249,7 +17491,7 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
 
 /**
  * Get the raw bytes of the public key in DER format.
- * @returns {Blob} The public key DER.
+ * @return {Blob} The public key DER.
  */
 PublicKey.prototype.getKeyDer = function()
 {
@@ -17306,7 +17548,7 @@ exports.CertificateExtension = CertificateExtension;
 
 /**
  * Encode the object into a DER syntax tree.
- * @returns {DerNode} The encoded DER syntax tree.
+ * @return {DerNode} The encoded DER syntax tree.
  */
 CertificateExtension.prototype.toDer = function()
 {
@@ -17393,7 +17635,7 @@ exports.CertificateSubjectDescription = CertificateSubjectDescription;
 
 /**
  * Encode the object into a DER syntax tree.
- * @returns {DerNode} The encoded DER syntax tree.
+ * @return {DerNode} The encoded DER syntax tree.
  */
 CertificateSubjectDescription.prototype.toDer = function()
 {
@@ -17499,7 +17741,7 @@ Certificate.prototype.addSubjectDescription = function(description)
 
 /**
  * Get the subject description list.
- * @returns {Array<CertificateSubjectDescription>} The subject description list.
+ * @return {Array<CertificateSubjectDescription>} The subject description list.
  */
 Certificate.prototype.getSubjectDescriptionList = function()
 {
@@ -17517,7 +17759,7 @@ Certificate.prototype.addExtension = function(extension)
 
 /**
  * Get the certificate extension list.
- * @returns {Array<CertificateExtension>} The extension list.
+ * @return {Array<CertificateExtension>} The extension list.
  */
 Certificate.prototype.getExtensionList = function()
 {
@@ -17556,7 +17798,7 @@ Certificate.prototype.getPublicKeyInfo = function()
 
 /**
  * Check if the certificate is valid.
- * @returns {Boolean} True if the current time is earlier than notBefore.
+ * @return {Boolean} True if the current time is earlier than notBefore.
  */
 Certificate.prototype.isTooEarly = function()
 {
@@ -17566,7 +17808,7 @@ Certificate.prototype.isTooEarly = function()
 
 /**
  * Check if the certificate is valid.
- * @returns {Boolean} True if the current time is later than notAfter.
+ * @return {Boolean} True if the current time is later than notAfter.
  */
 Certificate.prototype.isTooLate = function()
 {
@@ -17576,7 +17818,7 @@ Certificate.prototype.isTooLate = function()
 
 /**
  * Encode the certificate fields in DER format.
- * @returns {DerSequence} The DER encoded contents of the certificate.
+ * @return {DerSequence} The DER encoded contents of the certificate.
  */
 Certificate.prototype.toDer = function()
 {
@@ -17710,7 +17952,7 @@ Certificate.prototype.toString = function()
 /**
  * Convert a UNIX timestamp to ISO time representation with the "T" in the middle.
  * @param {type} msSince1970 Timestamp as milliseconds since Jan 1, 1970.
- * @returns {string} The string representation.
+ * @return {string} The string representation.
  */
 Certificate.toIsoString = function(msSince1970)
 {
@@ -17727,7 +17969,7 @@ Certificate.toIsoString = function(msSince1970)
 /**
  * A private method to zero pad an integer to 2 digits.
  * @param {number} x The number to pad.  Assume it is a non-negative integer.
- * @returns {string} The padded string.
+ * @return {string} The padded string.
  */
 Certificate.to2DigitString = function(x)
 {
@@ -17795,7 +18037,7 @@ exports.IdentityCertificate = IdentityCertificate;
  * Override the base class method to check that the name is a valid identity
  * certificate name.
  * @param {Name} name The identity certificate name which is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 IdentityCertificate.prototype.setName = function(name)
 {
@@ -17835,7 +18077,7 @@ IdentityCertificate.isIdentityCertificate = function(certificate)
 /**
  * Get the public key name from the full certificate name.
  * @param {Name} certificateName The full certificate name.
- * @returns {Name} The related public key name.
+ * @return {Name} The related public key name.
  */
 IdentityCertificate.certificateNameToPublicKeyName = function(certificateName)
 {
@@ -17949,7 +18191,7 @@ exports.IdentityStorage = IdentityStorage;
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @returns {Promise|SyncPromise} A promise which returns true if the identity
+ * @return {Promise|SyncPromise} A promise which returns true if the identity
  * exists.
  */
 IdentityStorage.prototype.doesIdentityExistPromise = function
@@ -17962,7 +18204,7 @@ IdentityStorage.prototype.doesIdentityExistPromise = function
 /**
  * Check if the specified identity already exists.
  * @param {Name} identityName The identity name.
- * @returns {boolean} true if the identity exists, otherwise false.
+ * @return {boolean} true if the identity exists, otherwise false.
  * @throws Error If doesIdentityExistPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
@@ -17999,7 +18241,7 @@ IdentityStorage.prototype.addIdentity = function(identityName)
 
 /**
  * Revoke the identity.
- * @returns {boolean} true if the identity was revoked, false if not.
+ * @return {boolean} true if the identity was revoked, false if not.
  */
 IdentityStorage.prototype.revokeIdentity = function()
 {
@@ -18014,7 +18256,7 @@ IdentityStorage.prototype.revokeIdentity = function()
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @returns {Promise|SyncPromise} A promise that returns the generated key Name.
+ * @return {Promise|SyncPromise} A promise that returns the generated key Name.
  */
 IdentityStorage.prototype.getNewKeyNamePromise = function
   (identityName, useKsk, useSync)
@@ -18049,7 +18291,7 @@ IdentityStorage.prototype.getNewKeyNamePromise = function
  * Generate a name for a new key belonging to the identity.
  * @param {Name} identityName The identity name.
  * @param {boolean} useKsk If true, generate a KSK name, otherwise a DSK name.
- * @returns {Name} The generated key name.
+ * @return {Name} The generated key name.
  * @throws Error If getNewKeyNamePromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
@@ -18076,7 +18318,7 @@ IdentityStorage.prototype.doesKeyExistPromise = function(keyName, useSync)
 /**
  * Check if the specified key already exists.
  * @param {Name} keyName The name of the key.
- * @returns {boolean} true if the key exists, otherwise false.
+ * @return {boolean} true if the key exists, otherwise false.
  * @throws Error If doesKeyExistPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
@@ -18140,7 +18382,7 @@ IdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 /**
  * Get the public key DER blob from the identity storage.
  * @param {Name} keyName The name of the requested public key.
- * @returns {Blob} The DER Blob.
+ * @return {Blob} The DER Blob.
  * @throws SecurityException if the key doesn't exist.
  * @throws Error If getKeyPromise doesn't return a SyncPromise which
  * is already fulfilled.
@@ -18189,7 +18431,7 @@ IdentityStorage.prototype.doesCertificateExistPromise = function
 /**
  * Check if the specified certificate already exists.
  * @param {Name} certificateName The name of the certificate.
- * @returns {boolean} true if the certificate exists, otherwise false.
+ * @return {boolean} true if the certificate exists, otherwise false.
  * @throws Error If doesCertificateExistPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
@@ -18249,7 +18491,7 @@ IdentityStorage.prototype.getCertificatePromise = function
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @returns {IdentityCertificate} The requested certificate.
+ * @return {IdentityCertificate} The requested certificate.
  * @throws SecurityException if the certificate doesn't exist.
  * @throws Error If getCertificatePromise doesn't return a SyncPromise which
  * is already fulfilled.
@@ -18274,7 +18516,7 @@ IdentityStorage.prototype.getTpmLocatorPromise = function(useSync)
 
 /**
  * Get the TPM locator associated with this storage.
- * @returns {string} The TPM locator.
+ * @return {string} The TPM locator.
  * @throws SecurityException if the TPM locator doesn't exist.
  * @throws Error If getTpmLocatorPromise doesn't return a SyncPromise which is
  * already fulfilled.
@@ -18305,7 +18547,7 @@ IdentityStorage.prototype.getDefaultIdentityPromise = function(useSync)
 
 /**
  * Get the default identity.
- * @returns {Name} The name of default identity.
+ * @return {Name} The name of default identity.
  * @throws SecurityException if the default identity is not set.
  * @throws Error If getDefaultIdentityPromise doesn't return a SyncPromise
  * which is already fulfilled.
@@ -18336,7 +18578,7 @@ IdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = function
 /**
  * Get the default key name for the specified identity.
  * @param {Name} identityName The identity name.
- * @returns {Name} The default key name.
+ * @return {Name} The default key name.
  * @throws SecurityException if the default key name for the identity is not set.
  * @throws Error If getDefaultKeyNameForIdentityPromise doesn't return a
  * SyncPromise which is already fulfilled.
@@ -18371,7 +18613,7 @@ IdentityStorage.prototype.getDefaultCertificateNameForIdentityPromise = function
 /**
  * Get the default certificate name for the specified identity.
  * @param {Name} identityName The identity name.
- * @returns {Name} The default certificate name.
+ * @return {Name} The default certificate name.
  * @throws SecurityException if the default key name for the identity is not
  * set or the default certificate name for the key name is not set.
  * @throws Error If getDefaultCertificateNameForIdentityPromise doesn't return
@@ -18404,7 +18646,7 @@ IdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = function
 /**
  * Get the default certificate name for the specified key.
  * @param {Name} keyName The key name.
- * @returns {Name} The default certificate name.
+ * @return {Name} The default certificate name.
  * @throws SecurityException if the default certificate name for the key name
  * is not set.
  * @throws Error If getDefaultCertificateNameForKeyPromise doesn't return a
@@ -18611,7 +18853,7 @@ IdentityStorage.prototype.getDefaultCertificatePromise = function(useSync)
 
 /**
  * Get the certificate of the default identity.
- * @returns {IdentityCertificate} The requested certificate.  If not found,
+ * @return {IdentityCertificate} The requested certificate.  If not found,
  * return null.
  * @throws Error If getDefaultCertificatePromise doesn't return a SyncPromise
  * which is already fulfilled.
@@ -18776,7 +19018,7 @@ IndexedDbIdentityStorage.prototype.name = "IndexedDbIdentityStorage";
  * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @returns {Promise} A promise which returns true if the identity exists.
+ * @return {Promise} A promise which returns true if the identity exists.
  */
 IndexedDbIdentityStorage.prototype.doesIdentityExistPromise = function
   (identityName, useSync)
@@ -19471,7 +19713,7 @@ exports.MemoryIdentityStorage = MemoryIdentityStorage;
 /**
  * Check if the specified identity already exists.
  * @param {Name} identityName The identity name.
- * @returns {SyncPromise} A promise which returns true if the identity exists.
+ * @return {SyncPromise} A promise which returns true if the identity exists.
  */
 MemoryIdentityStorage.prototype.doesIdentityExistPromise = function(identityName)
 {
@@ -21062,7 +21304,7 @@ IdentityManager.prototype.getDefaultIdentityPromise = function(useSync)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
- * @returns {Name} If onComplete is omitted, return the name of the default
+ * @return {Name} If onComplete is omitted, return the name of the default
  * identity. Otherwise, if onComplete is supplied then return undefined and use
  * onComplete as described above.
  * @throws SecurityException if the default identity is not set. However, if
@@ -22337,7 +22579,7 @@ exports.PolicyManager = PolicyManager;
  * Your derived class should override.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True if the data or interest does not need to be verified
+ * @return {boolean} True if the data or interest does not need to be verified
  * to be trusted as valid, otherwise false.
  */
 PolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
@@ -22351,7 +22593,7 @@ PolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * Your derived class should override.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True if the data or interest must be verified, otherwise
+ * @return {boolean} True if the data or interest must be verified, otherwise
  * false.
  */
 PolicyManager.prototype.requireVerify = function(dataOrInterest)
@@ -22379,7 +22621,7 @@ PolicyManager.prototype.requireVerify = function(dataOrInterest)
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {WireFormat} wireFormat
- * @returns {ValidationRequest} The indication of next verification step, or
+ * @return {ValidationRequest} The indication of next verification step, or
  * null if there is no further step.
  */
 PolicyManager.prototype.checkVerificationPolicy = function
@@ -22395,7 +22637,7 @@ PolicyManager.prototype.checkVerificationPolicy = function
  *
  * @param {Name} dataName The name of data to be signed.
  * @param {Name} certificateName The name of signing certificate.
- * @returns {boolean} True if the signing certificate can be used to sign the
+ * @return {boolean} True if the signing certificate can be used to sign the
  * data, otherwise false.
  */
 PolicyManager.prototype.checkSigningPolicy = function(dataName, certificateName)
@@ -22409,7 +22651,7 @@ PolicyManager.prototype.checkSigningPolicy = function(dataName, certificateName)
  * Your derived class should override.
  *
  * @param {Name} dataName The name of data to be signed.
- * @returns {Name} The signing identity or an empty name if cannot infer.
+ * @return {Name} The signing identity or an empty name if cannot infer.
  */
 PolicyManager.prototype.inferSigningIdentity = function(dataName)
 {
@@ -22763,7 +23005,7 @@ ConfigPolicyManager.prototype.load = function(configFileNameOrInput, inputName)
  * verified.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} true if the data must be verified, otherwise false.
+ * @return {boolean} true if the data must be verified, otherwise false.
  */
 ConfigPolicyManager.prototype.requireVerify = function(dataOrInterest)
 {
@@ -22776,7 +23018,7 @@ ConfigPolicyManager.prototype.requireVerify = function(dataOrInterest)
  *
  * @param {Name} dataName The name of data to be signed.
  * @param {Name} certificateName The name of signing certificate.
- * @returns {boolean} True to indicate that the signing certificate can be used
+ * @return {boolean} True to indicate that the signing certificate can be used
  * to sign the data.
  */
 ConfigPolicyManager.prototype.checkSigningPolicy = function
@@ -22791,7 +23033,7 @@ ConfigPolicyManager.prototype.checkSigningPolicy = function
  * 'any', nothing is verified.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} true if the data or interest does not need to be verified
+ * @return {boolean} true if the data or interest does not need to be verified
  * to be trusted as valid, otherwise false.
  */
 ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
@@ -22818,7 +23060,7 @@ ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {WireFormat} wireFormat
- * @returns {ValidationRequest} The indication of next verification step, or
+ * @return {ValidationRequest} The indication of next verification step, or
  * null if there is no further step.
  */
 ConfigPolicyManager.prototype.checkVerificationPolicy = function
@@ -23046,7 +23288,7 @@ ConfigPolicyManager.prototype.loadTrustAnchorCertificates = function()
  * components.
  * @param {BoostInfoTree} rule The rule from the configuration file that matches
  * the data or interest.
- * @returns {boolean} True if matches.
+ * @return {boolean} True if matches.
  */
 ConfigPolicyManager.prototype.checkSignatureMatch = function
   (signatureName, objectName, rule)
@@ -23140,7 +23382,7 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
  * the cases used by this class.
  * @param {Object} match The match object from String.match.
  * @param {string} expansion The string with \1, \2, etc. to replace from match.
- * @returns {string} The expanded string.
+ * @return {string} The expanded string.
  */
 ConfigPolicyManager.expand = function(match, expansion)
 {
@@ -23155,7 +23397,7 @@ ConfigPolicyManager.expand = function(match, expansion)
  * or decoding.
  * @param {string} certID
  * @param {boolean} isPath
- * @returns {IdentityCertificate}
+ * @return {IdentityCertificate}
  */
 ConfigPolicyManager.prototype.lookupCertificate = function(certID, isPath)
 {
@@ -23189,7 +23431,7 @@ ConfigPolicyManager.prototype.lookupCertificate = function(certID, isPath)
  * exclude the timestamp, nonce, and signature components.
  * @param {Name} objName The name to be matched.
  * @param {string} matchType The rule type to match, "data" or "interest".
- * @returns {BoostInfoTree} The matching rule, or null if not found.
+ * @return {BoostInfoTree} The matching rule, or null if not found.
  */
 ConfigPolicyManager.prototype.findMatchingRule = function(objName, matchType)
 {
@@ -23242,7 +23484,7 @@ ConfigPolicyManager.prototype.findMatchingRule = function(objName, matchType)
  *   'is-strict-prefix-of' - passes if the name has the other name as a
  *      prefix, and is not equal
  *   'equal' - passes if the two names are equal
- * @returns {boolean}
+ * @return {boolean}
  */
 ConfigPolicyManager.matchesRelation = function(name, matchName, matchRelation)
 {
@@ -23270,7 +23512,7 @@ ConfigPolicyManager.matchesRelation = function(name, matchName, matchRelation)
  * @param {Data|Interest} dataOrInterest The object whose signature is needed.
  * @param {WireFormat} wireFormat (optional) The wire format used to decode
  * signature information from the interest name.
- * @returns {Signature} The object of a sublcass of Signature or null if can't
+ * @return {Signature} The object of a sublcass of Signature or null if can't
  * decode.
  */
 ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
@@ -23282,7 +23524,7 @@ ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
     try {
       var signature = wireFormat.decodeSignatureInfoAndValue
         (dataOrInterest.getName().get(-2).getValue().buf(),
-         dataOrInterest.getName().get(-1).getValue().buf());
+         dataOrInterest.getName().get(-1).getValue().buf(), false);
     }
     catch (e) {
       return null;
@@ -23299,7 +23541,7 @@ ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
  * of this key, or within the grace interval on first use.
  * @param {Name} keyName The name of the public key used to sign the interest.
  * @param {number} timestamp The timestamp extracted from the interest name.
- * @returns {boolean} True if timestamp is fresh as described above.
+ * @return {boolean} True if timestamp is fresh as described above.
  */
 ConfigPolicyManager.prototype.interestTimestampIsFresh = function
   (keyName, timestamp)
@@ -23529,7 +23771,7 @@ exports.NoVerifyPolicyManager = NoVerifyPolicyManager;
  * Override to always skip verification and trust as valid.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True.
+ * @return {boolean} True.
  */
 NoVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
 {
@@ -23541,7 +23783,7 @@ NoVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * signed interest.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} False.
+ * @return {boolean} False.
  */
 NoVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 {
@@ -23563,7 +23805,7 @@ NoVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * exceptions.
  * @param {function} onVerifyFailed Override to ignore this.
  * @param {WireFormat} wireFormat
- * @returns {ValidationRequest} null for no further step for looking up a
+ * @return {ValidationRequest} null for no further step for looking up a
  * certificate chain.
  */
 NoVerifyPolicyManager.prototype.checkVerificationPolicy = function
@@ -23583,7 +23825,7 @@ NoVerifyPolicyManager.prototype.checkVerificationPolicy = function
  *
  * @param {Name} dataName The name of data to be signed.
  * @param {Name} certificateName The name of signing certificate.
- * @returns {boolean} True to indicate that the signing certificate can be used
+ * @return {boolean} True to indicate that the signing certificate can be used
  * to sign the data.
  */
 NoVerifyPolicyManager.prototype.checkSigningPolicy = function
@@ -23596,7 +23838,7 @@ NoVerifyPolicyManager.prototype.checkSigningPolicy = function
  * Override to indicate that the signing identity cannot be inferred.
  *
  * @param {Name} dataName The name of data to be signed.
- * @returns {Name} An empty name because cannot infer.
+ * @return {Name} An empty name because cannot infer.
  */
 NoVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 {
@@ -23666,7 +23908,7 @@ exports.SelfVerifyPolicyManager = SelfVerifyPolicyManager;
  * Never skip verification.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} False.
+ * @return {boolean} False.
  */
 SelfVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
 {
@@ -23677,7 +23919,7 @@ SelfVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * Always return true to use the self-verification rule for the received data.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True.
+ * @return {boolean} True.
  */
 SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 {
@@ -23704,7 +23946,7 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {WireFormat} wireFormat
- * @returns {ValidationRequest} null for no further step for looking up a
+ * @return {ValidationRequest} null for no further step for looking up a
  * certificate chain.
  */
 SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
@@ -23737,7 +23979,7 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
     // Decode the last two name components of the signed interest
     var signature = wireFormat.decodeSignatureInfoAndValue
       (interest.getName().get(-2).getValue().buf(),
-       interest.getName().get(-1).getValue().buf());
+       interest.getName().get(-1).getValue().buf(), false);
 
     // wireEncode returns the cached encoding if available.
     this.verify(signature, interest.wireEncode(), function(verified) {
@@ -23761,7 +24003,7 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
     throw new SecurityException(new Error
       ("checkVerificationPolicy: unrecognized type for dataOrInterest"));
 
-  // No more steps, so return a None.
+  // No more steps, so return null.
   return null;
 };
 
@@ -23771,7 +24013,7 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
  *
  * @param {Name} dataName The name of data to be signed.
  * @param {Name} certificateName The name of signing certificate.
- * @returns {boolean} True to indicate that the signing certificate can be used
+ * @return {boolean} True to indicate that the signing certificate can be used
  * to sign the data.
  */
 SelfVerifyPolicyManager.prototype.checkSigningPolicy = function
@@ -23784,7 +24026,7 @@ SelfVerifyPolicyManager.prototype.checkSigningPolicy = function
  * Override to indicate that the signing identity cannot be inferred.
  *
  * @param {Name} dataName The name of data to be signed.
- * @returns {Name} An empty name because cannot infer.
+ * @return {Name} An empty name because cannot infer.
  */
 SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 {
@@ -23941,7 +24183,7 @@ exports.KeyChain = KeyChain;
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @returns {Name} If onComplete is omitted, return the name of the default
+ * @return {Name} If onComplete is omitted, return the name of the default
  * certificate of the identity. Otherwise, if onComplete is supplied then return
  * undefined and use onComplete as described above.
  */
@@ -23968,7 +24210,7 @@ KeyChain.prototype.createIdentityAndCertificate = function
  * @param {Name} identityName The name of the identity.
  * @param {KeyParams} params (optional) The key parameters if a key needs to be
  * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
- * @returns {Name} The key name of the auto-generated KSK of the identity.
+ * @return {Name} The key name of the auto-generated KSK of the identity.
  */
 KeyChain.prototype.createIdentity = function(identityName, params)
 {
@@ -24016,7 +24258,7 @@ KeyChain.prototype.deleteIdentity = function
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
- * @returns {Name} If onComplete is omitted, return the name of the default
+ * @return {Name} If onComplete is omitted, return the name of the default
  * identity. Otherwise, if onComplete is supplied then return undefined and use
  * onComplete as described above.
  * NOTE: The library will log any exceptions thrown by this callback, but for
@@ -24069,7 +24311,7 @@ KeyChain.prototype.getDefaultCertificateName = function(onComplete, onError)
  * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
  * @param {number} keySize (optional) The size of the key. If omitted, use a
  * default secure key size.
- * @returns {Name} The generated key name.
+ * @return {Name} The generated key name.
  */
 KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
 {
@@ -24118,7 +24360,7 @@ KeyChain.prototype.setDefaultKeyForIdentity = function
  * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
  * @param {number} keySize (optional) The size of the key. If omitted, use a
  * default secure key size.
- * @returns {Name} The generated key name.
+ * @return {Name} The generated key name.
  */
 KeyChain.prototype.generateRSAKeyPairAsDefault = function
   (identityName, isKsk, keySize)
@@ -24130,7 +24372,7 @@ KeyChain.prototype.generateRSAKeyPairAsDefault = function
 /**
  * Create a public key signing request.
  * @param {Name} keyName The name of the key.
- * @returns {Blob} The signing request data.
+ * @return {Blob} The signing request data.
  */
 KeyChain.prototype.createSigningRequest = function(keyName)
 {
@@ -24246,7 +24488,7 @@ KeyChain.prototype.revokeCertificate = function(certificateName)
 
 /**
  * Get the identity manager given to or created by the constructor.
- * @returns {IdentityManager} The identity manager.
+ * @return {IdentityManager} The identity manager.
  */
 KeyChain.prototype.getIdentityManager = function()
 {
@@ -24259,7 +24501,7 @@ KeyChain.prototype.getIdentityManager = function()
 
 /**
  * Get the policy manager given to or created by the constructor.
- * @returns {PolicyManager} The policy manager.
+ * @return {PolicyManager} The policy manager.
  */
 KeyChain.prototype.getPolicyManager = function()
 {
@@ -24304,7 +24546,7 @@ KeyChain.prototype.getPolicyManager = function()
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * @return {Signature} If onComplete is omitted, return the generated Signature
  * object (if target is a Buffer) or the target (if target is Data or Interest).
  * Otherwise, if onComplete is supplied then return undefined and use onComplete as
  * described above.
@@ -24478,7 +24720,7 @@ KeyChain.prototype.signPromise = function
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * @return {Signature} If onComplete is omitted, return the generated Signature
  * object (if target is a Buffer) or undefined (if target is Data).
  * Otherwise, if onComplete is supplied then return undefined and use onComplete
  * as described above.
@@ -24717,7 +24959,7 @@ KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
  * @param {Blob} key The key for the HmacWithSha256.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the target. If omitted, use WireFormat getDefaultWireFormat().
- * @returns {boolean} True if the signature verifies, otherwise false.
+ * @return {boolean} True if the signature verifies, otherwise false.
  */
 KeyChain.verifyDataWithHmacWithSha256 = function(data, key, wireFormat)
 {
@@ -24902,20 +25144,20 @@ Exclude.ANY = "*";
 
 /**
  * Get the number of entries.
- * @returns {number} The number of entries.
+ * @return {number} The number of entries.
  */
 Exclude.prototype.size = function() { return this.values.length; };
 
 /**
  * Get the entry at the given index.
  * @param {number} i The index of the entry, starting from 0.
- * @returns {Exclude.ANY|Name.Component} Exclude.ANY or a Name.Component.
+ * @return {Exclude.ANY|Name.Component} Exclude.ANY or a Name.Component.
  */
 Exclude.prototype.get = function(i) { return this.values[i]; };
 
 /**
  * Append an Exclude.ANY element.
- * @returns This Exclude so that you can chain calls to append.
+ * @return This Exclude so that you can chain calls to append.
  */
 Exclude.prototype.appendAny = function()
 {
@@ -24927,7 +25169,7 @@ Exclude.prototype.appendAny = function()
 /**
  * Append a component entry, copying from component.
  * @param {Name.Component|Buffer} component
- * @returns This Exclude so that you can chain calls to append.
+ * @return This Exclude so that you can chain calls to append.
  */
 Exclude.prototype.appendComponent = function(component)
 {
@@ -24961,7 +25203,7 @@ Exclude.prototype.toUri = function()
     if (this.values[i] == Exclude.ANY)
       result += "*";
     else
-      result += Name.toEscapedString(this.values[i].getValue().buf());
+      result += this.values[i].toEscapedString();
   }
   return result;
 };
@@ -24969,12 +25211,10 @@ Exclude.prototype.toUri = function()
 /**
  * Return true if the component matches any of the exclude criteria.
  */
-Exclude.prototype.matches = function(/*Buffer*/ component)
+Exclude.prototype.matches = function(component)
 {
-  if (typeof component == 'object' && component instanceof Name.Component)
-    component = component.getValue().buf();
-  else if (typeof component === 'object' && component instanceof Blob)
-    component = component.buf();
+  if (!(typeof component == 'object' && component instanceof Name.Component))
+    component = new Name.Component(component);
 
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
@@ -24996,12 +25236,12 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       // If upperBound != null, we will check component equals upperBound on the next pass.
       if (upperBound != null) {
         if (lowerBound != null) {
-          if (Exclude.compareComponents(component, lowerBound) > 0 &&
-              Exclude.compareComponents(component, upperBound) < 0)
+          if (component.compare(lowerBound) > 0 &&
+              component.compare(upperBound) < 0)
             return true;
         }
         else {
-          if (Exclude.compareComponents(component, upperBound) < 0)
+          if (component.compare(upperBound) < 0)
             return true;
         }
 
@@ -25010,7 +25250,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       }
       else {
         if (lowerBound != null) {
-            if (Exclude.compareComponents(component, lowerBound) > 0)
+            if (component.compare(lowerBound) > 0)
               return true;
         }
         else
@@ -25019,7 +25259,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       }
     }
     else {
-      if (DataUtils.arraysEqual(component, this.values[i].getValue().buf()))
+      if (component.equals(this.values[i]))
         return true;
     }
   }
@@ -25043,7 +25283,7 @@ Exclude.compareComponents = function(component1, component2)
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Exclude.prototype.getChangeCount = function()
 {
@@ -25168,9 +25408,9 @@ Interest.CHILD_SELECTOR_RIGHT = 1;
  * Check if this interest's name matches the given name (using Name.match) and
  * the given name also conforms to the interest selectors.
  * @param {Name} name The name to check.
- * @returns {boolean} True if the name and interest selectors match, False otherwise.
+ * @return {boolean} True if the name and interest selectors match, False otherwise.
  */
-Interest.prototype.matchesName = function(/*Name*/ name)
+Interest.prototype.matchesName = function(name)
 {
   if (!this.getName().match(name))
     return false;
@@ -25199,6 +25439,89 @@ Interest.prototype.matches_name = function(/*Name*/ name)
 };
 
 /**
+ * Check if the given Data packet can satisfy this Interest. This method
+ * considers the Name, MinSuffixComponents, MaxSuffixComponents,
+ * PublisherPublicKeyLocator, and Exclude. It does not consider the
+ * ChildSelector or MustBeFresh. This uses the given wireFormat to get the
+ * Data packet encoding for the full Name.
+ * @param {Data} data The Data packet to check.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the Data packet to get its full Name. If omitted, use
+ * WireFormat.getDefaultWireFormat().
+ * @return {boolean} True if the given Data packet can satisfy this Interest.
+ */
+Interest.prototype.matchesData = function(data, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  // Imitate ndn-cxx Interest::matchesData.
+  var interestNameLength = this.getName().size();
+  var dataName = data.getName();
+  var fullNameLength = dataName.size() + 1;
+
+  // Check MinSuffixComponents.
+  var hasMinSuffixComponents = (this.getMinSuffixComponents() != null);
+  var minSuffixComponents =
+    hasMinSuffixComponents ? this.getMinSuffixComponents() : 0;
+  if (!(interestNameLength + minSuffixComponents <= fullNameLength))
+    return false;
+
+  // Check MaxSuffixComponents.
+  var hasMaxSuffixComponents = (this.getMaxSuffixComponents() != null);
+  if (hasMaxSuffixComponents &&
+      !(interestNameLength + this.getMaxSuffixComponents() >= fullNameLength))
+    return false;
+
+  // Check the prefix.
+  if (interestNameLength === fullNameLength) {
+    if (this.getName().get(-1).isImplicitSha256Digest()) {
+      if (!this.getName().equals(data.getFullName(wireFormat)))
+        return false;
+    }
+    else
+      // The Interest Name is the same length as the Data full Name, but the
+      //   last component isn't a digest so there's no possibility of matching.
+      return false;
+  }
+  else {
+    // The Interest Name should be a strict prefix of the Data full Name.
+    if (!this.getName().isPrefixOf(dataName))
+      return false;
+  }
+
+  // Check the Exclude.
+  // The Exclude won't be violated if the Interest Name is the same as the
+  //   Data full Name.
+  if (this.getExclude().size() > 0 && fullNameLength > interestNameLength) {
+    if (interestNameLength == fullNameLength - 1) {
+      // The component to exclude is the digest.
+      if (this.getExclude().matches
+          (data.getFullName(wireFormat).get(interestNameLength)))
+        return false;
+    }
+    else {
+      // The component to exclude is not the digest.
+      if (this.getExclude().matches(dataName.get(interestNameLength)))
+        return false;
+    }
+  }
+
+  // Check the KeyLocator.
+  var publisherPublicKeyLocator = this.getKeyLocator();
+  if (publisherPublicKeyLocator.getType()) {
+    var signature = data.getSignature();
+    if (!KeyLocator.canGetFromSignature(signature))
+      // No KeyLocator in the Data packet.
+      return false;
+    if (!publisherPublicKeyLocator.equals
+        (KeyLocator.getFromSignature(signature)))
+      return false;
+  }
+
+  return true;
+};
+
+/**
  * Return a new Interest with the same fields as this Interest.
  */
 Interest.prototype.clone = function()
@@ -25208,13 +25531,13 @@ Interest.prototype.clone = function()
 
 /**
  * Get the interest Name.
- * @returns {Name} The name.  The name size() may be 0 if not specified.
+ * @return {Name} The name.  The name size() may be 0 if not specified.
  */
 Interest.prototype.getName = function() { return this.name_.get(); };
 
 /**
  * Get the min suffix components.
- * @returns number} The min suffix components, or null if not specified.
+ * @return {number} The min suffix components, or null if not specified.
  */
 Interest.prototype.getMinSuffixComponents = function()
 {
@@ -25223,7 +25546,7 @@ Interest.prototype.getMinSuffixComponents = function()
 
 /**
  * Get the max suffix components.
- * @returns {number} The max suffix components, or null if not specified.
+ * @return {number} The max suffix components, or null if not specified.
  */
 Interest.prototype.getMaxSuffixComponents = function()
 {
@@ -25232,7 +25555,7 @@ Interest.prototype.getMaxSuffixComponents = function()
 
 /**
  * Get the interest key locator.
- * @returns {KeyLocator} The key locator. If its getType() is null,
+ * @return {KeyLocator} The key locator. If its getType() is null,
  * then the key locator is not specified.
  */
 Interest.prototype.getKeyLocator = function()
@@ -25242,14 +25565,14 @@ Interest.prototype.getKeyLocator = function()
 
 /**
  * Get the exclude object.
- * @returns {Exclude} The exclude object. If the exclude size() is zero, then
+ * @return {Exclude} The exclude object. If the exclude size() is zero, then
  * the exclude is not specified.
  */
 Interest.prototype.getExclude = function() { return this.exclude_.get(); };
 
 /**
  * Get the child selector.
- * @returns {number} The child selector, or null if not specified.
+ * @return {number} The child selector, or null if not specified.
  */
 Interest.prototype.getChildSelector = function()
 {
@@ -25258,7 +25581,7 @@ Interest.prototype.getChildSelector = function()
 
 /**
  * Get the must be fresh flag. If not specified, the default is true.
- * @returns {boolean} The must be fresh flag.
+ * @return {boolean} The must be fresh flag.
  */
 Interest.prototype.getMustBeFresh = function()
 {
@@ -25268,7 +25591,7 @@ Interest.prototype.getMustBeFresh = function()
 /**
  * Return the nonce value from the incoming interest.  If you change any of the
  * fields in this Interest object, then the nonce value is cleared.
- * @returns {Blob} The nonce. If not specified, the value isNull().
+ * @return {Blob} The nonce. If not specified, the value isNull().
  */
 Interest.prototype.getNonce = function()
 {
@@ -25360,7 +25683,7 @@ Interest.prototype.getSelectedDelegationIndex = function()
 
 /**
  * Get the interest lifetime.
- * @returns {number} The interest lifetime in milliseconds, or null if not
+ * @return {number} The interest lifetime in milliseconds, or null if not
  * specified.
  */
 Interest.prototype.getInterestLifetimeMilliseconds = function()
@@ -25371,7 +25694,7 @@ Interest.prototype.getInterestLifetimeMilliseconds = function()
 /**
  * Return the default wire encoding, which was encoded with
  * getDefaultWireEncodingFormat().
- * @returns {SignedBlob} The default wire encoding, whose isNull() may be true
+ * @return {SignedBlob} The default wire encoding, whose isNull() may be true
  * if there is no default wire encoding.
  */
 Interest.prototype.getDefaultWireEncoding = function()
@@ -25388,7 +25711,7 @@ Interest.prototype.getDefaultWireEncoding = function()
 
 /**
  * Get the WireFormat which is used by getDefaultWireEncoding().
- * @returns {WireFormat} The WireFormat, which is only meaningful if the
+ * @return {WireFormat} The WireFormat, which is only meaningful if the
  * getDefaultWireEncoding() is not isNull().
  */
 Interest.prototype.getDefaultWireEncodingFormat = function()
@@ -25411,7 +25734,7 @@ Interest.prototype.getIncomingFaceId = function()
  * Set the interest name.
  * Note: You can also call getName and change the name values directly.
  * @param {Name} name The interest name. This makes a copy of the name.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setName = function(name)
 {
@@ -25425,7 +25748,7 @@ Interest.prototype.setName = function(name)
  * Set the min suffix components count.
  * @param {number} minSuffixComponents The min suffix components count. If not
  * specified, set to undefined.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 {
@@ -25438,11 +25761,28 @@ Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
  * Set the max suffix components count.
  * @param {number} maxSuffixComponents The max suffix components count. If not
  * specified, set to undefined.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
   this.maxSuffixComponents_ = maxSuffixComponents;
+  ++this.changeCount_;
+  return this;
+};
+
+/**
+ * Set this interest to use a copy of the given KeyLocator object.
+ * Note: You can also call getKeyLocator and change the key locator directly.
+ * @param {KeyLocator} keyLocator The KeyLocator object. This makes a copy of the object.
+ * If no key locator is specified, set to a new default KeyLocator(), or to a
+ * KeyLocator with an unspecified type.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setKeyLocator = function(keyLocator)
+{
+  this.keyLocator_.set
+    (typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
+     new KeyLocator(keyLocator) : new KeyLocator());
   ++this.changeCount_;
   return this;
 };
@@ -25453,7 +25793,7 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
  * @param {Exclude} exclude The Exclude object. This makes a copy of the object.
  * If no exclude is specified, set to a new default Exclude(), or to an Exclude
  * with size() 0.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setExclude = function(exclude)
 {
@@ -25513,7 +25853,7 @@ Interest.prototype.setSelectedDelegationIndex = function(selectedDelegationIndex
  * Set the child selector.
  * @param {number} childSelector The child selector. If not specified, set to
  * undefined.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setChildSelector = function(childSelector)
 {
@@ -25526,7 +25866,7 @@ Interest.prototype.setChildSelector = function(childSelector)
  * Set the MustBeFresh flag.
  * @param {boolean} mustBeFresh True if the content must be fresh, otherwise
  * false. If you do not set this flag, the default value is true.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
@@ -25538,8 +25878,8 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
 /**
  * Set the interest lifetime.
  * @param {number} interestLifetimeMilliseconds The interest lifetime in
- * milliseconds. If not specified, set to -1.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * milliseconds. If not specified, set to undefined.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
 {
@@ -25568,7 +25908,7 @@ Interest.prototype.setNonce = function(nonce)
  * added the selectors as a query string.  For example "/test/name?ndn.ChildSelector=1".
  * Note: This is an experimental feature.  See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/interest.html#interest-touri-method .
- * @returns {string} The URI string.
+ * @return {string} The URI string.
  */
 Interest.prototype.toUri = function()
 {
@@ -25602,7 +25942,7 @@ Interest.prototype.toUri = function()
  * result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
+ * @return {SignedBlob} The encoded buffer in a SignedBlob object.
  */
 Interest.prototype.wireEncode = function(wireFormat)
 {
@@ -25637,10 +25977,12 @@ Interest.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-    input.buf() : input;
-  var result = wireFormat.decodeInterest(this, decodeBuffer);
+  var result;
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    result = wireFormat.decodeInterest(this, input.buf(), false);
+  else
+    result = wireFormat.decodeInterest(this, input, true);
 
   if (wireFormat == WireFormat.getDefaultWireFormat())
     // This is the default wire encoding.  In the Blob constructor, set copy
@@ -25695,7 +26037,7 @@ Interest.prototype.setLpPacket = function(lpPacket)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Interest.prototype.getChangeCount = function()
 {
@@ -25798,7 +26140,7 @@ ForwardingFlags.NfdForwardingFlags_CAPTURE       = 2;
 /**
  * Get an integer with the bits set according to the NFD forwarding flags as
  * used in the ControlParameters of the command interest.
- * @returns {number} An integer with the bits set.
+ * @return {number} An integer with the bits set.
  */
 ForwardingFlags.prototype.getNfdForwardingFlags = function()
 {
@@ -25827,13 +26169,13 @@ ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
 
 /**
  * Get the value of the "childInherit" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
+ * @return {Boolean} true if the flag is set, false if it is cleared.
  */
 ForwardingFlags.prototype.getChildInherit = function() { return this.childInherit; };
 
 /**
  * Get the value of the "capture" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
+ * @return {Boolean} true if the flag is set, false if it is cleared.
  */
 ForwardingFlags.prototype.getCapture = function() { return this.capture; };
 
@@ -25926,7 +26268,7 @@ ControlParameters.prototype.clear = function()
  * Encode this ControlParameters for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 ControlParameters.prototype.wireEncode = function(wireFormat)
 {
@@ -25944,15 +26286,16 @@ ControlParameters.prototype.wireEncode = function(wireFormat)
 ControlParameters.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeControlParameters(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeControlParameters(this, input.buf(), false);
+  else
+    wireFormat.decodeControlParameters(this, input, true);
 };
 
 /**
  * Get the name.
- * @returns {Name} The name. If not specified, return null.
+ * @return {Name} The name. If not specified, return null.
  */
 ControlParameters.prototype.getName = function()
 {
@@ -25961,7 +26304,7 @@ ControlParameters.prototype.getName = function()
 
 /**
  * Get the face ID.
- * @returns {number} The face ID, or null if not specified.
+ * @return {number} The face ID, or null if not specified.
  */
 ControlParameters.prototype.getFaceId = function()
 {
@@ -25970,7 +26313,7 @@ ControlParameters.prototype.getFaceId = function()
 
 /**
  * Get the URI.
- * @returns {string} The face URI, or an empty string if not specified.
+ * @return {string} The face URI, or an empty string if not specified.
  */
 ControlParameters.prototype.getUri = function()
 {
@@ -25979,7 +26322,7 @@ ControlParameters.prototype.getUri = function()
 
 /**
  * Get the local control feature value.
- * @returns {number} The local control feature value, or null if not specified.
+ * @return {number} The local control feature value, or null if not specified.
  */
 ControlParameters.prototype.getLocalControlFeature = function()
 {
@@ -25988,7 +26331,7 @@ ControlParameters.prototype.getLocalControlFeature = function()
 
 /**
  * Get the origin value.
- * @returns {number} The origin value, or null if not specified.
+ * @return {number} The origin value, or null if not specified.
  */
 ControlParameters.prototype.getOrigin = function()
 {
@@ -25997,7 +26340,7 @@ ControlParameters.prototype.getOrigin = function()
 
 /**
  * Get the cost value.
- * @returns {number} The cost value, or null if not specified.
+ * @return {number} The cost value, or null if not specified.
  */
 ControlParameters.prototype.getCost = function()
 {
@@ -26006,7 +26349,7 @@ ControlParameters.prototype.getCost = function()
 
 /**
  * Get the ForwardingFlags object.
- * @returns {ForwardingFlags} The ForwardingFlags object.
+ * @return {ForwardingFlags} The ForwardingFlags object.
  */
 ControlParameters.prototype.getForwardingFlags = function()
 {
@@ -26015,7 +26358,7 @@ ControlParameters.prototype.getForwardingFlags = function()
 
 /**
  * Get the strategy.
- * @returns {Name} The strategy or an empty Name
+ * @return {Name} The strategy or an empty Name
  */
 ControlParameters.prototype.getStrategy = function()
 {
@@ -26024,7 +26367,7 @@ ControlParameters.prototype.getStrategy = function()
 
 /**
  * Get the expiration period.
- * @returns {number} The expiration period in milliseconds, or null if not specified.
+ * @return {number} The expiration period in milliseconds, or null if not specified.
  */
 ControlParameters.prototype.getExpirationPeriod = function()
 {
@@ -26179,7 +26522,7 @@ ControlResponse.prototype.clear = function()
  * Encode this ControlResponse for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 ControlResponse.prototype.wireEncode = function(wireFormat)
 {
@@ -26197,10 +26540,11 @@ ControlResponse.prototype.wireEncode = function(wireFormat)
 ControlResponse.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeControlResponse(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeControlResponse(this, input.buf(), false);
+  else
+    wireFormat.decodeControlResponse(this, input, true);
 };
 
 /**
@@ -26349,7 +26693,7 @@ exports.InterestFilter = InterestFilter;
  * (e.g., there are implicit heading `^` and trailing `$` symbols in the
  * regular expression).
  * @param {Name} name The name to check against this filter.
- * @returns {boolean} True if name matches this filter, otherwise false.
+ * @return {boolean} True if name matches this filter, otherwise false.
  */
 InterestFilter.prototype.doesMatch = function(name)
 {
@@ -26372,13 +26716,13 @@ InterestFilter.prototype.doesMatch = function(name)
 
 /**
  * Get the prefix given to the constructor.
- * @returns {Name} The prefix Name which you should not modify.
+ * @return {Name} The prefix Name which you should not modify.
  */
 InterestFilter.prototype.getPrefix = function() { return this.prefix; };
 
 /**
  * Check if a regexFilter was supplied to the constructor.
- * @returns {boolean} True if a regexFilter was supplied to the constructor.
+ * @return {boolean} True if a regexFilter was supplied to the constructor.
  */
 InterestFilter.prototype.hasRegexFilter = function()
 {
@@ -26387,7 +26731,7 @@ InterestFilter.prototype.hasRegexFilter = function()
 
 /**
  * Get the regex filter. This is only valid if hasRegexFilter() is true.
- * @returns {string} The regular expression for matching the remaining name
+ * @return {string} The regular expression for matching the remaining name
  * components.
  */
 InterestFilter.prototype.getRegexFilter = function() { return this.regexFilter; };
@@ -26396,7 +26740,7 @@ InterestFilter.prototype.getRegexFilter = function() { return this.regexFilter; 
  * If regexFilter doesn't already have them, add ^ to the beginning and $ to
  * the end since these are required by NdnRegexMatcher.match.
  * @param {string} regexFilter The regex filter.
- * @returns {string} The regex pattern with ^ and $.
+ * @return {string} The regex pattern with ^ and $.
  */
 InterestFilter.makePattern = function(regexFilter)
 {
@@ -26608,7 +26952,7 @@ DelegationSet.prototype.find = function(name)
  * Encode this DelegationSet for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 DelegationSet.prototype.wireEncode = function(wireFormat)
 {
@@ -26625,10 +26969,11 @@ DelegationSet.prototype.wireEncode = function(wireFormat)
 DelegationSet.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeDelegationSet(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeDelegationSet(this, input.buf(), false);
+  else
+    wireFormat.decodeDelegationSet(this, input, true);
 };
 /**
  * Copyright (C) 2016 Regents of the University of California.
@@ -26926,33 +27271,33 @@ var IncomingFaceId = require('../lp/incoming-face-id.js').IncomingFaceId; /** @i
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
- * A Tlv0_1_1WireFormat implements the WireFormat interface for encoding and
- * decoding with the NDN-TLV wire format, version 0.1.1.
+ * A Tlv0_2WireFormat implements the WireFormat interface for encoding and
+ * decoding with the NDN-TLV wire format, version 0.2.
  * @constructor
  */
-var Tlv0_1_1WireFormat = function Tlv0_1_1WireFormat()
+var Tlv0_2WireFormat = function Tlv0_2WireFormat()
 {
   // Inherit from WireFormat.
   WireFormat.call(this);
 };
 
-Tlv0_1_1WireFormat.prototype = new WireFormat();
-Tlv0_1_1WireFormat.prototype.name = "Tlv0_1_1WireFormat";
+Tlv0_2WireFormat.prototype = new WireFormat();
+Tlv0_2WireFormat.prototype.name = "Tlv0_2WireFormat";
 
-exports.Tlv0_1_1WireFormat = Tlv0_1_1WireFormat;
+exports.Tlv0_2WireFormat = Tlv0_2WireFormat;
 
 // Default object.
-Tlv0_1_1WireFormat.instance = null;
+Tlv0_2WireFormat.instance = null;
 
 /**
- * Encode interest as NDN-TLV and return the encoding.
- * @param {Name} interest The Name to encode.
- * @returns {Blobl} A Blob containing the encoding.
+ * Encode name as an NDN-TLV Name and return the encoding.
+ * @param {Name} name The Name to encode.
+ * @return {Blobl} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeName = function(name)
+Tlv0_2WireFormat.prototype.encodeName = function(name)
 {
   var encoder = new TlvEncoder();
-  Tlv0_1_1WireFormat.encodeName(name, encoder);
+  Tlv0_2WireFormat.encodeName(name, encoder);
   return new Blob(encoder.getOutput(), false);
 };
 
@@ -26960,17 +27305,23 @@ Tlv0_1_1WireFormat.prototype.encodeName = function(name)
  * Decode input as a NDN-TLV name and set the fields of the Name object.
  * @param {Name} name The Name object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  */
-Tlv0_1_1WireFormat.prototype.decodeName = function(name, input)
+Tlv0_2WireFormat.prototype.decodeName = function(name, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
-  Tlv0_1_1WireFormat.decodeName(name, decoder);
+  Tlv0_2WireFormat.decodeName(name, decoder, copy);
 };
 
 /**
  * Encode the interest using NDN-TLV and return a Buffer.
  * @param {Interest} interest The Interest object to encode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
  * the encoding of the beginning of the signed portion, and
@@ -26979,7 +27330,7 @@ Tlv0_1_1WireFormat.prototype.decodeName = function(name, input)
  * just before the final name component (which is assumed to be a signature for
  * a signed interest).
  */
-Tlv0_1_1WireFormat.prototype.encodeInterest = function(interest)
+Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
 {
   var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
@@ -27017,8 +27368,8 @@ Tlv0_1_1WireFormat.prototype.encodeInterest = function(interest)
     // Truncate.
     encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
 
-  Tlv0_1_1WireFormat.encodeSelectors(interest, encoder);
-  var tempOffsets = Tlv0_1_1WireFormat.encodeName(interest.getName(), encoder);
+  Tlv0_2WireFormat.encodeSelectors(interest, encoder);
+  var tempOffsets = Tlv0_2WireFormat.encodeName(interest.getName(), encoder);
   var signedPortionBeginOffsetFromBack =
     encoder.getLength() - tempOffsets.signedPortionBeginOffset;
   var signedPortionEndOffsetFromBack =
@@ -27040,7 +27391,10 @@ Tlv0_1_1WireFormat.prototype.encodeInterest = function(interest)
  * object.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -27048,14 +27402,17 @@ Tlv0_1_1WireFormat.prototype.encodeInterest = function(interest)
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_1_1WireFormat.prototype.decodeInterest = function(interest, input)
+Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Interest);
-  var offsets = Tlv0_1_1WireFormat.decodeName(interest.getName(), decoder);
+  var offsets = Tlv0_2WireFormat.decodeName(interest.getName(), decoder, copy);
   if (decoder.peekType(Tlv.Selectors, endOffset))
-    Tlv0_1_1WireFormat.decodeSelectors(interest, decoder);
+    Tlv0_2WireFormat.decodeSelectors(interest, decoder, copy);
   // Require a Nonce, but don't force it to be 4 bytes.
   var nonce = decoder.readBlobTlv(Tlv.Nonce);
   interest.setInterestLifetimeMilliseconds
@@ -27068,7 +27425,7 @@ Tlv0_1_1WireFormat.prototype.decodeInterest = function(interest, input)
     decoder.seek(linkEndOffset);
 
     interest.setLinkWireEncoding
-      (new Blob(decoder.getSlice(linkBeginOffset, linkEndOffset), true), this);
+      (new Blob(decoder.getSlice(linkBeginOffset, linkEndOffset), copy), this);
   }
   else
     interest.unsetLink();
@@ -27079,7 +27436,7 @@ Tlv0_1_1WireFormat.prototype.decodeInterest = function(interest, input)
     throw new Error("Interest has a selected delegation, but no link object");
 
   // Set the nonce last because setting other interest fields clears it.
-  interest.setNonce(nonce);
+  interest.setNonce(new Blob(nonce, copy));
 
   decoder.finishNestedTlvs(endOffset);
   return offsets;
@@ -27088,14 +27445,14 @@ Tlv0_1_1WireFormat.prototype.decodeInterest = function(interest, input)
 /**
  * Encode data as NDN-TLV and return the encoding and signed offsets.
  * @param {Data} data The Data object to encode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
  * the encoding of the beginning of the signed portion, and
  * signedPortionEndOffset is the offset in the encoding of the end of the
  * signed portion.
  */
-Tlv0_1_1WireFormat.prototype.encodeData = function(data)
+Tlv0_2WireFormat.prototype.encodeData = function(data)
 {
   var encoder = new TlvEncoder(1500);
   var saveLength = encoder.getLength();
@@ -27104,10 +27461,10 @@ Tlv0_1_1WireFormat.prototype.encodeData = function(data)
   encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature().buf());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
-  Tlv0_1_1WireFormat.encodeSignatureInfo_(data.getSignature(), encoder);
+  Tlv0_2WireFormat.encodeSignatureInfo_(data.getSignature(), encoder);
   encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
-  Tlv0_1_1WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
-  Tlv0_1_1WireFormat.encodeName(data.getName(), encoder);
+  Tlv0_2WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
+  Tlv0_2WireFormat.encodeName(data.getName(), encoder);
   var signedPortionBeginOffsetFromBack = encoder.getLength();
 
   encoder.writeTypeAndLength(Tlv.Data, encoder.getLength() - saveLength);
@@ -27125,27 +27482,33 @@ Tlv0_1_1WireFormat.prototype.encodeData = function(data)
  * and return the signed offsets.
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
  * of the end of the signed portion.
  */
-Tlv0_1_1WireFormat.prototype.decodeData = function(data, input)
+Tlv0_2WireFormat.prototype.decodeData = function(data, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Data);
   var signedPortionBeginOffset = decoder.getOffset();
 
-  Tlv0_1_1WireFormat.decodeName(data.getName(), decoder);
-  Tlv0_1_1WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder);
-  data.setContent(decoder.readBlobTlv(Tlv.Content));
-  Tlv0_1_1WireFormat.decodeSignatureInfo(data, decoder);
+  Tlv0_2WireFormat.decodeName(data.getName(), decoder, copy);
+  Tlv0_2WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder, copy);
+  data.setContent(new Blob(decoder.readBlobTlv(Tlv.Content), copy));
+  Tlv0_2WireFormat.decodeSignatureInfo(data, decoder, copy);
 
   var signedPortionEndOffset = decoder.getOffset();
   data.getSignature().setSignature
-    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
+    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), copy));
 
   decoder.finishNestedTlvs(endOffset);
   return { signedPortionBeginOffset: signedPortionBeginOffset,
@@ -27156,12 +27519,12 @@ Tlv0_1_1WireFormat.prototype.decodeData = function(data, input)
  * Encode controlParameters as NDN-TLV and return the encoding.
  * @param {ControlParameters} controlParameters The ControlParameters object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
+Tlv0_2WireFormat.prototype.encodeControlParameters = function(controlParameters)
 {
   var encoder = new TlvEncoder(256);
-  Tlv0_1_1WireFormat.encodeControlParameters(controlParameters, encoder);
+  Tlv0_2WireFormat.encodeControlParameters(controlParameters, encoder);
   return new Blob(encoder.getOutput(), false);
 };
 
@@ -27170,21 +27533,28 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
   * @param {ControlParameters} controlParameters The ControlParameters object to
   * encode.
   * @param {Buffer} input The buffer with the bytes to decode.
-  * @throws EncodingException For invalid encoding
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+  * @throws DecodingException For invalid encoding
   */
-Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
+Tlv0_2WireFormat.prototype.decodeControlParameters = function
+  (controlParameters, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
-  Tlv0_1_1WireFormat.decodeControlParameters(controlParameters, decoder);
+  Tlv0_2WireFormat.decodeControlParameters(controlParameters, decoder, copy);
 };
 
 /**
  * Encode controlResponse as NDN-TLV and return the encoding.
  * @param {ControlResponse} controlResponse The ControlResponse object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeControlResponse = function(controlResponse)
+Tlv0_2WireFormat.prototype.encodeControlResponse = function(controlResponse)
 {
   var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
@@ -27193,7 +27563,7 @@ Tlv0_1_1WireFormat.prototype.encodeControlResponse = function(controlResponse)
 
   // Encode the body.
   if (controlResponse.getBodyAsControlParameters() != null)
-    Tlv0_1_1WireFormat.encodeControlParameters
+    Tlv0_2WireFormat.encodeControlParameters
       (controlResponse.getBodyAsControlParameters(), encoder);
 
   encoder.writeBlobTlv
@@ -27208,19 +27578,27 @@ Tlv0_1_1WireFormat.prototype.encodeControlResponse = function(controlResponse)
 };
 
 /**
-  * Decode controlResponse in NDN-TLV and return the encoding.
-  * @param {ControlResponse} controlResponse The ControlResponse object to
-  * encode.
-  * @param {Buffer} input The buffer with the bytes to decode.
-  * @throws EncodingException For invalid encoding
-  */
-Tlv0_1_1WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
+ * Decode controlResponse in NDN-TLV and return the encoding.
+ * @param {ControlResponse} controlResponse The ControlResponse object to
+ * encode.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @throws DecodingException For invalid encoding
+ */
+Tlv0_2WireFormat.prototype.decodeControlResponse = function
+  (controlResponse, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
   var endOffset = decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
 
   controlResponse.setStatusCode(decoder.readNonNegativeIntegerTlv
     (Tlv.NfdCommand_StatusCode));
+  // Set copy false since we just immediately get a string.
   var statusText = new Blob
     (decoder.readBlobTlv(Tlv.NfdCommand_StatusText), false);
   controlResponse.setStatusText(statusText.toString());
@@ -27229,8 +27607,8 @@ Tlv0_1_1WireFormat.prototype.decodeControlResponse = function(controlResponse, i
   if (decoder.peekType(Tlv.ControlParameters_ControlParameters, endOffset)) {
     controlResponse.setBodyAsControlParameters(new ControlParameters());
     // Decode into the existing ControlParameters to avoid copying.
-    Tlv0_1_1WireFormat.decodeControlParameters
-      (controlResponse.getBodyAsControlParameters(), decoder);
+    Tlv0_2WireFormat.decodeControlParameters
+      (controlResponse.getBodyAsControlParameters(), decoder, copy);
   }
   else
     controlResponse.setBodyAsControlParameters(null);
@@ -27239,64 +27617,70 @@ Tlv0_1_1WireFormat.prototype.decodeControlResponse = function(controlResponse, i
 };
 
 /**
- * Encode signature as a SignatureInfo and return the encoding.
+ * Encode signature as an NDN-TLV SignatureInfo and return the encoding.
  * @param {Signature} signature An object of a subclass of Signature to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeSignatureInfo = function(signature)
+Tlv0_2WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
   var encoder = new TlvEncoder(256);
-  Tlv0_1_1WireFormat.encodeSignatureInfo_(signature, encoder);
+  Tlv0_2WireFormat.encodeSignatureInfo_(signature, encoder);
 
   return new Blob(encoder.getOutput(), false);
 };
 
 // SignatureHolder is used by decodeSignatureInfoAndValue.
-Tlv0_1_1WireFormat.SignatureHolder = function Tlv0_1_1WireFormatSignatureHolder()
+Tlv0_2WireFormat.SignatureHolder = function Tlv0_2WireFormatSignatureHolder()
 {
 };
 
-Tlv0_1_1WireFormat.SignatureHolder.prototype.setSignature = function(signature)
+Tlv0_2WireFormat.SignatureHolder.prototype.setSignature = function(signature)
 {
   this.signature = signature;
 };
 
-Tlv0_1_1WireFormat.SignatureHolder.prototype.getSignature = function()
+Tlv0_2WireFormat.SignatureHolder.prototype.getSignature = function()
 {
   return this.signature;
 };
 
 /**
- * Decode signatureInfo as a signature info and signatureValue as the related
- * SignatureValue, and return a new object which is a subclass of Signature.
+ * Decode signatureInfo as an NDN-TLV SignatureInfo and signatureValue as the
+ * related SignatureValue, and return a new object which is a subclass of Signature.
  * @param {Buffer} signatureInfo The buffer with the signature info bytes to
  * decode.
  * @param {Buffer} signatureValue The buffer with the signature value to decode.
- * @returns {Signature} A new object which is a subclass of Signature.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @return {Signature} A new object which is a subclass of Signature.
  */
-Tlv0_1_1WireFormat.prototype.decodeSignatureInfoAndValue = function
-  (signatureInfo, signatureValue)
+Tlv0_2WireFormat.prototype.decodeSignatureInfoAndValue = function
+  (signatureInfo, signatureValue, copy)
 {
+  if (copy == null)
+    copy = true;
+
   // Use a SignatureHolder to imitate a Data object for decodeSignatureInfo.
-  var signatureHolder = new Tlv0_1_1WireFormat.SignatureHolder();
+  var signatureHolder = new Tlv0_2WireFormat.SignatureHolder();
   var decoder = new TlvDecoder(signatureInfo);
-  Tlv0_1_1WireFormat.decodeSignatureInfo(signatureHolder, decoder);
+  Tlv0_2WireFormat.decodeSignatureInfo(signatureHolder, decoder, copy);
 
   decoder = new TlvDecoder(signatureValue);
   signatureHolder.getSignature().setSignature
-    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
+    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), copy));
 
   return signatureHolder.getSignature();
 };
 
 /**
- * Encode the signatureValue in the Signature object as a SignatureValue (the
- * signature bits) and return the encoding.
+ * Encode the signatureValue in the Signature object as an NDN-TLV
+ * SignatureValue (the signature bits) and return the encoding.
  * @param {Signature} signature An object of a subclass of Signature with the
  * signature value to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
+Tlv0_2WireFormat.prototype.encodeSignatureValue = function(signature)
 {
   var encoder = new TlvEncoder(256);
   encoder.writeBlobTlv(Tlv.SignatureValue, signature.getSignature().buf());
@@ -27308,9 +27692,15 @@ Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
  * Decode input as an NDN-TLV LpPacket and set the fields of the lpPacket object.
  * @param {LpPacket} lpPacket The LpPacket object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  */
-Tlv0_1_1WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
+Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   lpPacket.clear();
 
   var decoder = new TlvDecoder(input);
@@ -27327,7 +27717,7 @@ Tlv0_1_1WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
     if (fieldType == Tlv.LpPacket_Fragment) {
       // Set the fragment to the bytes of the TLV value.
       lpPacket.setFragmentWireEncoding
-        (new Blob(decoder.getSlice(decoder.getOffset(), fieldEndOffset), true));
+        (new Blob(decoder.getSlice(decoder.getOffset(), fieldEndOffset), copy));
       decoder.seek(fieldEndOffset);
 
       // The fragment is supposed to be the last field.
@@ -27385,9 +27775,9 @@ Tlv0_1_1WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
  * type and length because it is intended to use the type and length of a Data
  * packet's Content.
  * @param {DelegationSet} delegationSet The DelegationSet object to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeDelegationSet = function(delegationSet)
+Tlv0_2WireFormat.prototype.encodeDelegationSet = function(delegationSet)
 {
   var encoder = new TlvEncoder(256);
 
@@ -27395,7 +27785,7 @@ Tlv0_1_1WireFormat.prototype.encodeDelegationSet = function(delegationSet)
   for (var i = delegationSet.size() - 1; i >= 0; --i) {
     var saveLength = encoder.getLength();
 
-    Tlv0_1_1WireFormat.encodeName(delegationSet.get(i).getName(), encoder);
+    Tlv0_2WireFormat.encodeName(delegationSet.get(i).getName(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.Link_Preference, delegationSet.get(i).getPreference());
 
@@ -27415,9 +27805,16 @@ Tlv0_1_1WireFormat.prototype.encodeDelegationSet = function(delegationSet)
  * @param {DelegationSet} delegationSet The DelegationSet object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  */
-Tlv0_1_1WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
+Tlv0_2WireFormat.prototype.decodeDelegationSet = function
+  (delegationSet, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
   var endOffset = input.length;
 
@@ -27426,7 +27823,7 @@ Tlv0_1_1WireFormat.prototype.decodeDelegationSet = function(delegationSet, input
     decoder.readTypeAndLength(Tlv.Link_Delegation);
     var preference = decoder.readNonNegativeIntegerTlv(Tlv.Link_Preference);
     var name = new Name();
-    Tlv0_1_1WireFormat.decodeName(name, decoder);
+    Tlv0_2WireFormat.decodeName(name, decoder, copy);
 
     // Add unsorted to preserve the order so that Interest selected delegation
     // index will work.
@@ -27438,9 +27835,9 @@ Tlv0_1_1WireFormat.prototype.decodeDelegationSet = function(delegationSet, input
  * Encode the EncryptedContent in NDN-TLV and return the encoding.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
+Tlv0_2WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
 {
   var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
@@ -27453,7 +27850,7 @@ Tlv0_1_1WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
   // Assume the algorithmType value is the same as the TLV type.
   encoder.writeNonNegativeIntegerTlv
     (Tlv.Encrypt_EncryptionAlgorithm, encryptedContent.getAlgorithmType());
-  Tlv0_1_1WireFormat.encodeKeyLocator
+  Tlv0_2WireFormat.encodeKeyLocator
     (Tlv.KeyLocator, encryptedContent.getKeyLocator(), encoder);
 
   encoder.writeTypeAndLength
@@ -27468,44 +27865,89 @@ Tlv0_1_1WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
  * @param {EncryptedContent} encryptedContent The EncryptedContent object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  */
-Tlv0_1_1WireFormat.prototype.decodeEncryptedContent = function
-  (encryptedContent, input)
+Tlv0_2WireFormat.prototype.decodeEncryptedContent = function
+  (encryptedContent, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
   var endOffset = decoder.
     readNestedTlvsStart(Tlv.Encrypt_EncryptedContent);
 
-  Tlv0_1_1WireFormat.decodeKeyLocator
-    (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder);
+  Tlv0_2WireFormat.decodeKeyLocator
+    (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder, copy);
   encryptedContent.setAlgorithmType
     (decoder.readNonNegativeIntegerTlv(Tlv.Encrypt_EncryptionAlgorithm));
   encryptedContent.setInitialVector
     (new Blob(decoder.readOptionalBlobTlv
-     (Tlv.Encrypt_InitialVector, endOffset), true));
+     (Tlv.Encrypt_InitialVector, endOffset), copy));
   encryptedContent.setPayload
-    (new Blob(decoder.readBlobTlv(Tlv.Encrypt_EncryptedPayload), true));
+    (new Blob(decoder.readBlobTlv(Tlv.Encrypt_EncryptedPayload), copy));
 
   decoder.finishNestedTlvs(endOffset);
 };
 
 /**
- * Get a singleton instance of a Tlv0_1_1WireFormat.  To always use the
+ * Get a singleton instance of a Tlv0_2WireFormat.  To always use the
  * preferred version NDN-TLV, you should use TlvWireFormat.get().
- * @returns {Tlv0_1_1WireFormat} The singleton instance.
+ * @return {Tlv0_2WireFormat} The singleton instance.
  */
-Tlv0_1_1WireFormat.get = function()
+Tlv0_2WireFormat.get = function()
 {
-  if (Tlv0_1_1WireFormat.instance === null)
-    Tlv0_1_1WireFormat.instance = new Tlv0_1_1WireFormat();
-  return Tlv0_1_1WireFormat.instance;
+  if (Tlv0_2WireFormat.instance === null)
+    Tlv0_2WireFormat.instance = new Tlv0_2WireFormat();
+  return Tlv0_2WireFormat.instance;
+};
+
+/**
+ * Encode the name component to the encoder as NDN-TLV. This handles different
+ * component types such as ImplicitSha256DigestComponent.
+ * @param {Name.Component} component The name component to encode.
+ * @param {TlvEncoder} encoder The encoder to receive the encoding.
+ */
+Tlv0_2WireFormat.encodeNameComponent = function(component, encoder)
+{
+  var type = component.isImplicitSha256Digest() ?
+      Tlv.ImplicitSha256DigestComponent : Tlv.NameComponent;
+  encoder.writeBlobTlv(type, component.getValue().buf());
+};
+
+/**
+ * Decode the name component as NDN-TLV and return the component. This handles
+ * different component types such as ImplicitSha256DigestComponent.
+ * @param {TlvDecoder} decoder The decoder with the input.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @return {Name.Component} A new Name.Component.
+ */
+Tlv0_2WireFormat.decodeNameComponent = function(decoder, copy)
+{
+  if (copy == null)
+    copy = true;
+
+  var savePosition = decoder.getOffset();
+  var type = decoder.readVarNumber();
+  // Restore the position.
+  decoder.seek(savePosition);
+
+  var value = new Blob(decoder.readBlobTlv(type), copy);
+  if (type === Tlv.ImplicitSha256DigestComponent)
+    return Name.Component.fromImplicitSha256Digest(value);
+  else
+    return new Name.Component(value);
 };
 
 /**
  * Encode the name to the encoder.
  * @param {Name} name The name to encode.
  * @param {TlvEncoder} encoder The encoder to receive the encoding.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -27513,14 +27955,14 @@ Tlv0_1_1WireFormat.get = function()
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_1_1WireFormat.encodeName = function(name, encoder)
+Tlv0_2WireFormat.encodeName = function(name, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode the components backwards.
   var signedPortionEndOffsetFromBack;
   for (var i = name.size() - 1; i >= 0; --i) {
-    encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue().buf());
+    Tlv0_2WireFormat.encodeNameComponent(name.get(i), encoder);
     if (i == name.size() - 1)
       signedPortionEndOffsetFromBack = encoder.getLength();
   }
@@ -27546,7 +27988,7 @@ Tlv0_1_1WireFormat.encodeName = function(name, encoder)
  * object.
  * @param {Name} name The name object whose fields are updated.
  * @param {TlvDecoder} decoder The decoder with the input.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -27554,7 +27996,7 @@ Tlv0_1_1WireFormat.encodeName = function(name, encoder)
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_1_1WireFormat.decodeName = function(name, decoder)
+Tlv0_2WireFormat.decodeName = function(name, decoder, copy)
 {
   name.clear();
 
@@ -27565,7 +28007,7 @@ Tlv0_1_1WireFormat.decodeName = function(name, decoder)
 
   while (decoder.getOffset() < endOffset) {
     signedPortionEndOffset = decoder.getOffset();
-    name.append(decoder.readBlobTlv(Tlv.NameComponent));
+    name.append(Tlv0_2WireFormat.decodeNameComponent(decoder, copy));
   }
 
   decoder.finishNestedTlvs(endOffset);
@@ -27578,7 +28020,7 @@ Tlv0_1_1WireFormat.decodeName = function(name, decoder)
  * Encode the interest selectors.  If no selectors are written, do not output a
  * Selectors TLV.
  */
-Tlv0_1_1WireFormat.encodeSelectors = function(interest, encoder)
+Tlv0_2WireFormat.encodeSelectors = function(interest, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -27588,10 +28030,10 @@ Tlv0_1_1WireFormat.encodeSelectors = function(interest, encoder)
   encoder.writeOptionalNonNegativeIntegerTlv(
     Tlv.ChildSelector, interest.getChildSelector());
   if (interest.getExclude().size() > 0)
-    Tlv0_1_1WireFormat.encodeExclude(interest.getExclude(), encoder);
+    Tlv0_2WireFormat.encodeExclude(interest.getExclude(), encoder);
 
   if (interest.getKeyLocator().getType() != null)
-    Tlv0_1_1WireFormat.encodeKeyLocator
+    Tlv0_2WireFormat.encodeKeyLocator
       (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), encoder);
 
   encoder.writeOptionalNonNegativeIntegerTlv(
@@ -27604,8 +28046,11 @@ Tlv0_1_1WireFormat.encodeSelectors = function(interest, encoder)
     encoder.writeTypeAndLength(Tlv.Selectors, encoder.getLength() - saveLength);
 };
 
-Tlv0_1_1WireFormat.decodeSelectors = function(interest, decoder)
+Tlv0_2WireFormat.decodeSelectors = function(interest, decoder, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var endOffset = decoder.readNestedTlvsStart(Tlv.Selectors);
 
   interest.setMinSuffixComponents(decoder.readOptionalNonNegativeIntegerTlv
@@ -27614,13 +28059,13 @@ Tlv0_1_1WireFormat.decodeSelectors = function(interest, decoder)
     (Tlv.MaxSuffixComponents, endOffset));
 
   if (decoder.peekType(Tlv.PublisherPublicKeyLocator, endOffset))
-    Tlv0_1_1WireFormat.decodeKeyLocator
-      (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), decoder);
+    Tlv0_2WireFormat.decodeKeyLocator
+      (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), decoder, copy);
   else
     interest.getKeyLocator().clear();
 
   if (decoder.peekType(Tlv.Exclude, endOffset))
-    Tlv0_1_1WireFormat.decodeExclude(interest.getExclude(), decoder);
+    Tlv0_2WireFormat.decodeExclude(interest.getExclude(), decoder, copy);
   else
     interest.getExclude().clear();
 
@@ -27631,7 +28076,7 @@ Tlv0_1_1WireFormat.decodeSelectors = function(interest, decoder)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1_1WireFormat.encodeExclude = function(exclude, encoder)
+Tlv0_2WireFormat.encodeExclude = function(exclude, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -27643,38 +28088,41 @@ Tlv0_1_1WireFormat.encodeExclude = function(exclude, encoder)
     if (entry == Exclude.ANY)
       encoder.writeTypeAndLength(Tlv.Any, 0);
     else
-      encoder.writeBlobTlv(Tlv.NameComponent, entry.getValue().buf());
+      Tlv0_2WireFormat.encodeNameComponent(entry, encoder);
   }
 
   encoder.writeTypeAndLength(Tlv.Exclude, encoder.getLength() - saveLength);
 };
 
-Tlv0_1_1WireFormat.decodeExclude = function(exclude, decoder)
+Tlv0_2WireFormat.decodeExclude = function(exclude, decoder, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var endOffset = decoder.readNestedTlvsStart(Tlv.Exclude);
 
   exclude.clear();
-  while (true) {
-    if (decoder.peekType(Tlv.NameComponent, endOffset))
-      exclude.appendComponent(decoder.readBlobTlv(Tlv.NameComponent));
-    else if (decoder.readBooleanTlv(Tlv.Any, endOffset))
+  while (decoder.getOffset() < endOffset) {
+    if (decoder.peekType(Tlv.Any, endOffset)) {
+      // Read past the Any TLV.
+      decoder.readBooleanTlv(Tlv.Any, endOffset);
       exclude.appendAny();
+    }
     else
-      // Else no more entries.
-      break;
+      exclude.appendComponent(Tlv0_2WireFormat.decodeNameComponent(decoder, copy));
   }
 
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1_1WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
+Tlv0_2WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode backwards.
   if (keyLocator.getType() != null) {
     if (keyLocator.getType() == KeyLocatorType.KEYNAME)
-      Tlv0_1_1WireFormat.encodeName(keyLocator.getKeyName(), encoder);
+      Tlv0_2WireFormat.encodeName(keyLocator.getKeyName(), encoder);
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
              keyLocator.getKeyData().size() > 0)
       encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData().buf());
@@ -27685,9 +28133,12 @@ Tlv0_1_1WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
   encoder.writeTypeAndLength(type, encoder.getLength() - saveLength);
 };
 
-Tlv0_1_1WireFormat.decodeKeyLocator = function
-  (expectedType, keyLocator, decoder)
+Tlv0_2WireFormat.decodeKeyLocator = function
+  (expectedType, keyLocator, decoder, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var endOffset = decoder.readNestedTlvsStart(expectedType);
 
   keyLocator.clear();
@@ -27699,12 +28150,13 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
   if (decoder.peekType(Tlv.Name, endOffset)) {
     // KeyLocator is a Name.
     keyLocator.setType(KeyLocatorType.KEYNAME);
-    Tlv0_1_1WireFormat.decodeName(keyLocator.getKeyName(), decoder);
+    Tlv0_2WireFormat.decodeName(keyLocator.getKeyName(), decoder, copy);
   }
   else if (decoder.peekType(Tlv.KeyLocatorDigest, endOffset)) {
     // KeyLocator is a KeyLocatorDigest.
     keyLocator.setType(KeyLocatorType.KEY_LOCATOR_DIGEST);
-    keyLocator.setKeyData(decoder.readBlobTlv(Tlv.KeyLocatorDigest));
+    keyLocator.setKeyData
+      (new Blob(decoder.readBlobTlv(Tlv.KeyLocatorDigest), copy));
   }
   else
     throw new DecodingException(new Error
@@ -27719,7 +28171,7 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
  * @param {Signature} signature An object of a subclass of Signature to encode.
  * @param {TlvEncoder} encoder The encoder.
  */
-Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
+Tlv0_2WireFormat.encodeSignatureInfo_ = function(signature, encoder)
 {
   if (signature instanceof GenericSignature) {
     // Handle GenericSignature separately since it has the entire encoding.
@@ -27745,13 +28197,13 @@ Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
 
   // Encode backwards.
   if (signature instanceof Sha256WithRsaSignature) {
-    Tlv0_1_1WireFormat.encodeKeyLocator
+    Tlv0_2WireFormat.encodeKeyLocator
       (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
   }
   else if (signature instanceof HmacWithSha256Signature) {
-    Tlv0_1_1WireFormat.encodeKeyLocator
+    Tlv0_2WireFormat.encodeKeyLocator
       (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureHmacWithSha256);
@@ -27765,8 +28217,11 @@ Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
   encoder.writeTypeAndLength(Tlv.SignatureInfo, encoder.getLength() - saveLength);
 };
 
-Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
+Tlv0_2WireFormat.decodeSignatureInfo = function(data, decoder, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var beginOffset = decoder.getOffset();
   var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
 
@@ -27776,14 +28231,14 @@ Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
     // Modify data's signature object because if we create an object
     //   and set it, then data will have to copy all the fields.
     var signatureInfo = data.getSignature();
-    Tlv0_1_1WireFormat.decodeKeyLocator
-      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
+    Tlv0_2WireFormat.decodeKeyLocator
+      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder, copy);
   }
   else if (signatureType == Tlv.SignatureType_SignatureHmacWithSha256) {
     data.setSignature(new HmacWithSha256Signature());
     var signatureInfo = data.getSignature();
-    Tlv0_1_1WireFormat.decodeKeyLocator
-      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
+    Tlv0_2WireFormat.decodeKeyLocator
+      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder, copy);
   }
   else if (signatureType == Tlv.SignatureType_DigestSha256)
     data.setSignature(new DigestSha256Signature());
@@ -27793,13 +28248,13 @@ Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
 
     // Get the bytes of the SignatureInfo TLV.
     signatureInfo.setSignatureInfoEncoding
-      (new Blob(decoder.getSlice(beginOffset, endOffset), true), signatureType);
+      (new Blob(decoder.getSlice(beginOffset, endOffset), copy), signatureType);
   }
 
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
+Tlv0_2WireFormat.encodeMetaInfo = function(metaInfo, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -27808,7 +28263,7 @@ Tlv0_1_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.
     var finalBlockIdSaveLength = encoder.getLength();
-    encoder.writeBlobTlv(Tlv.NameComponent, finalBlockIdBuf);
+    Tlv0_2WireFormat.encodeNameComponent(metaInfo.getFinalBlockId(), encoder);
     encoder.writeTypeAndLength
       (Tlv.FinalBlockId, encoder.getLength() - finalBlockIdSaveLength);
   }
@@ -27834,8 +28289,11 @@ Tlv0_1_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   encoder.writeTypeAndLength(Tlv.MetaInfo, encoder.getLength() - saveLength);
 };
 
-Tlv0_1_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
+Tlv0_2WireFormat.decodeMetaInfo = function(metaInfo, decoder, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var endOffset = decoder.readNestedTlvsStart(Tlv.MetaInfo);
 
   var type = decoder.readOptionalNonNegativeIntegerTlv
@@ -27858,7 +28316,7 @@ Tlv0_1_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.FreshnessPeriod, endOffset));
   if (decoder.peekType(Tlv.FinalBlockId, endOffset)) {
     var finalBlockIdEndOffset = decoder.readNestedTlvsStart(Tlv.FinalBlockId);
-    metaInfo.setFinalBlockId(decoder.readBlobTlv(Tlv.NameComponent));
+    metaInfo.setFinalBlockId(Tlv0_2WireFormat.decodeNameComponent(decoder, copy));
     decoder.finishNestedTlvs(finalBlockIdEndOffset);
   }
   else
@@ -27867,7 +28325,7 @@ Tlv0_1_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1_1WireFormat.encodeControlParameters = function(controlParameters, encoder)
+Tlv0_2WireFormat.encodeControlParameters = function(controlParameters, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -27878,7 +28336,7 @@ Tlv0_1_1WireFormat.encodeControlParameters = function(controlParameters, encoder
 
   if (controlParameters.getStrategy().size() > 0){
     var strategySaveLength = encoder.getLength();
-    Tlv0_1_1WireFormat.encodeName(controlParameters.getStrategy(), encoder);
+    Tlv0_2WireFormat.encodeName(controlParameters.getStrategy(), encoder);
     encoder.writeTypeAndLength(Tlv.ControlParameters_Strategy,
       encoder.getLength() - strategySaveLength);
   }
@@ -27904,14 +28362,18 @@ Tlv0_1_1WireFormat.encodeControlParameters = function(controlParameters, encoder
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
   if (controlParameters.getName() != null)
-    Tlv0_1_1WireFormat.encodeName(controlParameters.getName(), encoder);
+    Tlv0_2WireFormat.encodeName(controlParameters.getName(), encoder);
 
   encoder.writeTypeAndLength
     (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
 };
 
-Tlv0_1_1WireFormat.decodeControlParameters = function(controlParameters, decoder)
+Tlv0_2WireFormat.decodeControlParameters = function
+  (controlParameters, decoder, copy)
 {
+  if (copy == null)
+    copy = true;
+
   controlParameters.clear();
   var endOffset = decoder.
     readNestedTlvsStart(Tlv.ControlParameters_ControlParameters);
@@ -27919,7 +28381,7 @@ Tlv0_1_1WireFormat.decodeControlParameters = function(controlParameters, decoder
   // decode name
   if (decoder.peekType(Tlv.Name, endOffset)) {
     var name = new Name();
-    Tlv0_1_1WireFormat.decodeName(name, decoder);
+    Tlv0_2WireFormat.decodeName(name, decoder, copy);
     controlParameters.setName(name);
   }
 
@@ -27929,6 +28391,7 @@ Tlv0_1_1WireFormat.decodeControlParameters = function(controlParameters, decoder
 
   // decode URI
   if (decoder.peekType(Tlv.ControlParameters_Uri, endOffset)) {
+    // Set copy false since we just immediately get the string.
     var uri = new Blob
       (decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset), false);
     controlParameters.setUri(uri.toString());
@@ -27955,7 +28418,7 @@ Tlv0_1_1WireFormat.decodeControlParameters = function(controlParameters, decoder
   // decode strategy
   if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
     var strategyEndOffset = decoder.readNestedTlvsStart(Tlv.ControlParameters_Strategy);
-    Tlv0_1_1WireFormat.decodeName(controlParameters.getStrategy(), decoder);
+    Tlv0_2WireFormat.decodeName(controlParameters.getStrategy(), decoder, copy);
     decoder.finishNestedTlvs(strategyEndOffset);
   }
 
@@ -27965,6 +28428,59 @@ Tlv0_1_1WireFormat.decodeControlParameters = function(controlParameters, decoder
       Tlv.ControlParameters_ExpirationPeriod, endOffset));
 
   decoder.finishNestedTlvs(endOffset);
+};
+/**
+ * Copyright (C) 2013-2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Tlv0_2WireFormat = require('./tlv-0_2-wire-format.js').Tlv0_2WireFormat;
+
+/**
+ * A Tlv0_1_1WireFormat extends Tlv0_2WireFormat so that it is an alias in case
+ * any applications use Tlv0_1_1WireFormat directly.  These two wire formats are
+ * the same except that Tlv0_2WireFormat adds support for the name component
+ * type ImplicitSha256Digest.
+ * @constructor
+ */
+var Tlv0_1_1WireFormat = function Tlv0_1_1WireFormat()
+{
+  // Inherit from Tlv0_2WireFormat.
+  Tlv0_2WireFormat.call(this);
+};
+
+Tlv0_1_1WireFormat.prototype = new Tlv0_2WireFormat();
+Tlv0_1_1WireFormat.prototype.name = "Tlv0_1_1WireFormat";
+
+exports.Tlv0_1_1WireFormat = Tlv0_1_1WireFormat;
+
+// Default object.
+Tlv0_1_1WireFormat.instance = null;
+
+/**
+ * Get a singleton instance of a Tlv0_1_1WireFormat.
+ * @return {Tlv0_1_1WireFormat} The singleton instance.
+ */
+Tlv0_1_1WireFormat.get = function()
+{
+  if (Tlv0_1_1WireFormat.instance === null)
+    Tlv0_1_1WireFormat.instance = new Tlv0_1_1WireFormat();
+  return Tlv0_1_1WireFormat.instance;
 };
 /**
  * Copyright (C) 2013-2016 Regents of the University of California.
@@ -28012,7 +28528,7 @@ Tlv0_1WireFormat.instance = null;
 
 /**
  * Get a singleton instance of a Tlv0_1WireFormat.
- * @returns {Tlv0_1WireFormat} The singleton instance.
+ * @return {Tlv0_1WireFormat} The singleton instance.
  */
 Tlv0_1WireFormat.get = function()
 {
@@ -28041,7 +28557,7 @@ Tlv0_1WireFormat.get = function()
 
 /** @ignore */
 var WireFormat = require('./wire-format.js').WireFormat; /** @ignore */
-var Tlv0_1_1WireFormat = require('./tlv-0_1_1-wire-format.js').Tlv0_1_1WireFormat;
+var Tlv0_2WireFormat = require('./tlv-0_2-wire-format.js').Tlv0_2WireFormat;
 
 /**
  * A TlvWireFormat extends WireFormat to override its methods to
@@ -28050,11 +28566,11 @@ var Tlv0_1_1WireFormat = require('./tlv-0_1_1-wire-format.js').Tlv0_1_1WireForma
  */
 var TlvWireFormat = function TlvWireFormat()
 {
-  // Inherit from Tlv0_1_1WireFormat.
-  Tlv0_1_1WireFormat.call(this);
+  // Inherit from Tlv0_2WireFormat.
+  Tlv0_2WireFormat.call(this);
 };
 
-TlvWireFormat.prototype = new Tlv0_1_1WireFormat();
+TlvWireFormat.prototype = new Tlv0_2WireFormat();
 TlvWireFormat.prototype.name = "TlvWireFormat";
 
 exports.TlvWireFormat = TlvWireFormat;
@@ -28067,7 +28583,7 @@ TlvWireFormat.instance = null;
  * wire format was set with WireFormat.setDefaultWireFormat(TlvWireFormat.get()),
  * you can check if this is the default wire encoding with
  * if WireFormat.getDefaultWireFormat() == TlvWireFormat.get().
- * @returns {TlvWireFormat} The singleton instance.
+ * @return {TlvWireFormat} The singleton instance.
  */
 TlvWireFormat.get = function()
 {
@@ -28229,7 +28745,7 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
        signature.getSignature().toHex() : "<none>"));
   }
   if (keyLocator !== null) {
-    if (keyLocator.getType() == KeyLocatorType.NONE)
+    if (keyLocator.getType() == null)
       append("signature.keyLocator: <none>");
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
       append("signature.keyLocator: KeyLocatorDigest: " + keyLocator.getKeyData().toHex());
@@ -28659,9 +29175,7 @@ Encryptor.NAME_COMPONENT_C_KEY = new Name.Component("C-KEY");
 Encryptor.encryptDataPromise = function
   (data, payload, keyName, key, params, useSync)
 {
-  var dataName = data.getName();
-  dataName.append(Encryptor.NAME_COMPONENT_FOR).append(keyName);
-  data.setName(dataName);
+  data.getName().append(Encryptor.NAME_COMPONENT_FOR).append(keyName);
 
   var algorithmType = params.getAlgorithmType();
 
@@ -29948,7 +30462,7 @@ exports.EncryptedContent = EncryptedContent;
 
 /**
  * Get the algorithm type from EncryptAlgorithmType.
- * @returns {number} The algorithm type from EncryptAlgorithmType, or null if
+ * @return {number} The algorithm type from EncryptAlgorithmType, or null if
  * not specified.
  */
 EncryptedContent.prototype.getAlgorithmType = function()
@@ -29958,7 +30472,7 @@ EncryptedContent.prototype.getAlgorithmType = function()
 
 /**
  * Get the key locator.
- * @returns {KeyLocator} The key locator. If not specified, getType() is null.
+ * @return {KeyLocator} The key locator. If not specified, getType() is null.
  */
 EncryptedContent.prototype.getKeyLocator = function()
 {
@@ -29967,7 +30481,7 @@ EncryptedContent.prototype.getKeyLocator = function()
 
 /**
  * Get the initial vector.
- * @returns {Blob} The initial vector. If not specified, isNull() is true.
+ * @return {Blob} The initial vector. If not specified, isNull() is true.
  */
 EncryptedContent.prototype.getInitialVector = function()
 {
@@ -29976,7 +30490,7 @@ EncryptedContent.prototype.getInitialVector = function()
 
 /**
  * Get the payload.
- * @returns {Blob} The payload. If not specified, isNull() is true.
+ * @return {Blob} The payload. If not specified, isNull() is true.
  */
 EncryptedContent.prototype.getPayload = function()
 {
@@ -29987,7 +30501,7 @@ EncryptedContent.prototype.getPayload = function()
  * Set the algorithm type.
  * @param {number} algorithmType The algorithm type from EncryptAlgorithmType.
  * If not specified, set to null.
- * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
 EncryptedContent.prototype.setAlgorithmType = function(algorithmType)
@@ -30000,7 +30514,7 @@ EncryptedContent.prototype.setAlgorithmType = function(algorithmType)
  * Set the key locator.
  * @param {KeyLocator} keyLocator The key locator. This makes a copy of the
  * object. If not specified, set to the default KeyLocator().
- * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
 EncryptedContent.prototype.setKeyLocator = function(keyLocator)
@@ -30015,7 +30529,7 @@ EncryptedContent.prototype.setKeyLocator = function(keyLocator)
  * Set the initial vector.
  * @param {Blob} initialVector The initial vector. If not specified, set to the
  * default Blob() where isNull() is true.
- * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
 EncryptedContent.prototype.setInitialVector = function(initialVector)
@@ -30030,7 +30544,7 @@ EncryptedContent.prototype.setInitialVector = function(initialVector)
  * Set the encrypted payload.
  * @param {Blob} payload The payload. If not specified, set to the default Blob()
  * where isNull() is true.
- * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
 EncryptedContent.prototype.setPayload = function(payload)
@@ -30044,7 +30558,7 @@ EncryptedContent.prototype.setPayload = function(payload)
  * Encode this EncryptedContent for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 EncryptedContent.prototype.wireEncode = function(wireFormat)
 {
@@ -30062,10 +30576,11 @@ EncryptedContent.prototype.wireEncode = function(wireFormat)
 EncryptedContent.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeEncryptedContent(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeEncryptedContent(this, input.buf(), false);
+  else
+    wireFormat.decodeEncryptedContent(this, input, true);
 };
 /**
  * Copyright (C) 2015-2016 Regents of the University of California.
@@ -31074,7 +31589,7 @@ Interval.prototype.isEmpty = function()
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 
 /**
- * ProducerDb is a base class the storage of keys for the producer. It contains
+ * ProducerDb is a base class for the storage of keys for the producer. It contains
  * one table that maps time slots (to the nearest hour) to the content key
  * created for that time slot. A subclass must implement the methods. For
  * example, see Sqlite3ProducerDb (for Nodejs) or IndexedDbProducerDb (for the
@@ -31476,12 +31991,12 @@ Producer.getRoundedTimeSlot_ = function(timeSlot)
 
 /**
  * Send an interest with the given name through the face with callbacks to
- * handleCoveringKey_ and handleTimeout_.
+ * handleCoveringKey_, handleTimeout_ and handleNetworkNack_.
  * @param {Interest} interest The interest to send.
- * @param {number} timeSlot The time slot, passed to handleCoveringKey_ and
- * handleTimeout_.
+ * @param {number} timeSlot The time slot, passed to handleCoveringKey_,
+ * handleTimeout_ and handleNetworkNack_.
  * @param {function} onEncryptedKeys The OnEncryptedKeys callback, passed to
- * handleCoveringKey_ and handleTimeout_.
+ * handleCoveringKey_, handleTimeout_ and handleNetworkNack_.
  * @param {function} onError This calls onError(errorCode, message) for an error.
  */
 Producer.prototype.sendKeyInterest_ = function
@@ -31498,7 +32013,12 @@ Producer.prototype.sendKeyInterest_ = function
     thisProducer.handleTimeout_(interest, timeSlot, onEncryptedKeys, onError);
   }
 
-  this.face_.expressInterest(interest, onKey, onTimeout);
+  function onNetworkNack(interest, networkNack) {
+    thisProducer.handleNetworkNack_
+      (interest, networkNack, timeSlot, onEncryptedKeys);
+  }
+
+  this.face_.expressInterest(interest, onKey, onTimeout, onNetworkNack);
 };
 
 /**
@@ -31529,6 +32049,25 @@ Producer.prototype.handleTimeout_ = function
   else
     // No more retrials.
     this.updateKeyRequest_(keyRequest, timeCount, onEncryptedKeys);
+};
+
+/**
+ * This is called from an expressInterest OnNetworkNack to handle a network
+ * Nack for the E-KEY requested through the Interest. Decrease the outstanding
+ * E-KEY interest count for the C-KEY corresponding to the timeSlot.
+ * @param {Interest} interest The interest given to expressInterest.
+ * @param {NetworkNack} networkNack The returned NetworkNack (unused).
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {function} onEncryptedKeys When there are no more interests to process,
+ * this calls onEncryptedKeys(keys) where keys is a list of encrypted content
+ * key Data packets. If onEncryptedKeys is null, this does not use it.
+ */
+Producer.prototype.handleNetworkNack_ = function
+  (interest, networkNack, timeSlot, onEncryptedKeys)
+{
+  var timeCount = Math.round(timeSlot);
+  this.updateKeyRequest_
+    (this.keyRequests_[timeCount], timeCount, onEncryptedKeys);
 };
 
 /**
@@ -32009,7 +32548,7 @@ RepetitiveInterval.RepeatUnit = {
  * covering the time point, this returns false for isPositive and returns a
  * negative interval.
  * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (isPositive, interval) where
  * isPositive is true if the returned interval is
  * positive or false if negative, and interval is the Interval covering the time
@@ -32155,39 +32694,40 @@ RepetitiveInterval.prototype.getRepeatUnit = function()
  */
 RepetitiveInterval.prototype.hasIntervalOnDate_ = function(timePoint)
 {
-  var timePointDate = new Date(RepetitiveInterval.toDateOnlyMilliseconds_(timePoint));
-  var startDate = new Date(this.startDate_);
-  var endDate = new Date(this.endDate_);
+  var timePointDateMilliseconds = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint);
 
-  if (timePointDate.getTime() < startDate.getTime() ||
-      timePointDate.getTime() > endDate.getTime())
+  if (timePointDateMilliseconds < this.startDate_ ||
+      timePointDateMilliseconds > this.endDate_)
     return false;
 
   if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.NONE)
     return true;
-
-  if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.DAY) {
-    var durationDays =
-      (timePointDate.getTime() - startDate.getTime()) /
-      RepetitiveInterval.MILLISECONDS_IN_DAY;
+  else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.DAY) {
+    var durationDays = (timePointDateMilliseconds - this.startDate_) /
+                        RepetitiveInterval.MILLISECONDS_IN_DAY;
     if (durationDays % this.nRepeats_ == 0)
       return true;
   }
-  else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.MONTH &&
-           timePointDate.getUTCDate() == startDate.getUTCDate()) {
-    var yearDifference =
-      timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
-    var monthDifference = 12 * yearDifference +
-      timePointDate.getUTCMonth() - startDate.getUTCMonth();
-    if (monthDifference % this.nRepeats_ == 0)
-      return true;
-  }
-  else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.YEAR &&
-           timePointDate.getUTCDate() == startDate.getUTCDate() &&
-           timePointDate.getUTCMonth() == startDate.getUTCMonth()) {
-    var difference = timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
-    if (difference % this.nRepeats_ == 0)
-      return true;
+  else {
+    var timePointDate = new Date(timePointDateMilliseconds);
+    var startDate = new Date(this.startDate_);
+
+    if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.MONTH &&
+             timePointDate.getUTCDate() == startDate.getUTCDate()) {
+      var yearDifference =
+        timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
+      var monthDifference = 12 * yearDifference +
+        timePointDate.getUTCMonth() - startDate.getUTCMonth();
+      if (monthDifference % this.nRepeats_ == 0)
+        return true;
+    }
+    else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.YEAR &&
+             timePointDate.getUTCDate() == startDate.getUTCDate() &&
+             timePointDate.getUTCMonth() == startDate.getUTCMonth()) {
+      var difference = timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
+      if (difference % this.nRepeats_ == 0)
+        return true;
+    }
   }
 
   return false;
@@ -32297,7 +32837,7 @@ Schedule.prototype.addBlackInterval = function(repetitiveInterval)
  * member to access the data. If there is no interval covering the time stamp,
  * this returns false for isPositive and a negative interval.
  * @param {number} timeStamp The time stamp as milliseconds since Jan 1, 1970 UTC.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (isPositive, interval) where
  * isPositive is true if the returned interval is positive or false if negative,
  * and interval is the Interval covering the time stamp, or a negative interval
@@ -32385,7 +32925,7 @@ Schedule.prototype.wireEncode = function()
  * Decode the input and update this Schedule object.
  * @param {Blob|Buffer} input The input buffer to decode. For Buffer, this reads
  * from position() to limit(), but does not change the position.
- * @throws EncodingException For invalid encoding.
+ * @throws DecodingException For invalid encoding.
  */
 Schedule.prototype.wireDecode = function(input)
 {
@@ -32526,7 +33066,7 @@ Schedule.calculateIntervalResult_ = function
 /**
  * Convert a UNIX timestamp to ISO time representation with the "T" in the middle.
  * @param {number} msSince1970 Timestamp as milliseconds since Jan 1, 1970 UTC.
- * @returns {string} The string representation.
+ * @return {string} The string representation.
  */
 Schedule.toIsoString = function(msSince1970)
 {
@@ -32543,7 +33083,7 @@ Schedule.toIsoString = function(msSince1970)
 /**
  * A private method to zero pad an integer to 2 digits.
  * @param {number} x The number to pad.  Assume it is a non-negative integer.
- * @returns {string} The padded string.
+ * @return {string} The padded string.
  */
 Schedule.to2DigitString = function(x)
 {
@@ -32555,7 +33095,7 @@ Schedule.to2DigitString = function(x)
  * Convert an ISO time representation with the "T" in the middle to a UNIX
  * timestamp.
  * @param {string} timeString The ISO time representation.
- * @returns {number} The timestamp as milliseconds since Jan 1, 1970 UTC.
+ * @return {number} The timestamp as milliseconds since Jan 1, 1970 UTC.
  */
 Schedule.fromIsoString = function(timeString)
 {
@@ -34535,7 +35075,7 @@ InterestFilterTable.Entry = function InterestFilterTableEntry
 
 /**
  * Get the interestFilterId given to the constructor.
- * @returns {number} The interestFilterId.
+ * @return {number} The interestFilterId.
  */
 InterestFilterTable.Entry.prototype.getInterestFilterId = function()
 {
@@ -34544,7 +35084,7 @@ InterestFilterTable.Entry.prototype.getInterestFilterId = function()
 
 /**
  * Get the InterestFilter given to the constructor.
- * @returns {InterestFilter} The InterestFilter.
+ * @return {InterestFilter} The InterestFilter.
  */
 InterestFilterTable.Entry.prototype.getFilter = function()
 {
@@ -34553,7 +35093,7 @@ InterestFilterTable.Entry.prototype.getFilter = function()
 
 /**
  * Get the onInterest callback given to the constructor.
- * @returns {function} The onInterest callback.
+ * @return {function} The onInterest callback.
  */
 InterestFilterTable.Entry.prototype.getOnInterest = function()
 {
@@ -34562,7 +35102,7 @@ InterestFilterTable.Entry.prototype.getOnInterest = function()
 
 /**
  * Get the Face given to the constructor.
- * @returns {Face} The Face.
+ * @return {Face} The Face.
  */
 InterestFilterTable.Entry.prototype.getFace = function()
 {
@@ -34682,7 +35222,7 @@ PendingInterestTable.Entry = function PendingInterestTableEntry
 
 /**
  * Get the pendingInterestId given to the constructor.
- * @returns {number} The pendingInterestId.
+ * @return {number} The pendingInterestId.
  */
 PendingInterestTable.Entry.prototype.getPendingInterestId = function()
 {
@@ -34691,7 +35231,7 @@ PendingInterestTable.Entry.prototype.getPendingInterestId = function()
 
 /**
  * Get the interest given to the constructor (from Face.expressInterest).
- * @returns {Interest} The interest. NOTE: You must not change the interest
+ * @return {Interest} The interest. NOTE: You must not change the interest
  * object - if you need to change it then make a copy.
  */
 PendingInterestTable.Entry.prototype.getInterest = function()
@@ -34701,7 +35241,7 @@ PendingInterestTable.Entry.prototype.getInterest = function()
 
 /**
  * Get the OnData callback given to the constructor.
- * @returns {function} The OnData callback.
+ * @return {function} The OnData callback.
  */
 PendingInterestTable.Entry.prototype.getOnData = function()
 {
@@ -34710,7 +35250,7 @@ PendingInterestTable.Entry.prototype.getOnData = function()
 
 /**
  * Get the OnNetworkNack callback given to the constructor.
- * @returns {function} The OnNetworkNack callback.
+ * @return {function} The OnNetworkNack callback.
  */
 PendingInterestTable.Entry.prototype.getOnNetworkNack = function()
 {
@@ -34764,7 +35304,7 @@ PendingInterestTable.Entry.prototype.clearTimeout = function()
  * @param {function} onData
  * @param {function} onTimeout
  * @param {function} onNetworkNack
- * @returns {PendingInterestTable.Entry} The new PendingInterestTable.Entry, or
+ * @return {PendingInterestTable.Entry} The new PendingInterestTable.Entry, or
  * null if removePendingInterest was already called with the pendingInterestId.
  */
 PendingInterestTable.prototype.add = function
@@ -34801,22 +35341,21 @@ PendingInterestTable.prototype.add = function
 };
 
 /**
- * Find all entries from the pending interest table where the name conforms to
+ * Find all entries from the pending interest table where data conforms to
  * the entry's interest selectors, remove the entries from the table, and add to
  * the entries list.
- * @param {Name} name The name to find the interest for (from the incoming data
- * packet).
+ * @param {Data} data The incoming Data packet to find the interest for.
  * @param {Array<PendingInterestTable.Entry>} entries Add matching
  * PendingInterestTable.Entry from the pending interest table. The caller should
  * pass in an empty array.
  */
 PendingInterestTable.prototype.extractEntriesForExpressedInterest = function
-  (name, entries)
+  (data, entries)
 {
   // Go backwards through the list so we can erase entries.
   for (var i = this.table_.length - 1; i >= 0; --i) {
     var pendingInterest = this.table_[i];
-    if (pendingInterest.getInterest().matchesName(name)) {
+    if (pendingInterest.getInterest().matchesData(data)) {
       pendingInterest.clearTimeout();
       entries.push(pendingInterest);
       this.table_.splice(i, 1);
@@ -35030,7 +35569,7 @@ RegisteredPrefixTable._Entry = function RegisteredPrefixTableEntry
 
 /**
  * Get the registeredPrefixId given to the constructor.
- * @returns {number} The registeredPrefixId.
+ * @return {number} The registeredPrefixId.
  */
 RegisteredPrefixTable._Entry.prototype.getRegisteredPrefixId = function()
 {
@@ -35039,7 +35578,7 @@ RegisteredPrefixTable._Entry.prototype.getRegisteredPrefixId = function()
 
 /**
  * Get the name prefix given to the constructor.
- * @returns {Name} The name prefix.
+ * @return {Name} The name prefix.
  */
 RegisteredPrefixTable._Entry.prototype.getPrefix = function()
 {
@@ -35048,7 +35587,7 @@ RegisteredPrefixTable._Entry.prototype.getPrefix = function()
 
 /**
  * Get the related interestFilterId given to the constructor.
- * @returns {number} The related interestFilterId.
+ * @return {number} The related interestFilterId.
  */
 RegisteredPrefixTable._Entry.prototype.getRelatedInterestFilterId = function()
 {
@@ -35465,7 +36004,7 @@ Face.prototype.close = function()
  * interest table (there usually are not many interest filter table entries) so
  * we use a common pool to only have to have one method which is called by Face.
  *
- * @returns {number} The next entry ID.
+ * @return {number} The next entry ID.
  */
 Face.prototype.getNextEntryId = function()
 {
@@ -35480,7 +36019,7 @@ Face.prototype.getNextEntryId = function()
  * @param {function} makeConnectionInfo This calls makeConnectionInfo(host, port)
  * to make the Transport.ConnectionInfo. For example:
  * function(host, port) { return new TcpTransport.ConnectionInfo(host, port); }
- * @returns {function} A function which returns a Transport.ConnectionInfo.
+ * @return {function} A function which returns a Transport.ConnectionInfo.
  */
 Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnectionInfo)
 {
@@ -35534,7 +36073,7 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
  * @param {WireFormat} (optional) A WireFormat object used to encode the message.
  * If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {number} The pending interest ID which can be used with removePendingInterest.
+ * @return {number} The pending interest ID which can be used with removePendingInterest.
  * @throws Error If the encoded interest size exceeds Face.getMaxNdnPacketSize().
  */
 Face.prototype.expressInterest = function
@@ -35752,12 +36291,18 @@ Face.prototype.setCommandCertificateName = function(certificateName)
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the SignatureInfo and to encode the interest name for signing.  If omitted,
  * use WireFormat.getDefaultWireFormat().
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * If omitted, block until complete. (Some crypto/database libraries only use a
+ * callback, so onComplete is required to use these.)
  */
-Face.prototype.makeCommandInterest = function(interest, wireFormat)
+Face.prototype.makeCommandInterest = function(interest, wireFormat, onComplete)
 {
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
+  wireFormat = (typeof wireFormat === "function" || !wireFormat) ?
+                 WireFormat.getDefaultWireFormat() : wireFormat;
   this.nodeMakeCommandInterest
-    (interest, this.commandKeyChain, this.commandCertificateName, wireFormat);
+    (interest, this.commandKeyChain, this.commandCertificateName, wireFormat,
+     onComplete);
 };
 
 /**
@@ -35788,7 +36333,7 @@ Face.prototype.nodeMakeCommandInterest = function
  * first call setCommandSigningInfo.
  * This uses the form:
  * @param {Name} prefix The Name prefix.
- * @param {function} onInterest (optional) If not None, this creates an interest
+ * @param {function} onInterest (optional) If not null, this creates an interest
  * filter from prefix so that when an Interest is received which matches the
  * filter, this calls
  * onInterest(prefix, interest, face, interestFilterId, filter).
@@ -35816,7 +36361,7 @@ Face.prototype.nodeMakeCommandInterest = function
  * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for
  * finer control of which interests are forward to the application. If omitted,
  * use the default flags defined by the default ForwardingFlags constructor.
- * @returns {number} The registered prefix ID which can be used with
+ * @return {number} The registered prefix ID which can be used with
  * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefix = function
@@ -35834,7 +36379,7 @@ Face.prototype.registerPrefix = function
   // ForwardingFlags,   WireFormat,      null
   // ForwardingFlags,   null,            null
   // WireFormat,        null,            null
-  // null,              null,            None
+  // null,              null,            null
   if (typeof arg4 === "function")
     onRegisterSuccess = arg4;
   else
@@ -36259,7 +36804,7 @@ Face.prototype.onReceivedElement = function(element)
 
     var pendingInterests = [];
     this.pendingInterestTable_.extractEntriesForExpressedInterest
-      (data.getName(), pendingInterests);
+      (data, pendingInterests);
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
       var pendingInterest = pendingInterests[i];

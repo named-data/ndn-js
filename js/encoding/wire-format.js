@@ -29,7 +29,7 @@ exports.WireFormat = WireFormat;
 /**
  * Encode name and return the encoding.  Your derived class should override.
  * @param {Name} name The Name to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeName = function(name)
@@ -42,9 +42,12 @@ WireFormat.prototype.encodeName = function(name)
  * Your derived class should override.
  * @param {Name} name The Name object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeName = function(name, input)
+WireFormat.prototype.decodeName = function(name, input, copy)
 {
   throw new Error("decodeName is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -52,7 +55,7 @@ WireFormat.prototype.decodeName = function(name, input)
 /**
  * Encode interest and return the encoding.  Your derived class should override.
  * @param {Interest} interest The Interest to encode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
  * the encoding of the beginning of the signed portion, and
@@ -72,7 +75,10 @@ WireFormat.prototype.encodeInterest = function(interest)
  * Your derived class should override.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -81,7 +87,7 @@ WireFormat.prototype.encodeInterest = function(interest)
  * assumed to be a signature for a signed interest).
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeInterest = function(interest, input)
+WireFormat.prototype.decodeInterest = function(interest, input, copy)
 {
   throw new Error("decodeInterest is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -90,7 +96,7 @@ WireFormat.prototype.decodeInterest = function(interest, input)
  * Encode data and return the encoding and signed offsets. Your derived class
  * should override.
  * @param {Data} data The Data object to encode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
  * the encoding of the beginning of the signed portion, and
@@ -108,14 +114,17 @@ WireFormat.prototype.encodeData = function(data)
  * the signed offsets.  Your derived class should override.
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
  * of the end of the signed portion.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeData = function(data, input)
+WireFormat.prototype.decodeData = function(data, input, copy)
 {
   throw new Error("decodeData is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -125,7 +134,7 @@ WireFormat.prototype.decodeData = function(data, input)
  * override.
  * @param {ControlParameters} controlParameters The ControlParameters object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeControlParameters = function(controlParameters)
@@ -139,9 +148,13 @@ WireFormat.prototype.encodeControlParameters = function(controlParameters)
  * @param {ControlParameters} controlParameters The ControlParameters object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
+WireFormat.prototype.decodeControlParameters = function
+  (controlParameters, input, copy)
 {
   throw new Error("decodeControlParameters is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -151,7 +164,7 @@ WireFormat.prototype.decodeControlParameters = function(controlParameters, input
  * override.
  * @param {ControlResponse} controlResponse The ControlResponse object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeControlResponse = function(controlResponse)
@@ -165,9 +178,13 @@ WireFormat.prototype.encodeControlResponse = function(controlResponse)
  * @param {ControlResponse} controlResponse The ControlResponse object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
+WireFormat.prototype.decodeControlResponse = function
+  (controlResponse, input, copy)
 {
   throw new Error("decodeControlResponse is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -176,7 +193,7 @@ WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
  * Encode signature as a SignatureInfo and return the encoding. Your derived
  * class should override.
  * @param {Signature} signature An object of a subclass of Signature to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeSignatureInfo = function(signature)
@@ -191,11 +208,14 @@ WireFormat.prototype.encodeSignatureInfo = function(signature)
  * @param {Buffer} signatureInfo The buffer with the signature info bytes to
  * decode.
  * @param {Buffer} signatureValue The buffer with the signature value to decode.
- * @returns {Signature} A new object which is a subclass of Signature.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @return {Signature} A new object which is a subclass of Signature.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.decodeSignatureInfoAndValue = function
-  (signatureInfo, signatureValue)
+  (signatureInfo, signatureValue, copy)
 {
   throw new Error("decodeSignatureInfoAndValue is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -205,7 +225,7 @@ WireFormat.prototype.decodeSignatureInfoAndValue = function
  * signature bits) and return the encoding. Your derived class should override.
  * @param {Signature} signature An object of a subclass of Signature with the
  * signature value to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeSignatureValue = function(signature)
@@ -218,10 +238,13 @@ WireFormat.prototype.encodeSignatureValue = function(signature)
  * Your derived class should override.
  * @param {LpPacket} lpPacket The LpPacket object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
-WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
+WireFormat.prototype.decodeLpPacket = function(lpPacket, input, copy)
 {
   throw new Error
     ("decodeLpPacket is unimplemented in the base WireFormat class. You should use a derived class.");
@@ -232,7 +255,7 @@ WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
  * should override.
  * @param {DelegationSet} delegationSet The DelegationSet object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
@@ -248,10 +271,13 @@ WireFormat.prototype.encodeDelegationSet = function(delegationSet)
  * @param {DelegationSet} delegationSet The DelegationSet object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
-WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
+WireFormat.prototype.decodeDelegationSet = function(delegationSet, input, copy)
 {
   throw new Error
     ("decodeDelegationSet is unimplemented in the base WireFormat class. You should use a derived class.");
@@ -262,7 +288,7 @@ WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
  * should override.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
@@ -278,10 +304,14 @@ WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
  * @param {EncryptedContent} encryptedContent The EncryptedContent object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
-WireFormat.prototype.decodeEncryptedContent = function(encryptedContent, input)
+WireFormat.prototype.decodeEncryptedContent = function
+  (encryptedContent, input, copy)
 {
   throw new Error
     ("decodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
@@ -300,7 +330,7 @@ WireFormat.setDefaultWireFormat = function(wireFormat)
 /**
  * Return the default WireFormat used by default encoding and decoding methods
  * which was set with setDefaultWireFormat.
- * @returns {WireFormat} An object of a subclass of WireFormat.
+ * @return {WireFormat} An object of a subclass of WireFormat.
  */
 WireFormat.getDefaultWireFormat = function()
 {

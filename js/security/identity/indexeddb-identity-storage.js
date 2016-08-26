@@ -63,7 +63,7 @@ IndexedDbIdentityStorage.prototype.name = "IndexedDbIdentityStorage";
  * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @returns {Promise} A promise which returns true if the identity exists.
+ * @return {Promise} A promise which returns true if the identity exists.
  */
 IndexedDbIdentityStorage.prototype.doesIdentityExistPromise = function
   (identityName, useSync)

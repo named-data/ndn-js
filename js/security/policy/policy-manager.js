@@ -26,6 +26,7 @@ var DataUtils = require('../../encoding/data-utils.js').DataUtils; /** @ignore *
 var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
 var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
 var UseSubtleCrypto = require("../../use-subtle-crypto-node.js").UseSubtleCrypto;
 
 /**
@@ -45,7 +46,7 @@ exports.PolicyManager = PolicyManager;
  * Your derived class should override.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True if the data or interest does not need to be verified
+ * @return {boolean} True if the data or interest does not need to be verified
  * to be trusted as valid, otherwise false.
  */
 PolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
@@ -59,7 +60,7 @@ PolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * Your derived class should override.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True if the data or interest must be verified, otherwise
+ * @return {boolean} True if the data or interest must be verified, otherwise
  * false.
  */
 PolicyManager.prototype.requireVerify = function(dataOrInterest)
@@ -87,7 +88,7 @@ PolicyManager.prototype.requireVerify = function(dataOrInterest)
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {WireFormat} wireFormat
- * @returns {ValidationRequest} The indication of next verification step, or
+ * @return {ValidationRequest} The indication of next verification step, or
  * null if there is no further step.
  */
 PolicyManager.prototype.checkVerificationPolicy = function
@@ -103,7 +104,7 @@ PolicyManager.prototype.checkVerificationPolicy = function
  *
  * @param {Name} dataName The name of data to be signed.
  * @param {Name} certificateName The name of signing certificate.
- * @returns {boolean} True if the signing certificate can be used to sign the
+ * @return {boolean} True if the signing certificate can be used to sign the
  * data, otherwise false.
  */
 PolicyManager.prototype.checkSigningPolicy = function(dataName, certificateName)
@@ -117,17 +118,23 @@ PolicyManager.prototype.checkSigningPolicy = function(dataName, certificateName)
  * Your derived class should override.
  *
  * @param {Name} dataName The name of data to be signed.
- * @returns {Name} The signing identity or an empty name if cannot infer.
+ * @return {Name} The signing identity or an empty name if cannot infer.
  */
 PolicyManager.prototype.inferSigningIdentity = function(dataName)
 {
   throw new Error("PolicyManager.inferSigningIdentity is not implemented");
 };
 
-// The first time verifySha256WithRsaSignature is called, it sets this to
-// determine if a signature buffer needs to be converted to a string for the
-// crypto verifier.
-PolicyManager.verifyUsesString = null;
+// The first time verify is called, it sets this to determine if a signature
+// buffer needs to be converted to a string for the crypto verifier.
+PolicyManager.verifyUsesString_ = null;
+PolicyManager.setVerifyUsesString_ = function()
+{
+  var hashResult = Crypto.createHash('sha256').digest();
+  // If the hash result is a string, we assume that this is a version of
+  //   crypto where verify also uses a string signature.
+  PolicyManager.verifyUsesString_ = (typeof hashResult === 'string');
+};
 
 /**
  * Check the type of signature and use the publicKeyDer to verify the
@@ -152,6 +159,14 @@ PolicyManager.verifySignature = function
       return;
     }
     PolicyManager.verifySha256WithRsaSignature
+      (signature.getSignature(), signedBlob, publicKeyDer, onComplete);
+  }
+  else if (signature instanceof Sha256WithEcdsaSignature) {
+    if (publicKeyDer.isNull()) {
+      onComplete(false);
+      return;
+    }
+    PolicyManager.verifySha256WithEcdsaSignature
       (signature.getSignature(), signedBlob, publicKeyDer, onComplete);
   }
   else if (signature instanceof DigestSha256Signature)
@@ -185,12 +200,8 @@ PolicyManager.verifySha256WithRsaSignature = function
       onComplete(verified);
     });
   } else {
-    if (PolicyManager.verifyUsesString === null) {
-      var hashResult = Crypto.createHash('sha256').digest();
-      // If the hash result is a string, we assume that this is a version of
-      //   crypto where verify also uses a string signature.
-      PolicyManager.verifyUsesString = (typeof hashResult === 'string');
-    }
+    if (PolicyManager.verifyUsesString_ === null)
+      PolicyManager.setVerifyUsesString_();
 
     // The crypto verifier requires a PEM-encoded public key.
     var keyBase64 = publicKeyDer.buf().toString('base64');
@@ -201,7 +212,50 @@ PolicyManager.verifySha256WithRsaSignature = function
 
     var verifier = Crypto.createVerify('RSA-SHA256');
     verifier.update(signedBlob.signedBuf());
-    var signatureBytes = PolicyManager.verifyUsesString ?
+    var signatureBytes = PolicyManager.verifyUsesString_ ?
+      DataUtils.toString(signature.buf()) : signature.buf();
+    onComplete(verifier.verify(keyPem, signatureBytes));
+  }
+};
+
+/**
+ * Verify the ECDSA signature on the SignedBlob using the given public key.
+ * @param {Blob} signature The signature bits.
+ * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
+ * verify.
+ * @param {Blob} publicKeyDer The DER-encoded public key used to verify the
+ * signature.
+ * @param {function} onComplete This calls onComplete(true) if the signature
+ * verifies, otherwise onComplete(false).
+ */
+PolicyManager.verifySha256WithEcdsaSignature = function
+  (signature, signedBlob, publicKeyDer, onComplete)
+{
+  if (UseSubtleCrypto()) {
+/*
+    var algo = {name:"RSASSA-PKCS1-v1_5",hash:{name:"SHA-256"}};
+
+    crypto.subtle.importKey("spki", publicKeyDer.buf().buffer, algo, true, ["verify"]).then(function(publicKey){
+      return crypto.subtle.verify(algo, publicKey, signature.buf(), signedBlob.signedBuf())
+    }).then(function(verified){
+      onComplete(verified);
+    });
+*/  onComplete(false);
+  } else {
+    if (PolicyManager.verifyUsesString_ === null)
+      PolicyManager.setVerifyUsesString_();
+
+    // The crypto verifier requires a PEM-encoded public key.
+    var keyBase64 = publicKeyDer.buf().toString("base64");
+    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END PUBLIC KEY-----";
+
+    // Just create a "sha256". The Crypto library will infer ECDSA from the key.
+    var verifier = Crypto.createVerify("sha256");
+    verifier.update(signedBlob.signedBuf());
+    var signatureBytes = PolicyManager.verifyUsesString_ ?
       DataUtils.toString(signature.buf()) : signature.buf();
     onComplete(verifier.verify(keyPem, signatureBytes));
   }

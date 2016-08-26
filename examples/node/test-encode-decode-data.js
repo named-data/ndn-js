@@ -21,6 +21,7 @@ var Data = require('../..').Data;
 var Name = require('../..').Name;
 var Blob = require('../..').Blob;
 var Sha256WithRsaSignature = require('../..').Sha256WithRsaSignature;
+var Sha256WithEcdsaSignature = require('../..').Sha256WithEcdsaSignature;
 var HmacWithSha256Signature = require('../..').HmacWithSha256Signature;
 var DigestSha256Signature = require('../..').DigestSha256Signature;
 var GenericSignature = require('../..').GenericSignature;
@@ -205,6 +206,13 @@ function dumpData(data)
        signature.getSignature().toHex() : "<none>"));
     keyLocator = signature.getKeyLocator();
   }
+  else if (signature instanceof Sha256WithEcdsaSignature) {
+    var signature = data.getSignature();
+    console.log("Sha256WithEcdsa signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
+    keyLocator = signature.getKeyLocator();
+  }
   else if (signature instanceof HmacWithSha256Signature) {
     var signature = data.getSignature();
     console.log("HmacWithSha256 signature.signature: " +
@@ -228,7 +236,7 @@ function dumpData(data)
        signature.getSignatureInfoEncoding().toHex() : "<none>"));
   }
   if (keyLocator !== null) {
-    if (keyLocator.getType() == KeyLocatorType.NONE)
+    if (keyLocator.getType() == null)
       console.log("signature.keyLocator: <none>");
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
       console.log("signature.keyLocator: KeyLocatorDigest: " + keyLocator.getKeyData().toHex());

@@ -42,8 +42,7 @@ ProtobufTlv.decode(decodedMessage, descriptor, encoding);
 console.log("Re-decoded FibEntry:");
 // This should print the same values that we put in message above.
 var value = "";
-for (var i = 0; i < decodedMessage.fib_entry.name.component.length; ++i)
-  value += "/" + decodedMessage.fib_entry.name.component[i].toString("utf8");
+value += ProtobufTlv.toName(decodedMessage.fib_entry.name.component).toUri();
 value += " nexthops = {";
 for (var i = 0; i < decodedMessage.fib_entry.next_hop_records.length; ++i)
   value += "faceid=" + decodedMessage.fib_entry.next_hop_records[i].face_id

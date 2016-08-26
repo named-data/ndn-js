@@ -249,7 +249,7 @@ Face.prototype.close = function()
  * interest table (there usually are not many interest filter table entries) so
  * we use a common pool to only have to have one method which is called by Face.
  *
- * @returns {number} The next entry ID.
+ * @return {number} The next entry ID.
  */
 Face.prototype.getNextEntryId = function()
 {
@@ -264,7 +264,7 @@ Face.prototype.getNextEntryId = function()
  * @param {function} makeConnectionInfo This calls makeConnectionInfo(host, port)
  * to make the Transport.ConnectionInfo. For example:
  * function(host, port) { return new TcpTransport.ConnectionInfo(host, port); }
- * @returns {function} A function which returns a Transport.ConnectionInfo.
+ * @return {function} A function which returns a Transport.ConnectionInfo.
  */
 Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnectionInfo)
 {
@@ -318,7 +318,7 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
  * @param {WireFormat} (optional) A WireFormat object used to encode the message.
  * If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {number} The pending interest ID which can be used with removePendingInterest.
+ * @return {number} The pending interest ID which can be used with removePendingInterest.
  * @throws Error If the encoded interest size exceeds Face.getMaxNdnPacketSize().
  */
 Face.prototype.expressInterest = function
@@ -536,12 +536,18 @@ Face.prototype.setCommandCertificateName = function(certificateName)
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the SignatureInfo and to encode the interest name for signing.  If omitted,
  * use WireFormat.getDefaultWireFormat().
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * If omitted, block until complete. (Some crypto/database libraries only use a
+ * callback, so onComplete is required to use these.)
  */
-Face.prototype.makeCommandInterest = function(interest, wireFormat)
+Face.prototype.makeCommandInterest = function(interest, wireFormat, onComplete)
 {
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
+  wireFormat = (typeof wireFormat === "function" || !wireFormat) ?
+                 WireFormat.getDefaultWireFormat() : wireFormat;
   this.nodeMakeCommandInterest
-    (interest, this.commandKeyChain, this.commandCertificateName, wireFormat);
+    (interest, this.commandKeyChain, this.commandCertificateName, wireFormat,
+     onComplete);
 };
 
 /**
@@ -572,7 +578,7 @@ Face.prototype.nodeMakeCommandInterest = function
  * first call setCommandSigningInfo.
  * This uses the form:
  * @param {Name} prefix The Name prefix.
- * @param {function} onInterest (optional) If not None, this creates an interest
+ * @param {function} onInterest (optional) If not null, this creates an interest
  * filter from prefix so that when an Interest is received which matches the
  * filter, this calls
  * onInterest(prefix, interest, face, interestFilterId, filter).
@@ -600,7 +606,7 @@ Face.prototype.nodeMakeCommandInterest = function
  * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for
  * finer control of which interests are forward to the application. If omitted,
  * use the default flags defined by the default ForwardingFlags constructor.
- * @returns {number} The registered prefix ID which can be used with
+ * @return {number} The registered prefix ID which can be used with
  * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefix = function
@@ -618,7 +624,7 @@ Face.prototype.registerPrefix = function
   // ForwardingFlags,   WireFormat,      null
   // ForwardingFlags,   null,            null
   // WireFormat,        null,            null
-  // null,              null,            None
+  // null,              null,            null
   if (typeof arg4 === "function")
     onRegisterSuccess = arg4;
   else
@@ -1043,7 +1049,7 @@ Face.prototype.onReceivedElement = function(element)
 
     var pendingInterests = [];
     this.pendingInterestTable_.extractEntriesForExpressedInterest
-      (data.getName(), pendingInterests);
+      (data, pendingInterests);
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
       var pendingInterest = pendingInterests[i];

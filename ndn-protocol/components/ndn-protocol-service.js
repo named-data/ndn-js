@@ -686,7 +686,7 @@ function parseExclude(value)
 /**
  * Get the index of the first component that starts with %C1.META.
  * @param {Name} name The Name to search.
- * @returns {number} The index or -1 if not found.
+ * @return {number} The index or -1 if not found.
  */
 function getIndexOfMetaComponent(name)
 {
@@ -705,7 +705,7 @@ var MetaComponentPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);
 /**
  * Get the index of the first component that is the NDNFS file meta data marker.
  * @param {type} name The Name to search.
- * @returns {number} The index or -1 if not found.
+ * @return {number} The index or -1 if not found.
  */
 function getIndexOfNdnfsFolderComponent(name)
 {
@@ -720,7 +720,7 @@ function getIndexOfNdnfsFolderComponent(name)
 /**
  * Get the index of the first component that is the NDNFS file meta data marker.
  * @param {type} name The Name to search.
- * @returns {number} The index or -1 if not found.
+ * @return {number} The index or -1 if not found.
  */
 function getIndexOfNdnfsFileComponent(name)
 {

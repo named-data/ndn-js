@@ -77,7 +77,7 @@ exports.InterestFilter = InterestFilter;
  * (e.g., there are implicit heading `^` and trailing `$` symbols in the
  * regular expression).
  * @param {Name} name The name to check against this filter.
- * @returns {boolean} True if name matches this filter, otherwise false.
+ * @return {boolean} True if name matches this filter, otherwise false.
  */
 InterestFilter.prototype.doesMatch = function(name)
 {
@@ -100,13 +100,13 @@ InterestFilter.prototype.doesMatch = function(name)
 
 /**
  * Get the prefix given to the constructor.
- * @returns {Name} The prefix Name which you should not modify.
+ * @return {Name} The prefix Name which you should not modify.
  */
 InterestFilter.prototype.getPrefix = function() { return this.prefix; };
 
 /**
  * Check if a regexFilter was supplied to the constructor.
- * @returns {boolean} True if a regexFilter was supplied to the constructor.
+ * @return {boolean} True if a regexFilter was supplied to the constructor.
  */
 InterestFilter.prototype.hasRegexFilter = function()
 {
@@ -115,7 +115,7 @@ InterestFilter.prototype.hasRegexFilter = function()
 
 /**
  * Get the regex filter. This is only valid if hasRegexFilter() is true.
- * @returns {string} The regular expression for matching the remaining name
+ * @return {string} The regular expression for matching the remaining name
  * components.
  */
 InterestFilter.prototype.getRegexFilter = function() { return this.regexFilter; };
@@ -124,7 +124,7 @@ InterestFilter.prototype.getRegexFilter = function() { return this.regexFilter; 
  * If regexFilter doesn't already have them, add ^ to the beginning and $ to
  * the end since these are required by NdnRegexMatcher.match.
  * @param {string} regexFilter The regex filter.
- * @returns {string} The regex pattern with ^ and $.
+ * @return {string} The regex pattern with ^ and $.
  */
 InterestFilter.makePattern = function(regexFilter)
 {

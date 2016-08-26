@@ -80,7 +80,7 @@ exports.MetaInfo = MetaInfo;
 
 /**
  * Get the content type.
- * @returns {number} The content type as an int from ContentType. If this is
+ * @return {number} The content type as an int from ContentType. If this is
  * ContentType.OTHER_CODE, then call getOtherTypeCode() to get the unrecognized
  * content type code.
  */
@@ -102,7 +102,7 @@ MetaInfo.prototype.getOtherTypeCode = function()
 
 /**
  * Get the freshness period.
- * @returns {number} The freshness period in milliseconds, or null if not
+ * @return {number} The freshness period in milliseconds, or null if not
  * specified.
  */
 MetaInfo.prototype.getFreshnessPeriod = function()
@@ -112,7 +112,7 @@ MetaInfo.prototype.getFreshnessPeriod = function()
 
 /**
  * Get the final block ID.
- * @returns {Name.Component} The final block ID as a Name.Component. If the
+ * @return {Name.Component} The final block ID as a Name.Component. If the
  * Name.Component getValue().size() is 0, then the final block ID is not specified.
  */
 MetaInfo.prototype.getFinalBlockId = function()
@@ -149,6 +149,13 @@ MetaInfo.prototype.setType = function(type)
   ++this.changeCount_;
 };
 
+/**
+ * Set the packet’s content type code to use when the content type enum is
+ * ContentType.OTHER_CODE. If the packet’s content type code is a recognized
+ * enum value, just call setType().
+ * @param {number} otherTypeCode The packet’s unrecognized content type code,
+ * which must be non-negative.
+ */
 MetaInfo.prototype.setOtherTypeCode = function(otherTypeCode)
 {
   if (otherTypeCode < 0)
@@ -160,12 +167,11 @@ MetaInfo.prototype.setOtherTypeCode = function(otherTypeCode)
 
 /**
  * Set the freshness period.
- * @param {type} freshnessPeriod The freshness period in milliseconds, or null
+ * @param {number} freshnessPeriod The freshness period in milliseconds, or null
  * for not specified.
  */
 MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
 {
-  // Use attribute freshnessSeconds for backwards compatibility.
   if (freshnessPeriod == null || freshnessPeriod < 0)
     this.freshnessPeriod_ = null;
   else
@@ -173,6 +179,12 @@ MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
   ++this.changeCount_;
 };
 
+/**
+ * Set the final block ID.
+ * @param {Name.Component} finalBlockId The final block ID as a Name.Component.
+ * If not specified, set to a new default Name.Component(), or to a
+ * Name.Component where getValue().size() is 0.
+ */
 MetaInfo.prototype.setFinalBlockId = function(finalBlockId)
 {
   this.finalBlockId_ = typeof finalBlockId === 'object' &&
@@ -191,7 +203,7 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 MetaInfo.prototype.getChangeCount = function()
 {

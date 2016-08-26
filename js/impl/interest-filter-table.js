@@ -54,7 +54,7 @@ InterestFilterTable.Entry = function InterestFilterTableEntry
 
 /**
  * Get the interestFilterId given to the constructor.
- * @returns {number} The interestFilterId.
+ * @return {number} The interestFilterId.
  */
 InterestFilterTable.Entry.prototype.getInterestFilterId = function()
 {
@@ -63,7 +63,7 @@ InterestFilterTable.Entry.prototype.getInterestFilterId = function()
 
 /**
  * Get the InterestFilter given to the constructor.
- * @returns {InterestFilter} The InterestFilter.
+ * @return {InterestFilter} The InterestFilter.
  */
 InterestFilterTable.Entry.prototype.getFilter = function()
 {
@@ -72,7 +72,7 @@ InterestFilterTable.Entry.prototype.getFilter = function()
 
 /**
  * Get the onInterest callback given to the constructor.
- * @returns {function} The onInterest callback.
+ * @return {function} The onInterest callback.
  */
 InterestFilterTable.Entry.prototype.getOnInterest = function()
 {
@@ -81,7 +81,7 @@ InterestFilterTable.Entry.prototype.getOnInterest = function()
 
 /**
  * Get the Face given to the constructor.
- * @returns {Face} The Face.
+ * @return {Face} The Face.
  */
 InterestFilterTable.Entry.prototype.getFace = function()
 {

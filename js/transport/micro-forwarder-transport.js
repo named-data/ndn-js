@@ -75,7 +75,7 @@ MicroForwarderTransport.ConnectionInfo.prototype.name = "MicroForwarderTransport
  * Check if the fields of this MicroForwarderTransport.ConnectionInfo equal the other
  * MicroForwarderTransport.ConnectionInfo.
  * @param {MicroForwarderTransport.ConnectionInfo} The other object to check.
- * @returns {boolean} True if the objects have equal fields, false if not.
+ * @return {boolean} True if the objects have equal fields, false if not.
  */
 MicroForwarderTransport.ConnectionInfo.prototype.equals = function(other)
 {

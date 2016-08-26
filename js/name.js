@@ -22,6 +22,7 @@
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
 var LOG = require('./log.js').Log.LOG;
+var DecodingException = require('./encoding/decoding-exception.js').DecodingException;
 
 /**
  * Create a new Name from components.
@@ -57,15 +58,21 @@ var Name = function Name(components)
 exports.Name = Name;
 
 /**
- * Create a new Name.Component with a copy of the given value.
+ * Create a new GENERIC Name.Component with a copy of the given value.
+ * (To create an ImplicitSha256Digest component, use fromImplicitSha256Digest.)
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer} value If the value is a string, encode it as utf8 (but don't unescape).
  * @constructor
  */
 Name.Component = function NameComponent(value)
 {
-  if (typeof value === 'object' && value instanceof Name.Component)
+  if (typeof value === 'object' && value instanceof Name.Component) {
+    // The copy constructor.
     this.value_ = value.value_;
-  else if (!value)
+    this.type_ = value.type_;
+    return;
+  }
+
+  if (!value)
     this.value_ = new Blob([]);
   else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&
            value instanceof ArrayBuffer)
@@ -77,11 +84,22 @@ Name.Component = function NameComponent(value)
   else
     // Blob will make a copy if needed.
     this.value_ = new Blob(value);
+
+  this.type_ = Name.Component.ComponentType.GENERIC;
+};
+
+/**
+ * A Name.Component.ComponentType specifies the recognized types of a name
+ * component.
+ */
+Name.Component.ComponentType = {
+  IMPLICIT_SHA256_DIGEST: 1,
+  GENERIC: 8
 };
 
 /**
  * Get the component value.
- * @returns {Blob} The component value.
+ * @return {Blob} The component value.
  */
 Name.Component.prototype.getValue = function()
 {
@@ -107,71 +125,98 @@ Object.defineProperty(Name.Component.prototype, "value",
 /**
  * Convert this component value to a string by escaping characters according to the NDN URI Scheme.
  * This also adds "..." to a value with zero or more ".".
- * @returns {string} The escaped string.
+ * This adds a type code prefix as needed, such as "sha256digest=".
+ * @return {string} The escaped string.
  */
 Name.Component.prototype.toEscapedString = function()
 {
-  return Name.toEscapedString(this.value_.buf());
+  if (this.type_ === Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST)
+    return "sha256digest=" + this.value_.toHex();
+  else
+    return Name.toEscapedString(this.value_.buf());
 };
 
 /**
  * Check if this component is a segment number according to NDN naming
  * conventions for "Segment number" (marker 0x00).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns {number}  True if this is a segment number.
+ * @return {number}  True if this is a segment number.
  */
 Name.Component.prototype.isSegment = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0x00;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0x00 &&
+         this.isGeneric();
 };
 
 /**
  * Check if this component is a segment byte offset according to NDN
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns  True if this is a segment byte offset.
+ * @return  True if this is a segment byte offset.
  */
 Name.Component.prototype.isSegmentOffset = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFB;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFB &&
+         this.isGeneric();
 };
 
 /**
  * Check if this component is a version number  according to NDN naming
  * conventions for "Versioning" (marker 0xFD).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns {number}  True if this is a version number.
+ * @return {number}  True if this is a version number.
  */
 Name.Component.prototype.isVersion = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFD;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFD &&
+         this.isGeneric();
 };
 
 /**
  * Check if this component is a timestamp  according to NDN naming
  * conventions for "Timestamp" (marker 0xFC).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns  True if this is a timestamp.
+ * @return  True if this is a timestamp.
  */
 Name.Component.prototype.isTimestamp = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFC;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFC &&
+         this.isGeneric();
 };
 
 /**
  * Check if this component is a sequence number according to NDN naming
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns  True if this is a sequence number.
+ * @return  True if this is a sequence number.
  */
 Name.Component.prototype.isSequenceNumber = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFE;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFE &&
+         this.isGeneric();
+};
+
+/**
+ * Check if this component is a generic component.
+ * @return {boolean} True if this is an generic component.
+ */
+Name.Component.prototype.isGeneric = function()
+{
+  return this.type_ === Name.Component.ComponentType.GENERIC;
+};
+
+/**
+ * Check if this component is an ImplicitSha256Digest component.
+ * @return {boolean} True if this is an ImplicitSha256Digest component.
+ */
+Name.Component.prototype.isImplicitSha256Digest = function()
+{
+  return this.type_ === Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST;
 };
 
 /**
  * Interpret this name component as a network-ordered number and return an integer.
- * @returns {number} The integer number.
+ * @return {number} The integer number.
  */
 Name.Component.prototype.toNumber = function()
 {
@@ -182,7 +227,7 @@ Name.Component.prototype.toNumber = function()
  * Interpret this name component as a network-ordered number with a marker and
  * return an integer.
  * @param {number} marker The required first byte of the component.
- * @returns {number} The integer number.
+ * @return {number} The integer number.
  * @throws Error If the first byte of the component does not equal the marker.
  */
 Name.Component.prototype.toNumberWithMarker = function(marker)
@@ -197,7 +242,7 @@ Name.Component.prototype.toNumberWithMarker = function(marker)
  * Interpret this name component as a segment number according to NDN naming
  * conventions for "Segment number" (marker 0x00).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns {number} The integer segment number.
+ * @return {number} The integer segment number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toSegment = function()
@@ -209,7 +254,7 @@ Name.Component.prototype.toSegment = function()
  * Interpret this name component as a segment byte offset according to NDN
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns The integer segment byte offset.
+ * @return The integer segment byte offset.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toSegmentOffset = function()
@@ -222,7 +267,7 @@ Name.Component.prototype.toSegmentOffset = function()
  * conventions for "Versioning" (marker 0xFD). Note that this returns
  * the exact number from the component without converting it to a time
  * representation.
- * @returns {number} The integer version number.
+ * @return {number} The integer version number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toVersion = function()
@@ -234,7 +279,7 @@ Name.Component.prototype.toVersion = function()
  * Interpret this name component as a timestamp  according to NDN naming
  * conventions for "Timestamp" (marker 0xFC).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns The number of microseconds since the UNIX epoch (Thursday,
+ * @return The number of microseconds since the UNIX epoch (Thursday,
  * 1 January 1970) not counting leap seconds.
  * @throws Error If the first byte of the component is not the expected marker.
  */
@@ -247,7 +292,7 @@ Name.Component.prototype.toTimestamp = function()
  * Interpret this name component as a sequence number according to NDN naming
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns The integer sequence number.
+ * @return The integer sequence number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toSequenceNumber = function()
@@ -259,7 +304,7 @@ Name.Component.prototype.toSequenceNumber = function()
  * Create a component whose value is the nonNegativeInteger encoding of the
  * number.
  * @param {number} number
- * @returns {Name.Component}
+ * @return {Name.Component}
  */
 Name.Component.fromNumber = function(number)
 {
@@ -273,7 +318,7 @@ Name.Component.fromNumber = function(number)
  * nonNegativeInteger encoding of the number.
  * @param {number} number
  * @param {number} marker
- * @returns {Name.Component}
+ * @return {Name.Component}
  */
 Name.Component.fromNumberWithMarker = function(number, marker)
 {
@@ -348,8 +393,28 @@ Name.Component.fromSequenceNumber = function(sequenceNumber)
 };
 
 /**
+ * Create a component of type ImplicitSha256DigestComponent, so that
+ * isImplicitSha256Digest() is true.
+ * @param {Blob|Buffer} digest The SHA-256 digest value.
+ * @return {Name.Component} The new Component.
+ * @throws DecodingException If the digest length is not 32 bytes.
+ */
+Name.Component.fromImplicitSha256Digest = function(digest)
+{
+  digestBlob = typeof digest === 'object' && digest instanceof Blob ?
+    digest : new Blob(digest, true);
+  if (digestBlob.size() !== 32)
+    throw new DecodingException
+      ("Name.Component.fromImplicitSha256Digest: The digest length must be 32 bytes");
+
+  var result = new Name.Component(digestBlob);
+  result.type_ = Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST;
+  return result;
+};
+
+/**
  * Get the successor of this component, as described in Name.getSuccessor.
- * @returns {Name.Component} A new Name.Component which is the successor of this.
+ * @return {Name.Component} A new Name.Component which is the successor of this.
  */
 Name.Component.prototype.getSuccessor = function()
 {
@@ -381,18 +446,18 @@ Name.Component.prototype.getSuccessor = function()
 /**
  * Check if this is the same component as other.
  * @param {Name.Component} other The other Component to compare with.
- * @returns {Boolean} true if the components are equal, otherwise false.
+ * @return {Boolean} true if the components are equal, otherwise false.
  */
 Name.Component.prototype.equals = function(other)
 {
   return typeof other === 'object' && other instanceof Name.Component &&
-    this.value_.equals(other.value_);
+    this.value_.equals(other.value_) && this.type_ === other.type_;
 };
 
 /**
  * Compare this to the other Component using NDN canonical ordering.
  * @param {Name.Component} other The other Component to compare with.
- * @returns {number} 0 if they compare equal, -1 if this comes before other in
+ * @return {number} 0 if they compare equal, -1 if this comes before other in
  * the canonical ordering, or 1 if this comes after other in the canonical
  * ordering.
  *
@@ -400,6 +465,11 @@ Name.Component.prototype.equals = function(other)
  */
 Name.Component.prototype.compare = function(other)
 {
+  if (this.type_ < other.type_)
+    return -1;
+  if (this.type_ > other.type_)
+    return 1;
+
   return Name.Component.compareBuffers(this.value_.buf(), other.value_.buf());
 };
 
@@ -407,7 +477,7 @@ Name.Component.prototype.compare = function(other)
  * Do the work of Name.Component.compare to compare the component buffers.
  * @param {Buffer} component1
  * @param {Buffer} component2
- * @returns {number} 0 if they compare equal, -1 if component1 comes before
+ * @return {number} 0 if they compare equal, -1 if component1 comes before
  * component2 in the canonical ordering, or 1 if component1 comes after
  * component2 in the canonical ordering.
  */
@@ -470,17 +540,25 @@ Name.createNameArray = function(uri)
   var array = uri.split('/');
 
   // Unescape the components.
+  var sha256digestPrefix = "sha256digest=";
   for (var i = 0; i < array.length; ++i) {
-    var value = Name.fromEscapedString(array[i]);
+    var component;
+    if (array[i].substr(0, sha256digestPrefix.length) == sha256digestPrefix) {
+      var hexString = array[i].substr(sha256digestPrefix.length).trim();
+      component = Name.Component.fromImplicitSha256Digest
+        (new Blob(new Buffer(hexString, 'hex')), false);
+    }
+    else
+      component = new Name.Component(Name.fromEscapedString(array[i]));
 
-    if (value.isNull()) {
+    if (component.getValue().isNull()) {
       // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
       array.splice(i, 1);
       --i;
       continue;
     }
     else
-      array[i] = new Name.Component(value);
+      array[i] = component;
   }
 
   return array;
@@ -498,10 +576,10 @@ Name.prototype.set = function(uri)
 };
 
 /**
- * Convert the component to a Buffer and append to this Name.
+ * Convert the component to a Buffer and append a GENERIC component to this Name.
  * Return this Name object to allow chaining calls to add.
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8 (but don't unescape).
- * @returns {Name}
+ * @return {Name}
  */
 Name.prototype.append = function(component)
 {
@@ -516,6 +594,9 @@ Name.prototype.append = function(component)
     for (var i = 0; i < components.length; ++i)
       this.components.push(new Name.Component(components[i]));
   }
+  else if (typeof component === 'object' && component instanceof Name.Component)
+    // The Component is immutable, so use it as is.
+    this.components.push(component);
   else
     // Just use the Name.Component constructor.
     this.components.push(new Name.Component(component));
@@ -547,7 +628,7 @@ Name.prototype.clear = function()
  * in the URI, e.g. "ndn:/example/name". If false, just return the path, e.g.
  * "/example/name". If ommitted, then just return the path which is the default
  * case where toUri() is used for display.
- * @returns {String}
+ * @return {String}
  */
 Name.prototype.toUri = function(includeScheme)
 {
@@ -557,7 +638,7 @@ Name.prototype.toUri = function(includeScheme)
   var result = includeScheme ? "ndn:" : "";
 
   for (var i = 0; i < this.size(); ++i)
-    result += "/"+ Name.toEscapedString(this.components[i].getValue().buf());
+    result += "/"+ this.components[i].toEscapedString();
 
   return result;
 };
@@ -577,7 +658,7 @@ Name.prototype.toString = function() { return this.toUri(); }
  * naming conventions for "Segment number" (marker 0x00).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} segment The segment number.
- * @returns {Name} This name so that you can chain calls to append.
+ * @return {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendSegment = function(segment)
 {
@@ -589,7 +670,7 @@ Name.prototype.appendSegment = function(segment)
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} segmentOffset The segment byte offset.
- * @returns {Name} This name so that you can chain calls to append.
+ * @return {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendSegmentOffset = function(segmentOffset)
 {
@@ -602,7 +683,7 @@ Name.prototype.appendSegmentOffset = function(segmentOffset)
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * Note that this encodes the exact value of version without converting from a time representation.
  * @param {number} version The version number.
- * @returns {Name} This name so that you can chain calls to append.
+ * @return {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendVersion = function(version)
 {
@@ -615,7 +696,7 @@ Name.prototype.appendVersion = function(version)
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} timestamp The number of microseconds since the UNIX epoch (Thursday,
  * 1 January 1970) not counting leap seconds.
- * @returns This name so that you can chain calls to append.
+ * @return This name so that you can chain calls to append.
  */
 Name.prototype.appendTimestamp = function(timestamp)
 {
@@ -627,11 +708,23 @@ Name.prototype.appendTimestamp = function(timestamp)
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} sequenceNumber The sequence number.
- * @returns This name so that you can chain calls to append.
+ * @return This name so that you can chain calls to append.
  */
 Name.prototype.appendSequenceNumber = function(sequenceNumber)
 {
   return this.append(Name.Component.fromSequenceNumber(sequenceNumber));
+};
+
+/**
+ * Append a component of type ImplicitSha256DigestComponent, so that
+ * isImplicitSha256Digest() is true.
+ * @param {Blob|Buffer} digest The SHA-256 digest value.
+ * @return This name so that you can chain calls to append.
+ * @throws DecodingException If the digest length is not 32 bytes.
+ */
+Name.prototype.appendImplicitSha256Digest = function(digest)
+{
+  return this.append(Name.Component.fromImplicitSha256Digest(digest));
 };
 
 /**
@@ -650,7 +743,7 @@ Name.prototype.addSegment = function(number)
  * @param {number} (optional) nComponents The number of components starting at
  * iStartComponent. If omitted or greater than the size of this name, get until
  * the end of the name.
- * @returns {Name} A new name.
+ * @return {Name} A new name.
  */
 Name.prototype.getSubName = function(iStartComponent, nComponents)
 {
@@ -673,7 +766,7 @@ Name.prototype.getSubName = function(iStartComponent, nComponents)
  * Return a new Name with the first nComponents components of this Name.
  * @param {number} nComponents The number of prefix components.  If nComponents is -N then return the prefix up
  * to name.size() - N. For example getPrefix(-1) returns the name without the final component.
- * @returns {Name} A new name.
+ * @return {Name} A new name.
  */
 Name.prototype.getPrefix = function(nComponents)
 {
@@ -693,7 +786,7 @@ Name.prototype.cut = function(nComponents)
 
 /**
  * Return the number of name components.
- * @returns {number}
+ * @return {number}
  */
 Name.prototype.size = function()
 {
@@ -704,7 +797,8 @@ Name.prototype.size = function()
  * Get a Name Component by index number.
  * @param {Number} i The index of the component, starting from 0.  However, if i is negative, return the component
  * at size() - (-i).
- * @returns {Name.Component}
+ * @return {Name.Component} The name component at the index. You must not
+ * change the returned Name.Component object.
  */
 Name.prototype.get = function(i)
 {
@@ -712,14 +806,14 @@ Name.prototype.get = function(i)
     if (i >= this.components.length)
       throw new Error("Name.get: Index is out of bounds");
 
-    return new Name.Component(this.components[i]);
+    return this.components[i];
   }
   else {
     // Negative index.
     if (i < -this.components.length)
       throw new Error("Name.get: Index is out of bounds");
 
-    return new Name.Component(this.components[this.components.length - (-i)]);
+    return this.components[this.components.length - (-i)];
   }
 };
 
@@ -765,7 +859,7 @@ Name.prototype.indexOfFileName = function()
  * Encode this Name for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 Name.prototype.wireEncode = function(wireFormat)
 {
@@ -782,10 +876,11 @@ Name.prototype.wireEncode = function(wireFormat)
 Name.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeName(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeName(this, input.buf(), false);
+  else
+    wireFormat.decodeName(this, input, true);
 };
 
 /**
@@ -799,10 +894,7 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * is intuitive because all names with the prefix /a are next to each other.
  * But it may be also be counter-intuitive because /c comes before /bb according
  * to NDN canonical ordering since it is shorter.
- * @param {Name} other The other Name to compare with.
- * @returns {boolean} If they compare equal, -1 if *this comes before other in
- * the canonical ordering, or 1 if *this comes after other in the canonical
- * ordering. The first form of compare is simply compare(other). The second form is
+ * The first form of compare is simply compare(other). The second form is
  * compare(iStartComponent, nComponents, other [, iOtherStartComponent] [, nOtherComponents])
  * which is equivalent to
  * self.getSubName(iStartComponent, nComponents).compare
@@ -813,7 +905,7 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * @param {number} nComponents The number of components starting at
  * iStartComponent. If greater than the size of this name, compare until the end
  * of the name.
- * @param {Name other: The other Name to compare with.
+ * @param {Name} other The other Name to compare with.
  * @param {number} iOtherStartComponent (optional) The index if the first
  * component of the other name to compare. If iOtherStartComponent is -N then
  * compare components starting from other.size() - N. If omitted, compare
@@ -821,7 +913,7 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * @param {number} nOtherComponents (optional) The number of components
  * starting at iOtherStartComponent. If omitted or greater than the size of this
  * name, compare until the end of the name.
- * @returns {number} 0 If they compare equal, -1 if self comes before other in
+ * @return {number} 0 If they compare equal, -1 if self comes before other in
  * the canonical ordering, or 1 if self comes after other in the canonical
  * ordering.
  * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html
@@ -941,9 +1033,11 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
 
 /**
  * Return value as an escaped string according to NDN URI Scheme.
- * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
- * @param {Buffer|Name.Component} component The value or Name.Component to escape.
- * @returns {string} The escaped string.
+ * We can't use encodeURIComponent because that doesn't encode all the 
+ * characters we want to.
+ * This does not add a type code prefix such as "sha256digest=".
+ * @param {Buffer|Name.Component} value The value or Name.Component to escape.
+ * @return {string} The escaped string.
  */
 Name.toEscapedString = function(value)
 {
@@ -983,9 +1077,11 @@ Name.toEscapedString = function(value)
 
 /**
  * Make a blob value by decoding the escapedString according to NDN URI Scheme.
- * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
+ * If escapedString is "", "." or ".." then return null, which means to skip the 
+ * component in the name.
+ * This does not check for a type code prefix such as "sha256digest=".
  * @param {string} escapedString The escaped string to decode.
- * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
+ * @return {Blob} The unescaped Blob value. If the escapedString is not a valid
  * escaped component, then the Blob isNull().
  */
 Name.fromEscapedString = function(escapedString)
@@ -1033,7 +1129,7 @@ Name.fromEscapedStringAsBuffer = function(escapedString)
  * - The successor of /%00%01/%01%FF is /%00%01/%02%00
  * - The successor of /%00%01/%FF%FF is /%00%01/%00%00%00
  *
- * @returns {Name} A new name which is the successor of this.
+ * @return {Name} A new name which is the successor of this.
  */
 Name.prototype.getSuccessor = function()
 {
@@ -1051,7 +1147,7 @@ Name.prototype.getSuccessor = function()
  * Return true if the N components of this name are the same as the first N
  * components of the given name.
  * @param {Name} name The name to check.
- * @returns {Boolean} true if this matches the given name. This always returns
+ * @return {Boolean} true if this matches the given name. This always returns
  * true if this name is empty.
  */
 Name.prototype.match = function(name)
@@ -1077,14 +1173,14 @@ Name.prototype.match = function(name)
  * Return true if the N components of this name are the same as the first N
  * components of the given name.
  * @param {Name} name The name to check.
- * @returns {Boolean} true if this matches the given name. This always returns
+ * @return {Boolean} true if this matches the given name. This always returns
  * true if this name is empty.
  */
 Name.prototype.isPrefixOf = function(name) { return this.match(name); }
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Name.prototype.getChangeCount = function()
 {

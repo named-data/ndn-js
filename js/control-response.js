@@ -58,7 +58,7 @@ ControlResponse.prototype.clear = function()
  * Encode this ControlResponse for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 ControlResponse.prototype.wireEncode = function(wireFormat)
 {
@@ -76,10 +76,11 @@ ControlResponse.prototype.wireEncode = function(wireFormat)
 ControlResponse.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeControlResponse(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeControlResponse(this, input.buf(), false);
+  else
+    wireFormat.decodeControlResponse(this, input, true);
 };
 
 /**

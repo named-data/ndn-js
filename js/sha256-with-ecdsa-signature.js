@@ -1,7 +1,6 @@
 /**
  * This class represents an NDN Data Signature object.
- * Copyright (C) 2014-2016 Regents of the University of California.
- * @author: Meki Cheraoui
+ * Copyright (C) 2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -25,17 +24,18 @@ var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @igno
 var KeyLocator = require('./key-locator.js').KeyLocator;
 
 /**
- * Create a new Sha256WithRsaSignature object, possibly copying values from
+ * Create a new Sha256WithEcdsaSignature object, possibly copying values from
  * another object.
  *
- * @param {Sha256WithRsaSignature} value (optional) If value is a
- * Sha256WithRsaSignature, copy its values.  If value is omitted, the keyLocator
- * is the default with unspecified values and the signature is unspecified.
+ * @param {Sha256WithEcdsaSignature} value (optional) If value is a
+ * Sha256WithEcdsaSignature, copy its values.  If value is omitted, the 
+ * keyLocator is the default with unspecified values and the signature is
+ * unspecified.
  * @constructor
  */
-var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
+var Sha256WithEcdsaSignature = function Sha256WithEcdsaSignature(value)
 {
-  if (typeof value === 'object' && value instanceof Sha256WithRsaSignature) {
+  if (typeof value === 'object' && value instanceof Sha256WithEcdsaSignature) {
     // Copy the values.
     this.keyLocator_ = new ChangeCounter(new KeyLocator(value.getKeyLocator()));
     this.signature_ = value.signature_;
@@ -48,22 +48,23 @@ var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
   this.changeCount_ = 0;
 };
 
-exports.Sha256WithRsaSignature = Sha256WithRsaSignature;
+exports.Sha256WithEcdsaSignature = Sha256WithEcdsaSignature;
 
 /**
- * Create a new Sha256WithRsaSignature which is a copy of this object.
- * @return {Sha256WithRsaSignature} A new object which is a copy of this object.
+ * Create a new Sha256WithEcdsaSignature which is a copy of this object.
+ * @return {Sha256WithEcdsaSignature} A new object which is a copy of this
+ * object.
  */
-Sha256WithRsaSignature.prototype.clone = function()
+Sha256WithEcdsaSignature.prototype.clone = function()
 {
-  return new Sha256WithRsaSignature(this);
+  return new Sha256WithEcdsaSignature(this);
 };
 
 /**
  * Get the key locator.
  * @return {KeyLocator} The key locator.
  */
-Sha256WithRsaSignature.prototype.getKeyLocator = function()
+Sha256WithEcdsaSignature.prototype.getKeyLocator = function()
 {
   return this.keyLocator_.get();
 };
@@ -72,25 +73,16 @@ Sha256WithRsaSignature.prototype.getKeyLocator = function()
  * Get the data packet's signature bytes.
  * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
-Sha256WithRsaSignature.prototype.getSignature = function()
+Sha256WithEcdsaSignature.prototype.getSignature = function()
 {
   return this.signature_;
-};
-
-/**
- * @deprecated Use getSignature. This method returns a Buffer which is the former
- * behavior of getSignature, and should only be used while updating your code.
- */
-Sha256WithRsaSignature.prototype.getSignatureAsBuffer = function()
-{
-  return this.signature_.buf();
 };
 
 /**
  * Set the key locator to a copy of the given keyLocator.
  * @param {KeyLocator} keyLocator The KeyLocator to copy.
  */
-Sha256WithRsaSignature.prototype.setKeyLocator = function(keyLocator)
+Sha256WithEcdsaSignature.prototype.setKeyLocator = function(keyLocator)
 {
   this.keyLocator_.set(typeof keyLocator === 'object' &&
                        keyLocator instanceof KeyLocator ?
@@ -102,7 +94,7 @@ Sha256WithRsaSignature.prototype.setKeyLocator = function(keyLocator)
  * Set the data packet's signature bytes.
  * @param {Blob} signature
  */
-Sha256WithRsaSignature.prototype.setSignature = function(signature)
+Sha256WithEcdsaSignature.prototype.setSignature = function(signature)
 {
   this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
     signature : new Blob(signature);
@@ -114,7 +106,7 @@ Sha256WithRsaSignature.prototype.setSignature = function(signature)
  * object) is changed.
  * @return {number} The change count.
  */
-Sha256WithRsaSignature.prototype.getChangeCount = function()
+Sha256WithEcdsaSignature.prototype.getChangeCount = function()
 {
   // Make sure each of the checkChanged is called.
   var changed = this.keyLocator_.checkChanged();
@@ -124,14 +116,3 @@ Sha256WithRsaSignature.prototype.getChangeCount = function()
 
   return this.changeCount_;
 };
-
-// Define properties so we can change member variable types and implement changeCount_.
-Object.defineProperty(Sha256WithRsaSignature.prototype, "keyLocator",
-  { get: function() { return this.getKeyLocator(); },
-    set: function(val) { this.setKeyLocator(val); } });
-/**
- * @@deprecated Use getSignature and setSignature.
- */
-Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
-  { get: function() { return this.getSignatureAsBuffer(); },
-    set: function(val) { this.setSignature(val); } });

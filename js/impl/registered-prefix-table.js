@@ -131,7 +131,7 @@ RegisteredPrefixTable._Entry = function RegisteredPrefixTableEntry
 
 /**
  * Get the registeredPrefixId given to the constructor.
- * @returns {number} The registeredPrefixId.
+ * @return {number} The registeredPrefixId.
  */
 RegisteredPrefixTable._Entry.prototype.getRegisteredPrefixId = function()
 {
@@ -140,7 +140,7 @@ RegisteredPrefixTable._Entry.prototype.getRegisteredPrefixId = function()
 
 /**
  * Get the name prefix given to the constructor.
- * @returns {Name} The name prefix.
+ * @return {Name} The name prefix.
  */
 RegisteredPrefixTable._Entry.prototype.getPrefix = function()
 {
@@ -149,7 +149,7 @@ RegisteredPrefixTable._Entry.prototype.getPrefix = function()
 
 /**
  * Get the related interestFilterId given to the constructor.
- * @returns {number} The related interestFilterId.
+ * @return {number} The related interestFilterId.
  */
 RegisteredPrefixTable._Entry.prototype.getRelatedInterestFilterId = function()
 {

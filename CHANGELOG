@@ -1,10 +1,25 @@
-Interim changes since NDN-JS v0.11 (2016-05-13)
+Interim changes since NDN-JS v0.11 (2016-08-11)
 -----------------------------------------------
 
 Changes
 * http://redmine.named-data.net/issues/3337 In MetaInfo, added get/setOtherTypeCode
   to allow unrecognized content type codes in the packet.
 * In FilePrivateKeyStorage.generateKeyPair, update mapping.txt for the generated key.
+* Added NdnCommon.checkIndexedDb to check for Indexed DB support.
+* Added support for the Name component type ImplicitSha256Digest, and methods:
+  Name.Component.fromImplicitSha256Digest, isGeneric and isImplicitSha256Digest.
+  Name.appendImplicitSha256Digest.
+* https://redmine.named-data.net/issues/3447 In Data, added getFullName, and
+  in Interest added matchesData to use it.
+* In ProtobufTlv, added utility method toName.
+* https://redmine.named-data.net/issues/3675 In Name.get, don't copy the
+  returned component (for efficiency).
+* In Face.makeCommandInterest, added an optional onComplete callback.
+* Examples: In test-encode-decode-fib-entry, etc, use ProtobufTlv.toName.
+* Examples: Added browser/test-list-faces.html.
+* Unit tests: In test-name-methods, added test ImplicitSha256Digest.
+* Unit tests: In test-interest-methods, added test MatchesData.
+* Unit tests: In test-data-methods, added test FullName.
 
 Bug fixes
 * http://redmine.named-data.net/issues/3616 Respect tpm= setting in client.conf.

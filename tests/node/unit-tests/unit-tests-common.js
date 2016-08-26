@@ -29,7 +29,7 @@ exports.UnitTestsCommon = UnitTestsCommon;
 /**
  * Convert a UNIX timestamp to ISO time representation with the "T" in the middle.
  * @param {number} msSince1970 Timestamp as milliseconds since Jan 1, 1970 UTC.
- * @returns {string} The string representation.
+ * @return {string} The string representation.
  */
 UnitTestsCommon.toIsoString = function(msSince1970)
 {
@@ -46,7 +46,7 @@ UnitTestsCommon.toIsoString = function(msSince1970)
 /**
  * A private method to zero pad an integer to 2 digits.
  * @param {number} x The number to pad.  Assume it is a non-negative integer.
- * @returns {string} The padded string.
+ * @return {string} The padded string.
  */
 UnitTestsCommon.to2DigitString = function(x)
 {
@@ -58,7 +58,7 @@ UnitTestsCommon.to2DigitString = function(x)
  * Convert an ISO time representation with the "T" in the middle to a UNIX
  * timestamp.
  * @param {string} timeString The ISO time representation.
- * @returns {number} The timestamp as milliseconds since Jan 1, 1970 UTC.
+ * @return {number} The timestamp as milliseconds since Jan 1, 1970 UTC.
  */
 UnitTestsCommon.fromIsoString = function(timeString)
 {

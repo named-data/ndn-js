@@ -141,7 +141,7 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
  * expressInterest callbacks to tell Mocha to continue.
  * @param {Face} face The Face object for calling expressInterest.
  * @param {Name} interestName The name for the interest.
- * @returns {object} An object with onDataCallCount and onTimeoutCallCount,
+ * @return {object} An object with onDataCallCount and onTimeoutCallCount,
  * as well as the interest and data objects given to the callback. Note that
  * Mocha should wait until the callback calls done before continuing to check
  * the returned object.

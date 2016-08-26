@@ -63,7 +63,7 @@ exports.MemoryIdentityStorage = MemoryIdentityStorage;
 /**
  * Check if the specified identity already exists.
  * @param {Name} identityName The identity name.
- * @returns {SyncPromise} A promise which returns true if the identity exists.
+ * @return {SyncPromise} A promise which returns true if the identity exists.
  */
 MemoryIdentityStorage.prototype.doesIdentityExistPromise = function(identityName)
 {

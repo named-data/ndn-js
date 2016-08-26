@@ -31,56 +31,68 @@ var LOG = require('../log.js').Log.LOG;
  * elementListener.onReceivedElement(element) with the element.  This handles
  * the case where a single call to onReceivedData may contain multiple elements.
  * @constructor
- * @param {{onReceivedElement:function}} elementListener
+ * @param {object} elementListener An object with an onReceivedElement method.
  */
 var ElementReader = function ElementReader(elementListener)
 {
-  this.elementListener = elementListener;
-  this.dataParts = [];
-  this.tlvStructureDecoder = new TlvStructureDecoder();
+  this.elementListener_ = elementListener;
+  this.dataParts_ = [];
+  this.tlvStructureDecoder_ = new TlvStructureDecoder();
 };
 
 exports.ElementReader = ElementReader;
 
-ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
+/**
+ * Continue to read data until the end of an element, then call
+ * this.elementListener_.onReceivedElement(element). The buffer passed to
+ * onReceivedElement is only valid during this call.  If you need the data
+ * later, you must copy.
+ * @param {Buffer} data The Buffer with the incoming element's bytes.
+ */
+ElementReader.prototype.onReceivedData = function(data)
 {
-  // Process multiple objects in the data.
+  // Process multiple elements in the data.
   while (true) {
     var gotElementEnd;
     var offset;
 
     try {
-      if (this.dataParts.length == 0) {
+      if (this.dataParts_.length === 0) {
         // This is the beginning of an element.
         if (data.length <= 0)
           // Wait for more data.
           return;
       }
 
-      // Scan the input to check if a whole TLV object has been read.
-      this.tlvStructureDecoder.seek(0);
-      gotElementEnd = this.tlvStructureDecoder.findElementEnd(data);
-      offset = this.tlvStructureDecoder.getOffset();
+      // Scan the input to check if a whole TLV element has been read.
+      this.tlvStructureDecoder_.seek(0);
+      gotElementEnd = this.tlvStructureDecoder_.findElementEnd(data);
+      offset = this.tlvStructureDecoder_.getOffset();
     } catch (ex) {
       // Reset to read a new element on the next call.
-      this.dataParts = [];
-      this.tlvStructureDecoder = new TlvStructureDecoder();
+      this.dataParts_ = [];
+      this.tlvStructureDecoder_ = new TlvStructureDecoder();
 
       throw ex;
     }
 
     if (gotElementEnd) {
-      // Got the remainder of an object.  Report to the caller.
-      this.dataParts.push(data.slice(0, offset));
-      var element = DataUtils.concatArrays(this.dataParts);
-      this.dataParts = [];
+      // Got the remainder of an element.  Report to the caller.
+      var element;
+      if (this.dataParts_.length === 0)
+        element = data.slice(0, offset);
+      else {
+        this.dataParts_.push(data.slice(0, offset));
+        element = DataUtils.concatArrays(this.dataParts_);
+        this.dataParts_ = [];
+      }
 
-      // Reset to read a new object. Do this before calling onReceivedElement
+      // Reset to read a new element. Do this before calling onReceivedElement
       // in case it throws an exception.
       data = data.slice(offset, data.length);
-      this.tlvStructureDecoder = new TlvStructureDecoder();
+      this.tlvStructureDecoder_ = new TlvStructureDecoder();
 
-      this.elementListener.onReceivedElement(element);
+      this.elementListener_.onReceivedElement(element);
       if (data.length == 0)
         // No more data in the packet.
         return;
@@ -90,20 +102,20 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
     else {
       // Save a copy. We will call concatArrays later.
       var totalLength = data.length;
-      for (var i = 0; i < this.dataParts.length; ++i)
-        totalLength += this.dataParts[i].length;
+      for (var i = 0; i < this.dataParts_.length; ++i)
+        totalLength += this.dataParts_[i].length;
       if (totalLength > NdnCommon.MAX_NDN_PACKET_SIZE) {
         // Reset to read a new element on the next call.
-        this.dataParts = [];
-        this.tlvStructureDecoder = new TlvStructureDecoder();
+        this.dataParts_ = [];
+        this.tlvStructureDecoder_ = new TlvStructureDecoder();
 
         throw new DecodingException(new Error
           ("The incoming packet exceeds the maximum limit Face.getMaxNdnPacketSize()"));
       }
 
-      this.dataParts.push(new Buffer(data));
+      this.dataParts_.push(new Buffer(data));
       if (LOG > 3) console.log('Incomplete packet received. Length ' + data.length + '. Wait for more input.');
-        return;
+      return;
     }
   }
 };

@@ -67,7 +67,7 @@ BoostInfoTree.prototype.addSubtree = function(treeName, newTree)
  * Create a new BoostInfo and insert it as a sub-tree with the given name.
  * @param {string} treeName The name of the new sub-tree.
  * @param {string} value The value associated with the new sub-tree.
- * @returns {BoostInfoTree} The created sub-tree.
+ * @return {BoostInfoTree} The created sub-tree.
  */
 BoostInfoTree.prototype.createSubtree = function(treeName, value)
 {
@@ -79,7 +79,7 @@ BoostInfoTree.prototype.createSubtree = function(treeName, value)
 /**
  * Look up using the key and return a list of the subtrees.
  * @param {string} key The key which may be a path separated with '/'.
- * @returns {Array<BoostInfoTree>} A new array with pointers to the subtrees.
+ * @return {Array<BoostInfoTree>} A new array with pointers to the subtrees.
  */
 BoostInfoTree.prototype.get = function(key)
 {
@@ -108,7 +108,7 @@ BoostInfoTree.prototype.get = function(key)
 /**
  * Look up using the key and return string value of the first subtree.
  * @param {string} key The key which may be a path separated with '/'.
- * @returns {string} The string value or null if not found.
+ * @return {string} The string value or null if not found.
  */
 BoostInfoTree.prototype.getFirstValue = function(key)
 {
@@ -164,7 +164,7 @@ BoostInfoTree.prototype.toString = function()
  * Use treeName to find the array of BoostInfoTree in this.subtrees.
  * @param {string} treeName The key in this.subtrees to search for. This does a
  * flat search in subtrees_.  It does not split by '/' into a path.
- * @returns {Array<BoostInfoTree>} A array of BoostInfoTree, or null if not found.
+ * @return {Array<BoostInfoTree>} A array of BoostInfoTree, or null if not found.
  */
 BoostInfoTree.prototype.find = function(treeName)
 {
@@ -240,7 +240,7 @@ BoostInfoParser.prototype.getRoot = function() { return this.root; };
  * regardless of whitespace between the quotes. Also allow a backslash to escape
  * the next character.
  * @param {string} s The input string to split.
- * @returns {Array<string>} An array of strings.
+ * @return {Array<string>} An array of strings.
  */
 BoostInfoParser.shlex_split = function(s)
 {

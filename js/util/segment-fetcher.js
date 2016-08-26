@@ -193,6 +193,7 @@ SegmentFetcher.prototype.fetchNextSegment = function
   var interest = new Interest(originalInterest);
   // Changing a field clears the nonce so that the library will generate a new
   // one.
+  interest.setChildSelector(0);
   interest.setMustBeFresh(false);
   interest.setName(dataName.getPrefix(-1).appendSegment(segment));
   var thisSegmentFetcher = this;
@@ -306,11 +307,9 @@ SegmentFetcher.prototype.onTimeout = function(interest)
 /**
  * Check if the last component in the name is a segment number.
  * @param {Name} name The name to check.
- * @returns {boolean} True if the name ends with a segment number, otherwise false.
+ * @return {boolean} True if the name ends with a segment number, otherwise false.
  */
 SegmentFetcher.endsWithSegmentNumber = function(name)
 {
-  return name.size() >= 1 &&
-         name.get(-1).getValue().size() >= 1 &&
-         name.get(-1).getValue().buf()[0] == 0;
+  return name.size() >= 1 && name.get(-1).isSegment();
 };

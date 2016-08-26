@@ -74,9 +74,7 @@ Encryptor.NAME_COMPONENT_C_KEY = new Name.Component("C-KEY");
 Encryptor.encryptDataPromise = function
   (data, payload, keyName, key, params, useSync)
 {
-  var dataName = data.getName();
-  dataName.append(Encryptor.NAME_COMPONENT_FOR).append(keyName);
-  data.setName(dataName);
+  data.getName().append(Encryptor.NAME_COMPONENT_FOR).append(keyName);
 
   var algorithmType = params.getAlgorithmType();
 

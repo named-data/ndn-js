@@ -19,7 +19,7 @@
 
 /** @ignore */
 var WireFormat = require('./wire-format.js').WireFormat; /** @ignore */
-var Tlv0_1_1WireFormat = require('./tlv-0_1_1-wire-format.js').Tlv0_1_1WireFormat;
+var Tlv0_2WireFormat = require('./tlv-0_2-wire-format.js').Tlv0_2WireFormat;
 
 /**
  * A TlvWireFormat extends WireFormat to override its methods to
@@ -28,11 +28,11 @@ var Tlv0_1_1WireFormat = require('./tlv-0_1_1-wire-format.js').Tlv0_1_1WireForma
  */
 var TlvWireFormat = function TlvWireFormat()
 {
-  // Inherit from Tlv0_1_1WireFormat.
-  Tlv0_1_1WireFormat.call(this);
+  // Inherit from Tlv0_2WireFormat.
+  Tlv0_2WireFormat.call(this);
 };
 
-TlvWireFormat.prototype = new Tlv0_1_1WireFormat();
+TlvWireFormat.prototype = new Tlv0_2WireFormat();
 TlvWireFormat.prototype.name = "TlvWireFormat";
 
 exports.TlvWireFormat = TlvWireFormat;
@@ -45,7 +45,7 @@ TlvWireFormat.instance = null;
  * wire format was set with WireFormat.setDefaultWireFormat(TlvWireFormat.get()),
  * you can check if this is the default wire encoding with
  * if WireFormat.getDefaultWireFormat() == TlvWireFormat.get().
- * @returns {TlvWireFormat} The singleton instance.
+ * @return {TlvWireFormat} The singleton instance.
  */
 TlvWireFormat.get = function()
 {

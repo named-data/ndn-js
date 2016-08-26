@@ -74,7 +74,7 @@ exports.PublicKey = PublicKey;
 
 /**
  * Encode the public key into DER.
- * @returns {DerNode} The encoded DER syntax tree.
+ * @return {DerNode} The encoded DER syntax tree.
  */
 PublicKey.prototype.toDer = function()
 {
@@ -83,7 +83,7 @@ PublicKey.prototype.toDer = function()
 
 /**
  * Get the key type.
- * @returns {number} The key type as an int from KeyType.
+ * @return {number} The key type as an int from KeyType.
  */
 PublicKey.prototype.getKeyType = function()
 {
@@ -94,7 +94,7 @@ PublicKey.prototype.getKeyType = function()
  * Get the digest of the public key.
  * @param {number} digestAlgorithm (optional) The integer from DigestAlgorithm,
  * such as DigestAlgorithm.SHA256. If omitted, use DigestAlgorithm.SHA256 .
- * @returns {Blob} The digest value.
+ * @return {Blob} The digest value.
  */
 PublicKey.prototype.getDigest = function(digestAlgorithm)
 {
@@ -112,7 +112,7 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
 
 /**
  * Get the raw bytes of the public key in DER format.
- * @returns {Blob} The public key DER.
+ * @return {Blob} The public key DER.
  */
 PublicKey.prototype.getKeyDer = function()
 {

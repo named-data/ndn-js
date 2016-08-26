@@ -27,6 +27,7 @@ var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var ConfigFile = require('../../util/config-file.js').ConfigFile; /** @ignore */
 var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
 var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
 var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
@@ -348,7 +349,7 @@ IdentityManager.prototype.getDefaultIdentityPromise = function(useSync)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
- * @returns {Name} If onComplete is omitted, return the name of the default
+ * @return {Name} If onComplete is omitted, return the name of the default
  * identity. Otherwise, if onComplete is supplied then return undefined and use
  * onComplete as described above.
  * @throws SecurityException if the default identity is not set. However, if
@@ -1395,6 +1396,13 @@ IdentityManager.prototype.makeSignatureByCertificatePromise = function
     var signature = null;
     if (keyType == KeyType.RSA) {
       signature = new Sha256WithRsaSignature();
+      digestAlgorithm[0] = DigestAlgorithm.SHA256;
+
+      signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+      signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+    }
+    else if (keyType == KeyType.ECDSA) {
+      signature = new Sha256WithEcdsaSignature();
       digestAlgorithm[0] = DigestAlgorithm.SHA256;
 
       signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);

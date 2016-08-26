@@ -66,13 +66,14 @@ exports.KeyLocator = KeyLocator;
  * Get the key locator type. If KeyLocatorType.KEYNAME, you may also
  * getKeyName().  If KeyLocatorType.KEY_LOCATOR_DIGEST, you may also
  * getKeyData() to get the digest.
- * @returns {number} The key locator type, or null if not specified.
+ * @return {number} The key locator type as a KeyLocatorType enum value,
+ * or null if not specified.
  */
 KeyLocator.prototype.getType = function() { return this.type_; };
 
 /**
  * Get the key name.  This is meaningful if getType() is KeyLocatorType.KEYNAME.
- * @returns {Name} The key name. If not specified, the Name is empty.
+ * @return {Name} The key name. If not specified, the Name is empty.
  */
 KeyLocator.prototype.getKeyName = function()
 {
@@ -82,7 +83,7 @@ KeyLocator.prototype.getKeyName = function()
 /**
  * Get the key data. If getType() is KeyLocatorType.KEY_LOCATOR_DIGEST, this is
  * the digest bytes.
- * @returns {Blob} The key data, or null if not specified.
+ * @return {Blob} The key data, or an isNull Blob if not specified.
  */
 KeyLocator.prototype.getKeyData = function()
 {
@@ -102,7 +103,8 @@ KeyLocator.prototype.getKeyDataAsBuffer = function()
  * Set the key locator type.  If KeyLocatorType.KEYNAME, you must also
  * setKeyName().  If KeyLocatorType.KEY_LOCATOR_DIGEST, you must also
  * setKeyData() to the digest.
- * @param {number} type The key locator type.  If null, the type is unspecified.
+ * @param {number} type The key locator type as a KeyLocatorType enum value.  If
+ * null, the type is unspecified.
  */
 KeyLocator.prototype.setType = function(type)
 {
@@ -146,6 +148,28 @@ KeyLocator.prototype.clear = function()
 };
 
 /**
+ * Check if this key locator has the same values as the given key locator.
+ * @param {KeyLocator} other The other key locator to check.
+ * @return {boolean} true if the key locators are equal, otherwise false.
+ */
+KeyLocator.prototype.equals = function(other)
+{
+    if (this.type_ != other.type_)
+      return false;
+
+    if (this.type_ == KeyLocatorType.KEYNAME) {
+      if (!this.getKeyName().equals(other.getKeyName()))
+        return false;
+    }
+    else if (this.type_ == KeyLocatorType.KEY_LOCATOR_DIGEST) {
+      if (!this.getKeyData().equals(other.getKeyData()))
+        return false;
+    }
+
+    return true;
+};
+
+/**
  * If the signature is a type that has a KeyLocator (so that,
  * getFromSignature will succeed), return true.
  * Note: This is a static method of KeyLocator instead of a method of
@@ -153,12 +177,13 @@ KeyLocator.prototype.clear = function()
  * with all the different kinds of information that various signature
  * algorithms may use.
  * @param {Signature} signature An object of a subclass of Signature.
- * @returns {boolean} True if the signature is a type that has a KeyLocator,
+ * @return {boolean} True if the signature is a type that has a KeyLocator,
  * otherwise false.
  */
 KeyLocator.canGetFromSignature = function(signature)
 {
   return signature instanceof Sha256WithRsaSignature ||
+         signature instanceof Sha256WithEcdsaSignature ||
          signature instanceof HmacWithSha256Signature;
 }
 
@@ -166,12 +191,13 @@ KeyLocator.canGetFromSignature = function(signature)
  * If the signature is a type that has a KeyLocator, then return it. Otherwise
  * throw an error.
  * @param {Signature} signature An object of a subclass of Signature.
- * @returns {KeyLocator} The signature's KeyLocator. It is an error if signature
+ * @return {KeyLocator} The signature's KeyLocator. It is an error if signature
  * doesn't have a KeyLocator.
  */
 KeyLocator.getFromSignature = function(signature)
 {
   if (signature instanceof Sha256WithRsaSignature ||
+      signature instanceof Sha256WithEcdsaSignature ||
       signature instanceof HmacWithSha256Signature)
     return signature.getKeyLocator();
   else
@@ -182,7 +208,7 @@ KeyLocator.getFromSignature = function(signature)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 KeyLocator.prototype.getChangeCount = function()
 {
@@ -208,4 +234,5 @@ Object.defineProperty(KeyLocator.prototype, "keyData",
 
 // Put this last to avoid a require loop.
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var Sha256WithEcdsaSignature = require('./sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature;
 var HmacWithSha256Signature = require('./hmac-with-sha256-signature.js').HmacWithSha256Signature;

@@ -45,7 +45,7 @@ ForwardingFlags.NfdForwardingFlags_CAPTURE       = 2;
 /**
  * Get an integer with the bits set according to the NFD forwarding flags as
  * used in the ControlParameters of the command interest.
- * @returns {number} An integer with the bits set.
+ * @return {number} An integer with the bits set.
  */
 ForwardingFlags.prototype.getNfdForwardingFlags = function()
 {
@@ -74,13 +74,13 @@ ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
 
 /**
  * Get the value of the "childInherit" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
+ * @return {Boolean} true if the flag is set, false if it is cleared.
  */
 ForwardingFlags.prototype.getChildInherit = function() { return this.childInherit; };
 
 /**
  * Get the value of the "capture" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
+ * @return {Boolean} true if the flag is set, false if it is cleared.
  */
 ForwardingFlags.prototype.getCapture = function() { return this.capture; };
 

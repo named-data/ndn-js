@@ -54,7 +54,7 @@ exports.GenericSignature = GenericSignature;
 
 /**
  * Create a new GenericSignature which is a copy of this object.
- * @returns {GenericSignature} A new object which is a copy of this object.
+ * @return {GenericSignature} A new object which is a copy of this object.
  */
 GenericSignature.prototype.clone = function()
 {
@@ -63,7 +63,7 @@ GenericSignature.prototype.clone = function()
 
 /**
  * Get the data packet's signature bytes.
- * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 GenericSignature.prototype.getSignature = function()
 { 
@@ -82,7 +82,7 @@ GenericSignature.prototype.getSignatureAsBuffer = function()
 /**
  * Get the bytes of the entire signature info encoding (including the type
  * code).
- * @returns {Blob} The encoding bytes. If not specified, the value isNull().
+ * @return {Blob} The encoding bytes. If not specified, the value isNull().
  */
 GenericSignature.prototype.getSignatureInfoEncoding = function()
 {
@@ -94,7 +94,7 @@ GenericSignature.prototype.getSignatureInfoEncoding = function()
  * setSignatureInfoEncoding, it sets the type code. Note that the type code
  * is ignored during wire encode, which simply uses getSignatureInfoEncoding()
  * where the encoding already has the type code.
- * @returns {number} The type code, or null if not known.
+ * @return {number} The type code, or null if not known.
  */
 GenericSignature.prototype.getTypeCode = function() { return this.typeCode_; };
 
@@ -130,7 +130,7 @@ GenericSignature.prototype.setSignatureInfoEncoding = function
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 GenericSignature.prototype.getChangeCount = function()
 {

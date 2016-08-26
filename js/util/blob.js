@@ -27,7 +27,7 @@
  * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take
  * another pointer to the Buffer without copying. If value is a Buffer or byte
  * array, copy to create a new Buffer.  If omitted, buf() will return null.
- * @param {boolean} copy (optional) (optional) If true, copy the contents of
+ * @param {boolean} copy (optional) If true, copy the contents of
  * value into a new Buffer.  If false, just use the existing value without
  * copying. If omitted, then copy the contents (unless value is already a Blob).
  * IMPORTANT: If copy is false, if you keep a pointer to the value then you must
@@ -71,7 +71,7 @@ exports.Blob = Blob;
 
 /**
  * Return the length of the immutable byte array.
- * @returns {number} The length of the array.  If buf() is null, return 0.
+ * @return {number} The length of the array.  If buf() is null, return 0.
  */
 Blob.prototype.size = function()
 {
@@ -84,7 +84,7 @@ Blob.prototype.size = function()
 /**
  * Return the immutable byte array.  DO NOT change the contents of the Buffer.
  * If you need to change it, make a copy.
- * @returns {Buffer} The Buffer holding the immutable byte array, or null.
+ * @return {Buffer} The Buffer holding the immutable byte array, or null.
  */
 Blob.prototype.buf = function()
 {
@@ -93,7 +93,7 @@ Blob.prototype.buf = function()
 
 /**
  * Return true if the array is null, otherwise false.
- * @returns {boolean} True if the array is null.
+ * @return {boolean} True if the array is null.
  */
 Blob.prototype.isNull = function()
 {
@@ -102,7 +102,7 @@ Blob.prototype.isNull = function()
 
 /**
  * Return the hex representation of the bytes in the byte array.
- * @returns {string} The hex string.
+ * @return {string} The hex string.
  */
 Blob.prototype.toHex = function()
 {
@@ -127,7 +127,7 @@ Blob.prototype.toString = function()
 /**
  * Check if the value of this Blob equals the other blob.
  * @param {Blob} other The other Blob to check.
- * @returns {boolean} if this isNull and other isNull or if the bytes of this
+ * @return {boolean} if this isNull and other isNull or if the bytes of this
  * blob equal the bytes of the other.
  */
 Blob.prototype.equals = function(other)

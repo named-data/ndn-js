@@ -41,7 +41,7 @@ exports.ChangeCounter = ChangeCounter;
 /**
  * Get the target object. If the target is changed, then checkChanged will
  * detect it.
- * @returns {object} The target, as an object with the method
+ * @return {object} The target, as an object with the method
  * getChangeCount().
  */
 ChangeCounter.prototype.get = function()
@@ -67,7 +67,7 @@ ChangeCounter.prototype.set = function(target)
  * meaning that the target has not changed. Also, if the target is null,
  * simply return false. This is useful since the target (or one of the target's
  * targets) may be changed and you need to find out.
- * @returns {boolean} True if the change count has been updated, false if not.
+ * @return {boolean} True if the change count has been updated, false if not.
  */
 ChangeCounter.prototype.checkChanged = function()
 {

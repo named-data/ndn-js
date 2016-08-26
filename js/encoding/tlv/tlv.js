@@ -30,6 +30,7 @@ exports.Tlv = Tlv;
 Tlv.Interest =         5;
 Tlv.Data =             6;
 Tlv.Name =             7;
+Tlv.ImplicitSha256DigestComponent = 1;
 Tlv.NameComponent =    8;
 Tlv.Selectors =        9;
 Tlv.Nonce =            10;
@@ -133,7 +134,7 @@ Tlv.Encrypt_Schedule = 143;
  * (This could be a general function, but we define it here so that the
  * Tlv encoder/decoder is self-contained.)
  * @param {number} x
- * @returns {number}
+ * @return {number}
  */
 Tlv.getHighBytes = function(x)
 {

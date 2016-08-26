@@ -56,20 +56,20 @@ Exclude.ANY = "*";
 
 /**
  * Get the number of entries.
- * @returns {number} The number of entries.
+ * @return {number} The number of entries.
  */
 Exclude.prototype.size = function() { return this.values.length; };
 
 /**
  * Get the entry at the given index.
  * @param {number} i The index of the entry, starting from 0.
- * @returns {Exclude.ANY|Name.Component} Exclude.ANY or a Name.Component.
+ * @return {Exclude.ANY|Name.Component} Exclude.ANY or a Name.Component.
  */
 Exclude.prototype.get = function(i) { return this.values[i]; };
 
 /**
  * Append an Exclude.ANY element.
- * @returns This Exclude so that you can chain calls to append.
+ * @return This Exclude so that you can chain calls to append.
  */
 Exclude.prototype.appendAny = function()
 {
@@ -81,7 +81,7 @@ Exclude.prototype.appendAny = function()
 /**
  * Append a component entry, copying from component.
  * @param {Name.Component|Buffer} component
- * @returns This Exclude so that you can chain calls to append.
+ * @return This Exclude so that you can chain calls to append.
  */
 Exclude.prototype.appendComponent = function(component)
 {
@@ -115,7 +115,7 @@ Exclude.prototype.toUri = function()
     if (this.values[i] == Exclude.ANY)
       result += "*";
     else
-      result += Name.toEscapedString(this.values[i].getValue().buf());
+      result += this.values[i].toEscapedString();
   }
   return result;
 };
@@ -123,12 +123,10 @@ Exclude.prototype.toUri = function()
 /**
  * Return true if the component matches any of the exclude criteria.
  */
-Exclude.prototype.matches = function(/*Buffer*/ component)
+Exclude.prototype.matches = function(component)
 {
-  if (typeof component == 'object' && component instanceof Name.Component)
-    component = component.getValue().buf();
-  else if (typeof component === 'object' && component instanceof Blob)
-    component = component.buf();
+  if (!(typeof component == 'object' && component instanceof Name.Component))
+    component = new Name.Component(component);
 
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
@@ -150,12 +148,12 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       // If upperBound != null, we will check component equals upperBound on the next pass.
       if (upperBound != null) {
         if (lowerBound != null) {
-          if (Exclude.compareComponents(component, lowerBound) > 0 &&
-              Exclude.compareComponents(component, upperBound) < 0)
+          if (component.compare(lowerBound) > 0 &&
+              component.compare(upperBound) < 0)
             return true;
         }
         else {
-          if (Exclude.compareComponents(component, upperBound) < 0)
+          if (component.compare(upperBound) < 0)
             return true;
         }
 
@@ -164,7 +162,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       }
       else {
         if (lowerBound != null) {
-            if (Exclude.compareComponents(component, lowerBound) > 0)
+            if (component.compare(lowerBound) > 0)
               return true;
         }
         else
@@ -173,7 +171,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       }
     }
     else {
-      if (DataUtils.arraysEqual(component, this.values[i].getValue().buf()))
+      if (component.equals(this.values[i]))
         return true;
     }
   }
@@ -197,7 +195,7 @@ Exclude.compareComponents = function(component1, component2)
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Exclude.prototype.getChangeCount = function()
 {

@@ -76,7 +76,7 @@ ControlParameters.prototype.clear = function()
  * Encode this ControlParameters for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 ControlParameters.prototype.wireEncode = function(wireFormat)
 {
@@ -94,15 +94,16 @@ ControlParameters.prototype.wireEncode = function(wireFormat)
 ControlParameters.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeControlParameters(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeControlParameters(this, input.buf(), false);
+  else
+    wireFormat.decodeControlParameters(this, input, true);
 };
 
 /**
  * Get the name.
- * @returns {Name} The name. If not specified, return null.
+ * @return {Name} The name. If not specified, return null.
  */
 ControlParameters.prototype.getName = function()
 {
@@ -111,7 +112,7 @@ ControlParameters.prototype.getName = function()
 
 /**
  * Get the face ID.
- * @returns {number} The face ID, or null if not specified.
+ * @return {number} The face ID, or null if not specified.
  */
 ControlParameters.prototype.getFaceId = function()
 {
@@ -120,7 +121,7 @@ ControlParameters.prototype.getFaceId = function()
 
 /**
  * Get the URI.
- * @returns {string} The face URI, or an empty string if not specified.
+ * @return {string} The face URI, or an empty string if not specified.
  */
 ControlParameters.prototype.getUri = function()
 {
@@ -129,7 +130,7 @@ ControlParameters.prototype.getUri = function()
 
 /**
  * Get the local control feature value.
- * @returns {number} The local control feature value, or null if not specified.
+ * @return {number} The local control feature value, or null if not specified.
  */
 ControlParameters.prototype.getLocalControlFeature = function()
 {
@@ -138,7 +139,7 @@ ControlParameters.prototype.getLocalControlFeature = function()
 
 /**
  * Get the origin value.
- * @returns {number} The origin value, or null if not specified.
+ * @return {number} The origin value, or null if not specified.
  */
 ControlParameters.prototype.getOrigin = function()
 {
@@ -147,7 +148,7 @@ ControlParameters.prototype.getOrigin = function()
 
 /**
  * Get the cost value.
- * @returns {number} The cost value, or null if not specified.
+ * @return {number} The cost value, or null if not specified.
  */
 ControlParameters.prototype.getCost = function()
 {
@@ -156,7 +157,7 @@ ControlParameters.prototype.getCost = function()
 
 /**
  * Get the ForwardingFlags object.
- * @returns {ForwardingFlags} The ForwardingFlags object.
+ * @return {ForwardingFlags} The ForwardingFlags object.
  */
 ControlParameters.prototype.getForwardingFlags = function()
 {
@@ -165,7 +166,7 @@ ControlParameters.prototype.getForwardingFlags = function()
 
 /**
  * Get the strategy.
- * @returns {Name} The strategy or an empty Name
+ * @return {Name} The strategy or an empty Name
  */
 ControlParameters.prototype.getStrategy = function()
 {
@@ -174,7 +175,7 @@ ControlParameters.prototype.getStrategy = function()
 
 /**
  * Get the expiration period.
- * @returns {number} The expiration period in milliseconds, or null if not specified.
+ * @return {number} The expiration period in milliseconds, or null if not specified.
  */
 ControlParameters.prototype.getExpirationPeriod = function()
 {

@@ -54,7 +54,7 @@ PendingInterestTable.Entry = function PendingInterestTableEntry
 
 /**
  * Get the pendingInterestId given to the constructor.
- * @returns {number} The pendingInterestId.
+ * @return {number} The pendingInterestId.
  */
 PendingInterestTable.Entry.prototype.getPendingInterestId = function()
 {
@@ -63,7 +63,7 @@ PendingInterestTable.Entry.prototype.getPendingInterestId = function()
 
 /**
  * Get the interest given to the constructor (from Face.expressInterest).
- * @returns {Interest} The interest. NOTE: You must not change the interest
+ * @return {Interest} The interest. NOTE: You must not change the interest
  * object - if you need to change it then make a copy.
  */
 PendingInterestTable.Entry.prototype.getInterest = function()
@@ -73,7 +73,7 @@ PendingInterestTable.Entry.prototype.getInterest = function()
 
 /**
  * Get the OnData callback given to the constructor.
- * @returns {function} The OnData callback.
+ * @return {function} The OnData callback.
  */
 PendingInterestTable.Entry.prototype.getOnData = function()
 {
@@ -82,7 +82,7 @@ PendingInterestTable.Entry.prototype.getOnData = function()
 
 /**
  * Get the OnNetworkNack callback given to the constructor.
- * @returns {function} The OnNetworkNack callback.
+ * @return {function} The OnNetworkNack callback.
  */
 PendingInterestTable.Entry.prototype.getOnNetworkNack = function()
 {
@@ -136,7 +136,7 @@ PendingInterestTable.Entry.prototype.clearTimeout = function()
  * @param {function} onData
  * @param {function} onTimeout
  * @param {function} onNetworkNack
- * @returns {PendingInterestTable.Entry} The new PendingInterestTable.Entry, or
+ * @return {PendingInterestTable.Entry} The new PendingInterestTable.Entry, or
  * null if removePendingInterest was already called with the pendingInterestId.
  */
 PendingInterestTable.prototype.add = function
@@ -173,22 +173,21 @@ PendingInterestTable.prototype.add = function
 };
 
 /**
- * Find all entries from the pending interest table where the name conforms to
+ * Find all entries from the pending interest table where data conforms to
  * the entry's interest selectors, remove the entries from the table, and add to
  * the entries list.
- * @param {Name} name The name to find the interest for (from the incoming data
- * packet).
+ * @param {Data} data The incoming Data packet to find the interest for.
  * @param {Array<PendingInterestTable.Entry>} entries Add matching
  * PendingInterestTable.Entry from the pending interest table. The caller should
  * pass in an empty array.
  */
 PendingInterestTable.prototype.extractEntriesForExpressedInterest = function
-  (name, entries)
+  (data, entries)
 {
   // Go backwards through the list so we can erase entries.
   for (var i = this.table_.length - 1; i >= 0; --i) {
     var pendingInterest = this.table_[i];
-    if (pendingInterest.getInterest().matchesName(name)) {
+    if (pendingInterest.getInterest().matchesData(data)) {
       pendingInterest.clearTimeout();
       entries.push(pendingInterest);
       this.table_.splice(i, 1);

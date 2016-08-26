@@ -74,7 +74,7 @@ XpcomTransport.ConnectionInfo.prototype.name = "XpcomTransport.ConnectionInfo";
  * Check if the fields of this XpcomTransport.ConnectionInfo equal the other
  * XpcomTransport.ConnectionInfo.
  * @param {XpcomTransport.ConnectionInfo} The other object to check.
- * @returns {boolean} True if the objects have equal fields, false if not.
+ * @return {boolean} True if the objects have equal fields, false if not.
  */
 XpcomTransport.ConnectionInfo.prototype.equals = function(other)
 {
@@ -124,7 +124,7 @@ XpcomTransport.prototype.isLocal = function(connectionInfo, onResult, onError)
  * @param {function} onopenCallback Once connected, call onopenCallback().
  * @param {type} onclosedCallback If the connection is closed by the remote host,
  * call onclosedCallback().
- * @returns {undefined}
+ * @return {undefined}
  */
 XpcomTransport.prototype.connect = function
   (connectionInfo, elementListener, onopenCallback, onclosedCallback)

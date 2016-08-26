@@ -320,7 +320,7 @@ MemoryContentCache.prototype.storePendingInterest = function(interest, face)
  * calls storePendingInterest() to store the interest that doesn't match a
  * Data packet. add(data) will check if the added Data packet satisfies any
  * pending interest and send it.
- * @returns {function} A callback to use for onDataNotFound in registerPrefix().
+ * @return {function} A callback to use for onDataNotFound in registerPrefix().
  */
 MemoryContentCache.prototype.getStorePendingInterest = function()
 {
@@ -473,7 +473,7 @@ MemoryContentCache.StaleTimeContent.prototype.name = "StaleTimeContent";
  * Check if this content is stale.
  * @param {number} nowMilliseconds The current time in milliseconds from
  * new Date().getTime().
- * @returns {boolean} True if this content is stale, otherwise false.
+ * @return {boolean} True if this content is stale, otherwise false.
  */
 MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds)
 {
@@ -518,7 +518,7 @@ MemoryContentCache.PendingInterest.prototype.getFace = function()
  * Check if this interest is timed out.
  * @param {number} nowMilliseconds The current time in milliseconds from
  * new Date().getTime().
- * @returns {boolean} True if this interest timed out, otherwise false.
+ * @return {boolean} True if this interest timed out, otherwise false.
  */
 MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMilliseconds)
 {

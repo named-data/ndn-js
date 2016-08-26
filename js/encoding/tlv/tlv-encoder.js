@@ -42,7 +42,7 @@ exports.TlvEncoder = TlvEncoder;
  * Get the number of bytes that have been written to the output.  You can
  * save this number, write sub TLVs, then subtract the new length from this
  * to get the total length of the sub TLVs.
- * @returns {number} The number of bytes that have been written to the output.
+ * @return {number} The number of bytes that have been written to the output.
  */
 TlvEncoder.prototype.getLength = function()
 {
@@ -178,7 +178,7 @@ TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
  * If value is negative or null then do nothing, otherwise call
  * writeNonNegativeIntegerTlv.
  * @param {number} type The type of the TLV.
- * @param {number} value If negative or None do nothing, otherwise the integer
+ * @param {number} value If negative or null do nothing, otherwise the integer
  *   to encode.
  */
 TlvEncoder.prototype.writeOptionalNonNegativeIntegerTlv = function(type, value)
@@ -236,7 +236,7 @@ TlvEncoder.prototype.writeOptionalBlobTlv = function(type, value)
 
 /**
  * Get a slice of the encoded bytes.
- * @returns {Buffer} A slice backed by the encoding Buffer.
+ * @return {Buffer} A slice backed by the encoding Buffer.
  */
 TlvEncoder.prototype.getOutput = function()
 {

@@ -95,7 +95,7 @@ exports.BasicIdentityStorage = BasicIdentityStorage;
  * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @returns {Promise} A promise which returns true if the identity exists.
+ * @return {Promise} A promise which returns true if the identity exists.
  */
 BasicIdentityStorage.prototype.doesIdentityExistPromise = function
   (identityName, useSync)
@@ -776,7 +776,7 @@ BasicIdentityStorage.prototype.eachPromise_ = function(sql, params, onRow)
 
 /**
  * Retrieve the user's current home directory
- * @returns {string} path to the user's home directory
+ * @return {string} path to the user's home directory
  */
 BasicIdentityStorage.getUserHomePath = function() {
   return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;

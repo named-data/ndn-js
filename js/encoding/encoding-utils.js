@@ -24,6 +24,7 @@ var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var Data = require('../data.js').Data; /** @ignore */
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
 var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature; /** @ignore */
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var ContentType = require('../meta-info.js').ContentType; /** @ignore */
@@ -134,6 +135,13 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
        signature.getSignature().toHex() : "<none>"));
     keyLocator = signature.getKeyLocator();
   }
+  else if (signature instanceof Sha256WithEcdsaSignature) {
+    var signature = data.getSignature();
+    append("Sha256WithEcdsa signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
+    keyLocator = signature.getKeyLocator();
+  }
   else if (signature instanceof HmacWithSha256Signature) {
     var signature = data.getSignature();
     append("HmacWithSha256 signature.signature: " +
@@ -148,7 +156,7 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
        signature.getSignature().toHex() : "<none>"));
   }
   if (keyLocator !== null) {
-    if (keyLocator.getType() == KeyLocatorType.NONE)
+    if (keyLocator.getType() == null)
       append("signature.keyLocator: <none>");
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
       append("signature.keyLocator: KeyLocatorDigest: " + keyLocator.getKeyData().toHex());
