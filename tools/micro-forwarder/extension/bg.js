@@ -18,33 +18,45 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var PIT = [];   // of PitEntry
-var FIB = [];   // of FibEntry
-var Faces = []; // of ForwarderFace
+/**
+ * A MicroForwarder holds a PIT, FIB and faces to function as a simple NDN
+ * forwarder. 
+ * Use chrome.runtime.onConnect.addListener to receive messages from the
+ * WebExtensions port.
+ */
+var MicroForwarder = function MicroForwarder()
+{
+  this.PIT_ = [];   // of PitEntry
+  this.FIB_ = [];   // of FibEntry
+  this.faces_ = []; // of ForwarderFace
 
-// Add a listener to wait for a connection request from a tab.
-chrome.runtime.onConnect.addListener(function(port) {
-  var face = null;
-  var transport = new RuntimePortTransport
-    (function(obj) {
-      face.onReceivedObject(obj); });
-  face = new ForwarderFace("internal://port", transport);
+  // Add a listener to wait for a connection request from a tab.
+  var thisForwarder = this;
+  chrome.runtime.onConnect.addListener(function(port) {
+    var face = null;
+    var transport = new RuntimePortTransport
+      (function(obj) { thisForwarder.onReceivedObject(face, obj); });
+    face = new ForwarderFace("internal://port", transport);
 
-  function onClosedCallback() {
-    face.transport = null;
-    for (var i = 0; i < Faces.length; ++i) {
-      if (Faces[i] === face) {
-        // TODO: Mark this face as disconnected so the FIB doesn't use it.
-        Faces.splice(i, 1);
-        break;
+    function onClosedCallback() {
+      face.transport = null;
+      for (var i = 0; i < thisForwarder.faces_.length; ++i) {
+        if (thisForwarder.faces_[i] === face) {
+          // TODO: Mark this face as disconnected so the FIB doesn't use it.
+          thisForwarder.faces_.splice(i, 1);
+          break;
+        }
       }
     }
-  }
-  transport.connect
-    (new RuntimePortTransport.ConnectionInfo(port), face, function(){},
-     onClosedCallback);
-  Faces.push(face);
-});
+
+    transport.connect
+      (new RuntimePortTransport.ConnectionInfo(port),
+       { onReceivedElement: function(element) { 
+           thisForwarder.onReceivedElement(face, element); } },
+       function(){}, onClosedCallback);
+    thisForwarder.faces_.push(face);
+  });
+};
 
 /**
  * A PitEntry is used in the PIT to record the face on which an Interest came in.
@@ -91,9 +103,11 @@ ForwarderFace.lastFaceId = 0;
  * This is called by the listener when an entire TLV element is received.
  * If it is an Interest, look in the FIB for forwarding. If it is a Data packet,
  * look in the PIT to match an Interest.
- * @param {Buffer} element
+ * @param {ForwarderFace} face The ForwarderFace with the transport that
+ * received the element.
+ * @param {Buffer} element The received element.
  */
-ForwarderFace.prototype.onReceivedElement = function(element)
+MicroForwarder.prototype.onReceivedElement = function(face, element)
 {
   if (LOG > 3) console.log("Complete element received. Length " + element.length + "\n");
   // First, decode as Interest or Data.
@@ -114,15 +128,15 @@ ForwarderFace.prototype.onReceivedElement = function(element)
   // Now process as Interest or Data.
   if (interest !== null) {
     if (LOG > 3) console.log("Interest packet received: " + interest.getName().toUri() + "\n");
-    if (ForwarderFace.localhostNamePrefix.match(interest.getName())) {
-      this.onReceivedLocalhostInterest(interest);
+    if (MicroForwarder.localhostNamePrefix.match(interest.getName())) {
+      this.onReceivedLocalhostInterest(face, interest);
       return;
     }
 
-    for (var i = 0; i < PIT.length; ++i) {
+    for (var i = 0; i < this.PIT_.length; ++i) {
       // TODO: Check interest equality of appropriate selectors.
-      if (PIT[i].face == this &&
-          PIT[i].interest.getName().equals(interest.getName())) {
+      if (this.PIT_[i].face == face &&
+          this.PIT_[i].interest.getName().equals(interest.getName())) {
         // Duplicate PIT entry.
         // TODO: Update the interest timeout?
         if (LOG > 3) console.log("Duplicate Interest: " + interest.getName().toUri());
@@ -131,39 +145,39 @@ ForwarderFace.prototype.onReceivedElement = function(element)
     }
 
     // Add to the PIT.
-    var pitEntry = new PitEntry(interest, this);
-    PIT.push(pitEntry);
+    var pitEntry = new PitEntry(interest, face);
+    this.PIT_.push(pitEntry);
     // Set the interest timeout timer.
     var timeoutCallback = function() {
       if (LOG > 3) console.log("Interest time out: " + interest.getName().toUri() + "\n");
-      // Remove this entry from the PIT
-      var index = PIT.indexOf(pitEntry);
+      // Remove the face's entry from the PIT
+      var index = this.PIT_.indexOf(pitEntry);
       if (index >= 0)
-        PIT.splice(index, 1);
+        this.PIT_.splice(index, 1);
     };
     var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
     setTimeout(timeoutCallback, timeoutMilliseconds);
 
-    if (ForwarderFace.broadcastNamePrefix.match(interest.getName())) {
+    if (MicroForwarder.broadcastNamePrefix.match(interest.getName())) {
       // Special case: broadcast to all faces.
-      for (var i = 0; i < Faces.length; ++i) {
-        var outFace = Faces[i];
+      for (var i = 0; i < this.faces_.length; ++i) {
+        var outFace = this.faces_[i];
         // Don't send the interest back to where it came from.
-        if (outFace != this)
+        if (outFace != face)
           outFace.sendBuffer(element);
       }
     }
     else {
       // Send the interest to the faces in matching FIB entries.
-      for (var i = 0; i < FIB.length; ++i) {
-        var fibEntry = FIB[i];
+      for (var i = 0; i < this.FIB_.length; ++i) {
+        var fibEntry = this.FIB_[i];
 
         // TODO: Need to do longest prefix match?
         if (fibEntry.name.match(interest.getName())) {
           for (var j = 0; j < fibEntry.faces.length; ++j) {
             var outFace = fibEntry.faces[j];
             // Don't send the interest back to where it came from.
-            if (outFace != this)
+            if (outFace != face)
               outFace.sendBuffer(element);
           }
         }
@@ -175,15 +189,15 @@ ForwarderFace.prototype.onReceivedElement = function(element)
 
     // Send the data packet to the face for each matching PIT entry.
     // Iterate backwards so we can remove the entry and keep iterating.
-    for (var i = PIT.length - 1; i >= 0; --i) {
-      if (PIT[i].face != this && PIT[i].face != null &&
-          PIT[i].interest.matchesName(data.getName())) {
-        if (LOG > 3) console.log("Sending Data to match interest " + PIT[i].interest.getName().toUri() + "\n");
-        PIT[i].face.sendBuffer(element);
-        PIT[i].face = null;
+    for (var i = this.PIT_.length - 1; i >= 0; --i) {
+      if (this.PIT_[i].face != face && this.PIT_[i].face != null &&
+          this.PIT_[i].interest.matchesName(data.getName())) {
+        if (LOG > 3) console.log("Sending Data to match interest " + this.PIT_[i].interest.getName().toUri() + "\n");
+        this.PIT_[i].face.sendBuffer(element);
+        this.PIT_[i].face = null;
 
-        // Remove this entry.
-        PIT.splice(i, 1);
+        // Remove the entry.
+        this.PIT_.splice(i, 1);
       }
     }
   }
@@ -191,11 +205,13 @@ ForwarderFace.prototype.onReceivedElement = function(element)
 
 /**
  * Process a received interest if it begins with /localhost.
+ * @param {ForwarderFace} face The ForwarderFace with the transport that
+ * received the interest.
  * @param {Interest} interest The received interest.
  */
-ForwarderFace.prototype.onReceivedLocalhostInterest = function(interest)
+MicroForwarder.prototype.onReceivedLocalhostInterest = function(face, interest)
 {
-  if (ForwarderFace.registerNamePrefix.match(interest.getName())) {
+  if (MicroForwarder.registerNamePrefix.match(interest.getName())) {
     // Decode the ControlParameters.
     var controlParameters = new ControlParameters();
     try {
@@ -209,14 +225,14 @@ ForwarderFace.prototype.onReceivedLocalhostInterest = function(interest)
     if (LOG > 3) console.log("Received register request " + controlParameters.getName().toUri() + "\n");
 
     var name = controlParameters.getName();
-    // Check for a FIB entry for the name and add this face.
+    // Check for a FIB entry for the name and add the face.
     var foundFibEntry = false;
-    for (var i = 0; i < FIB.length; ++i) {
-      var fibEntry = FIB[i];
+    for (var i = 0; i < this.FIB_.length; ++i) {
+      var fibEntry = this.FIB_[i];
       if (fibEntry.name.equals(name)) {
         // Make sure the face is not already added.
-        if (fibEntry.faces.indexOf(this) < 0)
-          fibEntry.faces.push(this);
+        if (fibEntry.faces.indexOf(face) < 0)
+          fibEntry.faces.push(face);
 
         foundFibEntry = true;
         break;
@@ -226,8 +242,8 @@ ForwarderFace.prototype.onReceivedLocalhostInterest = function(interest)
     if (!foundFibEntry) {
       // Make a new FIB entry.
       var fibEntry = new FibEntry(name);
-      fibEntry.faces.push(this);
-      FIB.push(fibEntry);
+      fibEntry.faces.push(face);
+      this.FIB_.push(fibEntry);
     }
 
     // Send the ControlResponse.
@@ -238,19 +254,25 @@ ForwarderFace.prototype.onReceivedLocalhostInterest = function(interest)
     var responseData = new Data(interest.getName());
     responseData.setContent(controlResponse.wireEncode());
     // TODO: Sign the responseData.
-    this.sendBuffer(responseData.wireEncode().buf());
+    face.sendBuffer(responseData.wireEncode().buf());
   }
   else {
     if (LOG > 3) console.log("Unrecognized localhost prefix " + interest.getName() + "\n");
   }
 };
 
-ForwarderFace.prototype.onReceivedObject = function(obj)
+/**
+ * This is called when a JavaScript object is received on a local face.
+ * @param {ForwarderFace} face The ForwarderFace with the transport that
+ * received the element.
+ * @param {object} obj The JavaScript object.
+ */
+MicroForwarder.prototype.onReceivedObject = function(face, obj)
 {
   if (obj.type == "fib/list") {
     obj.fib = [];
-    for (var i = 0; i < FIB.length; ++i) {
-      var fibEntry = FIB[i];
+    for (var i = 0; i < this.FIB_.length; ++i) {
+      var fibEntry = this.FIB_[i];
 
       var entry = { name: fibEntry.name.toUri(),
                     nextHops: [] };
@@ -263,35 +285,35 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
         obj.fib.push(entry);
     }
 
-    this.sendObject(obj);
+    face.sendObject(obj);
   }
   else if (obj.type == "faces/list") {
     obj.faces = [];
-    for (var i = 0; i < Faces.length; ++i) {
+    for (var i = 0; i < this.faces_.length; ++i) {
       obj.faces.push({
-        faceId: Faces[i].faceId,
-        uri: Faces[i].uri
+        faceId: this.faces_[i].faceId,
+        uri: this.faces_[i].uri
       });
     }
 
-    this.sendObject(obj);
+    face.sendObject(obj);
   }
   else if (obj.type == "faces/query") {
-    for (var i = 0; i < Faces.length; ++i) {
-      if (Faces[i].uri == obj.uri) {
+    for (var i = 0; i < this.faces_.length; ++i) {
+      if (this.faces_[i].uri == obj.uri) {
         // We found the desired face.
-        obj.faceId = Faces[i].faceId;
+        obj.faceId = this.faces_[i].faceId;
         break;
       }
     }
-    this.sendObject(obj);
+    face.sendObject(obj);
   }
   else if (obj.type == "faces/create") {
     // TODO: Re-check that the face doesn't exist.
-    var thisFace = this;
     var sentReply = false;
     var newFace = null;
 
+    var thisForwarder = this;
     // Some transports can't report a connection failure, so use a timeout.
     var timerId = setTimeout(function() {
       // A problem opening the WebSocket.
@@ -301,7 +323,7 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
       sentReply = true;
 
       obj.statusCode = 503;
-      thisFace.sendObject(obj);
+      face.sendObject(obj);
     }, 3000);
     function onConnected() {
       if (sentReply)
@@ -311,23 +333,26 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
 
       // Cancel the timeout timer.
       clearTimeout(timerId);
-      Faces.push(newFace);
+      thisForwarder.faces_.push(newFace);
       obj.faceId = newFace.faceId;
       obj.statusCode = 200;
-      thisFace.sendObject(obj);
+      face.sendObject(obj);
     }
 
     var transport = new WebSocketTransport();
     newFace = new ForwarderFace(obj.uri, transport);
     transport.connect
-      (new WebSocketTransport.ConnectionInfo(obj.uri), this, onConnected);
+      (new WebSocketTransport.ConnectionInfo(obj.uri), 
+      { onReceivedElement: function(element) { 
+          thisForwarder.onReceivedElement(newFace, element); } },
+      onConnected);
   }
   else if (obj.type == "rib/register") {
     // Find the face with the faceId.
     var nexthopFace = null;
-    for (var i = 0; i < Faces.length; ++i) {
-      if (Faces[i].faceId == obj.faceId) {
-        nexthopFace = Faces[i];
+    for (var i = 0; i < this.faces_.length; ++i) {
+      if (this.faces_[i].faceId == obj.faceId) {
+        nexthopFace = this.faces_[i];
         break;
       }
     }
@@ -340,8 +365,8 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
     var name = new Name(obj.nameUri);
     // Check for a FIB entry for the name and add the face.
     var foundFibEntry = false;
-    for (var i = 0; i < FIB.length; ++i) {
-      var fibEntry = FIB[i];
+    for (var i = 0; i < this.FIB_.length; ++i) {
+      var fibEntry = this.FIB_[i];
       if (fibEntry.name.equals(name)) {
         // Make sure the face is not already added.
         if (fibEntry.faces.indexOf(nexthopFace) < 0)
@@ -356,11 +381,11 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
       // Make a new FIB entry.
       var fibEntry = new FibEntry(name);
       fibEntry.faces.push(nexthopFace);
-      FIB.push(fibEntry);
+      this.FIB_.push(fibEntry);
     }
 
     obj.statusCode = 200;
-    this.sendObject(obj);
+    face.sendObject(obj);
   }
 };
 
@@ -389,6 +414,9 @@ ForwarderFace.prototype.sendBuffer = function(buffer)
     this.transport.send(buffer);
 };
 
-ForwarderFace.localhostNamePrefix = new Name("/localhost");
-ForwarderFace.registerNamePrefix = new Name("/localhost/nfd/rib/register");
-ForwarderFace.broadcastNamePrefix = new Name("/ndn/broadcast");
+MicroForwarder.localhostNamePrefix = new Name("/localhost");
+MicroForwarder.registerNamePrefix = new Name("/localhost/nfd/rib/register");
+MicroForwarder.broadcastNamePrefix = new Name("/ndn/broadcast");
+
+// Create the only instance and start listening on the WebExtensions port.
+var microForwarder = new MicroForwarder();
