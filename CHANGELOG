@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.11 (2016-08-11)
+Interim changes since NDN-JS v0.11 (2016-08-29)
 -----------------------------------------------
 
 Changes
@@ -14,6 +14,7 @@ Changes
 * In ProtobufTlv, added utility method toName.
 * https://redmine.named-data.net/issues/3675 In Name.get, don't copy the
   returned component (for efficiency).
+* In tools/micro-forwarder, generalize to use WebSocketTransport or RuntimePortTransport.
 * In Face.makeCommandInterest, added an optional onComplete callback.
 * Examples: In test-encode-decode-fib-entry, etc, use ProtobufTlv.toName.
 * Examples: Added browser/test-list-faces.html.

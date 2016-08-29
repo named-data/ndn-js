@@ -24,7 +24,26 @@ var Faces = []; // of ForwarderFace
 
 // Add a listener to wait for a connection request from a tab.
 chrome.runtime.onConnect.addListener(function(port) {
-  Faces.push(new ForwarderFace("internal://port", port));
+  var face = null;
+  var transport = new RuntimePortTransport
+    (function(obj) {
+      face.onReceivedObject(obj); });
+  face = new ForwarderFace("internal://port", transport);
+
+  function onClosedCallback() {
+    face.transport = null;
+    for (var i = 0; i < Faces.length; ++i) {
+      if (Faces[i] === face) {
+        // TODO: Mark this face as disconnected so the FIB doesn't use it.
+        Faces.splice(i, 1);
+        break;
+      }
+    }
+  }
+  transport.connect
+    (new RuntimePortTransport.ConnectionInfo(port), face, function(){},
+     onClosedCallback);
+  Faces.push(face);
 });
 
 /**
@@ -51,51 +70,25 @@ var FibEntry = function FibEntry(name)
 };
 
 /**
- * A ForwarderFace is used by the Faces list to represent a connection using a
- * runtime.Port or a Transport.
+ * A ForwarderFace is used by the Faces list to represent a connection using the
+ * given Transport.
  * @param {string} The URI to use in the faces/query and faces/list commands.
- * @param {runtime.Port} port If supplied, communicate with the port. Otherwise
- * if this is null then use transport.
- * @param {Transport} transport If a port is not supplied, communicate using the
- * Transport object. You must call transport.connect using this ForwarderFace as
- * the elementListener.
+ * @param {Transport} transport Communicate using the Transport object. You must
+ * call transport.connect using this object as the elementListener. If available
+ * the transport's onReceivedObject should call this object's onReceivedObject.
  * @constructor
  */
-var ForwarderFace = function ForwarderFace(uri, port, transport)
+var ForwarderFace = function ForwarderFace(uri, transport)
 {
   this.uri = uri;
-  this.port = port;
   this.transport = transport;
-  this.elementReader = new ElementReader(this);
   this.faceId = ++ForwarderFace.lastFaceId;
-
-  var thisFace = this;
-  if (port != null) {
-    // Add a listener to wait for a message object from the tab
-    this.port.onMessage.addListener(function(obj) {
-      if (obj.type == "Buffer")
-        thisFace.elementReader.onReceivedData(new Buffer(obj.data));
-      else
-        thisFace.onReceivedObject(obj);
-    });
-
-    this.port.onDisconnect.addListener(function() {
-      for (var i = 0; i < Faces.length; ++i) {
-        if (Faces[i] === thisFace) {
-          // TODO: Mark this face as disconnected so the FIB doesn't use it.
-          Faces.splice(i, 1);
-          break;
-        }
-      }
-      thisFace.port = null;
-    });
-  }
 };
 
 ForwarderFace.lastFaceId = 0;
 
 /**
- * This is called by the port listener when an entire TLV element is received.
+ * This is called by the listener when an entire TLV element is received.
  * If it is an Interest, look in the FIB for forwarding. If it is a Data packet,
  * look in the PIT to match an Interest.
  * @param {Buffer} element
@@ -198,25 +191,26 @@ ForwarderFace.prototype.onReceivedElement = function(element)
 
 ForwarderFace.prototype.isEnabled = function()
 {
-  return this.port != null || this.transport != null;
-};
-
-ForwarderFace.prototype.sendObject = function(obj)
-{
-  if (this.port == null)
-    return;
-  this.port.postMessage(obj);
+  return this.transport != null;
 };
 
 /**
- * Send the buffer to the port or transport.
+ * Send the object to the transport, if not null.
+ * @param {object} obj The object to send.
+ */
+ForwarderFace.prototype.sendObject = function(obj)
+{
+  if (this.transport != null && this.transport.sendObject != null)
+    this.transport.sendObject(obj);
+};
+
+/**
+ * Send the buffer to the transport, if not null.
  * @param {Buffer} buffer The bytes to send.
  */
 ForwarderFace.prototype.sendBuffer = function(buffer)
 {
-  if (this.port != null)
-    this.sendObject(buffer.toJSON());
-  else if (this.transport != null)
+  if (this.transport != null)
     this.transport.send(buffer);
 };
 
@@ -349,7 +343,7 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
     }
 
     var transport = new WebSocketTransport();
-    face = new ForwarderFace(obj.uri, null, transport);
+    face = new ForwarderFace(obj.uri, transport);
     transport.connect
       (new WebSocketTransport.ConnectionInfo(obj.uri), this, onConnected);
   }
