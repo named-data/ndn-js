@@ -59,47 +59,6 @@ var MicroForwarder = function MicroForwarder()
 };
 
 /**
- * A PitEntry is used in the PIT to record the face on which an Interest came in.
- * @param {Interest} interest
- * @param {ForwarderFace} face
- * @constructor
- */
-var PitEntry = function PitEntry(interest, face)
-{
-  this.interest = interest;
-  this.face = face;
-};
-
-/**
- * A FibEntry is used in the FIB to match a registered name with related faces.
- * @param {Name} name The registered name for this FIB entry.
- * @constructor
- */
-var FibEntry = function FibEntry(name)
-{
-  this.name = name;
-  this.faces = []; // of ForwarderFace
-};
-
-/**
- * A ForwarderFace is used by the Faces list to represent a connection using the
- * given Transport.
- * @param {string} The URI to use in the faces/query and faces/list commands.
- * @param {Transport} transport Communicate using the Transport object. You must
- * call transport.connect using this object as the elementListener. If available
- * the transport's onReceivedObject should call this object's onReceivedObject.
- * @constructor
- */
-var ForwarderFace = function ForwarderFace(uri, transport)
-{
-  this.uri = uri;
-  this.transport = transport;
-  this.faceId = ++ForwarderFace.lastFaceId;
-};
-
-ForwarderFace.lastFaceId = 0;
-
-/**
  * This is called by the listener when an entire TLV element is received.
  * If it is an Interest, look in the FIB for forwarding. If it is a Data packet,
  * look in the PIT to match an Interest.
@@ -389,6 +348,51 @@ MicroForwarder.prototype.onReceivedObject = function(face, obj)
   }
 };
 
+MicroForwarder.localhostNamePrefix = new Name("/localhost");
+MicroForwarder.registerNamePrefix = new Name("/localhost/nfd/rib/register");
+MicroForwarder.broadcastNamePrefix = new Name("/ndn/broadcast");
+
+/**
+ * A PitEntry is used in the PIT to record the face on which an Interest came in.
+ * @param {Interest} interest
+ * @param {ForwarderFace} face
+ * @constructor
+ */
+var PitEntry = function PitEntry(interest, face)
+{
+  this.interest = interest;
+  this.face = face;
+};
+
+/**
+ * A FibEntry is used in the FIB to match a registered name with related faces.
+ * @param {Name} name The registered name for this FIB entry.
+ * @constructor
+ */
+var FibEntry = function FibEntry(name)
+{
+  this.name = name;
+  this.faces = []; // of ForwarderFace
+};
+
+/**
+ * A ForwarderFace is used by the Faces list to represent a connection using the
+ * given Transport.
+ * @param {string} The URI to use in the faces/query and faces/list commands.
+ * @param {Transport} transport Communicate using the Transport object. You must
+ * call transport.connect using this object as the elementListener. If available
+ * the transport's onReceivedObject should call this object's onReceivedObject.
+ * @constructor
+ */
+var ForwarderFace = function ForwarderFace(uri, transport)
+{
+  this.uri = uri;
+  this.transport = transport;
+  this.faceId = ++ForwarderFace.lastFaceId;
+};
+
+ForwarderFace.lastFaceId = 0;
+
 ForwarderFace.prototype.isEnabled = function()
 {
   return this.transport != null;
@@ -413,10 +417,6 @@ ForwarderFace.prototype.sendBuffer = function(buffer)
   if (this.transport != null)
     this.transport.send(buffer);
 };
-
-MicroForwarder.localhostNamePrefix = new Name("/localhost");
-MicroForwarder.registerNamePrefix = new Name("/localhost/nfd/rib/register");
-MicroForwarder.broadcastNamePrefix = new Name("/ndn/broadcast");
 
 // Create the only instance and start listening on the WebExtensions port.
 var microForwarder = new MicroForwarder();
