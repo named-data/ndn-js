@@ -147,10 +147,10 @@ ForwarderFace.prototype.onReceivedElement = function(element)
     if (ForwarderFace.broadcastNamePrefix.match(interest.getName())) {
       // Special case: broadcast to all faces.
       for (var i = 0; i < Faces.length; ++i) {
-        var face = Faces[i];
+        var outFace = Faces[i];
         // Don't send the interest back to where it came from.
-        if (face != this)
-          face.sendBuffer(element);
+        if (outFace != this)
+          outFace.sendBuffer(element);
       }
     }
     else {
@@ -161,10 +161,10 @@ ForwarderFace.prototype.onReceivedElement = function(element)
         // TODO: Need to do longest prefix match?
         if (fibEntry.name.match(interest.getName())) {
           for (var j = 0; j < fibEntry.faces.length; ++j) {
-            var face = fibEntry.faces[j];
+            var outFace = fibEntry.faces[j];
             // Don't send the interest back to where it came from.
-            if (face != this)
-              face.sendBuffer(element);
+            if (outFace != this)
+              outFace.sendBuffer(element);
           }
         }
       }
@@ -187,31 +187,6 @@ ForwarderFace.prototype.onReceivedElement = function(element)
       }
     }
   }
-};
-
-ForwarderFace.prototype.isEnabled = function()
-{
-  return this.transport != null;
-};
-
-/**
- * Send the object to the transport, if not null.
- * @param {object} obj The object to send.
- */
-ForwarderFace.prototype.sendObject = function(obj)
-{
-  if (this.transport != null && this.transport.sendObject != null)
-    this.transport.sendObject(obj);
-};
-
-/**
- * Send the buffer to the transport, if not null.
- * @param {Buffer} buffer The bytes to send.
- */
-ForwarderFace.prototype.sendBuffer = function(buffer)
-{
-  if (this.transport != null)
-    this.transport.send(buffer);
 };
 
 /**
@@ -315,7 +290,7 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
     // TODO: Re-check that the face doesn't exist.
     var thisFace = this;
     var sentReply = false;
-    var face = null;
+    var newFace = null;
 
     // Some transports can't report a connection failure, so use a timeout.
     var timerId = setTimeout(function() {
@@ -336,28 +311,28 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
 
       // Cancel the timeout timer.
       clearTimeout(timerId);
-      Faces.push(face);
-      obj.faceId = face.faceId;
+      Faces.push(newFace);
+      obj.faceId = newFace.faceId;
       obj.statusCode = 200;
       thisFace.sendObject(obj);
     }
 
     var transport = new WebSocketTransport();
-    face = new ForwarderFace(obj.uri, transport);
+    newFace = new ForwarderFace(obj.uri, transport);
     transport.connect
       (new WebSocketTransport.ConnectionInfo(obj.uri), this, onConnected);
   }
   else if (obj.type == "rib/register") {
     // Find the face with the faceId.
-    var face = null;
+    var nexthopFace = null;
     for (var i = 0; i < Faces.length; ++i) {
       if (Faces[i].faceId == obj.faceId) {
-        face = Faces[i];
+        nexthopFace = Faces[i];
         break;
       }
     }
 
-    if (face == null) {
+    if (nexthopFace == null) {
       // TODO: Send error reply.
       return;
     }
@@ -369,8 +344,8 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
       var fibEntry = FIB[i];
       if (fibEntry.name.equals(name)) {
         // Make sure the face is not already added.
-        if (fibEntry.faces.indexOf(face) < 0)
-          fibEntry.faces.push(face);
+        if (fibEntry.faces.indexOf(nexthopFace) < 0)
+          fibEntry.faces.push(nexthopFace);
 
         foundFibEntry = true;
         break;
@@ -380,13 +355,38 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
     if (!foundFibEntry) {
       // Make a new FIB entry.
       var fibEntry = new FibEntry(name);
-      fibEntry.faces.push(face);
+      fibEntry.faces.push(nexthopFace);
       FIB.push(fibEntry);
     }
 
     obj.statusCode = 200;
     this.sendObject(obj);
   }
+};
+
+ForwarderFace.prototype.isEnabled = function()
+{
+  return this.transport != null;
+};
+
+/**
+ * Send the object to the transport, if not null.
+ * @param {object} obj The object to send.
+ */
+ForwarderFace.prototype.sendObject = function(obj)
+{
+  if (this.transport != null && this.transport.sendObject != null)
+    this.transport.sendObject(obj);
+};
+
+/**
+ * Send the buffer to the transport, if not null.
+ * @param {Buffer} buffer The bytes to send.
+ */
+ForwarderFace.prototype.sendBuffer = function(buffer)
+{
+  if (this.transport != null)
+    this.transport.send(buffer);
 };
 
 ForwarderFace.localhostNamePrefix = new Name("/localhost");
