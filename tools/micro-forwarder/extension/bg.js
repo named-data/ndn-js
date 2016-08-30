@@ -308,18 +308,23 @@ MicroForwarder.prototype.onReceivedObject = function(face, obj)
       onConnected);
   }
   else if (obj.type == "rib/register") {
-    // Find the face with the faceId.
     var nexthopFace = null;
-    for (var i = 0; i < this.faces_.length; ++i) {
-      if (this.faces_[i].faceId == obj.faceId) {
-        nexthopFace = this.faces_[i];
-        break;
+    if (obj.faceId == null)
+      // Use the requesting face.
+      nexthopFace = face;
+    else {
+      // Find the face with the faceId.
+      for (var i = 0; i < this.faces_.length; ++i) {
+        if (this.faces_[i].faceId == obj.faceId) {
+          nexthopFace = this.faces_[i];
+          break;
+        }
       }
-    }
 
-    if (nexthopFace == null) {
-      // TODO: Send error reply.
-      return;
+      if (nexthopFace == null) {
+        // TODO: Send error reply.
+        return;
+      }
     }
 
     var name = new Name(obj.nameUri);
