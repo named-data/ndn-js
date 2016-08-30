@@ -76,7 +76,7 @@ RuntimePortTransport.ConnectionInfo.prototype.toString = function()
 
 /**
  * Determine whether this transport connecting according to connectionInfo is to
- * a node on the current machine. Unix transports are always local.
+ * a node on the current machine. RuntimePortTransport is always local.
  * @param {RuntimePortTransport.ConnectionInfo} connectionInfo This is ignored.
  * @param {function} onResult This calls onResult(true) because a runtime.port
  * is always local.
@@ -130,8 +130,8 @@ RuntimePortTransport.prototype.connect = function
 };
 
 /**
- * Send the JavaScript over the connection created by connect.
- * @param {object} obj The object to send. It it is a JSON Buffer then it is
+ * Send the JavaScript object over the connection created by connect.
+ * @param {object} obj The object to send. If it is a JSON Buffer then it is
  * processed like an NDN packet.
  */
 RuntimePortTransport.prototype.sendObject = function(obj)
