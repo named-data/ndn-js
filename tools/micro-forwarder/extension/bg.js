@@ -21,8 +21,9 @@
 /**
  * A MicroForwarder holds a PIT, FIB and faces to function as a simple NDN
  * forwarder. 
- * Use chrome.runtime.onConnect.addListener to receive messages from the
- * WebExtensions port.
+ * Create a new MicroForwarder, using chrome.runtime.onConnect.addListener to
+ * get the port and add a new face to use a RuntimePortTransport to communiate
+ * with the WebExtensions port.
  */
 var MicroForwarder = function MicroForwarder()
 {
@@ -39,7 +40,7 @@ var MicroForwarder = function MicroForwarder()
     face = new ForwarderFace("internal://port", transport);
 
     function onClosedCallback() {
-      face.transport = null;
+      face.disable();
       for (var i = 0; i < thisForwarder.faces_.length; ++i) {
         if (thisForwarder.faces_[i] === face) {
           // TODO: Mark this face as disconnected so the FIB doesn't use it.
@@ -73,7 +74,7 @@ MicroForwarder.prototype.onReceivedElement = function(face, element)
   var interest = null;
   var data = null;
   if (element[0] == Tlv.Interest || element[0] == Tlv.Data) {
-    var decoder = new TlvDecoder (element);
+    var decoder = new TlvDecoder(element);
     if (decoder.peekType(Tlv.Interest, element.length)) {
       interest = new Interest();
       interest.wireDecode(element, TlvWireFormat.get());
@@ -99,7 +100,7 @@ MicroForwarder.prototype.onReceivedElement = function(face, element)
         // Duplicate PIT entry.
         // TODO: Update the interest timeout?
         if (LOG > 3) console.log("Duplicate Interest: " + interest.getName().toUri());
-          return;
+        return;
       }
     }
 
@@ -223,7 +224,7 @@ MicroForwarder.prototype.onReceivedLocalhostInterest = function(face, interest)
 /**
  * This is called when a JavaScript object is received on a local face.
  * @param {ForwarderFace} face The ForwarderFace with the transport that
- * received the element.
+ * received the object.
  * @param {object} obj The JavaScript object.
  */
 MicroForwarder.prototype.onReceivedObject = function(face, obj)
@@ -376,12 +377,17 @@ var FibEntry = function FibEntry(name)
 };
 
 /**
- * A ForwarderFace is used by the Faces list to represent a connection using the
+ * A ForwarderFace is used by the faces list to represent a connection using the
  * given Transport.
- * @param {string} The URI to use in the faces/query and faces/list commands.
+ * Create a new ForwarderFace and set the faceId to a unique value.
+ * @param {string} uri The URI to use in the faces/query and faces/list
+ * commands.
  * @param {Transport} transport Communicate using the Transport object. You must
- * call transport.connect using this object as the elementListener. If available
- * the transport's onReceivedObject should call this object's onReceivedObject.
+ * call transport.connect with an elementListener object whose
+ * onReceivedElement(element) calls
+ * microForwarder.onReceivedElement(face, element), with this face. If available
+ * the transport's onReceivedObject(obj) should call
+ * microForwarder.onReceivedObject(face, obj), with this face.
  * @constructor
  */
 var ForwarderFace = function ForwarderFace(uri, transport)
@@ -393,13 +399,22 @@ var ForwarderFace = function ForwarderFace(uri, transport)
 
 ForwarderFace.lastFaceId = 0;
 
+/**
+ * Check if this face is still enabled.
+ * @returns {boolean} True if this face is still enabled.
+ */
 ForwarderFace.prototype.isEnabled = function()
 {
   return this.transport != null;
 };
 
 /**
- * Send the object to the transport, if not null.
+ * Disable this face so that isEnabled() returns false.
+ */
+ForwarderFace.prototype.disable = function() { this.transport = null; };
+
+/**
+ * Send the object to the transport, if this face is still enabled.
  * @param {object} obj The object to send.
  */
 ForwarderFace.prototype.sendObject = function(obj)
@@ -409,7 +424,7 @@ ForwarderFace.prototype.sendObject = function(obj)
 };
 
 /**
- * Send the buffer to the transport, if not null.
+ * Send the buffer to the transport, if this face is still enabled.
  * @param {Buffer} buffer The bytes to send.
  */
 ForwarderFace.prototype.sendBuffer = function(buffer)
