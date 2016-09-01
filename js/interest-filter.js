@@ -28,8 +28,9 @@ var NdnRegexMatcher = require('./util/ndn-regex-matcher.js').NdnRegexMatcher;
  * Create an InterestFilter to match any Interest whose name starts with the
  * given prefix. If the optional regexFilter is provided then the remaining
  * components match the regexFilter regular expression as described in doesMatch.
- * @param {Name|string} prefix The prefix. If a Name then this makes a copy of
- * the Name. Otherwise it create a Name from the URI string.
+ * @param {InterestFilter|Name|string} prefix If prefix is another
+ * InterestFilter copy its values. If prefix is a Name then this makes a copy of
+ * the Name. Otherwise this creates a Name from the URI string.
  * @param {string} regexFilter (optional) The regular expression for matching
  * the remaining name components.
  * @constructor
