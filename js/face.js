@@ -1019,7 +1019,7 @@ Face.prototype.onReceivedElement = function(element)
         }
       }
 
-      // We have process the network Nack packet.
+      // We have processed the network Nack packet.
       return;
     }
   }
