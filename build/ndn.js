@@ -14416,7 +14416,7 @@ RuntimePortTransport.ConnectionInfo.prototype.toString = function()
 
 /**
  * Determine whether this transport connecting according to connectionInfo is to
- * a node on the current machine. Unix transports are always local.
+ * a node on the current machine. RuntimePortTransport is always local.
  * @param {RuntimePortTransport.ConnectionInfo} connectionInfo This is ignored.
  * @param {function} onResult This calls onResult(true) because a runtime.port
  * is always local.
@@ -14470,8 +14470,8 @@ RuntimePortTransport.prototype.connect = function
 };
 
 /**
- * Send the JavaScript over the connection created by connect.
- * @param {object} obj The object to send. It it is a JSON Buffer then it is
+ * Send the JavaScript object over the connection created by connect.
+ * @param {object} obj The object to send. If it is a JSON Buffer then it is
  * processed like an NDN packet.
  */
 RuntimePortTransport.prototype.sendObject = function(obj)
@@ -27016,8 +27016,9 @@ var NdnRegexMatcher = require('./util/ndn-regex-matcher.js').NdnRegexMatcher;
  * Create an InterestFilter to match any Interest whose name starts with the
  * given prefix. If the optional regexFilter is provided then the remaining
  * components match the regexFilter regular expression as described in doesMatch.
- * @param {Name|string} prefix The prefix. If a Name then this makes a copy of
- * the Name. Otherwise it create a Name from the URI string.
+ * @param {InterestFilter|Name|string} prefix If prefix is another
+ * InterestFilter copy its values. If prefix is a Name then this makes a copy of
+ * the Name. Otherwise this creates a Name from the URI string.
  * @param {string} regexFilter (optional) The regular expression for matching
  * the remaining name components.
  * @constructor
@@ -37167,7 +37168,7 @@ Face.prototype.onReceivedElement = function(element)
         }
       }
 
-      // We have process the network Nack packet.
+      // We have processed the network Nack packet.
       return;
     }
   }
@@ -37177,7 +37178,7 @@ Face.prototype.onReceivedElement = function(element)
     if (LOG > 3) console.log('Interest packet received.');
 
     // Call all interest filter callbacks which match.
-    matchedFilters = [];
+    var matchedFilters = [];
     this.interestFilterTable_.getMatchedFilters(interest, matchedFilters);
     for (var i = 0; i < matchedFilters.length; ++i) {
       var entry = matchedFilters[i];
