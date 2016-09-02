@@ -1029,7 +1029,7 @@ Face.prototype.onReceivedElement = function(element)
     if (LOG > 3) console.log('Interest packet received.');
 
     // Call all interest filter callbacks which match.
-    matchedFilters = [];
+    var matchedFilters = [];
     this.interestFilterTable_.getMatchedFilters(interest, matchedFilters);
     for (var i = 0; i < matchedFilters.length; ++i) {
       var entry = matchedFilters[i];
