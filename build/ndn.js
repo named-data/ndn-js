@@ -11116,14 +11116,15 @@ var Blob = require('../util/blob.js').Blob; /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 
 /**
- * ProtobufTlv has static methods to encode and decode an Protobuf Message o
- * bject as NDN-TLV. The Protobuf tag value is used as the TLV type code. A
+ * ProtobufTlv has static methods to encode and decode an Protobuf Message
+ * object as NDN-TLV. The Protobuf tag value is used as the TLV type code. A
  * Protobuf message is encoded/decoded as a nested TLV encoding. Protobuf types
  * uint32, uint64 and enum are encoded/decoded as TLV nonNegativeInteger. (It is
  * an error if an enum value is negative.) Protobuf types bytes and string are
  * encoded/decoded as TLV bytes. The Protobuf type bool is encoded/decoded as a
- * TLV boolean (a zero length value for True, omitted for False). Other Protobuf
- * types are an error.
+ * TLV boolean (a zero length value for True, omitted for False). The Protobuf
+ * type double is encoded/decoded as an 8-byte little-endian IEEE 754 double.
+ * Other Protobuf types are an error.
  *
  * Protobuf has no "outer" message type, so you need to put your TLV message
  * inside an outer "typeless" message.
@@ -11247,6 +11248,11 @@ ProtobufTlv._encodeMessageValue = function(message, descriptor, encoder)
         if (value)
           encoder.writeTypeAndLength(tlvType, 0);
       }
+      else if (field.type.name == "double") {
+        var encoding = new Buffer(8);
+        encoding.writeDoubleLE(value, 0);
+        encoder.writeBlobTlv(tlvType, encoding);
+      }
       else
         throw new Error("ProtobufTlv::encode: Unknown field type");
     }
@@ -11312,6 +11318,8 @@ ProtobufTlv._decodeFieldValue = function(field, tlvType, decoder, endOffset)
     return decoder.readBlobTlv(tlvType).toString();
   else if (field.type.name == "bool")
     return decoder.readBooleanTlv(tlvType, endOffset);
+  else if (field.type.name == "double")
+    return decoder.readBlobTlv(tlvType).readDoubleLE(0);
   else
     throw new Error("ProtobufTlv.decode: Unknown field type");
 };
@@ -26268,7 +26276,7 @@ Interest.prototype.setNonce = function(nonce)
 {
   this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
     nonce : new Blob(nonce, true);
-  // Set _getNonceChangeCount so that the next call to getNonce() won't clear
+  // Set getNonceChangeCount_ so that the next call to getNonce() won't clear
   // this.nonce_.
   ++this.changeCount_;
   this.getNonceChangeCount_ = this.getChangeCount();
@@ -26386,7 +26394,7 @@ Interest.prototype.refreshNonce = function()
   }
 
   this.nonce_ = newNonce;
-  // Set _getNonceChangeCount so that the next call to getNonce() won't clear
+  // Set getNonceChangeCount_ so that the next call to getNonce() won't clear
   // this.nonce_.
   ++this.changeCount_;
   this.getNonceChangeCount_ = this.getChangeCount();
