@@ -28,6 +28,7 @@ var DecryptKey = require('../../..').DecryptKey;
 var EncryptKey = require('../../..').EncryptKey;
 var EncryptionMode = require('../../..').EncryptionMode;
 var AesAlgorithm = require('../../..').AesAlgorithm;
+var AesKeyParams = require('../../..').AesKeyParams;
 
 var KEY = new Buffer([
   0xdd, 0x60, 0x77, 0xec, 0xa9, 0x6b, 0x23, 0x1b,
@@ -94,6 +95,22 @@ describe('TestAesAlgorithm', function() {
 
     // Decrypt data in AES_CBC with specified IV.
     receivedBlob = AesAlgorithm.decrypt(decryptKey.getKeyBits(), cipherBlob, encryptParams);
+    assert.ok(receivedBlob.equals(plainBlob));
+  });
+
+  it('KeyGeneration', function() {
+    var keyParams = new AesKeyParams(128);
+    var decryptKey = AesAlgorithm.generateKey(keyParams);
+    var encryptKey = AesAlgorithm.deriveEncryptKey(decryptKey.getKeyBits());
+
+    var plainBlob = new Blob(PLAINTEXT, false);
+
+    // Encrypt/decrypt data in AES_CBC with auto-generated IV.
+    var encryptParams = new EncryptParams(EncryptAlgorithmType.AesCbc, 16);
+    var cipherBlob = AesAlgorithm.encrypt
+      (encryptKey.getKeyBits(), plainBlob, encryptParams);
+    var receivedBlob = AesAlgorithm.decrypt
+      (decryptKey.getKeyBits(), cipherBlob, encryptParams);
     assert.ok(receivedBlob.equals(plainBlob));
   });
 });
