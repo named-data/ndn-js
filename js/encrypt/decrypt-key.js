@@ -48,4 +48,4 @@ exports.DecryptKey = DecryptKey;
  * Get the key value.
  * @return {Blob} The key value.
  */
-DecryptKey.prototype.getKeyBits = function() { return this.keyBits_; }
+DecryptKey.prototype.getKeyBits = function() { return this.keyBits_; };
