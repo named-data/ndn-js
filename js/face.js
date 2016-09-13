@@ -973,7 +973,9 @@ Face.prototype.onReceivedElement = function(element)
   if (element[0] == Tlv.LpPacket_LpPacket) {
     // Decode the LpPacket and replace element with the fragment.
     lpPacket = new LpPacket();
-    TlvWireFormat.get().decodeLpPacket(lpPacket, element);
+    // Set copy false so that the fragment is a slice which will be copied below.
+    // The header fields are all integers and don't need to be copied.
+    TlvWireFormat.get().decodeLpPacket(lpPacket, element, false);
     element = lpPacket.getFragmentWireEncoding().buf();
   }
 
