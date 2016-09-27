@@ -37,11 +37,11 @@ var DerNodeType = require('./der-node-type.js').DerNodeType;
  */
 var DerNode = function DerNode(nodeType)
 {
-  this.nodeType = nodeType;
-  this.parent = null;
-  this.header = new Buffer(0);
-  this.payload = new DynamicBuffer(0);
-  this.payloadPosition = 0;
+  this.nodeType_ = nodeType;
+  this.parent_ = null;
+  this.header_ = new Buffer(0);
+  this.payload_ = new DynamicBuffer(0);
+  this.payloadPosition_ = 0;
 };
 
 exports.DerNode = DerNode;
@@ -52,7 +52,7 @@ exports.DerNode = DerNode;
  */
 DerNode.prototype.getSize = function()
 {
-  return this.header.length + this.payloadPosition;
+  return this.header_.length + this.payloadPosition_;
 };
 
 /**
@@ -63,7 +63,7 @@ DerNode.prototype.encodeHeader = function(size)
 {
   var buffer = new DynamicBuffer(10);
   var bufferPosition = 0;
-  buffer.array[bufferPosition++] = this.nodeType;
+  buffer.array[bufferPosition++] = this.nodeType_;
   if (size < 0)
     // We don't expect this to happen since this is an internal method and
     // always called with the non-negative size() of some buffer.
@@ -90,7 +90,7 @@ DerNode.prototype.encodeHeader = function(size)
     bufferPosition += nTempBufBytes;
   }
 
-  this.header = buffer.slice(0, bufferPosition);
+  this.header_ = buffer.slice(0, bufferPosition);
 };
 
 /**
@@ -106,7 +106,7 @@ DerNode.prototype.decodeHeader = function(inputBuf, startIdx)
   var nodeType = inputBuf[idx] & 0xff;
   idx += 1;
 
-  this.nodeType = nodeType;
+  this.nodeType_ = nodeType;
 
   var sizeLen = inputBuf[idx] & 0xff;
   idx += 1;
@@ -131,7 +131,7 @@ DerNode.prototype.decodeHeader = function(inputBuf, startIdx)
     }
   }
 
-  this.header = header.slice(0, headerPosition);
+  this.header_ = header.slice(0, headerPosition);
   return size;
 };
 
@@ -143,8 +143,8 @@ DerNode.prototype.encode = function()
 {
   var buffer = new Buffer(this.getSize());
 
-  this.header.copy(buffer);
-  this.payload.slice(0, this.payloadPosition).copy(buffer, this.header.length);
+  this.header_.copy(buffer);
+  this.payload_.slice(0, this.payloadPosition_).copy(buffer, this.header_.length);
 
   return new Blob(buffer, false);
 };
@@ -160,7 +160,7 @@ DerNode.prototype.decode = function(inputBuf, startIdx)
 {
   var idx = startIdx;
   var payloadSize = this.decodeHeader(inputBuf, idx);
-  var skipBytes = this.header.length;
+  var skipBytes = this.header_.length;
   if (payloadSize > 0) {
     idx += skipBytes;
     this.payloadAppend(inputBuf.slice(idx, idx + payloadSize));
@@ -168,13 +168,13 @@ DerNode.prototype.decode = function(inputBuf, startIdx)
 };
 
 /**
- * Copy buffer to this.payload at this.payloadPosition and update
- * this.payloadPosition.
+ * Copy buffer to this.payload_ at this.payloadPosition_ and update
+ * this.payloadPosition_.
  * @param {Buffer} buffer The buffer to copy.
  */
 DerNode.prototype.payloadAppend = function(buffer)
 {
-  this.payloadPosition = this.payload.copy(buffer, this.payloadPosition);
+  this.payloadPosition_ = this.payload_.copy(buffer, this.payloadPosition_);
 }
 
 /**
@@ -234,7 +234,7 @@ DerNode.prototype.toVal = function()
  */
 DerNode.prototype.getPayload = function()
 {
-  return new Blob(this.payload.slice(0, this.payloadPosition), true);
+  return new Blob(this.payload_.slice(0, this.payloadPosition_), true);
 };
 
 /**
@@ -283,9 +283,9 @@ DerNode.DerStructure = function DerStructure(nodeType)
   // Call the base constructor.
   DerNode.call(this, nodeType);
 
-  this.childChanged = false;
-  this.nodeList = []; // Of DerNode.
-  this.size = 0;
+  this.childChanged_ = false;
+  this.nodeList_ = []; // Of DerNode.
+  this.size_ = 0;
 };
 DerNode.DerStructure.prototype = new DerNode();
 DerNode.DerStructure.prototype.name = "DerStructure";
@@ -296,13 +296,13 @@ DerNode.DerStructure.prototype.name = "DerStructure";
  */
 DerNode.DerStructure.prototype.getSize = function()
 {
-  if (this.childChanged) {
+  if (this.childChanged_) {
     this.updateSize();
-    this.childChanged = false;
+    this.childChanged_ = false;
   }
 
-  this.encodeHeader(this.size);
-  return this.size + this.header.length;
+  this.encodeHeader(this.size_);
+  return this.size_ + this.header_.length;
 };
 
 /**
@@ -311,20 +311,20 @@ DerNode.DerStructure.prototype.getSize = function()
  */
 DerNode.DerStructure.prototype.getChildren = function()
 {
-  return this.nodeList;
+  return this.nodeList_;
 };
 
 DerNode.DerStructure.prototype.updateSize = function()
 {
   var newSize = 0;
 
-  for (var i = 0; i < this.nodeList.length; ++i) {
-    var n = this.nodeList[i];
+  for (var i = 0; i < this.nodeList_.length; ++i) {
+    var n = this.nodeList_[i];
     newSize += n.getSize();
   }
 
-  this.size = newSize;
-  this.childChanged = false;
+  this.size_ = newSize;
+  this.childChanged_ = false;
 };
 
 /**
@@ -336,14 +336,14 @@ DerNode.DerStructure.prototype.updateSize = function()
 DerNode.DerStructure.prototype.addChild = function(node, notifyParent)
 {
   node.parent = this;
-  this.nodeList.push(node);
+  this.nodeList_.push(node);
 
   if (notifyParent) {
-    if (this.parent != null)
-      this.parent.setChildChanged();
+    if (this.parent_ != null)
+      this.parent_.setChildChanged();
   }
 
-  this.childChanged = true;
+  this.childChanged_ = true;
 };
 
 /**
@@ -351,9 +351,9 @@ DerNode.DerStructure.prototype.addChild = function(node, notifyParent)
  */
 DerNode.DerStructure.prototype.setChildChanged = function()
 {
-  if (this.parent != null)
-    this.parent.setChildChanged();
-  this.childChanged = true;
+  if (this.parent_ != null)
+    this.parent_.setChildChanged();
+  this.childChanged_ = true;
 };
 
 /**
@@ -366,11 +366,11 @@ DerNode.DerStructure.prototype.encode = function()
   var buffer = new DynamicBuffer(10);
   var bufferPosition = 0;
   this.updateSize();
-  this.encodeHeader(this.size);
-  bufferPosition = buffer.copy(this.header, bufferPosition);
+  this.encodeHeader(this.size_);
+  bufferPosition = buffer.copy(this.header_, bufferPosition);
 
-  for (var i = 0; i < this.nodeList.length; ++i) {
-    var n = this.nodeList[i];
+  for (var i = 0; i < this.nodeList_.length; ++i) {
+    var n = this.nodeList_[i];
     var encodedChild = n.encode();
     bufferPosition = buffer.copy(encodedChild.buf(), bufferPosition);
   }
@@ -387,11 +387,11 @@ DerNode.DerStructure.prototype.encode = function()
 DerNode.DerStructure.prototype.decode = function(inputBuf, startIdx)
 {
   var idx = startIdx;
-  this.size = this.decodeHeader(inputBuf, idx);
-  idx += this.header.length;
+  this.size_ = this.decodeHeader(inputBuf, idx);
+  idx += this.header_.length;
 
   var accSize = 0;
-  while (accSize < this.size) {
+  while (accSize < this.size_) {
     var node = DerNode.parse(inputBuf, idx);
     idx += node.getSize();
     accSize += node.getSize();
@@ -445,8 +445,8 @@ DerNode.DerBoolean = function DerBoolean(value)
 
   if (value != undefined) {
     var val = value ? 0xff : 0x00;
-    this.payload.ensureLength(this.payloadPosition + 1);
-    this.payload.array[this.payloadPosition++] = val;
+    this.payload_.ensureLength(this.payloadPosition_ + 1);
+    this.payload_.array[this.payloadPosition_++] = val;
     this.encodeHeader(1);
   }
 };
@@ -455,7 +455,7 @@ DerNode.DerBoolean.prototype.name = "DerBoolean";
 
 DerNode.DerBoolean.prototype.toVal = function()
 {
-  var val = this.payload.array[0];
+  var val = this.payload_.array[0];
   return val != 0x00;
 };
 
@@ -515,7 +515,7 @@ DerNode.DerInteger = function DerInteger(integer)
       this.payloadAppend(temp.slice(temp.array.length - length));
     }
 
-    this.encodeHeader(this.payloadPosition);
+    this.encodeHeader(this.payloadPosition_);
   }
 };
 DerNode.DerInteger.prototype = new DerNode();
@@ -523,14 +523,14 @@ DerNode.DerInteger.prototype.name = "DerInteger";
 
 DerNode.DerInteger.prototype.toVal = function()
 {
-  if (this.payloadPosition > 0 && this.payload.array[0] >= 0x80)
+  if (this.payloadPosition_ > 0 && this.payload_.array[0] >= 0x80)
     throw new DerDecodingException(new Error
       ("DerInteger: Negative integers are not currently supported"));
 
   var result = 0;
-  for (var i = 0; i < this.payloadPosition; ++i) {
+  for (var i = 0; i < this.payloadPosition_; ++i) {
     result <<= 8;
-    result += this.payload.array[i];
+    result += this.payload_.array[i];
   }
 
   return result;
@@ -549,10 +549,10 @@ DerNode.DerBitString = function DerBitString(inputBuf, paddingLen)
   DerNode.call(this, DerNodeType.BitString);
 
   if (inputBuf != undefined) {
-    this.payload.ensureLength(this.payloadPosition + 1);
-    this.payload.array[this.payloadPosition++] = paddingLen & 0xff;
+    this.payload_.ensureLength(this.payloadPosition_ + 1);
+    this.payload_.array[this.payloadPosition_++] = paddingLen & 0xff;
     this.payloadAppend(inputBuf);
-    this.encodeHeader(this.payloadPosition);
+    this.encodeHeader(this.payloadPosition_);
   }
 };
 DerNode.DerBitString.prototype = new DerNode();
@@ -696,12 +696,12 @@ DerNode.DerOid.prototype.decode128 = function(offset, skip)
   var result = 0;
   var oldOffset = offset;
 
-  while ((this.payload.array[offset] & flagMask) != 0) {
-    result = 128 * result + (this.payload.array[offset] & 0xff) - 128;
+  while ((this.payload_.array[offset] & flagMask) != 0) {
+    result = 128 * result + (this.payload_.array[offset] & 0xff) - 128;
     offset += 1;
   }
 
-  result = result * 128 + (this.payload.array[offset] & 0xff);
+  result = result * 128 + (this.payload_.array[offset] & 0xff);
 
   skip[0] = offset - oldOffset + 1;
   return result;
@@ -716,7 +716,7 @@ DerNode.DerOid.prototype.toVal = function()
   var offset = 0;
   var components = []; // of number.
 
-  while (offset < this.payloadPosition) {
+  while (offset < this.payloadPosition_) {
     var skip = [0];
     var nextVal = this.decode128(offset, skip);
     offset += skip[0];
@@ -777,7 +777,7 @@ DerNode.DerGeneralizedTime = function DerGeneralizedTime(msSince1970)
     var derTime = DerNode.DerGeneralizedTime.toDerTimeString(msSince1970);
     // Use Blob to convert to a Buffer.
     this.payloadAppend(new Blob(derTime).buf());
-    this.encodeHeader(this.payloadPosition);
+    this.encodeHeader(this.payloadPosition_);
   }
 };
 DerNode.DerGeneralizedTime.prototype = new DerNode();
@@ -817,7 +817,7 @@ DerNode.DerGeneralizedTime.to2DigitString = function(x)
  */
 DerNode.DerGeneralizedTime.prototype.toVal = function()
 {
-  var timeStr = this.payload.slice(0, this.payloadPosition).toString();
+  var timeStr = this.payload_.slice(0, this.payloadPosition_).toString();
   return Date.UTC
     (parseInt(timeStr.substr(0, 4)),
      parseInt(timeStr.substr(4, 2) - 1),
