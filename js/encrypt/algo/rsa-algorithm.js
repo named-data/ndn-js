@@ -125,7 +125,7 @@ RsaAlgorithm.deriveEncryptKey = function(keyBits)
   var rsaPrivateKeyDer = RsaAlgorithm.getRsaPrivateKeyDer(keyBits);
 
   // Decode the PKCS #1 RSAPrivateKey.
-  parsedNode = DerNode.parse(rsaPrivateKeyDer.buf(), 0);
+  var parsedNode = DerNode.parse(rsaPrivateKeyDer.buf(), 0);
   var rsaPrivateKeyChildren = parsedNode.getChildren();
   var modulus = rsaPrivateKeyChildren[1];
   var publicExponent = rsaPrivateKeyChildren[2];
