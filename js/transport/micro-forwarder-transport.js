@@ -111,8 +111,8 @@ MicroForwarderTransport.prototype.isLocal = function(connectionInfo, onResult, o
  * @param {object} elementListener The elementListener with function
  * onReceivedElement which must remain valid during the life of this object.
  * @param {function} onopenCallback Once connected, call onopenCallback().
- * @param {type} onclosedCallback If the connection is closed by the remote host,
- * call onclosedCallback().
+ * @param {function} onclosedCallback (optional) If the connection is closed by
+ * the remote host, call onclosedCallback(). If omitted or null, don't call it.
  */
 MicroForwarderTransport.prototype.connect = function
   (connectionInfo, elementListener, onopenCallback, onclosedCallback)

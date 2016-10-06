@@ -10888,20 +10888,22 @@ TlvDecoder.prototype.getSlice = function(beginOffset, endOffset)
 var TlvDecoder = require('./tlv-decoder.js').TlvDecoder;
 
 /**
+ * A TlvStructureDecoder finds the end of an NDN-TLV element, even if the
+ * element is supplied in parts.
  * Create and initialize a TlvStructureDecoder.
  * @constructor
  */
 var TlvStructureDecoder = function TlvStructureDecoder()
 {
-  this.gotElementEnd = false;
-  this.offset = 0;
-  this.state = TlvStructureDecoder.READ_TYPE;
-  this.headerLength = 0;
-  this.useHeaderBuffer = false;
+  this.gotElementEnd_ = false;
+  this.offset_ = 0;
+  this.state_ = TlvStructureDecoder.READ_TYPE;
+  this.headerLength_ = 0;
+  this.useHeaderBuffer_ = false;
   // 8 bytes is enough to hold the extended bytes in the length encoding
   // where it is an 8-byte number.
-  this.headerBuffer = new Buffer(8);
-  this.nBytesToRead = 0;
+  this.headerBuffer_ = new Buffer(8);
+  this.nBytesToRead_ = 0;
 };
 
 exports.TlvStructureDecoder = TlvStructureDecoder;
@@ -10913,7 +10915,7 @@ TlvStructureDecoder.READ_LENGTH_BYTES = 3;
 TlvStructureDecoder.READ_VALUE_BYTES =  4;
 
 /**
- * Continue scanning input starting from this.offset to find the element end.
+ * Continue scanning input starting from this.offset_ to find the element end.
  * If the end of the element which started at offset 0 is found, this returns
  * true and getOffset() is the length of the element.  Otherwise, this returns
  * false which means you should read more into input and call again.
@@ -10923,146 +10925,146 @@ TlvStructureDecoder.READ_VALUE_BYTES =  4;
  */
 TlvStructureDecoder.prototype.findElementEnd = function(input)
 {
-  if (this.gotElementEnd)
+  if (this.gotElementEnd_)
     // Someone is calling when we already got the end.
     return true;
 
   var decoder = new TlvDecoder(input);
 
   while (true) {
-    if (this.offset >= input.length)
+    if (this.offset_ >= input.length)
       // All the cases assume we have some input. Return and wait for more.
       return false;
 
-    if (this.state == TlvStructureDecoder.READ_TYPE) {
-      var firstOctet = input[this.offset];
-      this.offset += 1;
+    if (this.state_ == TlvStructureDecoder.READ_TYPE) {
+      var firstOctet = input[this.offset_];
+      this.offset_ += 1;
       if (firstOctet < 253)
         // The value is simple, so we can skip straight to reading the length.
-        this.state = TlvStructureDecoder.READ_LENGTH;
+        this.state_ = TlvStructureDecoder.READ_LENGTH;
       else {
         // Set up to skip the type bytes.
         if (firstOctet == 253)
-          this.nBytesToRead = 2;
+          this.nBytesToRead_ = 2;
         else if (firstOctet == 254)
-          this.nBytesToRead = 4;
+          this.nBytesToRead_ = 4;
         else
           // value == 255.
-          this.nBytesToRead = 8;
+          this.nBytesToRead_ = 8;
 
-        this.state = TlvStructureDecoder.READ_TYPE_BYTES;
+        this.state_ = TlvStructureDecoder.READ_TYPE_BYTES;
       }
     }
-    else if (this.state == TlvStructureDecoder.READ_TYPE_BYTES) {
-      var nRemainingBytes = input.length - this.offset;
-      if (nRemainingBytes < this.nBytesToRead) {
+    else if (this.state_ == TlvStructureDecoder.READ_TYPE_BYTES) {
+      var nRemainingBytes = input.length - this.offset_;
+      if (nRemainingBytes < this.nBytesToRead_) {
         // Need more.
-        this.offset += nRemainingBytes;
-        this.nBytesToRead -= nRemainingBytes;
+        this.offset_ += nRemainingBytes;
+        this.nBytesToRead_ -= nRemainingBytes;
         return false;
       }
 
       // Got the type bytes. Move on to read the length.
-      this.offset += this.nBytesToRead;
-      this.state = TlvStructureDecoder.READ_LENGTH;
+      this.offset_ += this.nBytesToRead_;
+      this.state_ = TlvStructureDecoder.READ_LENGTH;
     }
-    else if (this.state == TlvStructureDecoder.READ_LENGTH) {
-      var firstOctet = input[this.offset];
-      this.offset += 1;
+    else if (this.state_ == TlvStructureDecoder.READ_LENGTH) {
+      var firstOctet = input[this.offset_];
+      this.offset_ += 1;
       if (firstOctet < 253) {
         // The value is simple, so we can skip straight to reading
         //  the value bytes.
-        this.nBytesToRead = firstOctet;
-        if (this.nBytesToRead == 0) {
+        this.nBytesToRead_ = firstOctet;
+        if (this.nBytesToRead_ == 0) {
           // No value bytes to read. We're finished.
-          this.gotElementEnd = true;
+          this.gotElementEnd_ = true;
           return true;
         }
 
-        this.state = TlvStructureDecoder.READ_VALUE_BYTES;
+        this.state_ = TlvStructureDecoder.READ_VALUE_BYTES;
       }
       else {
         // We need to read the bytes in the extended encoding of
         //  the length.
         if (firstOctet == 253)
-          this.nBytesToRead = 2;
+          this.nBytesToRead_ = 2;
         else if (firstOctet == 254)
-          this.nBytesToRead = 4;
+          this.nBytesToRead_ = 4;
         else
           // value == 255.
-          this.nBytesToRead = 8;
+          this.nBytesToRead_ = 8;
 
         // We need to use firstOctet in the next state.
-        this.firstOctet = firstOctet;
-        this.state = TlvStructureDecoder.READ_LENGTH_BYTES;
+        this.firstOctet_ = firstOctet;
+        this.state_ = TlvStructureDecoder.READ_LENGTH_BYTES;
       }
     }
-    else if (this.state == TlvStructureDecoder.READ_LENGTH_BYTES) {
-      var nRemainingBytes = input.length - this.offset;
-      if (!this.useHeaderBuffer && nRemainingBytes >= this.nBytesToRead) {
+    else if (this.state_ == TlvStructureDecoder.READ_LENGTH_BYTES) {
+      var nRemainingBytes = input.length - this.offset_;
+      if (!this.useHeaderBuffer_ && nRemainingBytes >= this.nBytesToRead_) {
         // We don't have to use the headerBuffer. Set nBytesToRead.
-        decoder.seek(this.offset);
+        decoder.seek(this.offset_);
 
-        this.nBytesToRead = decoder.readExtendedVarNumber(this.firstOctet);
-        // Update this.offset to the decoder's offset after reading.
-        this.offset = decoder.getOffset();
+        this.nBytesToRead_ = decoder.readExtendedVarNumber(this.firstOctet_);
+        // Update this.offset_ to the decoder's offset after reading.
+        this.offset_ = decoder.getOffset();
       }
       else {
-        this.useHeaderBuffer = true;
+        this.useHeaderBuffer_ = true;
 
-        var nNeededBytes = this.nBytesToRead - this.headerLength;
+        var nNeededBytes = this.nBytesToRead_ - this.headerLength_;
         if (nNeededBytes > nRemainingBytes) {
           // We can't get all of the header bytes from this input.
           // Save in headerBuffer.
-          if (this.headerLength + nRemainingBytes > this.headerBuffer.length)
+          if (this.headerLength_ + nRemainingBytes > this.headerBuffer_.length)
             // We don't expect this to happen.
             throw new Error
               ("Cannot store more header bytes than the size of headerBuffer");
-          input.slice(this.offset, this.offset + nRemainingBytes).copy
-            (this.headerBuffer, this.headerLength);
-          this.offset += nRemainingBytes;
-          this.headerLength += nRemainingBytes;
+          input.slice(this.offset_, this.offset_ + nRemainingBytes).copy
+            (this.headerBuffer_, this.headerLength_);
+          this.offset_ += nRemainingBytes;
+          this.headerLength_ += nRemainingBytes;
 
           return false;
         }
 
         // Copy the remaining bytes into headerBuffer, read the
         //   length and set nBytesToRead.
-        if (this.headerLength + nNeededBytes > this.headerBuffer.length)
+        if (this.headerLength_ + nNeededBytes > this.headerBuffer_.length)
           // We don't expect this to happen.
           throw new Error
             ("Cannot store more header bytes than the size of headerBuffer");
-        input.slice(this.offset, this.offset + nNeededBytes).copy
-          (this.headerBuffer, this.headerLength);
-        this.offset += nNeededBytes;
+        input.slice(this.offset_, this.offset_ + nNeededBytes).copy
+          (this.headerBuffer_, this.headerLength_);
+        this.offset_ += nNeededBytes;
 
         // Use a local decoder just for the headerBuffer.
-        var bufferDecoder = new TlvDecoder(this.headerBuffer);
+        var bufferDecoder = new TlvDecoder(this.headerBuffer_);
         // Replace nBytesToRead with the length of the value.
-        this.nBytesToRead = bufferDecoder.readExtendedVarNumber(this.firstOctet);
+        this.nBytesToRead_ = bufferDecoder.readExtendedVarNumber(this.firstOctet_);
       }
 
-      if (this.nBytesToRead == 0) {
+      if (this.nBytesToRead_ == 0) {
         // No value bytes to read. We're finished.
-        this.gotElementEnd = true;
+        this.gotElementEnd_ = true;
         return true;
       }
 
       // Get ready to read the value bytes.
-      this.state = TlvStructureDecoder.READ_VALUE_BYTES;
+      this.state_ = TlvStructureDecoder.READ_VALUE_BYTES;
     }
-    else if (this.state == TlvStructureDecoder.READ_VALUE_BYTES) {
-      nRemainingBytes = input.length - this.offset;
-      if (nRemainingBytes < this.nBytesToRead) {
+    else if (this.state_ == TlvStructureDecoder.READ_VALUE_BYTES) {
+      var nRemainingBytes = input.length - this.offset_;
+      if (nRemainingBytes < this.nBytesToRead_) {
         // Need more.
-        this.offset += nRemainingBytes;
-        this.nBytesToRead -= nRemainingBytes;
+        this.offset_ += nRemainingBytes;
+        this.nBytesToRead_ -= nRemainingBytes;
         return false;
       }
 
       // Got the bytes. We're finished.
-      this.offset += this.nBytesToRead;
-      this.gotElementEnd = true;
+      this.offset_ += this.nBytesToRead_;
+      this.gotElementEnd_ = true;
       return true;
     }
     else
@@ -11077,7 +11079,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
  */
 TlvStructureDecoder.prototype.getOffset = function()
 {
-  return this.offset;
+  return this.offset_;
 };
 
 /**
@@ -11086,7 +11088,7 @@ TlvStructureDecoder.prototype.getOffset = function()
  */
 TlvStructureDecoder.prototype.seek = function(offset)
 {
-  this.offset = offset;
+  this.offset_ = offset;
 };
 /**
  * Copyright (C) 2014-2016 Regents of the University of California.
@@ -11114,14 +11116,15 @@ var Blob = require('../util/blob.js').Blob; /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 
 /**
- * ProtobufTlv has static methods to encode and decode an Protobuf Message o
- * bject as NDN-TLV. The Protobuf tag value is used as the TLV type code. A
+ * ProtobufTlv has static methods to encode and decode an Protobuf Message
+ * object as NDN-TLV. The Protobuf tag value is used as the TLV type code. A
  * Protobuf message is encoded/decoded as a nested TLV encoding. Protobuf types
  * uint32, uint64 and enum are encoded/decoded as TLV nonNegativeInteger. (It is
  * an error if an enum value is negative.) Protobuf types bytes and string are
  * encoded/decoded as TLV bytes. The Protobuf type bool is encoded/decoded as a
- * TLV boolean (a zero length value for True, omitted for False). Other Protobuf
- * types are an error.
+ * TLV boolean (a zero length value for True, omitted for False). The Protobuf
+ * type double is encoded/decoded as an 8-byte little-endian IEEE 754 double.
+ * Other Protobuf types are an error.
  *
  * Protobuf has no "outer" message type, so you need to put your TLV message
  * inside an outer "typeless" message.
@@ -11245,6 +11248,11 @@ ProtobufTlv._encodeMessageValue = function(message, descriptor, encoder)
         if (value)
           encoder.writeTypeAndLength(tlvType, 0);
       }
+      else if (field.type.name == "double") {
+        var encoding = new Buffer(8);
+        encoding.writeDoubleLE(value, 0);
+        encoder.writeBlobTlv(tlvType, encoding);
+      }
       else
         throw new Error("ProtobufTlv::encode: Unknown field type");
     }
@@ -11310,6 +11318,8 @@ ProtobufTlv._decodeFieldValue = function(field, tlvType, decoder, endOffset)
     return decoder.readBlobTlv(tlvType).toString();
   else if (field.type.name == "bool")
     return decoder.readBooleanTlv(tlvType, endOffset);
+  else if (field.type.name == "double")
+    return decoder.readBlobTlv(tlvType).readDoubleLE(0);
   else
     throw new Error("ProtobufTlv.decode: Unknown field type");
 };
@@ -11783,56 +11793,68 @@ var LOG = require('../log.js').Log.LOG;
  * elementListener.onReceivedElement(element) with the element.  This handles
  * the case where a single call to onReceivedData may contain multiple elements.
  * @constructor
- * @param {{onReceivedElement:function}} elementListener
+ * @param {object} elementListener An object with an onReceivedElement method.
  */
 var ElementReader = function ElementReader(elementListener)
 {
-  this.elementListener = elementListener;
-  this.dataParts = [];
-  this.tlvStructureDecoder = new TlvStructureDecoder();
+  this.elementListener_ = elementListener;
+  this.dataParts_ = [];
+  this.tlvStructureDecoder_ = new TlvStructureDecoder();
 };
 
 exports.ElementReader = ElementReader;
 
-ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
+/**
+ * Continue to read data until the end of an element, then call
+ * this.elementListener_.onReceivedElement(element). The buffer passed to
+ * onReceivedElement is only valid during this call.  If you need the data
+ * later, you must copy.
+ * @param {Buffer} data The Buffer with the incoming element's bytes.
+ */
+ElementReader.prototype.onReceivedData = function(data)
 {
-  // Process multiple objects in the data.
+  // Process multiple elements in the data.
   while (true) {
     var gotElementEnd;
     var offset;
 
     try {
-      if (this.dataParts.length == 0) {
+      if (this.dataParts_.length === 0) {
         // This is the beginning of an element.
         if (data.length <= 0)
           // Wait for more data.
           return;
       }
 
-      // Scan the input to check if a whole TLV object has been read.
-      this.tlvStructureDecoder.seek(0);
-      gotElementEnd = this.tlvStructureDecoder.findElementEnd(data);
-      offset = this.tlvStructureDecoder.getOffset();
+      // Scan the input to check if a whole TLV element has been read.
+      this.tlvStructureDecoder_.seek(0);
+      gotElementEnd = this.tlvStructureDecoder_.findElementEnd(data);
+      offset = this.tlvStructureDecoder_.getOffset();
     } catch (ex) {
       // Reset to read a new element on the next call.
-      this.dataParts = [];
-      this.tlvStructureDecoder = new TlvStructureDecoder();
+      this.dataParts_ = [];
+      this.tlvStructureDecoder_ = new TlvStructureDecoder();
 
       throw ex;
     }
 
     if (gotElementEnd) {
-      // Got the remainder of an object.  Report to the caller.
-      this.dataParts.push(data.slice(0, offset));
-      var element = DataUtils.concatArrays(this.dataParts);
-      this.dataParts = [];
+      // Got the remainder of an element.  Report to the caller.
+      var element;
+      if (this.dataParts_.length === 0)
+        element = data.slice(0, offset);
+      else {
+        this.dataParts_.push(data.slice(0, offset));
+        element = DataUtils.concatArrays(this.dataParts_);
+        this.dataParts_ = [];
+      }
 
-      // Reset to read a new object. Do this before calling onReceivedElement
+      // Reset to read a new element. Do this before calling onReceivedElement
       // in case it throws an exception.
       data = data.slice(offset, data.length);
-      this.tlvStructureDecoder = new TlvStructureDecoder();
+      this.tlvStructureDecoder_ = new TlvStructureDecoder();
 
-      this.elementListener.onReceivedElement(element);
+      this.elementListener_.onReceivedElement(element);
       if (data.length == 0)
         // No more data in the packet.
         return;
@@ -11842,20 +11864,20 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
     else {
       // Save a copy. We will call concatArrays later.
       var totalLength = data.length;
-      for (var i = 0; i < this.dataParts.length; ++i)
-        totalLength += this.dataParts[i].length;
+      for (var i = 0; i < this.dataParts_.length; ++i)
+        totalLength += this.dataParts_[i].length;
       if (totalLength > NdnCommon.MAX_NDN_PACKET_SIZE) {
         // Reset to read a new element on the next call.
-        this.dataParts = [];
-        this.tlvStructureDecoder = new TlvStructureDecoder();
+        this.dataParts_ = [];
+        this.tlvStructureDecoder_ = new TlvStructureDecoder();
 
         throw new DecodingException(new Error
           ("The incoming packet exceeds the maximum limit Face.getMaxNdnPacketSize()"));
       }
 
-      this.dataParts.push(new Buffer(data));
+      this.dataParts_.push(new Buffer(data));
       if (LOG > 3) console.log('Incomplete packet received. Length ' + data.length + '. Wait for more input.');
-        return;
+      return;
     }
   }
 };
@@ -14286,8 +14308,8 @@ MicroForwarderTransport.prototype.isLocal = function(connectionInfo, onResult, o
  * @param {object} elementListener The elementListener with function
  * onReceivedElement which must remain valid during the life of this object.
  * @param {function} onopenCallback Once connected, call onopenCallback().
- * @param {type} onclosedCallback If the connection is closed by the remote host,
- * call onclosedCallback().
+ * @param {function} onclosedCallback (optional) If the connection is closed by
+ * the remote host, call onclosedCallback(). If omitted or null, don't call it.
  */
 MicroForwarderTransport.prototype.connect = function
   (connectionInfo, elementListener, onopenCallback, onclosedCallback)
@@ -14322,6 +14344,160 @@ MicroForwarderTransport.prototype.send = function(buffer)
     return;
   }
 
+  this.sendObject(buffer.toJSON());
+};
+/**
+ * Copyright (C) 2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: Wentao Shang
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * A RuntimePortTransport extends Transport to connect to a WebExtensions
+ * runtime.port.
+ * @param {function} onReceivedObject (optional) If supplied and the received
+ * object type field is not "Buffer" then just call this.onReceivedObject(obj).
+ * @constructor
+ */
+var RuntimePortTransport = function RuntimePortTransport(onReceivedObject)
+{
+  // Call the base constructor.
+  Transport.call(this);
+
+  this.elementReader = null;
+  this.connectionInfo = null; // Read by Face.
+  this.onReceivedObject = onReceivedObject;
+  this.port = null;
+};
+
+RuntimePortTransport.prototype = new Transport();
+RuntimePortTransport.prototype.name = "RuntimePortTransport";
+
+/**
+ * Create a new RuntimePortTransport.ConnectionInfo which extends
+ * Transport.ConnectionInfo to hold the runtime.port used to connect.
+ * @param {runtime.port} port The runtime.port object.
+ */
+RuntimePortTransport.ConnectionInfo = function RuntimePortTransportConnectionInfo
+  (port)
+{
+  // Call the base constructor.
+  Transport.ConnectionInfo .call(this);
+
+  this.port = port;
+};
+
+RuntimePortTransport.ConnectionInfo.prototype = new Transport.ConnectionInfo();
+RuntimePortTransport.ConnectionInfo.prototype.name = "RuntimePortTransport.ConnectionInfo";
+
+/**
+ * Check if the fields of this RuntimePortTransport.ConnectionInfo equal the other
+ * RuntimePortTransport.ConnectionInfo.
+ * @param {RuntimePortTransport.ConnectionInfo} The other object to check.
+ * @return {boolean} True if the objects have equal fields, false if not.
+ */
+RuntimePortTransport.ConnectionInfo.prototype.equals = function(other)
+{
+  if (other == null || other.port == undefined)
+    return false;
+  return this.port == other.port;
+};
+
+RuntimePortTransport.ConnectionInfo.prototype.toString = function()
+{
+  return "{}";
+};
+
+/**
+ * Determine whether this transport connecting according to connectionInfo is to
+ * a node on the current machine. RuntimePortTransport is always local.
+ * @param {RuntimePortTransport.ConnectionInfo} connectionInfo This is ignored.
+ * @param {function} onResult This calls onResult(true) because a runtime.port
+ * is always local.
+ * @param {function} onError This is ignored.
+ */
+RuntimePortTransport.prototype.isLocal = function(connectionInfo, onResult, onError)
+{
+  onResult(true);
+};
+
+/**
+ * Connect to the runtime.port in connectionInfo. For a received object obj, if
+ * obj.type is "Buffer", read an entire packet element from obj.data and call
+ * elementListener.onReceivedElement(element). Otherwise just call
+ * onReceivedObject(obj) using the callback given to the constructor.
+ * @param {RuntimePortTransport.ConnectionInfo} connectionInfo The
+ * ConnectionInfo with the runtime.port.
+ * @param {object} elementListener The elementListener with function
+ * onReceivedElement which must remain valid during the life of this object.
+ * @param {function} onOpenCallback Once connected, call onOpenCallback().
+ * @param {function} onClosedCallback (optional) If the connection is closed by
+ * the remote host, call onClosedCallback(). If omitted or null, don't call it.
+ */
+RuntimePortTransport.prototype.connect = function
+  (connectionInfo, elementListener, onOpenCallback, onClosedCallback)
+{
+  // The window listener is already set up.
+  this.elementReader = new ElementReader(elementListener);
+  this.connectionInfo = connectionInfo;
+  this.port = this.connectionInfo.port;
+
+  // Add a listener to wait for a message object from the tab
+  var thisTransport = this;
+  this.port.onMessage.addListener(function(obj) {
+    if (obj.type == "Buffer")
+      thisTransport.elementReader.onReceivedData
+        (Buffer.isBuffer(obj.data) ? obj.data : new Buffer(obj.data));
+    else {
+      if (thisTransport.onReceivedObject != null)
+        thisTransport.onReceivedObject(obj);
+    }
+  });
+
+  this.port.onDisconnect.addListener(function() {
+    thisTransport.port = null;
+    if (onClosedCallback != null)
+      onClosedCallback();
+  });
+
+  onOpenCallback();
+};
+
+/**
+ * Send the JavaScript object over the connection created by connect.
+ * @param {object} obj The object to send. If it is a JSON Buffer then it is
+ * processed like an NDN packet.
+ */
+RuntimePortTransport.prototype.sendObject = function(obj)
+{
+  if (this.port == null) {
+    console.log("RuntimePortTransport connection is not established.");
+    return;
+  }
+
+  this.port.postMessage(obj);
+};
+
+/**
+ * Send the buffer over the connection created by connect.
+ * @param {Buffer} buffer The bytes to send.
+ */
+RuntimePortTransport.prototype.send = function(buffer)
+{
   this.sendObject(buffer.toJSON());
 };
 /**
@@ -14457,9 +14633,8 @@ WebSocketTransport.prototype.isLocal = function(connectionInfo, onResult, onErro
  * @param {object} elementListener The elementListener with function
  * onReceivedElement which must remain valid during the life of this object.
  * @param {function} onopenCallback Once connected, call onopenCallback().
- * @param {type} onclosedCallback If the connection is closed by the remote host,
- * call onclosedCallback().
- * @return {undefined}
+ * @param {function} onclosedCallback (optional) If the connection is closed by
+ * the remote host, call onclosedCallback(). If omitted or null, don't call it.
  */
 WebSocketTransport.prototype.connect = function
   (connectionInfo, elementListener, onopenCallback, onclosedCallback)
@@ -14518,7 +14693,8 @@ WebSocketTransport.prototype.connect = function
     console.log('ws.onclose: WebSocket connection closed.');
     self.ws = null;
 
-    onclosedCallback();
+    if (onclosedCallback != null)
+      onclosedCallback();
   }
 };
 
@@ -15623,7 +15799,7 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
  * We can't use encodeURIComponent because that doesn't encode all the 
  * characters we want to.
  * This does not add a type code prefix such as "sha256digest=".
- * @param {Buffer|Name.Component} component The value or Name.Component to escape.
+ * @param {Buffer|Name.Component} value The value or Name.Component to escape.
  * @return {string} The escaped string.
  */
 Name.toEscapedString = function(value)
@@ -15962,6 +16138,7 @@ KeyLocator.prototype.equals = function(other)
 KeyLocator.canGetFromSignature = function(signature)
 {
   return signature instanceof Sha256WithRsaSignature ||
+         signature instanceof Sha256WithEcdsaSignature ||
          signature instanceof HmacWithSha256Signature;
 }
 
@@ -15975,6 +16152,7 @@ KeyLocator.canGetFromSignature = function(signature)
 KeyLocator.getFromSignature = function(signature)
 {
   if (signature instanceof Sha256WithRsaSignature ||
+      signature instanceof Sha256WithEcdsaSignature ||
       signature instanceof HmacWithSha256Signature)
     return signature.getKeyLocator();
   else
@@ -16011,6 +16189,7 @@ Object.defineProperty(KeyLocator.prototype, "keyData",
 
 // Put this last to avoid a require loop.
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var Sha256WithEcdsaSignature = require('./sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature;
 var HmacWithSha256Signature = require('./hmac-with-sha256-signature.js').HmacWithSha256Signature;
 /**
  * This class represents an NDN Data MetaInfo object.
@@ -16253,6 +16432,124 @@ Object.defineProperty(MetaInfo.prototype, "freshnessSeconds",
 Object.defineProperty(MetaInfo.prototype, "finalBlockID",
   { get: function() { return this.getFinalBlockIDAsBuffer(); },
     set: function(val) { this.setFinalBlockId(val); } });
+/**
+ * This class represents an NDN Data Signature object.
+ * Copyright (C) 2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
+var KeyLocator = require('./key-locator.js').KeyLocator;
+
+/**
+ * Create a new Sha256WithEcdsaSignature object, possibly copying values from
+ * another object.
+ *
+ * @param {Sha256WithEcdsaSignature} value (optional) If value is a
+ * Sha256WithEcdsaSignature, copy its values.  If value is omitted, the 
+ * keyLocator is the default with unspecified values and the signature is
+ * unspecified.
+ * @constructor
+ */
+var Sha256WithEcdsaSignature = function Sha256WithEcdsaSignature(value)
+{
+  if (typeof value === 'object' && value instanceof Sha256WithEcdsaSignature) {
+    // Copy the values.
+    this.keyLocator_ = new ChangeCounter(new KeyLocator(value.getKeyLocator()));
+    this.signature_ = value.signature_;
+  }
+  else {
+    this.keyLocator_ = new ChangeCounter(new KeyLocator());
+    this.signature_ = new Blob();
+  }
+
+  this.changeCount_ = 0;
+};
+
+exports.Sha256WithEcdsaSignature = Sha256WithEcdsaSignature;
+
+/**
+ * Create a new Sha256WithEcdsaSignature which is a copy of this object.
+ * @return {Sha256WithEcdsaSignature} A new object which is a copy of this
+ * object.
+ */
+Sha256WithEcdsaSignature.prototype.clone = function()
+{
+  return new Sha256WithEcdsaSignature(this);
+};
+
+/**
+ * Get the key locator.
+ * @return {KeyLocator} The key locator.
+ */
+Sha256WithEcdsaSignature.prototype.getKeyLocator = function()
+{
+  return this.keyLocator_.get();
+};
+
+/**
+ * Get the data packet's signature bytes.
+ * @return {Blob} The signature bytes. If not specified, the value isNull().
+ */
+Sha256WithEcdsaSignature.prototype.getSignature = function()
+{
+  return this.signature_;
+};
+
+/**
+ * Set the key locator to a copy of the given keyLocator.
+ * @param {KeyLocator} keyLocator The KeyLocator to copy.
+ */
+Sha256WithEcdsaSignature.prototype.setKeyLocator = function(keyLocator)
+{
+  this.keyLocator_.set(typeof keyLocator === 'object' &&
+                       keyLocator instanceof KeyLocator ?
+    new KeyLocator(keyLocator) : new KeyLocator());
+  ++this.changeCount_;
+};
+
+/**
+ * Set the data packet's signature bytes.
+ * @param {Blob} signature
+ */
+Sha256WithEcdsaSignature.prototype.setSignature = function(signature)
+{
+  this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
+    signature : new Blob(signature);
+  ++this.changeCount_;
+};
+
+/**
+ * Get the change count, which is incremented each time this object (or a child
+ * object) is changed.
+ * @return {number} The change count.
+ */
+Sha256WithEcdsaSignature.prototype.getChangeCount = function()
+{
+  // Make sure each of the checkChanged is called.
+  var changed = this.keyLocator_.checkChanged();
+  if (changed)
+    // A child object has changed, so update the change count.
+    ++this.changeCount_;
+
+  return this.changeCount_;
+};
 /**
  * This class represents an NDN Data Signature object.
  * Copyright (C) 2014-2016 Regents of the University of California.
@@ -20446,10 +20743,22 @@ MemoryPrivateKeyStorage.prototype.setPrivateKeyForKeyName = function
 {
   // Encode the DER as PEM.
   var keyBase64 = privateKeyDer.toString('base64');
-  var keyPem = "-----BEGIN RSA PRIVATE KEY-----\n";
-  for (var i = 0; i < keyBase64.length; i += 64)
-    keyPem += (keyBase64.substr(i, 64) + "\n");
-  keyPem += "-----END RSA PRIVATE KEY-----";
+  var keyPem;
+  if (keyType === KeyType.RSA) {
+    keyPem = "-----BEGIN RSA PRIVATE KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END RSA PRIVATE KEY-----";
+  }
+  else if (keyType === KeyType.ECDSA) {
+    keyPem = "-----BEGIN EC PRIVATE KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END EC PRIVATE KEY-----";
+  }
+  else
+    throw new SecurityException(new Error
+      ("MemoryPrivateKeyStorage: KeyType is not supported"));
 
   this.privateKeyStore[keyName.toUri()] =
     { keyType: keyType, privateKey: keyPem };
@@ -20676,11 +20985,20 @@ MemoryPrivateKeyStorage.prototype.signPromise = function
       return Promise.resolve(result);
     });
   } else {
-    var rsa = Crypto.createSign('RSA-SHA256');
-    rsa.update(data);
+    var signer;
+    if (privateKey.keyType === KeyType.RSA)
+      signer = Crypto.createSign("RSA-SHA256");
+    else if (privateKey.keyType === KeyType.ECDSA)
+      // Just create a "sha256". The Crypto library will infer ECDSA from the key.
+      signer = Crypto.createSign("sha256");
+    else
+      // We don't expect this to happen since setPrivateKeyForKeyName already checked.
+      return SyncPromise.reject(new SecurityException(new Error
+        ("MemoryPrivateKeyStorage.sign: Unrecognized private key type")));
 
+    signer.update(data);
     var signature = new Buffer
-      (DataUtils.toNumbersIfString(rsa.sign(privateKey.privateKey)));
+      (DataUtils.toNumbersIfString(signer.sign(privateKey.privateKey)));
     var result = new Blob(signature, false);
 
     return SyncPromise.resolve(result);
@@ -20983,6 +21301,7 @@ var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var ConfigFile = require('../../util/config-file.js').ConfigFile; /** @ignore */
 var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
 var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
 var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
@@ -22356,6 +22675,13 @@ IdentityManager.prototype.makeSignatureByCertificatePromise = function
       signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
       signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
     }
+    else if (keyType == KeyType.ECDSA) {
+      signature = new Sha256WithEcdsaSignature();
+      digestAlgorithm[0] = DigestAlgorithm.SHA256;
+
+      signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+      signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+    }
     else
       throw new SecurityException(new Error("Key type is not recognized"));
 
@@ -22560,6 +22886,7 @@ var DataUtils = require('../../encoding/data-utils.js').DataUtils; /** @ignore *
 var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
 var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
 var UseSubtleCrypto = require("../../use-subtle-crypto-node.js").UseSubtleCrypto;
 
 /**
@@ -22658,10 +22985,16 @@ PolicyManager.prototype.inferSigningIdentity = function(dataName)
   throw new Error("PolicyManager.inferSigningIdentity is not implemented");
 };
 
-// The first time verifySha256WithRsaSignature is called, it sets this to
-// determine if a signature buffer needs to be converted to a string for the
-// crypto verifier.
-PolicyManager.verifyUsesString = null;
+// The first time verify is called, it sets this to determine if a signature
+// buffer needs to be converted to a string for the crypto verifier.
+PolicyManager.verifyUsesString_ = null;
+PolicyManager.setVerifyUsesString_ = function()
+{
+  var hashResult = Crypto.createHash('sha256').digest();
+  // If the hash result is a string, we assume that this is a version of
+  //   crypto where verify also uses a string signature.
+  PolicyManager.verifyUsesString_ = (typeof hashResult === 'string');
+};
 
 /**
  * Check the type of signature and use the publicKeyDer to verify the
@@ -22686,6 +23019,14 @@ PolicyManager.verifySignature = function
       return;
     }
     PolicyManager.verifySha256WithRsaSignature
+      (signature.getSignature(), signedBlob, publicKeyDer, onComplete);
+  }
+  else if (signature instanceof Sha256WithEcdsaSignature) {
+    if (publicKeyDer.isNull()) {
+      onComplete(false);
+      return;
+    }
+    PolicyManager.verifySha256WithEcdsaSignature
       (signature.getSignature(), signedBlob, publicKeyDer, onComplete);
   }
   else if (signature instanceof DigestSha256Signature)
@@ -22719,12 +23060,8 @@ PolicyManager.verifySha256WithRsaSignature = function
       onComplete(verified);
     });
   } else {
-    if (PolicyManager.verifyUsesString === null) {
-      var hashResult = Crypto.createHash('sha256').digest();
-      // If the hash result is a string, we assume that this is a version of
-      //   crypto where verify also uses a string signature.
-      PolicyManager.verifyUsesString = (typeof hashResult === 'string');
-    }
+    if (PolicyManager.verifyUsesString_ === null)
+      PolicyManager.setVerifyUsesString_();
 
     // The crypto verifier requires a PEM-encoded public key.
     var keyBase64 = publicKeyDer.buf().toString('base64');
@@ -22735,7 +23072,50 @@ PolicyManager.verifySha256WithRsaSignature = function
 
     var verifier = Crypto.createVerify('RSA-SHA256');
     verifier.update(signedBlob.signedBuf());
-    var signatureBytes = PolicyManager.verifyUsesString ?
+    var signatureBytes = PolicyManager.verifyUsesString_ ?
+      DataUtils.toString(signature.buf()) : signature.buf();
+    onComplete(verifier.verify(keyPem, signatureBytes));
+  }
+};
+
+/**
+ * Verify the ECDSA signature on the SignedBlob using the given public key.
+ * @param {Blob} signature The signature bits.
+ * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
+ * verify.
+ * @param {Blob} publicKeyDer The DER-encoded public key used to verify the
+ * signature.
+ * @param {function} onComplete This calls onComplete(true) if the signature
+ * verifies, otherwise onComplete(false).
+ */
+PolicyManager.verifySha256WithEcdsaSignature = function
+  (signature, signedBlob, publicKeyDer, onComplete)
+{
+  if (UseSubtleCrypto()) {
+/*
+    var algo = {name:"RSASSA-PKCS1-v1_5",hash:{name:"SHA-256"}};
+
+    crypto.subtle.importKey("spki", publicKeyDer.buf().buffer, algo, true, ["verify"]).then(function(publicKey){
+      return crypto.subtle.verify(algo, publicKey, signature.buf(), signedBlob.signedBuf())
+    }).then(function(verified){
+      onComplete(verified);
+    });
+*/  onComplete(false);
+  } else {
+    if (PolicyManager.verifyUsesString_ === null)
+      PolicyManager.setVerifyUsesString_();
+
+    // The crypto verifier requires a PEM-encoded public key.
+    var keyBase64 = publicKeyDer.buf().toString("base64");
+    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END PUBLIC KEY-----";
+
+    // Just create a "sha256". The Crypto library will infer ECDSA from the key.
+    var verifier = Crypto.createVerify("sha256");
+    verifier.update(signedBlob.signedBuf());
+    var signatureBytes = PolicyManager.verifyUsesString_ ?
       DataUtils.toString(signature.buf()) : signature.buf();
     onComplete(verifier.verify(keyPem, signatureBytes));
   }
@@ -25896,7 +26276,7 @@ Interest.prototype.setNonce = function(nonce)
 {
   this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
     nonce : new Blob(nonce, true);
-  // Set _getNonceChangeCount so that the next call to getNonce() won't clear
+  // Set getNonceChangeCount_ so that the next call to getNonce() won't clear
   // this.nonce_.
   ++this.changeCount_;
   this.getNonceChangeCount_ = this.getChangeCount();
@@ -26014,7 +26394,7 @@ Interest.prototype.refreshNonce = function()
   }
 
   this.nonce_ = newNonce;
-  // Set _getNonceChangeCount so that the next call to getNonce() won't clear
+  // Set getNonceChangeCount_ so that the next call to getNonce() won't clear
   // this.nonce_.
   ++this.changeCount_;
   this.getNonceChangeCount_ = this.getChangeCount();
@@ -26644,8 +27024,9 @@ var NdnRegexMatcher = require('./util/ndn-regex-matcher.js').NdnRegexMatcher;
  * Create an InterestFilter to match any Interest whose name starts with the
  * given prefix. If the optional regexFilter is provided then the remaining
  * components match the regexFilter regular expression as described in doesMatch.
- * @param {Name|string} prefix The prefix. If a Name then this makes a copy of
- * the Name. Otherwise it create a Name from the URI string.
+ * @param {InterestFilter|Name|string} prefix If prefix is another
+ * InterestFilter copy its values. If prefix is a Name then this makes a copy of
+ * the Name. Otherwise this creates a Name from the URI string.
  * @param {string} regexFilter (optional) The regular expression for matching
  * the remaining name components.
  * @constructor
@@ -27261,6 +27642,7 @@ var Exclude = require('../exclude.js').Exclude; /** @ignore */
 var ContentType = require('../meta-info.js').ContentType; /** @ignore */
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
 var GenericSignature = require('../generic-signature.js').GenericSignature; /** @ignore */
 var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature; /** @ignore */
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
@@ -28202,6 +28584,12 @@ Tlv0_2WireFormat.encodeSignatureInfo_ = function(signature, encoder)
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
   }
+  else if (signature instanceof Sha256WithEcdsaSignature) {
+    Tlv0_2WireFormat.encodeKeyLocator
+      (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
+    encoder.writeNonNegativeIntegerTlv
+      (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithEcdsa);
+  }
   else if (signature instanceof HmacWithSha256Signature) {
     Tlv0_2WireFormat.encodeKeyLocator
       (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
@@ -28230,6 +28618,12 @@ Tlv0_2WireFormat.decodeSignatureInfo = function(data, decoder, copy)
     data.setSignature(new Sha256WithRsaSignature());
     // Modify data's signature object because if we create an object
     //   and set it, then data will have to copy all the fields.
+    var signatureInfo = data.getSignature();
+    Tlv0_2WireFormat.decodeKeyLocator
+      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder, copy);
+  }
+  else if (signatureType == Tlv.SignatureType_SignatureSha256WithEcdsa) {
+    data.setSignature(new Sha256WithEcdsaSignature());
     var signatureInfo = data.getSignature();
     Tlv0_2WireFormat.decodeKeyLocator
       (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder, copy);
@@ -28621,6 +29015,7 @@ var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var Data = require('../data.js').Data; /** @ignore */
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
 var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature; /** @ignore */
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var ContentType = require('../meta-info.js').ContentType; /** @ignore */
@@ -28727,6 +29122,13 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
   if (signature instanceof Sha256WithRsaSignature) {
     var signature = data.getSignature();
     append("Sha256WithRsa signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
+    keyLocator = signature.getKeyLocator();
+  }
+  else if (signature instanceof Sha256WithEcdsaSignature) {
+    var signature = data.getSignature();
+    append("Sha256WithEcdsa signature.signature: " +
       (signature.getSignature().size() > 0 ?
        signature.getSignature().toHex() : "<none>"));
     keyLocator = signature.getKeyLocator();
@@ -36774,7 +37176,7 @@ Face.prototype.onReceivedElement = function(element)
         }
       }
 
-      // We have process the network Nack packet.
+      // We have processed the network Nack packet.
       return;
     }
   }
@@ -36784,7 +37186,7 @@ Face.prototype.onReceivedElement = function(element)
     if (LOG > 3) console.log('Interest packet received.');
 
     // Call all interest filter callbacks which match.
-    matchedFilters = [];
+    var matchedFilters = [];
     this.interestFilterTable_.getMatchedFilters(interest, matchedFilters);
     for (var i = 0; i < matchedFilters.length; ++i) {
       var entry = matchedFilters[i];

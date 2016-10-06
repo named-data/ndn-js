@@ -605,7 +605,7 @@ Interest.prototype.setNonce = function(nonce)
 {
   this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
     nonce : new Blob(nonce, true);
-  // Set _getNonceChangeCount so that the next call to getNonce() won't clear
+  // Set getNonceChangeCount_ so that the next call to getNonce() won't clear
   // this.nonce_.
   ++this.changeCount_;
   this.getNonceChangeCount_ = this.getChangeCount();
@@ -723,7 +723,7 @@ Interest.prototype.refreshNonce = function()
   }
 
   this.nonce_ = newNonce;
-  // Set _getNonceChangeCount so that the next call to getNonce() won't clear
+  // Set getNonceChangeCount_ so that the next call to getNonce() won't clear
   // this.nonce_.
   ++this.changeCount_;
   this.getNonceChangeCount_ = this.getChangeCount();

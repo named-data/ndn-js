@@ -48,4 +48,4 @@ exports.EncryptKey = EncryptKey;
  * Get the key value.
  * @return {Blob} The key value.
  */
-EncryptKey.prototype.getKeyBits = function() { return this.keyBits_; }
+EncryptKey.prototype.getKeyBits = function() { return this.keyBits_; };

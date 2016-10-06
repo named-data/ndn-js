@@ -91,7 +91,7 @@ describe('TestNameMethods', function() {
 
   it('GetComponent', function() {
     var name = new Name(expectedURI);
-    component2 = name.get(2);
+    var component2 = name.get(2);
     assert.ok(comp2.equals(component2), 'Component at index 2 is incorrect');
   });
 
@@ -248,7 +248,7 @@ describe('TestNameMethods', function() {
     var decodedName2 = new Name();
     decodedName2.wireDecode(new Blob(TEST_NAME_IMPLICIT_DIGEST), TlvWireFormat.get());
     assert.ok(decodedName2.equals(name2));
-});
+  });
 
   it('ImplicitSha256Digest', function() {
     var name = new Name();
@@ -282,12 +282,12 @@ describe('TestNameMethods', function() {
       assert.fail("Expected error in appendImplicitSha256Digest");
 
     // Add name.get(2) as a generic component.
-    name.append(digest.slice(0, 32), true);
+    name.append(digest.slice(0, 32));
     assert.ok(name.get(0).compare(name.get(2)) < 0);
     assert.ok(name.get(0).getValue().equals(name.get(2).getValue()));
 
     // Add name.get(3) as a generic component whose first byte is greater.
-    name.append(digest.slice(1, 32), true);
+    name.append(digest.slice(1, 32));
     assert.ok(name.get(0).compare(name.get(3)) < 0);
 
     assert.equal

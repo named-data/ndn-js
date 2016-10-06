@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.11 (2016-08-11)
+Interim changes since NDN-JS v0.11 (2016-09-07)
 -----------------------------------------------
 
 Changes
@@ -11,9 +11,10 @@ Changes
   Name.appendImplicitSha256Digest.
 * https://redmine.named-data.net/issues/3447 In Data, added getFullName, and
   in Interest added matchesData to use it.
-* In ProtobufTlv, added utility method toName.
+* In ProtobufTlv, added utility method toName and support for Protobuf double.
 * https://redmine.named-data.net/issues/3675 In Name.get, don't copy the
   returned component (for efficiency).
+* In tools/micro-forwarder, generalize to use WebSocketTransport or RuntimePortTransport.
 * In Face.makeCommandInterest, added an optional onComplete callback.
 * Examples: In test-encode-decode-fib-entry, etc, use ProtobufTlv.toName.
 * Examples: Added browser/test-list-faces.html.

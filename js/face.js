@@ -973,7 +973,9 @@ Face.prototype.onReceivedElement = function(element)
   if (element[0] == Tlv.LpPacket_LpPacket) {
     // Decode the LpPacket and replace element with the fragment.
     lpPacket = new LpPacket();
-    TlvWireFormat.get().decodeLpPacket(lpPacket, element);
+    // Set copy false so that the fragment is a slice which will be copied below.
+    // The header fields are all integers and don't need to be copied.
+    TlvWireFormat.get().decodeLpPacket(lpPacket, element, false);
     element = lpPacket.getFragmentWireEncoding().buf();
   }
 
@@ -1019,7 +1021,7 @@ Face.prototype.onReceivedElement = function(element)
         }
       }
 
-      // We have process the network Nack packet.
+      // We have processed the network Nack packet.
       return;
     }
   }
@@ -1029,7 +1031,7 @@ Face.prototype.onReceivedElement = function(element)
     if (LOG > 3) console.log('Interest packet received.');
 
     // Call all interest filter callbacks which match.
-    matchedFilters = [];
+    var matchedFilters = [];
     this.interestFilterTable_.getMatchedFilters(interest, matchedFilters);
     for (var i = 0; i < matchedFilters.length; ++i) {
       var entry = matchedFilters[i];

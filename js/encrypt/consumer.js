@@ -57,7 +57,7 @@ var Consumer = function Consumer
   this.consumerName_ = new Name(consumerName);
 
   // The map key is the C-KEY name URI string. The value is the encoded key Blob.
-  // (Use a string because we can't use the Name object as the key in JavaScript.
+  // (Use a string because we can't use the Name object as the key in JavaScript.)
   this.cKeyMap_ = {};
   // The map key is the D-KEY name URI string. The value is the encoded key Blob.
   this.dKeyMap_ = {};
