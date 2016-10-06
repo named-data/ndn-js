@@ -296,6 +296,12 @@ MicroForwarder.prototype.onReceivedObject = function(face, obj)
       thisForwarder.faces_.push(newFace);
       obj.faceId = newFace.faceId;
       obj.statusCode = 200;
+
+      // Register with the remote demo forwarder. There is no PIT entry, so
+      //   onReceivedElement will drop the response.
+      var registerCommand = MicroForwarder.makeDemoRegisterCommand(new Name("/"));
+      newFace.sendBuffer(registerCommand.wireEncode(TlvWireFormat.get()).buf());
+
       face.sendObject(obj);
     }
 
@@ -352,6 +358,43 @@ MicroForwarder.prototype.onReceivedObject = function(face, obj)
     obj.statusCode = 200;
     face.sendObject(obj);
   }
+};
+
+/**
+ * Imitate Face.nfdRegisterPrefix to make a command interest to register the
+ * prefix. This uses a blank DigestSha256Signature, assuming that the demo
+ * forwarder won't require an RSA signature.
+ * @param {Name} prefix The prefix to register.
+ * @return {Interest} The new command interest.
+ */
+MicroForwarder.makeDemoRegisterCommand = function(prefix)
+{
+  var controlParameters = new ControlParameters();
+  controlParameters.setName(prefix);
+  controlParameters.setForwardingFlags(new ForwardingFlags());
+
+  var wireFormat = TlvWireFormat.get();
+  var commandInterest = new Interest();
+  commandInterest.setName(new Name("/localhop/nfd/rib/register"));
+  commandInterest.setInterestLifetimeMilliseconds(4000.0);
+  commandInterest.getName().append(controlParameters.wireEncode(wireFormat));
+
+  // Imitate CommandInterestGenerator.generate. Assume this is called more than
+  // one millisecond from that last time, so we don't need to check for
+  // incrementing the timestamp.
+  var timestamp = Math.round(new Date().getTime());
+  var encoder = new TlvEncoder(8);
+  encoder.writeNonNegativeInteger(timestamp);
+  commandInterest.getName().append(new Blob(encoder.getOutput(), false));
+  commandInterest.getName().append
+    (new Blob(require('./crypto.js').randomBytes(8), false));
+
+  // Imitate IdentityManager.signInterestWithSha256.
+  var signature = new DigestSha256Signature();
+  commandInterest.getName().append(wireFormat.encodeSignatureInfo(signature));
+  commandInterest.getName().append(new Buffer(32));
+
+  return commandInterest;
 };
 
 MicroForwarder.localhostNamePrefix = new Name("/localhost");
