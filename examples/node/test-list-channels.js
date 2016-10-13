@@ -41,7 +41,7 @@ function main()
   console.log("Express interest " + interest.getName().toUri());
 
   SegmentFetcher.fetch
-    (face, interest, SegmentFetcher.DontVerifySegment,
+    (face, interest, null,
      function(content) {
        face.close();  // This will cause the script to quit.
        printChannelStatuses(content);

@@ -51,7 +51,7 @@ function testListFaces()
   result.innerHTML += "Express interest " + interest.getName().toUri() + "</br>";
 
   SegmentFetcher.fetch
-    (face, interest, SegmentFetcher.DontVerifySegment,
+    (face, interest, null,
      function(content) {
        printFaceStatuses(content);
      },

@@ -186,7 +186,7 @@ function main()
   interest.getName().append(encodedFilter);
 
   SegmentFetcher.fetch
-    (face, interest, SegmentFetcher.DontVerifySegment,
+    (face, interest, null,
      function(content) {
        processFaceStatus(content, prefix, uri, face);
      },
