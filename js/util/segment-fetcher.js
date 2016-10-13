@@ -82,8 +82,12 @@ var NdnCommon = require('./ndn-common.js').NdnCommon;
  *       (face, interest, SegmentFetcher.DontVerifySegment, onComplete, onError);
  *
  * This is a private constructor to create a new SegmentFetcher to use the Face.
- * An application should use SegmentFetcher.fetch.
+ * An application should use SegmentFetcher.fetch. If validatorKeyChain is not
+ * null, use it and ignore verifySegment. After creating the SegmentFetcher,
+ * call fetchFirstSegment.
  * @param {Face} face This calls face.expressInterest to fetch more segments.
+ * @param validatorKeyChain {KeyChain} If this is not null, use its verifyData
+ * instead of the verifySegment callback.
  * @param {function} verifySegment When a Data packet is received this calls
  * verifySegment(data) where data is a Data object. If it returns False then
  * abort fetching and call onError with
@@ -106,9 +110,10 @@ var NdnCommon = require('./ndn-common.js').NdnCommon;
  * @constructor
  */
 var SegmentFetcher = function SegmentFetcher
-  (face, verifySegment, onComplete, onError)
+  (face, validatorKeyChain, verifySegment, onComplete, onError)
 {
   this.face = face;
+  this.validatorKeyChain = validatorKeyChain;
   this.verifySegment = verifySegment;
   this.onComplete = onComplete;
   this.onError = onError;
@@ -169,8 +174,8 @@ SegmentFetcher.DontVerifySegment = function(data)
 SegmentFetcher.fetch = function
   (face, baseInterest, verifySegment, onComplete, onError)
 {
-  new SegmentFetcher(face, verifySegment, onComplete, onError).fetchFirstSegment
-    (baseInterest);
+  new SegmentFetcher(face, null, verifySegment, onComplete, onError)
+    .fetchFirstSegment(baseInterest);
 };
 
 SegmentFetcher.prototype.fetchFirstSegment = function(baseInterest)
@@ -216,6 +221,11 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
     return;
   }
 
+  this.onVerified(data, originalInterest);
+};
+
+SegmentFetcher.prototype.onVerified = function(data, originalInterest)
+{
   if (!SegmentFetcher.endsWithSegmentNumber(data.getName())) {
     // We don't expect a name without a segment number.  Treat it as a bad packet.
     try {
@@ -291,7 +301,7 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
         (originalInterest, data.getName(), expectedSegmentNumber + 1);
     }
   }
-};
+}
 
 SegmentFetcher.prototype.onTimeout = function(interest)
 {
