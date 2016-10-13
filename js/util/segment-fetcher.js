@@ -21,6 +21,7 @@
 /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var Blob = require('./blob.js').Blob; /** @ignore */
+var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon;
 
 /**
@@ -62,13 +63,12 @@ var NdnCommon = require('./ndn-common.js').NdnCommon;
  * - `DATA_HAS_NO_SEGMENT`: if any of the retrieved Data packets don't have a segment
  *   as the last component of the name (not counting the implicit digest)
  * - `SEGMENT_VERIFICATION_FAILED`: if any retrieved segment fails
- *   the user-provided VerifySegment callback
+ *   the user-provided VerifySegment callback or KeyChain verifyData.
  * - `IO_ERROR`: for I/O errors when sending an Interest.
  *
- * In order to validate individual segments, a verifySegment callback needs to
- * be specified. If the callback returns false, the fetching process is aborted
- * with SEGMENT_VERIFICATION_FAILED. If data validation is not required, the
- * provided DontVerifySegment object can be used.
+ * In order to validate individual segments, a KeyChain needs to be supplied.
+ * If verifyData fails, the fetching process is aborted with
+ * SEGMENT_VERIFICATION_FAILED. If data validation is not required, pass null.
  *
  * Example:
  *     var onComplete = function(content) { ... }
@@ -78,8 +78,7 @@ var NdnCommon = require('./ndn-common.js').NdnCommon;
  *     var interest = new Interest(new Name("/data/prefix"));
  *     interest.setInterestLifetimeMilliseconds(1000);
  *
- *     SegmentFetcher.fetch
- *       (face, interest, SegmentFetcher.DontVerifySegment, onComplete, onError);
+ *     SegmentFetcher.fetch(face, interest, null, onComplete, onError);
  *
  * This is a private constructor to create a new SegmentFetcher to use the Face.
  * An application should use SegmentFetcher.fetch. If validatorKeyChain is not
@@ -142,7 +141,10 @@ SegmentFetcher.DontVerifySegment = function(data)
 
 /**
  * Initiate segment fetching. For more details, see the documentation for the
- * class.
+ * class. There are two forms of fetch:
+ * fetch(face, baseInterest, validatorKeyChain, onComplete, onError)
+ * and
+ * fetch(face, baseInterest, verifySegment, onComplete, onError)
  * @param {Face} face This calls face.expressInterest to fetch more segments.
  * @param {Interest} baseInterest An Interest for the initial segment of the
  * requested data, where baseInterest.getName() has the name prefix. This
@@ -150,6 +152,11 @@ SegmentFetcher.DontVerifySegment = function(data)
  * propagate to all subsequent Interests. The only exception is that the initial
  * Interest will be forced to include selectors "ChildSelector=1" and
  * "MustBeFresh=true" which will be turned off in subsequent Interests.
+ * @param validatorKeyChain {KeyChain} When a Data packet is received this calls
+ * validatorKeyChain.verifyData(data). If validation fails then abortfetching
+ * and call onError with SEGMENT_VERIFICATION_FAILED. This does not make a copy
+ * of the KeyChain; the object must remain valid while fetching.
+ * If validatorKeyChain is null, this does not validate the data packet.
  * @param {function} verifySegment When a Data packet is received this calls
  * verifySegment(data) where data is a Data object. If it returns False then
  * abort fetching and call onError with
@@ -172,10 +179,18 @@ SegmentFetcher.DontVerifySegment = function(data)
  * exceptions.
  */
 SegmentFetcher.fetch = function
-  (face, baseInterest, verifySegment, onComplete, onError)
+  (face, baseInterest, validatorKeyChainOrVerifySegment, onComplete, onError)
 {
-  new SegmentFetcher(face, null, verifySegment, onComplete, onError)
-    .fetchFirstSegment(baseInterest);
+  if (validatorKeyChainOrVerifySegment == null ||
+      validatorKeyChainOrVerifySegment instanceof KeyChain)
+    new SegmentFetcher
+      (face, validatorKeyChainOrVerifySegment, SegmentFetcher.DontVerifySegment,
+       onComplete, onError)
+      .fetchFirstSegment(baseInterest);
+  else
+    new SegmentFetcher
+      (face, null, validatorKeyChainOrVerifySegment, onComplete, onError)
+      .fetchFirstSegment(baseInterest);
 };
 
 SegmentFetcher.prototype.fetchFirstSegment = function(baseInterest)
@@ -210,18 +225,33 @@ SegmentFetcher.prototype.fetchNextSegment = function
 
 SegmentFetcher.prototype.onData = function(originalInterest, data)
 {
-  if (!this.verifySegment(data)) {
+  if (this.validatorKeyChain != null) {
     try {
-      this.onError
-        (SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-         "Segment verification failed");
+      var thisSegmentFetcher = this;
+      this.validatorKeyChain.verifyData
+        (data,
+         function(localData) {
+           thisSegmentFetcher.onVerified(localData, originalInterest);
+         },
+         this.onVerifyFailed.bind(this));
     } catch (ex) {
-      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in KeyChain.verifyData: " + ex);
     }
-    return;
   }
+  else {
+    if (!this.verifySegment(data)) {
+      try {
+        this.onError
+          (SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED,
+           "Segment verification failed");
+      } catch (ex) {
+        console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+      return;
+    }
 
-  this.onVerified(data, originalInterest);
+    this.onVerified(data, originalInterest);
+  }
 };
 
 SegmentFetcher.prototype.onVerified = function(data, originalInterest)
@@ -302,6 +332,17 @@ SegmentFetcher.prototype.onVerified = function(data, originalInterest)
     }
   }
 }
+
+SegmentFetcher.prototype.onVerifyFailed = function(data)
+{
+  try {
+    this.onError
+      (SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED,
+       "Segment verification failed for " + data.getName().toUri());
+  } catch (ex) {
+    console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
+};
 
 SegmentFetcher.prototype.onTimeout = function(interest)
 {

@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.11 (2016-09-07)
+Interim changes since NDN-JS v0.11 (2016-10-13)
 -----------------------------------------------
 
 Changes
@@ -11,6 +11,7 @@ Changes
   Name.appendImplicitSha256Digest.
 * https://redmine.named-data.net/issues/3447 In Data, added getFullName, and
   in Interest added matchesData to use it.
+* In SegmentFetcher.fetch, allow a validatorKeyChain for asynchronous Data validation.
 * In ProtobufTlv, added utility method toName and support for Protobuf double.
 * https://redmine.named-data.net/issues/3675 In Name.get, don't copy the
   returned component (for efficiency).
