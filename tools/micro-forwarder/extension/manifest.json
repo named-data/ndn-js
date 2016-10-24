@@ -14,7 +14,7 @@
 	}
     },
 
-    "permissions": ["tabs", "notifications"],
+    "permissions": ["tabs", "notifications", "nativeMessaging"],
 
     "background": {
       "scripts": ["ndn.js", "bg.js"]
