@@ -23,6 +23,7 @@
  * runtime.port.
  * @param {function} onReceivedObject (optional) If supplied and the received
  * object type field is not "Buffer" then just call this.onReceivedObject(obj).
+ * If this is null, then don't call it.
  * @constructor
  */
 var RuntimePortTransport = function RuntimePortTransport(onReceivedObject)
@@ -73,6 +74,17 @@ RuntimePortTransport.ConnectionInfo.prototype.toString = function()
 {
   return "{}";
 };
+
+/**
+ * Set the onReceivedObject callback, replacing any previous callback.
+ * @param {function} onReceivedObject (optional) If supplied and the received
+ * object type field is not "Buffer" then just call this.onReceivedObject(obj).
+ * If this is null, then don't call it.
+ */
+RuntimePortTransport.prototype.setOnReceivedObject = function(onReceivedObject)
+{
+  this.onReceivedObject = onReceivedObject;
+}
 
 /**
  * Determine whether this transport connecting according to connectionInfo is to
