@@ -150,14 +150,15 @@ MicroForwarder.prototype.onReceivedElement = function(face, element)
     // Send the data packet to the face for each matching PIT entry.
     // Iterate backwards so we can remove the entry and keep iterating.
     for (var i = this.PIT_.length - 1; i >= 0; --i) {
-      if (this.PIT_[i].face != face && this.PIT_[i].face != null &&
-          this.PIT_[i].interest.matchesData(data)) {
-        if (LOG > 3) console.log("Sending Data to match interest " + this.PIT_[i].interest.getName().toUri() + "\n");
-        this.PIT_[i].face.sendBuffer(element);
-        this.PIT_[i].face = null;
-
-        // Remove the entry.
+      var entry = this.PIT_[i];
+      if (entry.face != face && entry.face != null &&
+          entry.interest.matchesData(data)) {
+        // Remove the entry before sending.
         this.PIT_.splice(i, 1);
+
+        if (LOG > 3) console.log("Sending Data to match interest " + entry.interest.getName().toUri() + "\n");
+        entry.face.sendBuffer(element);
+        entry.face = null;
       }
     }
   }
