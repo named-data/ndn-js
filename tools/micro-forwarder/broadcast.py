@@ -95,6 +95,8 @@ def printAllBroadcasted():
         # We need to sleep for a few milliseconds so we don't use 100% of the CPU.
         time.sleep(0.1)
 
+    inSocket.close()
+
 def broadcastAllStdin():
     # Loop until there is no more data in stdin.
     while True:
@@ -113,3 +115,5 @@ thread = threading.Thread(target=printAllBroadcasted)
 thread.start()
 broadcastAllStdin()
 printAllBroadcastedEnabled = False
+
+outSocket.close()
