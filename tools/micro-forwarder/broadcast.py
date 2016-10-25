@@ -64,13 +64,29 @@ class SocketPoller(object):
             isReady, _, _ = select.select([self._socket], [], [], 0)
             return len(isReady) != 0
 
+NDN_MULTICAST_IP = '224.0.23.170'
+NDN_MULTICAST_PORT = 56363
+
+# See the multicast tutorial at https://pymotw.com/2/socket/multicast.html .
 inSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-inSocket.bind(("", 2115))
+inSocket.bind(('', NDN_MULTICAST_PORT))
 inSocketPoller = SocketPoller(inSocket)
+# Tell the operating system to add the socket to the multicast group on all
+# interfaces.
+group = socket.inet_aton(NDN_MULTICAST_IP)
+mreq = struct.pack('4sL', group, socket.INADDR_ANY)
+inSocket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
 outSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 outSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-outSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+# Don't send packets in a loop.
+outSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0)
+# Set a timeout so the socket does not block indefinitely when trying to receive
+# data.
+outSocket.settimeout(0.2)
+# Set the time-to-live for messages to 1 so they do not go past the local
+# network segment.
+outSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, struct.pack('b', 1))
 
 buffer = bytearray(10000)
 
@@ -97,7 +113,7 @@ def printAllBroadcasted():
 
     inSocket.close()
 
-def broadcastAllStdin():
+def multicastAllStdin():
     # Loop until there is no more data in stdin.
     while True:
         # The Native Messaging packet starts with a 4-byte length
@@ -109,11 +125,11 @@ def broadcastAllStdin():
         messageLength = struct.unpack('@I', rawLength)[0]
         message = sys.stdin.read(messageLength)
 
-        outSocket.sendto(rawLength + message, ("255.255.255.255", 2115))
+        outSocket.sendto(rawLength + message, (NDN_MULTICAST_IP, NDN_MULTICAST_PORT))
 
 thread = threading.Thread(target=printAllBroadcasted)
 thread.start()
-broadcastAllStdin()
+multicastAllStdin()
 printAllBroadcastedEnabled = False
 
 outSocket.close()
