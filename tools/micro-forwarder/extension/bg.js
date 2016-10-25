@@ -60,6 +60,48 @@ var MicroForwarder = function MicroForwarder()
 };
 
 /**
+ * Find or create the FIB entry with the given name and add the ForwarderFace
+ * with the given faceId.
+ * @param {Name} name The name of the FIB entry.
+ * @param {number} faceId The face ID of the face for the route.
+ * @return {boolean} True for success, or false if can't find the ForwarderFace
+ * with faceId.
+ */
+MicroForwarder.prototype.registerRoute = function(name, faceId)
+{
+  // Find the face with the faceId.
+  var nexthopFace = null;
+  for (var i = 0; i < this.faces_.length; ++i) {
+    if (this.faces_[i].faceId == faceId) {
+      nexthopFace = this.faces_[i];
+      break;
+    }
+  }
+
+  if (nexthopFace == null)
+    return false;
+
+  // Check for a FIB entry for the name and add the face.
+  for (var i = 0; i < this.FIB_.length; ++i) {
+    var fibEntry = this.FIB_[i];
+    if (fibEntry.name.equals(name)) {
+      // Make sure the face is not already added.
+      if (fibEntry.faces.indexOf(nexthopFace) < 0)
+        fibEntry.faces.push(nexthopFace);
+
+      return true;
+    }
+  }
+
+  // Make a new FIB entry.
+  var fibEntry = new FibEntry(name);
+  fibEntry.faces.push(nexthopFace);
+  this.FIB_.push(fibEntry);
+
+  return true;
+}
+
+/**
  * This is called by the listener when an entire TLV element is received.
  * If it is an Interest, look in the FIB for forwarding. If it is a Data packet,
  * look in the PIT to match an Interest.
@@ -185,27 +227,9 @@ MicroForwarder.prototype.onReceivedLocalhostInterest = function(face, interest)
 
     if (LOG > 3) console.log("Received register request " + controlParameters.getName().toUri() + "\n");
 
-    var name = controlParameters.getName();
-    // Check for a FIB entry for the name and add the face.
-    var foundFibEntry = false;
-    for (var i = 0; i < this.FIB_.length; ++i) {
-      var fibEntry = this.FIB_[i];
-      if (fibEntry.name.equals(name)) {
-        // Make sure the face is not already added.
-        if (fibEntry.faces.indexOf(face) < 0)
-          fibEntry.faces.push(face);
-
-        foundFibEntry = true;
-        break;
-      }
-    }
-
-    if (!foundFibEntry) {
-      // Make a new FIB entry.
-      var fibEntry = new FibEntry(name);
-      fibEntry.faces.push(face);
-      this.FIB_.push(fibEntry);
-    }
+    if (!this.registerRoute(controlParameters.getName(), face.faceId))
+      // TODO: Send error reply?
+      return;
 
     // Send the ControlResponse.
     var controlResponse = new ControlResponse();
@@ -309,46 +333,16 @@ MicroForwarder.prototype.onReceivedObject = function(face, obj)
       onConnected);
   }
   else if (obj.type == "rib/register") {
-    var nexthopFace = null;
-    if (obj.faceId == null)
+    var faceId;
+    if (obj.faceId != null)
+      faceId = obj.faceId;
+    else
       // Use the requesting face.
-      nexthopFace = face;
-    else {
-      // Find the face with the faceId.
-      for (var i = 0; i < this.faces_.length; ++i) {
-        if (this.faces_[i].faceId == obj.faceId) {
-          nexthopFace = this.faces_[i];
-          break;
-        }
-      }
+      faceId = face.faceId;
 
-      if (nexthopFace == null) {
-        // TODO: Send error reply.
-        return;
-      }
-    }
-
-    var name = new Name(obj.nameUri);
-    // Check for a FIB entry for the name and add the face.
-    var foundFibEntry = false;
-    for (var i = 0; i < this.FIB_.length; ++i) {
-      var fibEntry = this.FIB_[i];
-      if (fibEntry.name.equals(name)) {
-        // Make sure the face is not already added.
-        if (fibEntry.faces.indexOf(nexthopFace) < 0)
-          fibEntry.faces.push(nexthopFace);
-
-        foundFibEntry = true;
-        break;
-      }
-    }
-
-    if (!foundFibEntry) {
-      // Make a new FIB entry.
-      var fibEntry = new FibEntry(name);
-      fibEntry.faces.push(nexthopFace);
-      this.FIB_.push(fibEntry);
-    }
+    if (!this.registerRoute(new Name(obj.nameUri), faceId))
+      // TODO: Send error reply?
+      return;
 
     obj.statusCode = 200;
     face.sendObject(obj);
