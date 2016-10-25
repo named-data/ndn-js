@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+# This "script Native Messaging application listens on the NDN multicast address
+# for Native Messaging packets and sends them to stdout. It also takes any
+# Native Messaging packets from stdin and sends to the NDN multicast address.
+# A "Native Messaging packet" has a 4-byte length header followed by the bytes
+# of a serialized JSON object.
+
 import sys
 import struct
 import socket

@@ -1,0 +1,7 @@
+{
+  "name": "ndn_multicast",
+  "description": "Receive and multicast on the NDN multicast address",
+  "path": "ndn-js/tools/micro-forwarder/ndn_multicast.py",
+  "type": "stdio",
+  "allowed_extensions": [ "micro-forwarder@named-data.net" ]
+}
