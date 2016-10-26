@@ -74,7 +74,8 @@ function onReceivedObject(obj) {
     }
 }
 
-transport = new MicroForwarderTransport(onReceivedObject);
+transport = new MicroForwarderTransport();
+transport.setOnReceivedObject(onReceivedObject);
 
 function addRoute() {
     addRoutePrefixUri = document.getElementById("prefix").value;
