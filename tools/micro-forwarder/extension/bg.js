@@ -31,13 +31,24 @@ var MicroForwarder = function MicroForwarder()
   this.FIB_ = [];   // of FibEntry
   this.faces_ = []; // of ForwarderFace
 
-  // Add a listener to wait for a connection request from a tab.
+  // Add a listener to wait for a connection request from a tab and add a face.
   var thisForwarder = this;
   chrome.runtime.onConnect.addListener(function(port) {
     thisForwarder.addFace
       ("internal://port", new RuntimePortTransport(),
        new RuntimePortTransport.ConnectionInfo(port));
   });
+
+  // Use Native Messaging to connect to the ndn_multicast app to send and
+  // receive to other computers on the LAN using the NDN multicast group.
+  // Make a FIB entry to multicast all Interests.
+  if (chrome.runtime.connectNative) {
+    var port = chrome.runtime.connectNative("ndn_multicast");
+    var faceId = this.addFace
+      ("nativePort://ndn_multicast", new RuntimePortTransport(),
+       new RuntimePortTransport.ConnectionInfo(port));
+    this.registerRoute(new Name("/ndn"), faceId);
+  }
 };
 
 
