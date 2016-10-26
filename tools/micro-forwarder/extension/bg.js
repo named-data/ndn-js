@@ -35,7 +35,8 @@ var MicroForwarder = function MicroForwarder()
   var thisForwarder = this;
   chrome.runtime.onConnect.addListener(function(port) {
     var face = null;
-    var transport = new RuntimePortTransport
+    var transport = new RuntimePortTransport();
+    transport.setOnReceivedObject
       (function(obj) { thisForwarder.onReceivedObject(face, obj); });
     face = new ForwarderFace("internal://port", transport);
 
