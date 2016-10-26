@@ -190,7 +190,7 @@ MicroForwarder.prototype.onReceivedElement = function(face, element)
     var timeoutCallback = function() {
       if (LOG > 3) console.log("Interest time out: " + interest.getName().toUri() + "\n");
       // Remove the face's entry from the PIT
-      var index = this.PIT_.indexOf(pitEntry);
+      var index = thisForwarder.PIT_.indexOf(pitEntry);
       if (index >= 0)
         thisForwarder.PIT_.splice(index, 1);
     };
