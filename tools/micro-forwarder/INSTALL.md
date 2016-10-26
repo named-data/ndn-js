@@ -10,7 +10,8 @@ packets in the NDN multicast group. To authorize it, follow these steps for your
 
 ## Firefox on macOS
 
-In a terminal change directory to `ndn-js/tools/micro-forwarder` .
+Native Messaging requires Firefox 50. In a terminal change directory to
+`ndn-js/tools/micro-forwarder` . Enter:
 
     mkdir -p ~/Library/Application\ Support/Mozilla/NativeMessagingHosts
     cp ndn_multicast.json ~/Library/Application\ Support/Mozilla/NativeMessagingHosts
@@ -22,7 +23,7 @@ change the line
 
 to have the full path of the ndn-js project. For example:
 
-    "path": "/Users/username/work/ndn-js/tools/micro-forwarder/ndn_multicast.py",
+    "path": "/Users/username/ndn-js/tools/micro-forwarder/ndn_multicast.py",
 
 Installing during development
 =============================
