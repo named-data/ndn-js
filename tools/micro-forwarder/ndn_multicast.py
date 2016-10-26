@@ -12,6 +12,7 @@ import socket
 import select
 import time
 import threading
+from io import BytesIO
 
 class SocketPoller(object):
     """
@@ -96,6 +97,10 @@ outSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, struct.pack('b'
 
 buffer = bytearray(10000)
 
+# Expect: {"type":"Buffer","data":[1,2,3]}
+JSON_PREFIX = '{"type":"Buffer","data":['
+JSON_SUFFIX = ']}'
+
 def printOneBroadcasted():
     while True:
         if not inSocketPoller.isReady():
@@ -107,7 +112,23 @@ def printOneBroadcasted():
             # Since we checked for data ready, we don't expect this.
             break
 
-        sys.stdout.write(buffer[0:nBytesRead])
+        # TODO: Use an ElementReader. For now assume one packet is one TLV element.
+        elementLength = nBytesRead
+
+        # Convert element to a JSON Buffer.
+        jsonIO = BytesIO()
+        jsonIO.write(JSON_PREFIX)
+
+        for i in range(elementLength):
+            if i != 0:
+                jsonIO.write(',')
+            jsonIO.write(str(buffer[i]))
+
+        jsonIO.write(JSON_SUFFIX)
+        json = jsonIO.getvalue()
+
+        sys.stdout.write(struct.pack('@I', len(json)))
+        sys.stdout.write(json)
         sys.stdout.flush()
 
 printAllBroadcastedEnabled = True
@@ -119,6 +140,9 @@ def printAllBroadcasted():
 
     inSocket.close()
 
+def asciiToChr(x):
+    return chr(int(x))
+
 def multicastAllStdin():
     # Loop until there is no more data in stdin.
     while True:
@@ -128,10 +152,20 @@ def multicastAllStdin():
             # Input EOF. Finished.
             return
 
-        messageLength = struct.unpack('@I', rawLength)[0]
-        message = sys.stdin.read(messageLength)
+        jsonLength = struct.unpack('@I', rawLength)[0]
+        json = sys.stdin.read(jsonLength)
 
-        outSocket.sendto(rawLength + message, (NDN_MULTICAST_IP, NDN_MULTICAST_PORT))
+        if (json.find(JSON_PREFIX) != 0 or
+            json.find(JSON_SUFFIX) != len(json) - len(JSON_SUFFIX)):
+            # This is not the JSON of a Buffer.
+            continue
+
+        # Set asciiElements to the Buffer data such as "1,2,3". Then split into
+        # ascii elements, map them to raw chars and join them into a raw string.
+        asciiArray = json[len(JSON_PREFIX) : -len(JSON_SUFFIX)]
+        rawString = "".join(map(asciiToChr, asciiArray.split(',')))
+
+        outSocket.sendto(rawString, (NDN_MULTICAST_IP, NDN_MULTICAST_PORT))
 
 thread = threading.Thread(target=printAllBroadcasted)
 thread.start()
