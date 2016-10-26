@@ -22,19 +22,16 @@
  * A MicroForwarderTransport extends Transport to connect to the browser's
  * micro forwarder service. This assumes that the MicroForwarder extensions has
  * been installed.
- * @param {function} onReceivedObject (optional) If supplied and the received
- * object type field is not "Buffer" then just call this.onReceivedObject(obj).
- * If this is null, then don't call it.
  * @constructor
  */
-var MicroForwarderTransport = function MicroForwarderTransport(onReceivedObject)
+var MicroForwarderTransport = function MicroForwarderTransport()
 {
   // Call the base constructor.
   Transport.call(this);
 
   this.elementReader = null;
   this.connectionInfo = null; // Read by Face.
-  this.onReceivedObject = onReceivedObject;
+  this.onReceivedObject = null;
 
   var thisTransport = this;
   window.addEventListener("message", function(event) {
