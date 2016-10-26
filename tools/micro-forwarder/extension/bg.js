@@ -34,30 +34,54 @@ var MicroForwarder = function MicroForwarder()
   // Add a listener to wait for a connection request from a tab.
   var thisForwarder = this;
   chrome.runtime.onConnect.addListener(function(port) {
-    var face = null;
-    var transport = new RuntimePortTransport();
+    thisForwarder.addFace
+      ("internal://port", new RuntimePortTransport(),
+       new RuntimePortTransport.ConnectionInfo(port));
+  });
+};
+
+
+/**
+ * Add a new face to communicate with the given transport. This immediately
+ * connects using the connectionInfo. If the transport connection is closed,
+ * disable and remove the face.
+ * @param {string} uri The URI to use in the faces/query and faces/list
+ * commands.
+ * @param {Transport} transport An object of a subclass of Transport to use
+ * for communication. If the transport object has a "setOnReceivedObject"
+ * method, then use it to set the onReceivedObject callback.
+ * @param {TransportConnectionInfo} connectionInfo This must be a
+ * ConnectionInfo from the same subclass of Transport as transport.
+ * @return {number} The new face ID.
+ */
+MicroForwarder.prototype.addFace = function(uri, transport, connectionInfo)
+{
+  var face = null;
+  var thisForwarder = this;
+  if ("setOnReceivedObject" in transport)
     transport.setOnReceivedObject
       (function(obj) { thisForwarder.onReceivedObject(face, obj); });
-    face = new ForwarderFace("internal://port", transport);
+  face = new ForwarderFace(uri, transport);
 
-    function onClosedCallback() {
-      face.disable();
-      for (var i = 0; i < thisForwarder.faces_.length; ++i) {
-        if (thisForwarder.faces_[i] === face) {
-          // TODO: Mark this face as disconnected so the FIB doesn't use it.
-          thisForwarder.faces_.splice(i, 1);
-          break;
-        }
+  function onClosedCallback() {
+    face.disable();
+    for (var i = 0; i < thisForwarder.faces_.length; ++i) {
+      if (thisForwarder.faces_[i] === face) {
+        // TODO: Mark this face as disconnected so the FIB doesn't use it.
+        thisForwarder.faces_.splice(i, 1);
+        break;
       }
     }
+  }
 
-    transport.connect
-      (new RuntimePortTransport.ConnectionInfo(port),
-       { onReceivedElement: function(element) { 
-           thisForwarder.onReceivedElement(face, element); } },
-       function(){}, onClosedCallback);
-    thisForwarder.faces_.push(face);
-  });
+  transport.connect
+    (connectionInfo,
+     { onReceivedElement: function(element) {
+         thisForwarder.onReceivedElement(face, element); } },
+     function(){}, onClosedCallback);
+  this.faces_.push(face);
+
+  return face.faceId;
 };
 
 /**
@@ -151,12 +175,13 @@ MicroForwarder.prototype.onReceivedElement = function(face, element)
     var pitEntry = new PitEntry(interest, face);
     this.PIT_.push(pitEntry);
     // Set the interest timeout timer.
+    var thisForwarder = this;
     var timeoutCallback = function() {
       if (LOG > 3) console.log("Interest time out: " + interest.getName().toUri() + "\n");
       // Remove the face's entry from the PIT
       var index = this.PIT_.indexOf(pitEntry);
       if (index >= 0)
-        this.PIT_.splice(index, 1);
+        thisForwarder.PIT_.splice(index, 1);
     };
     var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
     setTimeout(timeoutCallback, timeoutMilliseconds);
