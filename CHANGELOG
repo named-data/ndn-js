@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.11 (2016-10-13)
+Interim changes since NDN-JS v0.11 (2016-10-28)
 -----------------------------------------------
 
 Changes
@@ -16,6 +16,7 @@ Changes
 * https://redmine.named-data.net/issues/3675 In Name.get, don't copy the
   returned component (for efficiency).
 * In tools/micro-forwarder, generalize to use WebSocketTransport or RuntimePortTransport.
+* In tools/micro-forwarder, use Native Messaging to connect to the ndn_multicast app.
 * In Face.makeCommandInterest, added an optional onComplete callback.
 * Examples: In test-encode-decode-fib-entry, etc, use ProtobufTlv.toName.
 * Examples: Added browser/test-list-faces.html.
