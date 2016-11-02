@@ -1,5 +1,5 @@
-Interim changes since NDN-JS v0.11 (2016-10-28)
------------------------------------------------
+NDN-JS v0.12.0 (2016-11-02)
+---------------------------
 
 Changes
 * http://redmine.named-data.net/issues/3337 In MetaInfo, added get/setOtherTypeCode
