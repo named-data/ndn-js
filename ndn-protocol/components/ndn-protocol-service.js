@@ -458,27 +458,36 @@ ContentContext.removeContextForWindow = function(context)
 };
 
 /*
- * A SegmentStore stores segments until they are retrieved in order starting with segment 0.
+ * A SegmentStore stores segments until they are retrieved in order starting
+ * with segment 0.
  */
 var SegmentStore = function SegmentStore()
 {
-    // Each entry is an object where the key is the segment number and value is null if
-    //   the segment number is requested or the data if received.
+    // Each entry is an object where the key is the segment number and value is
+    // null if the segment number is requested or the data if received.
     this.store = new SortedArray();
     this.maxRetrievedSegmentNumber = -1;
 };
 
+/**
+ * Store the Data packet with the given segmentNumber.
+ * @param {number} segmentNumber The segment number of the packet.
+ * @param {Data} data The Data packet.
+ */
 SegmentStore.prototype.storeContent = function(segmentNumber, data)
 {
-    // We don't expect to try to store a segment that has already been retrieved, but check anyway.
+    // We don't expect to try to store a segment that has already been retrieved,
+    // but check anyway.
     if (segmentNumber > this.maxRetrievedSegmentNumber)
         this.store.set(segmentNumber, data);
 };
 
 /*
- * If the min segment number is this.maxRetrievedSegmentNumber + 1 and its value is not null,
- *   then delete from the store, return the entry with key and value, and update maxRetrievedSegmentNumber.
- * Otherwise return null.
+ * If the min segment number is this.maxRetrievedSegmentNumber + 1 and its value 
+ * is not null, then delete from the store, return the entry with key and value,
+ * and update maxRetrievedSegmentNumber. Otherwise return null.
+ * @return {object} An object where "key" is the segment number and "value" is
+ * the Data object. However, if there is no next entry then return null.
  */
 SegmentStore.prototype.maybeRetrieveNextEntry = function()
 {
@@ -494,10 +503,14 @@ SegmentStore.prototype.maybeRetrieveNextEntry = function()
 };
 
 /*
- * Return an array of the next segment numbers that need to be requested so that the total
- *   requested segments is totalRequestedSegments.  If a segment store entry value is null, it is
- *   already requested and is not returned.  If a segment number is returned, create a
- *   entry in the segment store with a null value.
+ * Return an array of the next segment numbers that need to be requested so that 
+ * the total requested segments is totalRequestedSegments. If a segment store
+ * entry value is null, it is already requested and is not returned. If a
+ * segment number is returned, create a entry in the segment store with a null
+ * value.
+ * @param {number} totalRequestedSegments The total number of requested segments.
+ * @return {Array<number>} An array of the next segment number to request. The
+ * array may be empty.
  */
 SegmentStore.prototype.requestSegmentNumbers = function(totalRequestedSegments)
 {
@@ -544,18 +557,27 @@ SegmentStore.prototype.requestSegmentNumbers = function(totalRequestedSegments)
 };
 
 /*
- * A SortedArray is an array of objects with key and value, where the key is an integer.
+ * A SortedArray is an array of objects with key and value, where the key is an
+ * integer.
  */
 var SortedArray = function SortedArray()
 {
     this.entries = [];
 };
 
+/**
+ * Sort the entries by the integer "key".
+ */
 SortedArray.prototype.sortEntries = function()
 {
     this.entries.sort(function(a, b) { return a.key - b.key; });
 };
 
+/**
+ * Return the index number in this.entries of the object with a matching "key".
+ * @param {number} key The value of the object's "key".
+ * @returns {number} The index number, or -1 if not found.
+ */
 SortedArray.prototype.indexOfKey = function(key)
 {
     for (var i = 0; i < this.entries.length; ++i) {
@@ -566,6 +588,11 @@ SortedArray.prototype.indexOfKey = function(key)
     return -1;
 };
 
+/**
+ * Find or create an entry with the given "key" and set its "value".
+ * @param {integer} key The "key" of the entry object.
+ * @param {object} value The "value" of the entry object.
+ */
 SortedArray.prototype.set = function(key, value)
 {
     var i = this.indexOfKey(key);
@@ -578,6 +605,10 @@ SortedArray.prototype.set = function(key, value)
     this.sortEntries();
 };
 
+/**
+ * Remove the entryin this.entries at the given index.
+ * @param {number} index The index of the entry to remove.
+ */
 SortedArray.prototype.removeAt = function(index)
 {
     this.entries.splice(index, 1);
