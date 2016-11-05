@@ -20,7 +20,7 @@
 
 /**
  * A MicroForwarder holds a PIT, FIB and faces to function as a simple NDN
- * forwarder. 
+ * forwarder.
  * Create a new MicroForwarder, using chrome.runtime.onConnect.addListener to
  * get the port and add a new face to use a RuntimePortTransport to communiate
  * with the WebExtensions port.
@@ -30,6 +30,7 @@ var MicroForwarder = function MicroForwarder()
   this.PIT_ = [];   // of PitEntry
   this.FIB_ = [];   // of FibEntry
   this.faces_ = []; // of ForwarderFace
+  this.CS_ = {};    // of CS
 
   // Add a listener to wait for a connection request from a tab and add a face.
   var thisForwarder = this;
@@ -165,9 +166,18 @@ MicroForwarder.prototype.onReceivedElement = function(face, element)
 
   // Now process as Interest or Data.
   if (interest !== null) {
-    if (LOG > 3) console.log("Interest packet received: " + interest.getName().toUri() + "\n");
+    var interestUri = interest.getName().toUri();
+    if (LOG > 3) console.log("Interest packet received: " + interestUri + "\n");
     if (MicroForwarder.localhostNamePrefix.match(interest.getName())) {
       this.onReceivedLocalhostInterest(face, interest);
+      return;
+    }
+
+    // Check CS.
+    // TODO: This uses exact name match. Should match on prefix and use selectors.
+    if (interestUri in this.CS_) {
+      if (LOG > 3) console.log("Data found in CS: " + interestUri + "\n");
+      face.sendBuffer(this.CS_[interestUri].wireEncode().buf());
       return;
     }
 
@@ -225,6 +235,10 @@ MicroForwarder.prototype.onReceivedElement = function(face, element)
   }
   else if (data !== null) {
     if (LOG > 3) console.log("Data packet received: " + data.getName().toUri() + "\n");
+
+    //insert into CS
+    if (LOG > 3) console.log("Insert Data in CS" + data.getName().toUri() + "\n");
+    this.CS_[data.getName().toUri()] = data;
 
     // Send the data packet to the face for each matching PIT entry.
     // Iterate backwards so we can remove the entry and keep iterating.
@@ -364,8 +378,8 @@ MicroForwarder.prototype.onReceivedObject = function(face, obj)
     var transport = new WebSocketTransport();
     newFace = new ForwarderFace(obj.uri, transport);
     transport.connect
-      (new WebSocketTransport.ConnectionInfo(obj.uri), 
-      { onReceivedElement: function(element) { 
+      (new WebSocketTransport.ConnectionInfo(obj.uri),
+      { onReceivedElement: function(element) {
           thisForwarder.onReceivedElement(newFace, element); } },
       onConnected);
   }
