@@ -72,6 +72,7 @@ class SocketPoller(object):
             return len(isReady) != 0
 
 NDN_MULTICAST_IP = '224.0.23.170'
+MY_IP = socket.gethostbyname(socket.gethostname())
 NDN_MULTICAST_PORT = 56363
 
 # See the multicast tutorial at https://pymotw.com/2/socket/multicast.html .
@@ -80,12 +81,17 @@ inSocket.bind(('', NDN_MULTICAST_PORT))
 inSocketPoller = SocketPoller(inSocket)
 # Tell the operating system to add the socket to the multicast group on all
 # interfaces.
-group = socket.inet_aton(NDN_MULTICAST_IP)
-mreq = struct.pack('4sL', group, socket.INADDR_ANY)
-inSocket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+inSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF,
+                    socket.inet_aton(MY_IP))
+inSocket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
+                    socket.inet_aton(NDN_MULTICAST_IP)
+                    + socket.inet_aton(MY_IP))
 
 outSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 outSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+outSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF,
+                     socket.inet_aton(MY_IP))
+
 # Don't send packets in a loop.
 outSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0)
 # Set a timeout so the socket does not block indefinitely when trying to receive
