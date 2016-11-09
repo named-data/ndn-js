@@ -4,14 +4,14 @@
     "description": "NDN Micro Forwarder in the browser!",
     "version": "1.1",
     "icons": {
-	"48": "icons/N-48.png"
+      "48": "icons/N-48.png"
     },
 
     "applications": {
-	"gecko": {
-	    "id": "micro-forwarder@named-data.net",
-	    "strict_min_version": "45.0"
-	}
+      "gecko": {
+        "id": "micro-forwarder@named-data.net",
+        "strict_min_version": "45.0"
+      }
     },
 
     "permissions": ["tabs", "notifications", "nativeMessaging"],
@@ -21,15 +21,15 @@
     },
 
     "browser_action": {
-        "default_icon": "icons/N-48.png",
-        "default_title": "MicroForwarder",
-        "default_popup": "popup/choose_option.html"
+      "default_icon": "icons/N-48.png",
+      "default_title": "MicroForwarder",
+      "default_popup": "popup/choose_option.html"
     },
 
     "content_scripts": [
-	{
-	    "matches": ["<all_urls>"],
-	    "js": ["content.js"]
-	}
+      {
+        "matches": ["<all_urls>"],
+        "js": ["content.js"]
+      }
     ]
 }
