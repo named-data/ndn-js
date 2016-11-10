@@ -130,10 +130,33 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
   }
   else if (dataOrInterest instanceof Interest) {
     var interest = dataOrInterest;
+
+    if (interest.getName().size() < 2) {
+      try {
+        onValidationFailed
+          (interest, "The signed interest has less than 2 components: " +
+             interest.getName().toUri());
+      } catch (ex) {
+        console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+      return;
+    }
+
     // Decode the last two name components of the signed interest
-    var signature = wireFormat.decodeSignatureInfoAndValue
-      (interest.getName().get(-2).getValue().buf(),
-       interest.getName().get(-1).getValue().buf(), false);
+    var signature;
+    try {
+      signature = wireFormat.decodeSignatureInfoAndValue
+        (interest.getName().get(-2).getValue().buf(),
+         interest.getName().get(-1).getValue().buf(), false);
+    } catch (ex) {
+      try {
+        onValidationFailed
+          (interest, "Error decoding the signed interest signature: " + ex);
+      } catch (ex) {
+        console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+      return;
+    }
 
     // wireEncode returns the cached encoding if available.
     this.verify(signature, interest.wireEncode(), function(verified, reason) {
@@ -266,6 +289,7 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
       onComplete
         (new Blob(), "Cannot get a public key name from the certificate named: " +
            keyLocator.getKeyName().toUri());
+      return;
     }
     SyncPromise.complete
       (onComplete,
