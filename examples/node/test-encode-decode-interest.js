@@ -239,7 +239,10 @@ function main()
   keyChain.verifyInterest
     (reDecodedFreshInterest,
      function() { console.log("Freshly-signed Interest signature verification: VERIFIED"); },
-     function() { console.log("Freshly-signed Interest signature verification: FAILED"); });
+     function(interest, reason) {
+       console.log("Freshly-signed Interest signature verification: FAILED. Reason: " +
+                   reason);
+     });
 }
 
 main();

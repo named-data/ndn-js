@@ -183,8 +183,8 @@ DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
                  output+= "<br/>SIGNATURE VALID<br/>";
                  document.getElementById('result').innerHTML = output;
                },
-               function() {
-                 output+= "<br/>SIGNATURE INVALID<br/>";
+               function(data, reason) {
+                 output+= "<br/>SIGNATURE INVALID. Reason: " + reason + "<br/>";
                  document.getElementById('result').innerHTML = output;
                });
         }
