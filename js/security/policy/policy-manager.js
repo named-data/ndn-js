@@ -69,8 +69,8 @@ PolicyManager.prototype.requireVerify = function(dataOrInterest)
 };
 
 /**
- * Check whether the received data packet complies with the verification policy,
- * and get the indication of the next verification step.
+ * Check whether the received data or interest packet complies with the
+ * verification policy, and get the indication of the next verification step.
  * Your derived class should override.
  *
  * @param {Data|Interest} dataOrInterest The Data object or interest with the
@@ -82,8 +82,8 @@ PolicyManager.prototype.requireVerify = function(dataOrInterest)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(dataOrInterest).
+ * @param {function} onValidationFailed If the signature check fails, this calls
+ * onValidationFailed(dataOrInterest, reason).
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -92,7 +92,7 @@ PolicyManager.prototype.requireVerify = function(dataOrInterest)
  * null if there is no further step.
  */
 PolicyManager.prototype.checkVerificationPolicy = function
-  (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
+  (dataOrInterest, stepCount, onVerified, onValidationFailed, wireFormat)
 {
   throw new Error("PolicyManager.checkVerificationPolicy is not implemented");
 };

@@ -83,7 +83,7 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 /**
  * Look in the IdentityStorage for the public key with the name in the
  * KeyLocator (if available) and use it to verify the data packet.  If the
- * public key can't be found, call onVerifyFailed.
+ * public key can't be found, call onValidationFailed.
  *
  * @param {Data|Interest} dataOrInterest The Data object or interest with the
  * signature to check.
@@ -94,8 +94,8 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(dataOrInterest).
+ * @param {function} onValidationFailed If the signature check fails, this calls
+ * onValidationFailed(dataOrInterest, reason).
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -104,14 +104,14 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * certificate chain.
  */
 SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
-  (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
+  (dataOrInterest, stepCount, onVerified, onValidationFailed, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
   if (dataOrInterest instanceof Data) {
     var data = dataOrInterest;
     // wireEncode returns the cached encoding if available.
-    this.verify(data.getSignature(), data.wireEncode(), function(verified) {
+    this.verify(data.getSignature(), data.wireEncode(), function(verified, reason) {
       if (verified) {
         try {
           onVerified(data);
@@ -121,9 +121,9 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
       }
       else {
         try {
-          onVerifyFailed(data);
+          onValidationFailed(data, reason);
         } catch (ex) {
-          console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+          console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
         }
       }
     });
@@ -148,7 +148,7 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
         try {
           onVerifyFailed(interest);
         } catch (ex) {
-          console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+          console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
         }
       }
     });
@@ -197,26 +197,49 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
  * verify.
- * @param {function} onComplete This calls onComplete(true) if the signature
- * verifies, otherwise onComplete(false).
+ * @param {function} onComplete This calls onComplete(true, undefined) if the
+ * signature verifies, otherwise onComplete(false, reason).
  */
 SelfVerifyPolicyManager.prototype.verify = function
   (signatureInfo, signedBlob, onComplete)
 {
   if (KeyLocator.canGetFromSignature(signatureInfo)) {
     this.getPublicKeyDer
-      (KeyLocator.getFromSignature(signatureInfo), function(publicKeyDer) {
+      (KeyLocator.getFromSignature(signatureInfo), function(publicKeyDer, reason) {
         if (publicKeyDer.isNull())
-          onComplete(false);
-        else
-          PolicyManager.verifySignature
-            (signatureInfo, signedBlob, publicKeyDer, onComplete);
+          onComplete(false, reason);
+        else {
+          try {
+            PolicyManager.verifySignature
+              (signatureInfo, signedBlob, publicKeyDer, function(verified) {
+                if (verified)
+                  onComplete(true);
+                else
+                  onComplete
+                    (false,
+                     "The signature did not verify with the given public key");
+              });
+          } catch (ex) {
+            onComplete(false, "Error in verifySignature: " + ex);
+          }
+        }
       });
   }
-  else
-    // Assume that the signature type does not require a public key.
-    PolicyManager.verifySignature
-      (signatureInfo, signedBlob, null, onComplete);
+  else {
+    try {
+      // Assume that the signature type does not require a public key.
+      PolicyManager.verifySignature
+        (signatureInfo, signedBlob, null, function(verified) {
+          if (verified)
+            onComplete(true);
+          else
+            onComplete
+              (false, "The signature did not verify with the given public key");
+        });
+    } catch (ex) {
+      onComplete(false, "Error in verifySignature: " + ex);
+    }
+  }
 };
 
 /**
@@ -224,25 +247,37 @@ SelfVerifyPolicyManager.prototype.verify = function
  * KeyLocator (if available). If the public key can't be found, return and empty
  * Blob.
  * @param {KeyLocator} keyLocator The KeyLocator.
- * @param {function} onComplete This calls onComplete(publicKeyDer) where
- * publicKeyDer is the public key DER Blob or an isNull Blob if not found.
+ * @param {function} onComplete This calls 
+ * onComplete(publicKeyDer, reason) where publicKeyDer is the public key
+ * DER Blob or an isNull Blob if not found and reason is the reason
+ * string if not found.
  */
 SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
   (keyLocator, onComplete)
 {
   if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
-           this.identityStorage != null)
-    // Assume the key name is a certificate name.
+      this.identityStorage != null) {
+    var keyName;
+    try {
+      // Assume the key name is a certificate name.
+      keyName = IdentityCertificate.certificateNameToPublicKeyName
+        (keyLocator.getKeyName());
+    } catch (ex) {
+      onComplete
+        (new Blob(), "Cannot get a public key name from the certificate named: " +
+           keyLocator.getKeyName().toUri());
+    }
     SyncPromise.complete
       (onComplete,
        function(err) {
          // The storage doesn't have the key.
-         onComplete(new Blob());
+         onComplete
+           (new Blob(), "The identityStorage doesn't have the key named " +
+              keyName.toUri());
        },
-       this.identityStorage.getKeyPromise
-         (IdentityCertificate.certificateNameToPublicKeyName
-          (keyLocator.getKeyName())));
+       this.identityStorage.getKeyPromise(keyName));
+  }
   else
     // Can't find a key to verify.
-    onComplete(new Blob());
+    onComplete(new Blob(), "The signature KeyLocator doesn't have a key name");
 };
