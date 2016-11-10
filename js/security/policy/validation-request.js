@@ -26,19 +26,19 @@
  * @param {Interest} interest An interest for fetching more data.
  * @param {function} onVerified If the signature is verified, this calls
  * onVerified(data).
- * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(data).
- * @param {boolean} retry
+ * @param {function} onValidationFailed If the signature check fails, this calls
+ * onValidationFailed(data, reason).
+ * @param {number} retry The number of retrials when there is an interest timeout.
  * @param {number} stepCount  The number of verification steps that have been
  * done, used to track the verification progress.
  * @constructor
  */
 var ValidationRequest = function ValidationRequest
-  (interest, onVerified, onVerifyFailed, retry, stepCount)
+  (interest, onVerified, onValidationFailed, retry, stepCount)
 {
   this.interest = interest;
   this.onVerified = onVerified;
-  this.onVerifyFailed = onVerifyFailed;
+  this.onValidationFailed = onValidationFailed;
   this.retry = retry;
   this.stepCount = stepCount;
 };
