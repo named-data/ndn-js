@@ -772,7 +772,7 @@ KeyChain.prototype.verifyData = function
 
 /**
  * Check the signature on the signed interest and call either onVerify or
- * onVerifyFailed. We use callback functions because verify may fetch
+ * onValidationFailed. We use callback functions because verify may fetch
  * information to check the signature.
  * @param {Interest} interest The interest with the signature to check.
  * @param {function} onVerified If the signature is verified, this calls
@@ -780,14 +780,14 @@ KeyChain.prototype.verifyData = function
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(interest).
+ * @param {function} onValidationFailed If the signature check fails, this calls
+ * onValidationFailed(interest, reason).
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
  */
 KeyChain.prototype.verifyInterest = function
-  (interest, onVerified, onVerifyFailed, stepCount, wireFormat)
+  (interest, onVerified, onValidationFailed, stepCount, wireFormat)
 {
   if (stepCount == null)
     stepCount = 0;
@@ -795,7 +795,7 @@ KeyChain.prototype.verifyInterest = function
 
   if (this.policyManager.requireVerify(interest)) {
     var nextStep = this.policyManager.checkVerificationPolicy
-      (interest, stepCount, onVerified, onVerifyFailed, wireFormat);
+      (interest, stepCount, onVerified, onValidationFailed, wireFormat);
     if (nextStep != null) {
       var thisKeyChain = this;
       this.face.expressInterest
@@ -805,7 +805,8 @@ KeyChain.prototype.verifyInterest = function
          },
          function(callbackInterest) {
            thisKeyChain.onCertificateInterestTimeout
-             (callbackInterest, nextStep.retry, onVerifyFailed, interest, nextStep);
+             (callbackInterest, nextStep.retry, onValidationFailed, interest,
+              nextStep);
          });
     }
   }
@@ -818,7 +819,9 @@ KeyChain.prototype.verifyInterest = function
   }
   else {
     try {
-      onVerifyFailed(interest);
+      onValidationFailed
+        (interest,
+         "The packet has no verify rule but skipVerifyAndTrust is false");
     } catch (ex) {
       console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
