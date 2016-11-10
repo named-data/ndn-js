@@ -233,7 +233,7 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
          function(localData) {
            thisSegmentFetcher.onVerified(localData, originalInterest);
          },
-         this.onVerifyFailed.bind(this));
+         this.onValidationFailed.bind(this));
     } catch (ex) {
       console.log("Error in KeyChain.verifyData: " + ex);
     }
@@ -333,12 +333,13 @@ SegmentFetcher.prototype.onVerified = function(data, originalInterest)
   }
 }
 
-SegmentFetcher.prototype.onVerifyFailed = function(data)
+SegmentFetcher.prototype.onValidationFailed = function(data, reason)
 {
   try {
     this.onError
       (SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-       "Segment verification failed for " + data.getName().toUri());
+       "Segment verification failed for " + data.getName().toUri() +
+       " . Reason: " + reason);
   } catch (ex) {
     console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
   }
