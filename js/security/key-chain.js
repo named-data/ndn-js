@@ -716,7 +716,7 @@ KeyChain.prototype.signWithSha256 = function(target, wireFormat)
 
 /**
  * Check the signature on the Data object and call either onVerify or
- * onVerifyFailed. We use callback functions because verify may fetch
+ * onValidationFailed. We use callback functions because verify may fetch
  * information to check the signature.
  * @param {Data} data The Data object with the signature to check.
  * @param {function} onVerified If the signature is verified, this calls
@@ -724,19 +724,22 @@ KeyChain.prototype.signWithSha256 = function(target, wireFormat)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(data).
+ * @param {function} onValidationFailed If the signature check fails, this calls
+ * onValidationFailed(data, reason).
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {number} stepCount
  */
 KeyChain.prototype.verifyData = function
-  (data, onVerified, onVerifyFailed, stepCount)
+  (data, onVerified, onValidationFailed, stepCount)
 {
+  if (stepCount == null)
+    stepCount = 0;
+
   if (this.policyManager.requireVerify(data)) {
     var nextStep = this.policyManager.checkVerificationPolicy
-      (data, stepCount, onVerified, onVerifyFailed);
+      (data, stepCount, onVerified, onValidationFailed);
     if (nextStep != null) {
       var thisKeyChain = this;
       this.face.expressInterest
@@ -746,7 +749,7 @@ KeyChain.prototype.verifyData = function
          },
          function(callbackInterest) {
            thisKeyChain.onCertificateInterestTimeout
-             (callbackInterest, nextStep.retry, onVerifyFailed, data, nextStep);
+             (callbackInterest, nextStep.retry, onValidationFailed, data, nextStep);
          });
     }
   }
@@ -759,9 +762,10 @@ KeyChain.prototype.verifyData = function
   }
   else {
     try {
-      onVerifyFailed(data);
+      onValidationFailed
+        (data, "The packet has no verify rule but skipVerifyAndTrust is false");
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
   }
 };
@@ -785,6 +789,8 @@ KeyChain.prototype.verifyData = function
 KeyChain.prototype.verifyInterest = function
   (interest, onVerified, onVerifyFailed, stepCount, wireFormat)
 {
+  if (stepCount == null)
+    stepCount = 0;
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
   if (this.policyManager.requireVerify(interest)) {
@@ -799,7 +805,7 @@ KeyChain.prototype.verifyInterest = function
          },
          function(callbackInterest) {
            thisKeyChain.onCertificateInterestTimeout
-             (callbackInterest, nextStep.retry, onVerifyFailed, data, nextStep);
+             (callbackInterest, nextStep.retry, onVerifyFailed, interest, nextStep);
          });
     }
   }
@@ -814,7 +820,7 @@ KeyChain.prototype.verifyInterest = function
     try {
       onVerifyFailed(interest);
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
   }
 };
@@ -888,11 +894,11 @@ KeyChain.prototype.onCertificateData = function(interest, data, nextStep)
 {
   // Try to verify the certificate (data) according to the parameters in nextStep.
   this.verifyData
-    (data, nextStep.onVerified, nextStep.onVerifyFailed, nextStep.stepCount);
+    (data, nextStep.onVerified, nextStep.onValidationFailed, nextStep.stepCount);
 };
 
 KeyChain.prototype.onCertificateInterestTimeout = function
-  (interest, retry, onVerifyFailed, originalDataOrInterest, nextStep)
+  (interest, retry, onValidationFailed, originalDataOrInterest, nextStep)
 {
   if (retry > 0) {
     // Issue the same expressInterest as in verifyData except decrement retry.
@@ -904,14 +910,17 @@ KeyChain.prototype.onCertificateInterestTimeout = function
        },
        function(callbackInterest) {
          thisKeyChain.onCertificateInterestTimeout
-           (callbackInterest, retry - 1, onVerifyFailed, originalDataOrInterest, nextStep);
+           (callbackInterest, retry - 1, onValidationFailed,
+            originalDataOrInterest, nextStep);
        });
   }
   else {
     try {
-      onVerifyFailed(originalDataOrInterest);
+      onValidationFailed
+        (originalDataOrInterest, "The retry count is zero after timeout for fetching " +
+          interest.getName().toUri());
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
   }
 };
