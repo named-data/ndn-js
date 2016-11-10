@@ -281,7 +281,10 @@ function main()
   keyChain.verifyData
     (reDecodedData,
      function() { console.log("Re-decoded Data signature verification: VERIFIED"); },
-     function() { console.log("Re-decoded Data  signature verification: FAILED"); });
+     function(data, reason) {
+       console.log("Re-decoded Data  signature verification: FAILED. Reason: " +
+                   reason);
+     });
 
   var freshData = new Data(new Name("/ndn/abc"));
   freshData.setContent(new Blob("SUCCESS!"));
@@ -295,7 +298,10 @@ function main()
   keyChain.verifyData
     (freshData,
      function() { console.log("Freshly-signed Data signature verification: VERIFIED"); },
-     function() { console.log("Freshly-signed Data signature verification: FAILED"); });
+     function(data, reason) {
+       console.log("Freshly-signed Data signature verification: FAILED. Reason: " +
+                   reason);
+     });
 }
 
 main();

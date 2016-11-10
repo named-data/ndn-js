@@ -73,13 +73,13 @@ NoVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onVerifyFailed Override to ignore this.
+ * @param {function} onValidationFailed Override to ignore this.
  * @param {WireFormat} wireFormat
  * @return {ValidationRequest} null for no further step for looking up a
  * certificate chain.
  */
 NoVerifyPolicyManager.prototype.checkVerificationPolicy = function
-  (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
+  (dataOrInterest, stepCount, onVerified, onValidationFailed, wireFormat)
 {
   try {
     onVerified(dataOrInterest);

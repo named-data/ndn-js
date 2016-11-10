@@ -209,8 +209,8 @@ ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(dataOrInterest).
+ * @param {function} onValidationFailed If the signature check fails, this calls
+ * onValidationFailed(dataOrInterest, reason).
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -219,13 +219,15 @@ ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * null if there is no further step.
  */
 ConfigPolicyManager.prototype.checkVerificationPolicy = function
-  (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
+  (dataOrInterest, stepCount, onVerified, onValidationFailed, wireFormat)
 {
   if (stepCount > this.maxDepth) {
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed
+        (dataOrInterest, "The verification stepCount " + stepCount +
+           " exceeded the maxDepth " + this.maxDepth);
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
@@ -234,9 +236,11 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   // No signature -> fail.
   if (signature == null) {
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed
+        (dataOrInterest, "Cannot extract the signature from " +
+         dataOrInterest.getName().toUri());
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
@@ -244,9 +248,10 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   if (!KeyLocator.canGetFromSignature(signature)) {
     // We only support signature types with key locators.
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed
+        (dataOrInterest, "The signature type does not support a KeyLocator");
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
@@ -258,9 +263,10 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   catch (ex) {
     // No key locator -> fail.
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed
+        (dataOrInterest, "Error in KeyLocator.getFromSignature: " + ex);
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
@@ -269,9 +275,10 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   // No key name in KeyLocator -> fail.
   if (signatureName.size() == 0) {
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed
+        (dataOrInterest, "The signature KeyLocator doesn't have a key name");
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
@@ -292,20 +299,22 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   // No matching rule -> fail.
   if (matchedRule == null) {
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed
+        (dataOrInterest, "No matching rule found for " + objectName.toUri());
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
 
+  var failureReason = ["unknown"];
   var signatureMatches = this.checkSignatureMatch
-    (signatureName, objectName, matchedRule);
+    (signatureName, objectName, matchedRule, failureReason);
   if (!signatureMatches) {
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed(dataOrInterest, failureReason[0]);
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
@@ -323,14 +332,25 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   if (foundCert == null) {
     var certificateInterest = new Interest(signatureName);
     var onCertificateDownloadComplete = function(data) {
-      var certificate = new IdentityCertificate(data);
+      var certificate;
+      try {
+        certificate = new IdentityCertificate(data);
+      } catch (ex) {
+        try {
+          onValidationFailed
+            (dataOrInterest, "Cannot decode certificate " + data.getName().toUri());
+        } catch (ex) {
+          console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+        return;
+      }
       thisManager.certificateCache.insertCertificate(certificate);
       thisManager.checkVerificationPolicy
-        (dataOrInterest, stepCount + 1, onVerified, onVerifyFailed);
+        (dataOrInterest, stepCount + 1, onVerified, onValidationFailed);
     };
 
     var nextStep = new ValidationRequest
-      (certificateInterest, onCertificateDownloadComplete, onVerifyFailed,
+      (certificateInterest, onCertificateDownloadComplete, onValidationFailed,
        2, stepCount + 1);
 
     return nextStep;
@@ -343,18 +363,18 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     var keyName = foundCert.getPublicKeyName();
     var timestamp = dataOrInterest.getName().get(-4).toNumber();
 
-    if (!this.interestTimestampIsFresh(keyName, timestamp)) {
+    if (!this.interestTimestampIsFresh(keyName, timestamp, failureReason)) {
       try {
-        onVerifyFailed(dataOrInterest);
+        onValidationFailed(dataOrInterest, failureReason[0]);
       } catch (ex) {
-        console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+        console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
       }
       return null;
     }
   }
 
   // Certificate is known, so verify the signature.
-  this.verify(signature, dataOrInterest.wireEncode(), function (verified) {
+  this.verify(signature, dataOrInterest.wireEncode(), function (verified, reason) {
     if (verified) {
       try {
         onVerified(dataOrInterest);
@@ -366,9 +386,9 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     }
     else {
       try {
-        onVerifyFailed(dataOrInterest);
+        onValidationFailed(dataOrInterest, reason);
       } catch (ex) {
-        console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+        console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
       }
     }
   });
@@ -443,10 +463,12 @@ ConfigPolicyManager.prototype.loadTrustAnchorCertificates = function()
  * components.
  * @param {BoostInfoTree} rule The rule from the configuration file that matches
  * the data or interest.
+ * @param {Array<strng>} failureReason If matching fails, set failureReason[0]
+ * to the failure reason.
  * @return {boolean} True if matches.
  */
 ConfigPolicyManager.prototype.checkSignatureMatch = function
-  (signatureName, objectName, rule)
+  (signatureName, objectName, rule, failureReason)
 {
   var checker = rule.get("checker")[0];
   var checkerType = checker.get("type")[0].getValue();
@@ -455,19 +477,36 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
     var signerType = signerInfo.get("type")[0].getValue();
 
     var cert;
-    if (signerType == "file")
+    if (signerType == "file") {
       cert = this.lookupCertificate
         (signerInfo.get("file-name")[0].getValue(), true);
-    else if (signerType == "base64")
+      if (cert == null) {
+        failureReason[0] = "Can't find fixed-signer certificate file: " +
+          signerInfo.get("file-name")[0].getValue();
+        return false;
+      }
+    }
+    else if (signerType == "base64") {
       cert = this.lookupCertificate
         (signerInfo.get("base64-string")[0].getValue(), false);
-    else
+      if (cert == null) {
+        failureReason[0] = "Can't find fixed-signer certificate base64: " +
+          signerInfo.get("base64-string")[0].getValue();
+        return false;
+      }
+    }
+    else {
+      failureReason[0] = "Unrecognized fixed-signer signerType: " + signerType;
       return false;
+    }
 
-    if (cert == null)
+    if (cert.getName().equals(signatureName))
+      return true;
+    else {
+      failureReason[0] = "fixed-signer cert name \"" + cert.getName().toUri() +
+        "\" does not equal signatureName \"" + signatureName.toUri() + "\"";
       return false;
-    else
-      return cert.getName().equals(signatureName);
+    }
   }
   else if (checkerType == "hierarchical") {
     // This just means the data/interest name has the signing identity as a prefix.
@@ -477,10 +516,20 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
     if (identityMatch != null) {
       var identityPrefix = new Name(identityMatch[1]).append
         (new Name(identityMatch[2]));
-      return ConfigPolicyManager.matchesRelation(objectName, identityPrefix, "is-prefix-of");
+      if (ConfigPolicyManager.matchesRelation
+          (objectName, identityPrefix, "is-prefix-of"))
+        return true;
+      else {
+        failureReason[0] = "The hierarchical objectName \"" + objectName.toUri() +
+          "\" is not a prefix of \"" + identityPrefix + "\"";
+        return false;
+      }
     }
-    else
+    else {
+      failureReason[0] = "The hierarchical identityRegex \"" + identityRegex +
+        "\" does not match signatureName \"" + signatureName.toUri() + "\"";
       return false;
+    }
   }
   else if (checkerType == "customized") {
     var keyLocatorInfo = checker.get("key-locator")[0];
@@ -490,13 +539,28 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
     var relationType = keyLocatorInfo.getFirstValue("relation");
     if (relationType != null) {
       var matchName = new Name(keyLocatorInfo.get("name")[0].getValue());
-      return ConfigPolicyManager.matchesRelation(signatureName, matchName, relationType);
+      if (ConfigPolicyManager.matchesRelation
+          (signatureName, matchName, relationType))
+        return true;
+      else {
+        failureReason[0] = "The custom signatureName \"" + signatureName.toUri() +
+          "\" does not match matchName \"" + matchName.toUri() +
+          "\" using relation " + relationType;
+        return false;
+      }
     }
 
     // Is this a simple regex?
     var keyRegex = keyLocatorInfo.getFirstValue("regex");
-    if (keyRegex != null)
-      return NdnRegexMatcher.match(keyRegex, signatureName) != null;
+    if (keyRegex != null) {
+      if (NdnRegexMatcher.match(keyRegex, signatureName) != null)
+        return true;
+      else {
+        failureReason[0] = "The custom signatureName \"" + signatureName.toUri() +
+          "\" does not regex match simpleKeyRegex \"" + keyRegex + "\"";
+        return false;
+      }
+    }
 
     // Is this a hyper-relation?
     var hyperRelationList = keyLocatorInfo.get("hyper-relation");
@@ -511,22 +575,37 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
       if (keyRegex != null && keyExpansion != null && nameRegex != null &&
           nameExpansion != null && relationType != null) {
         var keyMatch = NdnRegexMatcher.match(keyRegex, signatureName);
-        if (keyMatch == null || keyMatch[1] === undefined)
+        if (keyMatch == null || keyMatch[1] === undefined) {
+          failureReason[0] = "The custom hyper-relation signatureName \"" +
+            signatureName.toUri() + "\" does not match the keyRegex \"" +
+            keyRegex + "\"";
           return false;
+        }
         var keyMatchPrefix = ConfigPolicyManager.expand(keyMatch, keyExpansion);
 
         var nameMatch = NdnRegexMatcher.match(nameRegex, objectName);
-        if (nameMatch == null || nameMatch[1] === undefined)
+        if (nameMatch == null || nameMatch[1] === undefined) {
+          failureReason[0] = "The custom hyper-relation objectName \"" +
+            objectName.toUri() + "\" does not match the nameRegex \"" +
+            nameRegex + "\"";
           return false;
+        }
         var nameMatchStr = ConfigPolicyManager.expand(nameMatch, nameExpansion);
 
-        return ConfigPolicyManager.matchesRelation
-          (new Name(nameMatchStr), new Name(keyMatchPrefix), relationType);
+        if (ConfigPolicyManager.matchesRelation
+            (new Name(nameMatchStr), new Name(keyMatchPrefix), relationType))
+          return true;
+        else {
+          failureReason[0] = "The custom hyper-relation nameMatch \"" +
+            nameMatchStr + "\" does not match the keyMatchPrefix \"" +
+            keyMatchPrefix + "\" using relation " + relationType;
+          return false;
+        }
       }
     }
   }
 
-  // unknown type
+  failureReason[0] = "Unrecognized checkerType: " + checkerType;
   return false;
 };
 
@@ -552,7 +631,7 @@ ConfigPolicyManager.expand = function(match, expansion)
  * or decoding.
  * @param {string} certID
  * @param {boolean} isPath
- * @return {IdentityCertificate}
+ * @return {IdentityCertificate} The certificate object, or null if not found.
  */
 ConfigPolicyManager.prototype.lookupCertificate = function(certID, isPath)
 {
@@ -696,20 +775,36 @@ ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
  * of this key, or within the grace interval on first use.
  * @param {Name} keyName The name of the public key used to sign the interest.
  * @param {number} timestamp The timestamp extracted from the interest name.
+ * @param {Array<strng>} failureReason If matching fails, set failureReason[0]
+ * to the failure reason.
  * @return {boolean} True if timestamp is fresh as described above.
  */
 ConfigPolicyManager.prototype.interestTimestampIsFresh = function
-  (keyName, timestamp)
+  (keyName, timestamp, failureReason)
 {
   var lastTimestamp = this.keyTimestamps[keyName.toUri()];
   if (lastTimestamp == undefined) {
     var now = new Date().getTime();
     var notBefore = now - this.keyGraceInterval;
     var notAfter = now + this.keyGraceInterval;
-    return timestamp > notBefore && timestamp < notAfter;
+    if (!(timestamp > notBefore && timestamp < notAfter)) {
+      failureReason[0] =
+        "The command interest timestamp is not within the first use grace period of " +
+        this.keyGraceInterval + " milliseconds.";
+      return false;
+    }
+    else
+      return true;
   }
-  else
-    return timestamp > lastTimestamp;
+  else {
+    if (timestamp <= lastTimestamp) {
+      failureReason[0] =
+        "The command interest timestamp is not newer than the previous timestamp";
+      return false;
+    }
+    else
+      return true;
+  }
 };
 
 /**
@@ -766,8 +861,8 @@ ConfigPolicyManager.prototype.updateTimestampForKey = function
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob The SignedBlob with the signed portion to
  * verify.
- * @param {function} onComplete This calls onComplete(true) if the signature
- * verifies, otherwise onComplete(false).
+ * @param {function} onComplete This calls onComplete(true, undefined) if the
+ * signature verifies, otherwise onComplete(false, reason).
  */
 ConfigPolicyManager.prototype.verify = function
   (signatureInfo, signedBlob, onComplete)
@@ -781,20 +876,32 @@ ConfigPolicyManager.prototype.verify = function
     var certificate = this.refreshManager.getCertificate(signatureName);
     if (certificate == null)
       certificate = this.certificateCache.getCertificate(signatureName);
-    if (certificate == null)
-      return onComplete(false);
+    if (certificate == null) {
+      onComplete(false,  "Cannot find a certificate with name " +
+        signatureName.toUri());
+      return;
+    }
 
     var publicKeyDer = certificate.getPublicKeyInfo().getKeyDer();
-    if (publicKeyDer.isNull())
+    if (publicKeyDer.isNull()) {
       // Can't find the public key with the name.
-      return onComplete(false);
+      onComplete(false, "There is no public key in the certificate with name " +
+        certificate.getName().toUri());
+      return;
+    }
 
-    return PolicyManager.verifySignature
-      (signatureInfo, signedBlob, publicKeyDer, onComplete);
+    PolicyManager.verifySignature
+      (signatureInfo, signedBlob, publicKeyDer, function(verified) {
+        if (verified)
+          onComplete(true);
+        else
+          onComplete
+            (false,
+             "The signature did not verify with the given public key");
+      });
   }
   else
-    // Can't find a key to verify.
-    return onComplete(false);
+    onComplete(false, "The KeyLocator does not have a key name");
 };
 
 ConfigPolicyManager.TrustAnchorRefreshManager =

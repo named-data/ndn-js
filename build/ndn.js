@@ -14062,7 +14062,7 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
          function(localData) {
            thisSegmentFetcher.onVerified(localData, originalInterest);
          },
-         this.onVerifyFailed.bind(this));
+         this.onValidationFailed.bind(this));
     } catch (ex) {
       console.log("Error in KeyChain.verifyData: " + ex);
     }
@@ -14162,12 +14162,13 @@ SegmentFetcher.prototype.onVerified = function(data, originalInterest)
   }
 }
 
-SegmentFetcher.prototype.onVerifyFailed = function(data)
+SegmentFetcher.prototype.onValidationFailed = function(data, reason)
 {
   try {
     this.onError
       (SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-       "Segment verification failed for " + data.getName().toUri());
+       "Segment verification failed for " + data.getName().toUri() +
+       " . Reason: " + reason);
   } catch (ex) {
     console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
   }
@@ -14272,19 +14273,16 @@ Transport.prototype.isLocal = function(connectionInfo, onResult, onError)
  * A MicroForwarderTransport extends Transport to connect to the browser's
  * micro forwarder service. This assumes that the MicroForwarder extensions has
  * been installed.
- * @param {function} onReceivedObject (optional) If supplied and the received
- * object type field is not "Buffer" then just call this.onReceivedObject(obj).
- * If this is null, then don't call it.
  * @constructor
  */
-var MicroForwarderTransport = function MicroForwarderTransport(onReceivedObject)
+var MicroForwarderTransport = function MicroForwarderTransport()
 {
   // Call the base constructor.
   Transport.call(this);
 
   this.elementReader = null;
   this.connectionInfo = null; // Read by Face.
-  this.onReceivedObject = onReceivedObject;
+  this.onReceivedObject = null;
 
   var thisTransport = this;
   window.addEventListener("message", function(event) {
@@ -22917,19 +22915,19 @@ IdentityManager.prototype.checkTpmPromise_ = function(canonicalTpmLocator)
  * @param {Interest} interest An interest for fetching more data.
  * @param {function} onVerified If the signature is verified, this calls
  * onVerified(data).
- * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(data).
- * @param {boolean} retry
+ * @param {function} onValidationFailed If the signature check fails, this calls
+ * onValidationFailed(data, reason).
+ * @param {number} retry The number of retrials when there is an interest timeout.
  * @param {number} stepCount  The number of verification steps that have been
  * done, used to track the verification progress.
  * @constructor
  */
 var ValidationRequest = function ValidationRequest
-  (interest, onVerified, onVerifyFailed, retry, stepCount)
+  (interest, onVerified, onValidationFailed, retry, stepCount)
 {
   this.interest = interest;
   this.onVerified = onVerified;
-  this.onVerifyFailed = onVerifyFailed;
+  this.onValidationFailed = onValidationFailed;
   this.retry = retry;
   this.stepCount = stepCount;
 };
@@ -23006,8 +23004,8 @@ PolicyManager.prototype.requireVerify = function(dataOrInterest)
 };
 
 /**
- * Check whether the received data packet complies with the verification policy,
- * and get the indication of the next verification step.
+ * Check whether the received data or interest packet complies with the
+ * verification policy, and get the indication of the next verification step.
  * Your derived class should override.
  *
  * @param {Data|Interest} dataOrInterest The Data object or interest with the
@@ -23019,8 +23017,8 @@ PolicyManager.prototype.requireVerify = function(dataOrInterest)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(dataOrInterest).
+ * @param {function} onValidationFailed If the signature check fails, this calls
+ * onValidationFailed(dataOrInterest, reason).
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -23029,7 +23027,7 @@ PolicyManager.prototype.requireVerify = function(dataOrInterest)
  * null if there is no further step.
  */
 PolicyManager.prototype.checkVerificationPolicy = function
-  (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
+  (dataOrInterest, stepCount, onVerified, onValidationFailed, wireFormat)
 {
   throw new Error("PolicyManager.checkVerificationPolicy is not implemented");
 };
@@ -23511,8 +23509,8 @@ ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(dataOrInterest).
+ * @param {function} onValidationFailed If the signature check fails, this calls
+ * onValidationFailed(dataOrInterest, reason).
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -23521,13 +23519,15 @@ ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * null if there is no further step.
  */
 ConfigPolicyManager.prototype.checkVerificationPolicy = function
-  (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
+  (dataOrInterest, stepCount, onVerified, onValidationFailed, wireFormat)
 {
   if (stepCount > this.maxDepth) {
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed
+        (dataOrInterest, "The verification stepCount " + stepCount +
+           " exceeded the maxDepth " + this.maxDepth);
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
@@ -23536,9 +23536,11 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   // No signature -> fail.
   if (signature == null) {
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed
+        (dataOrInterest, "Cannot extract the signature from " +
+         dataOrInterest.getName().toUri());
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
@@ -23546,9 +23548,10 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   if (!KeyLocator.canGetFromSignature(signature)) {
     // We only support signature types with key locators.
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed
+        (dataOrInterest, "The signature type does not support a KeyLocator");
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
@@ -23560,9 +23563,10 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   catch (ex) {
     // No key locator -> fail.
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed
+        (dataOrInterest, "Error in KeyLocator.getFromSignature: " + ex);
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
@@ -23571,9 +23575,10 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   // No key name in KeyLocator -> fail.
   if (signatureName.size() == 0) {
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed
+        (dataOrInterest, "The signature KeyLocator doesn't have a key name");
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
@@ -23594,20 +23599,22 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   // No matching rule -> fail.
   if (matchedRule == null) {
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed
+        (dataOrInterest, "No matching rule found for " + objectName.toUri());
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
 
+  var failureReason = ["unknown"];
   var signatureMatches = this.checkSignatureMatch
-    (signatureName, objectName, matchedRule);
+    (signatureName, objectName, matchedRule, failureReason);
   if (!signatureMatches) {
     try {
-      onVerifyFailed(dataOrInterest);
+      onValidationFailed(dataOrInterest, failureReason[0]);
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
     return null;
   }
@@ -23625,14 +23632,25 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   if (foundCert == null) {
     var certificateInterest = new Interest(signatureName);
     var onCertificateDownloadComplete = function(data) {
-      var certificate = new IdentityCertificate(data);
+      var certificate;
+      try {
+        certificate = new IdentityCertificate(data);
+      } catch (ex) {
+        try {
+          onValidationFailed
+            (dataOrInterest, "Cannot decode certificate " + data.getName().toUri());
+        } catch (ex) {
+          console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+        return;
+      }
       thisManager.certificateCache.insertCertificate(certificate);
       thisManager.checkVerificationPolicy
-        (dataOrInterest, stepCount + 1, onVerified, onVerifyFailed);
+        (dataOrInterest, stepCount + 1, onVerified, onValidationFailed);
     };
 
     var nextStep = new ValidationRequest
-      (certificateInterest, onCertificateDownloadComplete, onVerifyFailed,
+      (certificateInterest, onCertificateDownloadComplete, onValidationFailed,
        2, stepCount + 1);
 
     return nextStep;
@@ -23645,18 +23663,18 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     var keyName = foundCert.getPublicKeyName();
     var timestamp = dataOrInterest.getName().get(-4).toNumber();
 
-    if (!this.interestTimestampIsFresh(keyName, timestamp)) {
+    if (!this.interestTimestampIsFresh(keyName, timestamp, failureReason)) {
       try {
-        onVerifyFailed(dataOrInterest);
+        onValidationFailed(dataOrInterest, failureReason[0]);
       } catch (ex) {
-        console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+        console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
       }
       return null;
     }
   }
 
   // Certificate is known, so verify the signature.
-  this.verify(signature, dataOrInterest.wireEncode(), function (verified) {
+  this.verify(signature, dataOrInterest.wireEncode(), function (verified, reason) {
     if (verified) {
       try {
         onVerified(dataOrInterest);
@@ -23668,9 +23686,9 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     }
     else {
       try {
-        onVerifyFailed(dataOrInterest);
+        onValidationFailed(dataOrInterest, reason);
       } catch (ex) {
-        console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+        console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
       }
     }
   });
@@ -23745,10 +23763,12 @@ ConfigPolicyManager.prototype.loadTrustAnchorCertificates = function()
  * components.
  * @param {BoostInfoTree} rule The rule from the configuration file that matches
  * the data or interest.
+ * @param {Array<strng>} failureReason If matching fails, set failureReason[0]
+ * to the failure reason.
  * @return {boolean} True if matches.
  */
 ConfigPolicyManager.prototype.checkSignatureMatch = function
-  (signatureName, objectName, rule)
+  (signatureName, objectName, rule, failureReason)
 {
   var checker = rule.get("checker")[0];
   var checkerType = checker.get("type")[0].getValue();
@@ -23757,19 +23777,36 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
     var signerType = signerInfo.get("type")[0].getValue();
 
     var cert;
-    if (signerType == "file")
+    if (signerType == "file") {
       cert = this.lookupCertificate
         (signerInfo.get("file-name")[0].getValue(), true);
-    else if (signerType == "base64")
+      if (cert == null) {
+        failureReason[0] = "Can't find fixed-signer certificate file: " +
+          signerInfo.get("file-name")[0].getValue();
+        return false;
+      }
+    }
+    else if (signerType == "base64") {
       cert = this.lookupCertificate
         (signerInfo.get("base64-string")[0].getValue(), false);
-    else
+      if (cert == null) {
+        failureReason[0] = "Can't find fixed-signer certificate base64: " +
+          signerInfo.get("base64-string")[0].getValue();
+        return false;
+      }
+    }
+    else {
+      failureReason[0] = "Unrecognized fixed-signer signerType: " + signerType;
       return false;
+    }
 
-    if (cert == null)
+    if (cert.getName().equals(signatureName))
+      return true;
+    else {
+      failureReason[0] = "fixed-signer cert name \"" + cert.getName().toUri() +
+        "\" does not equal signatureName \"" + signatureName.toUri() + "\"";
       return false;
-    else
-      return cert.getName().equals(signatureName);
+    }
   }
   else if (checkerType == "hierarchical") {
     // This just means the data/interest name has the signing identity as a prefix.
@@ -23779,10 +23816,20 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
     if (identityMatch != null) {
       var identityPrefix = new Name(identityMatch[1]).append
         (new Name(identityMatch[2]));
-      return ConfigPolicyManager.matchesRelation(objectName, identityPrefix, "is-prefix-of");
+      if (ConfigPolicyManager.matchesRelation
+          (objectName, identityPrefix, "is-prefix-of"))
+        return true;
+      else {
+        failureReason[0] = "The hierarchical objectName \"" + objectName.toUri() +
+          "\" is not a prefix of \"" + identityPrefix + "\"";
+        return false;
+      }
     }
-    else
+    else {
+      failureReason[0] = "The hierarchical identityRegex \"" + identityRegex +
+        "\" does not match signatureName \"" + signatureName.toUri() + "\"";
       return false;
+    }
   }
   else if (checkerType == "customized") {
     var keyLocatorInfo = checker.get("key-locator")[0];
@@ -23792,13 +23839,28 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
     var relationType = keyLocatorInfo.getFirstValue("relation");
     if (relationType != null) {
       var matchName = new Name(keyLocatorInfo.get("name")[0].getValue());
-      return ConfigPolicyManager.matchesRelation(signatureName, matchName, relationType);
+      if (ConfigPolicyManager.matchesRelation
+          (signatureName, matchName, relationType))
+        return true;
+      else {
+        failureReason[0] = "The custom signatureName \"" + signatureName.toUri() +
+          "\" does not match matchName \"" + matchName.toUri() +
+          "\" using relation " + relationType;
+        return false;
+      }
     }
 
     // Is this a simple regex?
     var keyRegex = keyLocatorInfo.getFirstValue("regex");
-    if (keyRegex != null)
-      return NdnRegexMatcher.match(keyRegex, signatureName) != null;
+    if (keyRegex != null) {
+      if (NdnRegexMatcher.match(keyRegex, signatureName) != null)
+        return true;
+      else {
+        failureReason[0] = "The custom signatureName \"" + signatureName.toUri() +
+          "\" does not regex match simpleKeyRegex \"" + keyRegex + "\"";
+        return false;
+      }
+    }
 
     // Is this a hyper-relation?
     var hyperRelationList = keyLocatorInfo.get("hyper-relation");
@@ -23813,22 +23875,37 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
       if (keyRegex != null && keyExpansion != null && nameRegex != null &&
           nameExpansion != null && relationType != null) {
         var keyMatch = NdnRegexMatcher.match(keyRegex, signatureName);
-        if (keyMatch == null || keyMatch[1] === undefined)
+        if (keyMatch == null || keyMatch[1] === undefined) {
+          failureReason[0] = "The custom hyper-relation signatureName \"" +
+            signatureName.toUri() + "\" does not match the keyRegex \"" +
+            keyRegex + "\"";
           return false;
+        }
         var keyMatchPrefix = ConfigPolicyManager.expand(keyMatch, keyExpansion);
 
         var nameMatch = NdnRegexMatcher.match(nameRegex, objectName);
-        if (nameMatch == null || nameMatch[1] === undefined)
+        if (nameMatch == null || nameMatch[1] === undefined) {
+          failureReason[0] = "The custom hyper-relation objectName \"" +
+            objectName.toUri() + "\" does not match the nameRegex \"" +
+            nameRegex + "\"";
           return false;
+        }
         var nameMatchStr = ConfigPolicyManager.expand(nameMatch, nameExpansion);
 
-        return ConfigPolicyManager.matchesRelation
-          (new Name(nameMatchStr), new Name(keyMatchPrefix), relationType);
+        if (ConfigPolicyManager.matchesRelation
+            (new Name(nameMatchStr), new Name(keyMatchPrefix), relationType))
+          return true;
+        else {
+          failureReason[0] = "The custom hyper-relation nameMatch \"" +
+            nameMatchStr + "\" does not match the keyMatchPrefix \"" +
+            keyMatchPrefix + "\" using relation " + relationType;
+          return false;
+        }
       }
     }
   }
 
-  // unknown type
+  failureReason[0] = "Unrecognized checkerType: " + checkerType;
   return false;
 };
 
@@ -23854,7 +23931,7 @@ ConfigPolicyManager.expand = function(match, expansion)
  * or decoding.
  * @param {string} certID
  * @param {boolean} isPath
- * @return {IdentityCertificate}
+ * @return {IdentityCertificate} The certificate object, or null if not found.
  */
 ConfigPolicyManager.prototype.lookupCertificate = function(certID, isPath)
 {
@@ -23998,20 +24075,36 @@ ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
  * of this key, or within the grace interval on first use.
  * @param {Name} keyName The name of the public key used to sign the interest.
  * @param {number} timestamp The timestamp extracted from the interest name.
+ * @param {Array<strng>} failureReason If matching fails, set failureReason[0]
+ * to the failure reason.
  * @return {boolean} True if timestamp is fresh as described above.
  */
 ConfigPolicyManager.prototype.interestTimestampIsFresh = function
-  (keyName, timestamp)
+  (keyName, timestamp, failureReason)
 {
   var lastTimestamp = this.keyTimestamps[keyName.toUri()];
   if (lastTimestamp == undefined) {
     var now = new Date().getTime();
     var notBefore = now - this.keyGraceInterval;
     var notAfter = now + this.keyGraceInterval;
-    return timestamp > notBefore && timestamp < notAfter;
+    if (!(timestamp > notBefore && timestamp < notAfter)) {
+      failureReason[0] =
+        "The command interest timestamp is not within the first use grace period of " +
+        this.keyGraceInterval + " milliseconds.";
+      return false;
+    }
+    else
+      return true;
   }
-  else
-    return timestamp > lastTimestamp;
+  else {
+    if (timestamp <= lastTimestamp) {
+      failureReason[0] =
+        "The command interest timestamp is not newer than the previous timestamp";
+      return false;
+    }
+    else
+      return true;
+  }
 };
 
 /**
@@ -24068,8 +24161,8 @@ ConfigPolicyManager.prototype.updateTimestampForKey = function
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob The SignedBlob with the signed portion to
  * verify.
- * @param {function} onComplete This calls onComplete(true) if the signature
- * verifies, otherwise onComplete(false).
+ * @param {function} onComplete This calls onComplete(true, undefined) if the
+ * signature verifies, otherwise onComplete(false, reason).
  */
 ConfigPolicyManager.prototype.verify = function
   (signatureInfo, signedBlob, onComplete)
@@ -24083,20 +24176,32 @@ ConfigPolicyManager.prototype.verify = function
     var certificate = this.refreshManager.getCertificate(signatureName);
     if (certificate == null)
       certificate = this.certificateCache.getCertificate(signatureName);
-    if (certificate == null)
-      return onComplete(false);
+    if (certificate == null) {
+      onComplete(false,  "Cannot find a certificate with name " +
+        signatureName.toUri());
+      return;
+    }
 
     var publicKeyDer = certificate.getPublicKeyInfo().getKeyDer();
-    if (publicKeyDer.isNull())
+    if (publicKeyDer.isNull()) {
       // Can't find the public key with the name.
-      return onComplete(false);
+      onComplete(false, "There is no public key in the certificate with name " +
+        certificate.getName().toUri());
+      return;
+    }
 
-    return PolicyManager.verifySignature
-      (signatureInfo, signedBlob, publicKeyDer, onComplete);
+    PolicyManager.verifySignature
+      (signatureInfo, signedBlob, publicKeyDer, function(verified) {
+        if (verified)
+          onComplete(true);
+        else
+          onComplete
+            (false,
+             "The signature did not verify with the given public key");
+      });
   }
   else
-    // Can't find a key to verify.
-    return onComplete(false);
+    onComplete(false, "The KeyLocator does not have a key name");
 };
 
 ConfigPolicyManager.TrustAnchorRefreshManager =
@@ -24260,13 +24365,13 @@ NoVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onVerifyFailed Override to ignore this.
+ * @param {function} onValidationFailed Override to ignore this.
  * @param {WireFormat} wireFormat
  * @return {ValidationRequest} null for no further step for looking up a
  * certificate chain.
  */
 NoVerifyPolicyManager.prototype.checkVerificationPolicy = function
-  (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
+  (dataOrInterest, stepCount, onVerified, onValidationFailed, wireFormat)
 {
   try {
     onVerified(dataOrInterest);
@@ -24386,7 +24491,7 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 /**
  * Look in the IdentityStorage for the public key with the name in the
  * KeyLocator (if available) and use it to verify the data packet.  If the
- * public key can't be found, call onVerifyFailed.
+ * public key can't be found, call onValidationFailed.
  *
  * @param {Data|Interest} dataOrInterest The Data object or interest with the
  * signature to check.
@@ -24397,8 +24502,8 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(dataOrInterest).
+ * @param {function} onValidationFailed If the signature check fails, this calls
+ * onValidationFailed(dataOrInterest, reason).
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -24407,14 +24512,14 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * certificate chain.
  */
 SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
-  (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
+  (dataOrInterest, stepCount, onVerified, onValidationFailed, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
   if (dataOrInterest instanceof Data) {
     var data = dataOrInterest;
     // wireEncode returns the cached encoding if available.
-    this.verify(data.getSignature(), data.wireEncode(), function(verified) {
+    this.verify(data.getSignature(), data.wireEncode(), function(verified, reason) {
       if (verified) {
         try {
           onVerified(data);
@@ -24424,22 +24529,45 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
       }
       else {
         try {
-          onVerifyFailed(data);
+          onValidationFailed(data, reason);
         } catch (ex) {
-          console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+          console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
         }
       }
     });
   }
   else if (dataOrInterest instanceof Interest) {
     var interest = dataOrInterest;
+
+    if (interest.getName().size() < 2) {
+      try {
+        onValidationFailed
+          (interest, "The signed interest has less than 2 components: " +
+             interest.getName().toUri());
+      } catch (ex) {
+        console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+      return;
+    }
+
     // Decode the last two name components of the signed interest
-    var signature = wireFormat.decodeSignatureInfoAndValue
-      (interest.getName().get(-2).getValue().buf(),
-       interest.getName().get(-1).getValue().buf(), false);
+    var signature;
+    try {
+      signature = wireFormat.decodeSignatureInfoAndValue
+        (interest.getName().get(-2).getValue().buf(),
+         interest.getName().get(-1).getValue().buf(), false);
+    } catch (ex) {
+      try {
+        onValidationFailed
+          (interest, "Error decoding the signed interest signature: " + ex);
+      } catch (ex) {
+        console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+      return;
+    }
 
     // wireEncode returns the cached encoding if available.
-    this.verify(signature, interest.wireEncode(), function(verified) {
+    this.verify(signature, interest.wireEncode(), function(verified, reason) {
       if (verified) {
         try {
           onVerified(interest);
@@ -24449,9 +24577,9 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
       }
       else {
         try {
-          onVerifyFailed(interest);
+          onValidationFailed(interest, reason);
         } catch (ex) {
-          console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+          console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
         }
       }
     });
@@ -24500,26 +24628,49 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
  * verify.
- * @param {function} onComplete This calls onComplete(true) if the signature
- * verifies, otherwise onComplete(false).
+ * @param {function} onComplete This calls onComplete(true, undefined) if the
+ * signature verifies, otherwise onComplete(false, reason).
  */
 SelfVerifyPolicyManager.prototype.verify = function
   (signatureInfo, signedBlob, onComplete)
 {
   if (KeyLocator.canGetFromSignature(signatureInfo)) {
     this.getPublicKeyDer
-      (KeyLocator.getFromSignature(signatureInfo), function(publicKeyDer) {
+      (KeyLocator.getFromSignature(signatureInfo), function(publicKeyDer, reason) {
         if (publicKeyDer.isNull())
-          onComplete(false);
-        else
-          PolicyManager.verifySignature
-            (signatureInfo, signedBlob, publicKeyDer, onComplete);
+          onComplete(false, reason);
+        else {
+          try {
+            PolicyManager.verifySignature
+              (signatureInfo, signedBlob, publicKeyDer, function(verified) {
+                if (verified)
+                  onComplete(true);
+                else
+                  onComplete
+                    (false,
+                     "The signature did not verify with the given public key");
+              });
+          } catch (ex) {
+            onComplete(false, "Error in verifySignature: " + ex);
+          }
+        }
       });
   }
-  else
-    // Assume that the signature type does not require a public key.
-    PolicyManager.verifySignature
-      (signatureInfo, signedBlob, null, onComplete);
+  else {
+    try {
+      // Assume that the signature type does not require a public key.
+      PolicyManager.verifySignature
+        (signatureInfo, signedBlob, null, function(verified) {
+          if (verified)
+            onComplete(true);
+          else
+            onComplete
+              (false, "The signature did not verify with the given public key");
+        });
+    } catch (ex) {
+      onComplete(false, "Error in verifySignature: " + ex);
+    }
+  }
 };
 
 /**
@@ -24527,27 +24678,40 @@ SelfVerifyPolicyManager.prototype.verify = function
  * KeyLocator (if available). If the public key can't be found, return and empty
  * Blob.
  * @param {KeyLocator} keyLocator The KeyLocator.
- * @param {function} onComplete This calls onComplete(publicKeyDer) where
- * publicKeyDer is the public key DER Blob or an isNull Blob if not found.
+ * @param {function} onComplete This calls 
+ * onComplete(publicKeyDer, reason) where publicKeyDer is the public key
+ * DER Blob or an isNull Blob if not found and reason is the reason
+ * string if not found.
  */
 SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
   (keyLocator, onComplete)
 {
   if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
-           this.identityStorage != null)
-    // Assume the key name is a certificate name.
+      this.identityStorage != null) {
+    var keyName;
+    try {
+      // Assume the key name is a certificate name.
+      keyName = IdentityCertificate.certificateNameToPublicKeyName
+        (keyLocator.getKeyName());
+    } catch (ex) {
+      onComplete
+        (new Blob(), "Cannot get a public key name from the certificate named: " +
+           keyLocator.getKeyName().toUri());
+      return;
+    }
     SyncPromise.complete
       (onComplete,
        function(err) {
          // The storage doesn't have the key.
-         onComplete(new Blob());
+         onComplete
+           (new Blob(), "The identityStorage doesn't have the key named " +
+              keyName.toUri());
        },
-       this.identityStorage.getKeyPromise
-         (IdentityCertificate.certificateNameToPublicKeyName
-          (keyLocator.getKeyName())));
+       this.identityStorage.getKeyPromise(keyName));
+  }
   else
     // Can't find a key to verify.
-    onComplete(new Blob());
+    onComplete(new Blob(), "The signature KeyLocator doesn't have a key name");
 };
 /**
  * Copyright (C) 2014-2016 Regents of the University of California.
@@ -25267,7 +25431,7 @@ KeyChain.prototype.signWithSha256 = function(target, wireFormat)
 
 /**
  * Check the signature on the Data object and call either onVerify or
- * onVerifyFailed. We use callback functions because verify may fetch
+ * onValidationFailed. We use callback functions because verify may fetch
  * information to check the signature.
  * @param {Data} data The Data object with the signature to check.
  * @param {function} onVerified If the signature is verified, this calls
@@ -25275,19 +25439,22 @@ KeyChain.prototype.signWithSha256 = function(target, wireFormat)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(data).
+ * @param {function} onValidationFailed If the signature check fails, this calls
+ * onValidationFailed(data, reason).
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {number} stepCount
  */
 KeyChain.prototype.verifyData = function
-  (data, onVerified, onVerifyFailed, stepCount)
+  (data, onVerified, onValidationFailed, stepCount)
 {
+  if (stepCount == null)
+    stepCount = 0;
+
   if (this.policyManager.requireVerify(data)) {
     var nextStep = this.policyManager.checkVerificationPolicy
-      (data, stepCount, onVerified, onVerifyFailed);
+      (data, stepCount, onVerified, onValidationFailed);
     if (nextStep != null) {
       var thisKeyChain = this;
       this.face.expressInterest
@@ -25297,7 +25464,7 @@ KeyChain.prototype.verifyData = function
          },
          function(callbackInterest) {
            thisKeyChain.onCertificateInterestTimeout
-             (callbackInterest, nextStep.retry, onVerifyFailed, data, nextStep);
+             (callbackInterest, nextStep.retry, onValidationFailed, data, nextStep);
          });
     }
   }
@@ -25310,16 +25477,17 @@ KeyChain.prototype.verifyData = function
   }
   else {
     try {
-      onVerifyFailed(data);
+      onValidationFailed
+        (data, "The packet has no verify rule but skipVerifyAndTrust is false");
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
   }
 };
 
 /**
  * Check the signature on the signed interest and call either onVerify or
- * onVerifyFailed. We use callback functions because verify may fetch
+ * onValidationFailed. We use callback functions because verify may fetch
  * information to check the signature.
  * @param {Interest} interest The interest with the signature to check.
  * @param {function} onVerified If the signature is verified, this calls
@@ -25327,20 +25495,22 @@ KeyChain.prototype.verifyData = function
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(interest).
+ * @param {function} onValidationFailed If the signature check fails, this calls
+ * onValidationFailed(interest, reason).
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
  */
 KeyChain.prototype.verifyInterest = function
-  (interest, onVerified, onVerifyFailed, stepCount, wireFormat)
+  (interest, onVerified, onValidationFailed, stepCount, wireFormat)
 {
+  if (stepCount == null)
+    stepCount = 0;
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
   if (this.policyManager.requireVerify(interest)) {
     var nextStep = this.policyManager.checkVerificationPolicy
-      (interest, stepCount, onVerified, onVerifyFailed, wireFormat);
+      (interest, stepCount, onVerified, onValidationFailed, wireFormat);
     if (nextStep != null) {
       var thisKeyChain = this;
       this.face.expressInterest
@@ -25350,7 +25520,8 @@ KeyChain.prototype.verifyInterest = function
          },
          function(callbackInterest) {
            thisKeyChain.onCertificateInterestTimeout
-             (callbackInterest, nextStep.retry, onVerifyFailed, data, nextStep);
+             (callbackInterest, nextStep.retry, onValidationFailed, interest,
+              nextStep);
          });
     }
   }
@@ -25363,9 +25534,11 @@ KeyChain.prototype.verifyInterest = function
   }
   else {
     try {
-      onVerifyFailed(interest);
+      onValidationFailed
+        (interest,
+         "The packet has no verify rule but skipVerifyAndTrust is false");
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
   }
 };
@@ -25439,11 +25612,11 @@ KeyChain.prototype.onCertificateData = function(interest, data, nextStep)
 {
   // Try to verify the certificate (data) according to the parameters in nextStep.
   this.verifyData
-    (data, nextStep.onVerified, nextStep.onVerifyFailed, nextStep.stepCount);
+    (data, nextStep.onVerified, nextStep.onValidationFailed, nextStep.stepCount);
 };
 
 KeyChain.prototype.onCertificateInterestTimeout = function
-  (interest, retry, onVerifyFailed, originalDataOrInterest, nextStep)
+  (interest, retry, onValidationFailed, originalDataOrInterest, nextStep)
 {
   if (retry > 0) {
     // Issue the same expressInterest as in verifyData except decrement retry.
@@ -25455,14 +25628,17 @@ KeyChain.prototype.onCertificateInterestTimeout = function
        },
        function(callbackInterest) {
          thisKeyChain.onCertificateInterestTimeout
-           (callbackInterest, retry - 1, onVerifyFailed, originalDataOrInterest, nextStep);
+           (callbackInterest, retry - 1, onValidationFailed,
+            originalDataOrInterest, nextStep);
        });
   }
   else {
     try {
-      onVerifyFailed(originalDataOrInterest);
+      onValidationFailed
+        (originalDataOrInterest, "The retry count is zero after timeout for fetching " +
+          interest.getName().toUri());
     } catch (ex) {
-      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
     }
   }
 };
@@ -30343,9 +30519,11 @@ Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
             console.log("Error in onConsumeComplete: " + NdnCommon.getErrorWithStackTrace(ex));
           }
         }, onError);
-      }, function(d) {
+      }, function(d, reason) {
         try {
-          onError(EncryptError.ErrorCode.Validation, "verifyData failed");
+          onError
+            (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
+             reason);
         } catch (ex) {
           console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
         }
@@ -30576,8 +30754,10 @@ Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
             Consumer.decrypt_
               (dataEncryptedContent, cKeyBits, onPlainText, onError);
           }, onError);
-        }, function(d) {
-          onError(EncryptError.ErrorCode.Validation, "verifyData failed");
+        }, function(d, reason) {
+          onError
+            (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
+             reason);
         });
       } catch (ex) {
         Consumer.Error.callOnError(onError, ex, "verifyData error: ");
@@ -30654,8 +30834,10 @@ Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
           }, function(ex) {
             Consumer.Error.callOnError(onError, ex, "decryptDKey error: ");
           });
-        }, function(d) {
-          onError(EncryptError.ErrorCode.Validation, "verifyData failed");
+        }, function(d, reason) {
+          onError
+            (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
+             reason);
         });
       } catch (ex) {
         Consumer.Error.callOnError(onError, ex, "verifyData error: ");

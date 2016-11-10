@@ -270,9 +270,9 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
   loopBody();
 };
 
-function onVerifyFailed(data)
+function onValidationFailed(data, reason)
 {
-  console.log("Signature verification: FAILED");
+  console.log("Signature verification: FAILED. Reason: " + reason);
 }
 
 /**
@@ -326,7 +326,7 @@ TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function
       data.wireDecode(encoding);
 
       if (useCrypto)
-        keyChain.verifyData(data, onVerified, onVerifyFailed);
+        keyChain.verifyData(data, onVerified, onValidationFailed);
 
       ++iteration;
     }
