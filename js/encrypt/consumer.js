@@ -102,9 +102,11 @@ Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
             console.log("Error in onConsumeComplete: " + NdnCommon.getErrorWithStackTrace(ex));
           }
         }, onError);
-      }, function(d) {
+      }, function(d, reason) {
         try {
-          onError(EncryptError.ErrorCode.Validation, "verifyData failed");
+          onError
+            (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
+             reason);
         } catch (ex) {
           console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
         }
@@ -335,8 +337,10 @@ Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
             Consumer.decrypt_
               (dataEncryptedContent, cKeyBits, onPlainText, onError);
           }, onError);
-        }, function(d) {
-          onError(EncryptError.ErrorCode.Validation, "verifyData failed");
+        }, function(d, reason) {
+          onError
+            (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
+             reason);
         });
       } catch (ex) {
         Consumer.Error.callOnError(onError, ex, "verifyData error: ");
@@ -413,8 +417,10 @@ Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
           }, function(ex) {
             Consumer.Error.callOnError(onError, ex, "decryptDKey error: ");
           });
-        }, function(d) {
-          onError(EncryptError.ErrorCode.Validation, "verifyData failed");
+        }, function(d, reason) {
+          onError
+            (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
+             reason);
         });
       } catch (ex) {
         Consumer.Error.callOnError(onError, ex, "verifyData error: ");
