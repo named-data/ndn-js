@@ -261,13 +261,14 @@ describe('TestRegexMatching', function() {
     var signatureName1 = data1.getSignature().getKeyLocator().getKeyName();
     var signatureName2 = data2.getSignature().getKeyLocator().getKeyName();
 
+    var failureReason = ["unknown"];
     assert.equal
       (policyManager.checkSignatureMatch
-         (signatureName1, dataName1, matchedRule), false,
+         (signatureName1, dataName1, matchedRule, failureReason), false,
        "Hierarchical matcher matched short data name to long key name");
 
     assert.ok(policyManager.checkSignatureMatch
-               (signatureName2, dataName2, matchedRule));
+               (signatureName2, dataName2, matchedRule, failureReason));
 
     keyChain.sign(data1, shortCertName);
     keyChain.sign(data2, shortCertName);
@@ -276,9 +277,9 @@ describe('TestRegexMatching', function() {
     signatureName2 = data2.getSignature().getKeyLocator().getKeyName();
 
     assert.ok(policyManager.checkSignatureMatch
-               (signatureName1, dataName1, matchedRule));
+               (signatureName1, dataName1, matchedRule, failureReason));
     assert.ok(policyManager.checkSignatureMatch
-               (signatureName2, dataName2, matchedRule));
+               (signatureName2, dataName2, matchedRule, failureReason));
   });
 
   it('Hierarchical', function() {
@@ -296,10 +297,11 @@ describe('TestRegexMatching', function() {
     var signatureName1 = data1.getSignature().getKeyLocator().getKeyName();
     var signatureName2 = data2.getSignature().getKeyLocator().getKeyName();
 
+    var failureReason = ["unknown"];
     assert.ok(policyManager.checkSignatureMatch
-               (signatureName1, dataName, matchedRule));
+               (signatureName1, dataName, matchedRule, failureReason));
     assert.equal(policyManager.checkSignatureMatch
-                  (signatureName2, dataName, matchedRule), false);
+                  (signatureName2, dataName, matchedRule, failureReason), false);
 
     dataName = new Name('/SecurityTestSecRule/Basic/Other/Data1');
     data1 = new Data(dataName);
@@ -313,8 +315,8 @@ describe('TestRegexMatching', function() {
     signatureName2 = data2.getSignature().getKeyLocator().getKeyName();
 
     assert.equal(policyManager.checkSignatureMatch
-                  (signatureName1, dataName, matchedRule), false);
+                  (signatureName1, dataName, matchedRule, failureReason), false);
     assert.ok(policyManager.checkSignatureMatch
-               (signatureName2, dataName, matchedRule));
+               (signatureName2, dataName, matchedRule, failureReason));
   });
 });
