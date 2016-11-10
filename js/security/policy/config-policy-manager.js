@@ -363,9 +363,9 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     var keyName = foundCert.getPublicKeyName();
     var timestamp = dataOrInterest.getName().get(-4).toNumber();
 
-    if (!this.interestTimestampIsFresh(keyName, timestamp)) {
+    if (!this.interestTimestampIsFresh(keyName, timestamp, failureReason)) {
       try {
-        onValidationFailed(dataOrInterest);
+        onValidationFailed(dataOrInterest, failureReason[0]);
       } catch (ex) {
         console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
       }
@@ -775,20 +775,36 @@ ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
  * of this key, or within the grace interval on first use.
  * @param {Name} keyName The name of the public key used to sign the interest.
  * @param {number} timestamp The timestamp extracted from the interest name.
+ * @param {Array<strng>} failureReason If matching fails, set failureReason[0]
+ * to the failure reason.
  * @return {boolean} True if timestamp is fresh as described above.
  */
 ConfigPolicyManager.prototype.interestTimestampIsFresh = function
-  (keyName, timestamp)
+  (keyName, timestamp, failureReason)
 {
   var lastTimestamp = this.keyTimestamps[keyName.toUri()];
   if (lastTimestamp == undefined) {
     var now = new Date().getTime();
     var notBefore = now - this.keyGraceInterval;
     var notAfter = now + this.keyGraceInterval;
-    return timestamp > notBefore && timestamp < notAfter;
+    if (!(timestamp > notBefore && timestamp < notAfter)) {
+      failureReason[0] =
+        "The command interest timestamp is not within the first use grace period of " +
+        this.keyGraceInterval + " milliseconds.";
+      return false;
+    }
+    else
+      return true;
   }
-  else
-    return timestamp > lastTimestamp;
+  else {
+    if (timestamp <= lastTimestamp) {
+      failureReason[0] =
+        "The command interest timestamp is not newer than the previous timestamp";
+      return false;
+    }
+    else
+      return true;
+  }
 };
 
 /**

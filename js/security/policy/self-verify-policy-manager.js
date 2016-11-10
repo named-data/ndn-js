@@ -136,7 +136,7 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
        interest.getName().get(-1).getValue().buf(), false);
 
     // wireEncode returns the cached encoding if available.
-    this.verify(signature, interest.wireEncode(), function(verified) {
+    this.verify(signature, interest.wireEncode(), function(verified, reason) {
       if (verified) {
         try {
           onVerified(interest);
@@ -146,7 +146,7 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
       }
       else {
         try {
-          onVerifyFailed(interest);
+          onValidationFailed(interest, reason);
         } catch (ex) {
           console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
         }
