@@ -725,7 +725,7 @@ KeyChain.prototype.signWithSha256 = function(target, wireFormat)
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {function} onValidationFailed If the signature check fails, this calls
- * onValidationFailed(data, reason).
+ * onValidationFailed(data, reason) with the Data object and reason string.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -781,7 +781,8 @@ KeyChain.prototype.verifyData = function
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {function} onValidationFailed If the signature check fails, this calls
- * onValidationFailed(interest, reason).
+ * onValidationFailed(interest, reason) with the Interest object and reason
+ * string.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.

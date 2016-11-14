@@ -342,7 +342,7 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
         } catch (ex) {
           console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
         }
-        return;
+        return null;
       }
       thisManager.certificateCache.insertCertificate(certificate);
       thisManager.checkVerificationPolicy
@@ -463,7 +463,7 @@ ConfigPolicyManager.prototype.loadTrustAnchorCertificates = function()
  * components.
  * @param {BoostInfoTree} rule The rule from the configuration file that matches
  * the data or interest.
- * @param {Array<strng>} failureReason If matching fails, set failureReason[0]
+ * @param {Array<string>} failureReason If matching fails, set failureReason[0]
  * to the failure reason.
  * @return {boolean} True if matches.
  */
@@ -775,7 +775,7 @@ ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
  * of this key, or within the grace interval on first use.
  * @param {Name} keyName The name of the public key used to sign the interest.
  * @param {number} timestamp The timestamp extracted from the interest name.
- * @param {Array<strng>} failureReason If matching fails, set failureReason[0]
+ * @param {Array<string>} failureReason If matching fails, set failureReason[0]
  * to the failure reason.
  * @return {boolean} True if timestamp is fresh as described above.
  */
