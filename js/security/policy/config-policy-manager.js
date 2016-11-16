@@ -521,7 +521,7 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
         return true;
       else {
         failureReason[0] = "The hierarchical objectName \"" + objectName.toUri() +
-          "\" is not a prefix of \"" + identityPrefix + "\"";
+          "\" is not a prefix of \"" + identityPrefix.toUri() + "\"";
         return false;
       }
     }
