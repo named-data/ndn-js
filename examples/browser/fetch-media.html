@@ -1,0 +1,551 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<!--
+ * Copyright (C) 2016 Regents of the University of California.
+ * @author: Zhehao Wang
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+-->
+<!--
+This page fetches NDN segmented content and displays it based on the media type
+(video, image, text).
+-->
+<html>
+
+<head>
+  <title>NDN Fetch Media</title>
+
+<script type="text/javascript" src="../../build/ndn.js"></script>
+
+<script type="text/javascript" src="../../js/encoding/mime-types.js"></script>
+
+<script type="text/javascript">
+  var microForwarderTransport;
+  var face;
+
+  var listComponent = "_list";
+  var metaComponent = "_meta";
+
+  var NdnfsFileComponent = Name.fromEscapedString("%C1.FS.file");
+  var NdnfsFolderComponent = Name.fromEscapedString("%C1.FS.dir");
+
+  var contentElement;
+  var currentDirectory = "/";
+  var prevContent = [{"cd": new Name(), "content": ""}];
+  var fetching = false;
+
+  function connectButtonClick()
+  {
+    var hostName = document.getElementById("hub").value;
+    if (document.getElementById("microForwarderRadio").checked)
+      face = new Face(microForwarderTransport,
+                      new MicroForwarderTransport.ConnectionInfo());
+    else
+      face = new Face({host: hostName});
+
+    var interest = new Interest((new Name(document.getElementById("ndnfs-prefix").value)).append(listComponent));
+    face.expressInterest(interest, function (interest, data) {
+      contentElement.innerHTML = data.getContent().buf().toString('binary');
+      currentDirectory = interest.getName().getPrefix(-1);
+      replaceAnchorAction();
+    }, function (interest) {
+      console.log("initial ndnfs connection timeout");
+    });
+  }
+
+  // copy paste from Firefox addon
+  /**
+   * Get the index of the first component that is the NDNFS file meta data marker.
+   * @param {type} name The Name to search.
+   * @return {number} The index or -1 if not found.
+   */
+  function getIndexOfNdnfsFileComponent(name)
+  {
+    for (var i = 0; i < name.size(); ++i) {
+      if (name.get(i).getValue().equals(NdnfsFileComponent))
+        return i;
+    }
+
+    return -1;
+  }
+
+  function getNameContentTypeAndCharset(name)
+  {
+      var iFileName = name.indexOfFileName();
+      if (iFileName < 0)
+          // Get the default mime type.
+          return MimeTypes.getContentTypeAndCharset("");
+
+      return MimeTypes.getContentTypeAndCharset
+          (DataUtils.toString(name.get(iFileName).getValue().buf()).toLowerCase());
+  }
+
+  function replaceAnchorAction() {
+    var aElements = contentElement.getElementsByTagName("a");
+    for (var idx = 0; idx < aElements.length; idx++) {
+      //aElements[idx].onclick = "return false";
+      console.log(aElements[idx].href);
+      aElements[idx].onclick = (function () {
+        // try it as a file
+        var fileAsssetURL = new Name(currentDirectory).append(new Name(this.innerHTML)).append(NdnfsFileComponent);
+        var folderAsssetURL = new Name(currentDirectory).append(new Name(this.innerHTML)).append(NdnfsFolderComponent);
+        browseFile(fileAsssetURL);
+        // try it as a folder
+        browseFolder(folderAsssetURL);
+        return false;
+      }).bind(aElements[idx]);
+    }
+  }
+
+  function browseFolder(name) {
+    console.log("trying browse as folder: " + name.toUri());
+    var interest = new Interest(name);
+
+    face.expressInterest(interest, function (interest, data) {
+      console.log("got data name: " + data.getName().toUri());
+      prevContent.push({"cd": currentDirectory, "content": contentElement.innerHTML});
+      currentDirectory = interest.getName().getPrefix(-1);
+      contentElement.innerHTML = data.getContent().buf().toString('binary');
+      replaceAnchorAction();
+    }, function (interest) {
+      console.log("timeout (folder): " + interest.getName().toUri());
+    });
+  }
+
+  function browseFile(name) {
+    console.log("trying browse as file: " + name.toUri());
+    var interest = new Interest(name);
+
+    face.expressInterest(interest, function (interest, data) {
+      console.log("got data name: " + data.getName().toUri());
+      var contentTypeEtc = getNameContentTypeAndCharset(data.getName());
+      var iNdnfsFileComponent = getIndexOfNdnfsFileComponent(data.getName());
+
+      if (iNdnfsFileComponent >= 0) {
+        // Expect the data.getName() to be /<prefix>/<file name>/<%C1.FS.File>/<version>
+        console.log(contentTypeEtc.contentType);
+        if (contentTypeEtc.contentType == "video/mp4") {
+          prevContent.push({"cd": currentDirectory, "content": contentElement.innerHTML});
+          contentElement.innerHTML = "<video id=\"video1\"></video>";
+
+          var assetURL = new Name(data.getName()).getPrefix(-2).append(data.getName().get(-1));
+          console.log("start video playing called!: " + data.getName().toUri() + "; found component at " + iNdnfsFileComponent);
+          startVideoPlaying(assetURL);
+
+        } else if (contentTypeEtc.contentType == "image/jpeg") {
+          prevContent.push({"cd": currentDirectory, "content": contentElement.innerHTML});
+          contentElement.innerHTML = "<img id=\"image1\"></img>";
+
+          var assetURL = new Name(data.getName()).getPrefix(-2).append(data.getName().get(-1));
+          startFetchingImage(assetURL);
+        } else {
+          prevContent.push({"cd": currentDirectory, "content": contentElement.innerHTML});
+          contentElement.innerHTML = "";
+
+          var assetURL = new Name(data.getName()).getPrefix(-2).append(data.getName().get(-1));
+          startFetching(assetURL);
+        }
+      }
+    }, function (interest) {
+      console.log("timeout (file): " + interest.getName().toUri());
+    });
+  }
+
+  function goBack() {
+    if (prevContent.length > 0) {
+      var content = prevContent.pop();
+      contentElement.innerHTML = content["content"];
+      currentDirectory = content["cd"];
+      // whatever is being fetched now, we stop it
+      fetching = false;
+      replaceAnchorAction();
+    } else {
+      console.log("already at the top");
+    }
+  }
+
+  function onImageComplete(content)
+  {
+    document.getElementById('image1').src = 'data:image/jpeg;base64,' + content.buf().toString('base64');
+    fetching = false;
+  }
+
+  function onComplete(content)
+  {
+    contentElement.innerHTML = content.buf().toString('binary');
+    fetching = false;
+  }
+
+  var onError = function(errorCode, message)
+  {
+    console.log("Error " + errorCode + ": " + message);
+    fetching = false;
+  }
+
+  function startFetchingImage(assetURL) {
+    fetching = true;
+    var interest = new Interest(new Name(assetURL));
+    SegmentFetcher.fetch(face, interest, null, onImageComplete, onError);
+  }
+
+  function startFetching(assetURL) {
+    fetching = true;
+    var interest = new Interest(new Name(assetURL));
+    SegmentFetcher.fetch(face, interest, null, onComplete, onError);
+  }
+
+// documents for "proper mp4 fragmentation":
+// https://hacks.mozilla.org/2015/07/streaming-media-on-demand-with-media-source-extensions/
+// keywords: media-source-extensions
+// this page in chrome might help with debugging codec / mp4 fragmentation: chrome://media-internals/
+// for the streaming part, this doc helped: https://developers.google.com/web/updates/2016/03/mse-sourcebuffer
+// initial code comes from https://developer.mozilla.org/en-US/docs/Web/API/MediaSource/addSourceBuffer
+// need to run a local web server for this it seems
+
+var mediaSource;
+var sourceBuffer;
+
+function startVideoPlaying(assetURL) {
+  var video = document.getElementById('video1');
+
+  // Need to be specific for Blink regarding codecs
+  // ./mp4info frag_bunny.mp4 | grep Codec
+  var mimeCodec = 'video/mp4; codecs="avc1.64001F, mp4a.40.2"';
+
+  if ('MediaSource' in window && MediaSource.isTypeSupported(mimeCodec)) {
+    mediaSource = new MediaSource();
+    //console.log(mediaSource.readyState); // closed
+    video.src = URL.createObjectURL(mediaSource);
+    var queue = [];
+    var thisDone = false;
+
+    mediaSource.addEventListener('sourceopen', function sourceOpen (_) {
+      //console.log(this.readyState); // open
+      var mediaSource = this;
+      sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
+      fetching = true;
+
+      var segmentStreamer = new SegmentStreamer(face, function (buf, done, first) {
+        if (done) {
+          console.log("done fetching the video!");
+          thisDone = true;
+        } else {
+          if (first) {
+            console.log("appended!");
+            sourceBuffer.appendBuffer(buf);
+          } else {
+            queue.push(buf);
+          }
+
+        }
+      });
+
+      // TODO: better queueing implementation?
+
+      sourceBuffer.addEventListener('updateend', function() {
+        if (fetching) {
+          if (queue.length) {
+            sourceBuffer.appendBuffer(queue.shift());
+          } else {
+            if (thisDone) {
+              mediaSource.endOfStream();
+            } else {
+              // not done yet, need to make sure that updateend fires again
+              var event = new CustomEvent("updateend", { "detail": "Example of an event" });
+
+              // Dispatch/Trigger/Fire the event
+              setTimeout(function () {
+                sourceBuffer.dispatchEvent(event);
+              }, 50);
+            }
+          }
+
+          if (video.paused) {
+            // start playing after first chunk is appended
+            video.play();
+          }
+        }
+
+      }, false);
+
+
+      // Fetch the first segment to initiate segment fetching.
+      face.expressInterest
+        (new Name(assetURL).appendSegment(0),
+         segmentStreamer.onData.bind(segmentStreamer),
+         function(interest) {
+           console.log("Timeout fetching initial interest: " + interest.getName().toUri());
+         });
+    });
+
+  } else {
+    console.error('Unsupported MIME type or codec: ', mimeCodec);
+  }
+}
+
+var SegmentStreamer = function SegmentStreamer(face, callback)
+{
+  this.face_ = face;
+  this.callback_ = callback;
+  this.finalSegmentNumber_ = null;
+  this.segmentStore_ = new SegmentStore();
+}
+
+SegmentStreamer.prototype.onData = function(interest, data)
+{
+  if (!data.getName().get(-1).isSegment()) {
+    console.log("Skipping non-segment");
+    return;
+  }
+
+  var segmentNumber = data.getName().get(-1).toSegment();
+  this.segmentStore_.storeContent(segmentNumber, data);
+
+  if (data.getMetaInfo().getFinalBlockId().getValue().size() > 0)
+    this.finalSegmentNumber_ =
+      data.getMetaInfo().getFinalBlockId().toSegment();
+
+  // The content was already put in the store.  Retrieve as much as possible.
+  var entry;
+  while ((entry = this.segmentStore_.maybeRetrieveNextEntry()) !== null) {
+    segmentNumber = entry.key;
+    var done = (this.finalSegmentNumber_ !== null &&
+                segmentNumber === this.finalSegmentNumber_);
+    var first = (segmentNumber == 0);
+    this.callback_(entry.value.getContent().buf(), done, first);
+
+    if (done)
+      return;
+  }
+
+  // Request new segments.
+  var toRequest = this.segmentStore_.requestSegmentNumbers(8);
+  for (var i = 0; i < toRequest.length; ++i) {
+    if (this.finalSegmentNumber_ !== null &&
+        toRequest[i] > this.finalSegmentNumber_)
+      continue;
+
+    // zhehao: hack for UI "go back"
+    if (fetching) {
+      this.face_.expressInterest
+        (data.getName().getPrefix(-1).appendSegment(toRequest[i]),
+         this.onData.bind(this), this.onTimeout.bind(this));
+    }
+  }
+}
+
+SegmentStreamer.prototype.onTimeout = function(interest)
+{
+  console.log("Interest timed out: " + interest.getName().toUri());
+  this.callback_(undefined, true);
+  // TODO: Re-express?
+}
+
+/*
+ * A SegmentStore stores segments until they are retrieved in order starting
+ * with segment 0.
+ */
+var SegmentStore = function SegmentStore()
+{
+    // Each entry is an object where the key is the segment number and value is
+    // null if the segment number is requested or the data if received.
+    this.store = new SortedArray();
+    this.maxRetrievedSegmentNumber = -1;
+};
+
+/**
+ * Store the Data packet with the given segmentNumber.
+ * @param {number} segmentNumber The segment number of the packet.
+ * @param {Data} data The Data packet.
+ */
+SegmentStore.prototype.storeContent = function(segmentNumber, data)
+{
+    // We don't expect to try to store a segment that has already been retrieved,
+    // but check anyway.
+    if (segmentNumber > this.maxRetrievedSegmentNumber)
+        this.store.set(segmentNumber, data);
+};
+
+/*
+ * If the min segment number is this.maxRetrievedSegmentNumber + 1 and its value
+ * is not null, then delete from the store, return the entry with key and value,
+ * and update maxRetrievedSegmentNumber. Otherwise return null.
+ * @return {object} An object where "key" is the segment number and "value" is
+ * the Data object. However, if there is no next entry then return null.
+ */
+SegmentStore.prototype.maybeRetrieveNextEntry = function()
+{
+    if (this.store.entries.length > 0 && this.store.entries[0].value != null &&
+        this.store.entries[0].key == this.maxRetrievedSegmentNumber + 1) {
+        var entry = this.store.entries[0];
+        this.store.removeAt(0);
+        ++this.maxRetrievedSegmentNumber;
+        return entry;
+    }
+    else
+        return null;
+};
+
+/*
+ * Return an array of the next segment numbers that need to be requested so that
+ * the total requested segments is totalRequestedSegments. If a segment store
+ * entry value is null, it is already requested and is not returned. If a
+ * segment number is returned, create a entry in the segment store with a null
+ * value.
+ * @param {number} totalRequestedSegments The total number of requested segments.
+ * @return {Array<number>} An array of the next segment number to request. The
+ * array may be empty.
+ */
+SegmentStore.prototype.requestSegmentNumbers = function(totalRequestedSegments)
+{
+    // First, count how many are already requested.
+    var nRequestedSegments = 0;
+    for (var i = 0; i < this.store.entries.length; ++i) {
+        if (this.store.entries[i].value == null) {
+            ++nRequestedSegments;
+            if (nRequestedSegments >= totalRequestedSegments)
+                // Already maxed out on requests.
+                return [];
+        }
+    }
+
+    var toRequest = [];
+    var nextSegmentNumber = this.maxRetrievedSegmentNumber + 1;
+    for (var i = 0; i < this.store.entries.length; ++i) {
+        var entry = this.store.entries[i];
+        // Fill in the gap before the segment number in the entry.
+        while (nextSegmentNumber < entry.key) {
+            toRequest.push(nextSegmentNumber);
+            ++nextSegmentNumber;
+            ++nRequestedSegments;
+            if (nRequestedSegments >= totalRequestedSegments)
+                break;
+        }
+        if (nRequestedSegments >= totalRequestedSegments)
+            break;
+
+        nextSegmentNumber = entry.key + 1;
+    }
+
+    // We already filled in the gaps for the segments in the store. Continue after the last.
+    while (nRequestedSegments < totalRequestedSegments) {
+        toRequest.push(nextSegmentNumber);
+        ++nextSegmentNumber;
+        ++nRequestedSegments;
+    }
+
+    // Mark the new segment numbers as requested.
+    for (var i = 0; i < toRequest.length; ++i)
+        this.store.set(toRequest[i], null);
+    return toRequest;
+};
+
+/*
+ * A SortedArray is an array of objects with key and value, where the key is an
+ * integer.
+ */
+var SortedArray = function SortedArray()
+{
+    this.entries = [];
+};
+
+/**
+ * Sort the entries by the integer "key".
+ */
+SortedArray.prototype.sortEntries = function()
+{
+    this.entries.sort(function(a, b) { return a.key - b.key; });
+};
+
+/**
+ * Return the index number in this.entries of the object with a matching "key".
+ * @param {number} key The value of the object's "key".
+ * @returns {number} The index number, or -1 if not found.
+ */
+SortedArray.prototype.indexOfKey = function(key)
+{
+    for (var i = 0; i < this.entries.length; ++i) {
+        if (this.entries[i].key == key)
+            return i;
+    }
+
+    return -1;
+};
+
+/**
+ * Find or create an entry with the given "key" and set its "value".
+ * @param {integer} key The "key" of the entry object.
+ * @param {object} value The "value" of the entry object.
+ */
+SortedArray.prototype.set = function(key, value)
+{
+    var i = this.indexOfKey(key);
+    if (i >= 0) {
+        this.entries[i].value = value;
+        return;
+    }
+
+    this.entries.push({ key: key, value: value});
+    this.sortEntries();
+};
+
+/**
+ * Remove the entryin this.entries at the given index.
+ * @param {number} index The index of the entry to remove.
+ */
+SortedArray.prototype.removeAt = function(index)
+{
+    this.entries.splice(index, 1);
+};
+
+</script>
+</head>
+
+<body>
+
+NDN Name: <br>
+<input id="ndnfs-prefix" value="/ndn/edu/ucla/remap/demo" size="75"></input>
+<br/><br/>
+<input type="radio" name="face" value="webSocket" checked> wshub: <input type="text" id="hub" style = "width:235px" value="memoria.ndn.ucla.edu"><br/>
+<div id="microForwarder" style="visibility:hidden;">
+  <input type="radio" id="microForwarderRadio" name="face" value="microForwarder"> Micro Forwarder
+</div>
+<p><button id="connect-ndnfs">Connect</button></p>
+
+<a id="go-back" href="javascript:goBack();">[go back]</a><br>
+<div id="content">
+</div>
+
+<script type="text/javascript">
+  contentElement = document.getElementById("content");
+  document.getElementById("connect-ndnfs").onclick = connectButtonClick;
+
+  microForwarderTransport = new MicroForwarderTransport();
+  microForwarderTransport.setOnReceivedObject(function(obj) {
+    var haveMicroForwarder = (obj.type == "faces/list");
+    if (haveMicroForwarder)
+      document.getElementById("microForwarder").style.visibility = 'visible';
+  });
+  // Check if the Micro Forwarder is enabled.
+  setTimeout(function() {
+    microForwarderTransport.sendObject({ type: "faces/list" });
+  }, 500);
+</script>
+
+</body>
+
+</html>

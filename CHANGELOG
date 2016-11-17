@@ -1,9 +1,10 @@
-Interim changes since NDN-JS v0.12.0 (2016-11-02)
+Interim changes since NDN-JS v0.12.0 (2016-11-17)
 -------------------------------------------------
 
 Changes
 * https://redmine.named-data.net/issues/3798 In KeyChain.verifyData and verifyInterest,
   use onValidationFailed callbacks which include a reason string.
+* Examples: Added fetch-media.html .
 
 NDN-JS v0.12.0 (2016-11-02)
 ---------------------------
