@@ -205,7 +205,7 @@ MicroForwarder.prototype.onReceivedElement = function(face, element)
         thisForwarder.PIT_.splice(index, 1);
     };
     var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
-    setTimeout(timeoutCallback, timeoutMilliseconds);
+    pitEntry.timerId_ = setTimeout(timeoutCallback, timeoutMilliseconds);
 
     if (MicroForwarder.broadcastNamePrefix.match(interest.getName())) {
       // Special case: broadcast to all faces.
@@ -246,6 +246,10 @@ MicroForwarder.prototype.onReceivedElement = function(face, element)
       var entry = this.PIT_[i];
       if (entry.face != face && entry.face != null &&
           entry.interest.matchesData(data)) {
+        // Clear the timeout.
+        clearTimeout(entry.timerId_);
+        entry.timerId_ = -1;
+
         // Remove the entry before sending.
         this.PIT_.splice(i, 1);
 
