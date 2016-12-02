@@ -25,6 +25,7 @@ var fs = require("fs");
 var Blob = require('../../..').Blob;
 var Name = require('../../..').Name;
 var Data = require('../../..').Data;
+var Link = require('../../..').Link;
 var Encryptor = require('../../..').Encryptor;
 var EncryptAlgorithmType = require('../../..').EncryptAlgorithmType;
 var Sqlite3ConsumerDb = require('../../..').Sqlite3ConsumerDb;
@@ -301,7 +302,8 @@ describe ("TestConsumer", function() {
 
     // Prepare a TestFace to instantly answer calls to expressInterest.
     var TestFace = function TestFace() {};
-    TestFace.prototype.expressInterest = function(interest, onData, onTimeout)
+    TestFace.prototype.expressInterest = function
+      (interest, onData, onTimeout, onNetworkNack)
     {
       if (interest.matchesName(contentData.getName())) {
         contentCount = 1;
@@ -343,6 +345,85 @@ describe ("TestConsumer", function() {
       }, function(code, message) {
         done(new Error("consume error " + code + ": " + message));
       });
+    }, function(error) {
+      done(new Error("addDecryptionKey error: " + error));
+    });
+  });
+
+  it("CosumerWithLink", function(done) {
+    var contentData = createEncryptedContent();
+    var cKeyData = createEncryptedCKey();
+    var dKeyData = createEncryptedDKey();
+
+    var contentCount = 0;
+    var cKeyCount = 0;
+    var dKeyCount = 0;
+
+    // Prepare a TestFace to instantly answer calls to expressInterest.
+    var TestFace = function TestFace() {};
+    TestFace.prototype.expressInterest = function
+      (interest, onData, onTimeout, onNetworkNack)
+    {
+      assert.equal(interest.getLink().getDelegations().size(), 3);
+
+      if (interest.matchesName(contentData.getName())) {
+        contentCount = 1;
+        onData(interest, contentData);
+      }
+      else if (interest.matchesName(cKeyData.getName())) {
+        cKeyCount = 1;
+        onData(interest, cKeyData);
+      }
+      else if (interest.matchesName(dKeyData.getName())) {
+        dKeyCount = 1;
+        onData(interest, dKeyData);
+      }
+      else
+        onTimeout(interest);
+
+      return 0;
+    };
+
+    var face = new TestFace();
+
+    // Create the consumer.
+    var ckeyLink = new Link();
+    ckeyLink.addDelegation(10,  new Name("/ckey1"));
+    ckeyLink.addDelegation(20,  new Name("/ckey2"));
+    ckeyLink.addDelegation(100, new Name("/ckey3"));
+    var dkeyLink = new Link();
+    dkeyLink.addDelegation(10,  new Name("/dkey1"));
+    dkeyLink.addDelegation(20,  new Name("/dkey2"));
+    dkeyLink.addDelegation(100, new Name("/dkey3"));
+    var dataLink = new Link();
+    dataLink.addDelegation(10,  new Name("/data1"));
+    dataLink.addDelegation(20,  new Name("/data2"));
+    dataLink.addDelegation(100, new Name("/data3"));
+    keyChain.sign(ckeyLink, certificateName);
+    keyChain.sign(dkeyLink, certificateName);
+    keyChain.sign(dataLink, certificateName);
+
+    var consumer = new Consumer
+      (face, keyChain, groupName, uName, new Sqlite3ConsumerDb(databaseFilePath),
+       ckeyLink, dkeyLink);
+    consumer.addDecryptionKey(uKeyName, fixtureUDKeyBlob, function() {
+      var finalCount = 0;
+      consumer.consume(contentName, function(data, result) {
+        try {
+          finalCount = 1;
+          assert.ok(result.equals(new Blob(DATA_CONTENT, false)), "consumeComplete");
+
+          assert.equal(contentCount, 1, "contentCount");
+          assert.equal(cKeyCount, 1, "cKeyCount");
+          assert.equal(dKeyCount, 1, "dKeyCount");
+          assert.equal(finalCount, 1, "finalCount");
+
+          done();
+        } catch (ex) { done(ex); }
+      }, function(code, message) {
+        done(new Error("consume error " + code + ": " + message));
+      },
+      dataLink);
     }, function(error) {
       done(new Error("addDecryptionKey error: " + error));
     });

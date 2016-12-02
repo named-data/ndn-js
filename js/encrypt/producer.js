@@ -22,6 +22,8 @@
 var Name = require('../name.js').Name; /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var Data = require('../data.js').Data; /** @ignore */
+var Link = require('../link.js').Link; /** @ignore */
+var NetworkNack = require('../network-nack.js').NetworkNack; /** @ignore */
 var Exclude = require('../exclude.js').Exclude; /** @ignore */
 var Encryptor = require('./algo/encryptor.js').Encryptor; /** @ignore */
 var EncryptParams = require('./algo/encrypt-params.js').EncryptParams; /** @ignore */
@@ -56,16 +58,22 @@ var SyncPromise = require('../util/sync-promise.js').SyncPromise;
  * @param {ProducerDb} database The ProducerDb database for storing keys.
  * @param {number} repeatAttempts (optional) The maximum retry for retrieving
  * keys. If omitted, use a default value of 3.
+ * @param {Link} keyRetrievalLink (optional) The Link object to use in Interests
+ * for key retrieval. This makes a copy of the Link object. If the Link object's
+ * getDelegations().size() is zero, don't use it. If omitted, don't use a Link
+ * object.
  * @note This class is an experimental feature. The API may change.
  * @constructor
  */
 var Producer = function Producer
-  (prefix, dataType, face, keyChain, database, repeatAttempts)
+  (prefix, dataType, face, keyChain, database, repeatAttempts, keyRetrievalLink)
 {
   this.face_ = face;
   this.keyChain_ = keyChain;
   this.database_ = database;
   this.maxRepeatAttempts_ = (repeatAttempts == undefined ? 3 : repeatAttempts);
+  this.keyRetrievalLink_ =
+    (keyRetrievalLink == undefined ? Producer.NO_LINK : new Link(keyRetrievalLink));
 
   // The map key is the key name URI string. The value is an object with fields
   // "keyName" and "keyInfo" where "keyName" is the same Name used for the key
@@ -316,10 +324,21 @@ Producer.prototype.sendKeyInterest_ = function
 
   function onNetworkNack(interest, networkNack) {
     thisProducer.handleNetworkNack_
-      (interest, networkNack, timeSlot, onEncryptedKeys);
+      (interest, networkNack, timeSlot, onEncryptedKeys, onError);
   }
 
-  this.face_.expressInterest(interest, onKey, onTimeout, onNetworkNack);
+  var request;
+  if (this.keyRetrievalLink_.getDelegations().size() === 0)
+    // We can use the supplied interest without copying.
+    request = interest;
+  else {
+    // Copy the supplied interest and add the Link.
+    request = new Interest(interest);
+    // This will use a cached encoding if available.
+    request.setLinkWireEncoding(this.keyRetrievalLink_.wireEncode());
+  }
+
+  this.face_.expressInterest(request, onKey, onTimeout, onNetworkNack);
 };
 
 /**
@@ -348,8 +367,9 @@ Producer.prototype.handleTimeout_ = function
     this.sendKeyInterest_(interest, timeSlot, onEncryptedKeys, onError);
   }
   else
-    // No more retrials.
-    this.updateKeyRequest_(keyRequest, timeCount, onEncryptedKeys);
+    // Treat an eventual timeout as a network Nack.
+    this.handleNetworkNack_
+      (interest, new NetworkNack(), timeSlot, onEncryptedKeys, onError);
 };
 
 /**
@@ -364,8 +384,9 @@ Producer.prototype.handleTimeout_ = function
  * key Data packets. If onEncryptedKeys is null, this does not use it.
  */
 Producer.prototype.handleNetworkNack_ = function
-  (interest, networkNack, timeSlot, onEncryptedKeys)
+  (interest, networkNack, timeSlot, onEncryptedKeys, onError)
 {
+  // We have run out of options....
   var timeCount = Math.round(timeSlot);
   this.updateKeyRequest_
     (this.keyRequests_[timeCount], timeCount, onEncryptedKeys);
@@ -736,3 +757,4 @@ Producer.excludeRange = function(exclude, from, to)
 
 Producer.START_TIME_STAMP_INDEX = -2;
 Producer.END_TIME_STAMP_INDEX = -1;
+Producer.NO_LINK = new Link();
