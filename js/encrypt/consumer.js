@@ -85,59 +85,20 @@ exports.Consumer = Consumer;
 Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
 {
   var interest = new Interest(contentName);
-
-  // Prepare the callback functions.
   var thisConsumer = this;
-  var onData = function(contentInterest, contentData) {
-    // The Interest has no selectors, so assume the library correctly
-    // matched with the Data name before calling onData.
-
-    try {
-      thisConsumer.keyChain_.verifyData(contentData, function(validData) {
-        // Decrypt the content.
-        thisConsumer.decryptContent_(validData, function(plainText) {
-          try {
-            onConsumeComplete(contentData, plainText);
-          } catch (ex) {
-            console.log("Error in onConsumeComplete: " + NdnCommon.getErrorWithStackTrace(ex));
-          }
-        }, onError);
-      }, function(d, reason) {
-        try {
-          onError
-            (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
-             reason);
-        } catch (ex) {
-          console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-        }
-      });
-    } catch (ex) {
-      Consumer.Error.callOnError(onError, ex, "verifyData error: ");
-    }
-  };
-
-  var onTimeout = function(contentInterest) {
-    // We should re-try at least once.
-    try {
-      thisConsumer.face_.expressInterest
-        (interest, onData, function(contentInterest) {
-        try {
-          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
-        } catch (ex) {
-          console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-        }
-       });
-    } catch (ex) {
-      Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
-    }
-  };
-
-  // Express the Interest.
-  try {
-    this.face_.expressInterest(interest, onData, onTimeout);
-  } catch (ex) {
-    Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
-  }
+  this.sendInterest_
+    (interest,
+     function(validData) {
+       // Decrypt the content.
+       thisConsumer.decryptContent_(validData, function(plainText) {
+         try {
+           onConsumeComplete(validData, plainText);
+         } catch (ex) {
+           console.log("Error in onConsumeComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+         }
+       }, onError);
+     },
+     onError);
 };
 
 /**
@@ -323,48 +284,17 @@ Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
     var interestName = new Name(cKeyName);
     interestName.append(Encryptor.NAME_COMPONENT_FOR).append(this.groupName_);
     var interest = new Interest(interestName);
-
-    // Prepare the callback functions.
     var thisConsumer = this;
-    var onData = function(cKeyInterest, cKeyData) {
-      // The Interest has no selectors, so assume the library correctly
-      // matched with the Data name before calling onData.
-
-      try {
-        thisConsumer.keyChain_.verifyData(cKeyData, function(validCKeyData) {
-          thisConsumer.decryptCKey_(validCKeyData, function(cKeyBits) {
-            thisConsumer.cKeyMap_[cKeyName.toUri()] = cKeyBits;
-            Consumer.decrypt_
-              (dataEncryptedContent, cKeyBits, onPlainText, onError);
-          }, onError);
-        }, function(d, reason) {
-          onError
-            (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
-             reason);
-        });
-      } catch (ex) {
-        Consumer.Error.callOnError(onError, ex, "verifyData error: ");
-      }
-    };
-
-    var onTimeout = function(dKeyInterest) {
-      // We should re-try at least once.
-      try {
-        thisConsumer.face_.expressInterest
-          (interest, onData, function(contentInterest) {
-          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
-         });
-      } catch (ex) {
-        Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
-      }
-    };
-
-    // Express the Interest.
-    try {
-      thisConsumer.face_.expressInterest(interest, onData, onTimeout);
-    } catch (ex) {
-      Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
-    }
+    this.sendInterest_
+      (interest,
+       function(validCKeyData) {
+         thisConsumer.decryptCKey_(validCKeyData, function(cKeyBits) {
+           thisConsumer.cKeyMap_[cKeyName.toUri()] = cKeyBits;
+           Consumer.decrypt_
+             (dataEncryptedContent, cKeyBits, onPlainText, onError);
+         }, onError);
+       },
+       onError);
   }
 };
 
@@ -400,51 +330,20 @@ Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
     var interestName = new Name(dKeyName);
     interestName.append(Encryptor.NAME_COMPONENT_FOR).append(this.consumerName_);
     var interest = new Interest(interestName);
-
-    // Prepare the callback functions.
     var thisConsumer = this;
-    var onData = function(dKeyInterest, dKeyData) {
-      // The Interest has no selectors, so assume the library correctly
-      // matched with the Data name before calling onData.
-
-      try {
-        thisConsumer.keyChain_.verifyData(dKeyData, function(validDKeyData) {
-          thisConsumer.decryptDKeyPromise_(validDKeyData)
-          .then(function(dKeyBits) {
-            thisConsumer.dKeyMap_[dKeyName.toUri()] = dKeyBits;
-            Consumer.decrypt_
-              (cKeyEncryptedContent, dKeyBits, onPlainText, onError);
-          }, function(ex) {
-            Consumer.Error.callOnError(onError, ex, "decryptDKey error: ");
-          });
-        }, function(d, reason) {
-          onError
-            (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
-             reason);
-        });
-      } catch (ex) {
-        Consumer.Error.callOnError(onError, ex, "verifyData error: ");
-      }
-    };
-
-    var onTimeout = function(dKeyInterest) {
-      // We should re-try at least once.
-      try {
-        thisConsumer.face_.expressInterest
-          (interest, onData, function(contentInterest) {
-          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
+    this.sendInterest_
+      (interest,
+       function(validDKeyData) {
+         thisConsumer.decryptDKeyPromise_(validDKeyData)
+         .then(function(dKeyBits) {
+           thisConsumer.dKeyMap_[dKeyName.toUri()] = dKeyBits;
+           Consumer.decrypt_
+             (cKeyEncryptedContent, dKeyBits, onPlainText, onError);
+         }, function(ex) {
+           Consumer.Error.callOnError(onError, ex, "decryptDKey error: ");
          });
-      } catch (ex) {
-        Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
-      }
-    };
-
-    // Express the Interest.
-    try {
-      thisConsumer.face_.expressInterest(interest, onData, onTimeout);
-    } catch (ex) {
-      Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
-    }
+       },
+       onError);
   }
 };
 
@@ -497,6 +396,62 @@ Consumer.prototype.decryptDKeyPromise_ = function(dKeyData)
   .then(function(nonceKeyBits) {
     return Consumer.decryptPromise_(encryptedPayloadBlob, nonceKeyBits);
   });
+};
+
+/**
+ * Express the interest, call verifyData for the fetched Data packet and call
+ * onVerified if verify succeeds. If verify fails, call
+ * onError(EncryptError.ErrorCode.Validation, "verifyData failed").
+ * @param {Interest} interest The Interest to express.
+ * @param {function} onVerified When the fetched Data packet validation
+ * succeeds, this calls onVerified(data).
+ * @param {function} onError This calls onError(errorCode, message) for an error,
+ * where errorCode is an error code from EncryptError.ErrorCode.
+ */
+Consumer.prototype.sendInterest_ = function(interest, onVerified, onError)
+{
+  // Prepare the callback functions.
+  var thisConsumer = this;
+  var onData = function(contentInterest, contentData) {
+    try {
+      thisConsumer.keyChain_.verifyData
+        (contentData, onVerified,
+         function(d, reason) {
+           try {
+             onError
+               (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
+                reason);
+           } catch (ex) {
+             console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+           }
+         });
+    } catch (ex) {
+      Consumer.Error.callOnError(onError, ex, "verifyData error: ");
+    }
+  };
+
+  var onTimeout = function(interest) {
+    // We should re-try at least once.
+    try {
+      thisConsumer.face_.expressInterest
+        (interest, onData, function(contentInterest) {
+        try {
+          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
+        } catch (ex) {
+          console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+       });
+    } catch (ex) {
+      Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
+    }
+  };
+
+  // Express the Interest.
+  try {
+    this.face_.expressInterest(interest, onData, onTimeout);
+  } catch (ex) {
+    Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
+  }
 };
 
 /**
