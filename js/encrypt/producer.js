@@ -23,6 +23,7 @@ var Name = require('../name.js').Name; /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var Data = require('../data.js').Data; /** @ignore */
 var Link = require('../link.js').Link; /** @ignore */
+var NetworkNack = require('../network-nack.js').NetworkNack; /** @ignore */
 var Exclude = require('../exclude.js').Exclude; /** @ignore */
 var Encryptor = require('./algo/encryptor.js').Encryptor; /** @ignore */
 var EncryptParams = require('./algo/encrypt-params.js').EncryptParams; /** @ignore */
@@ -366,8 +367,9 @@ Producer.prototype.handleTimeout_ = function
     this.sendKeyInterest_(interest, timeSlot, onEncryptedKeys, onError);
   }
   else
-    // No more retrials.
-    this.updateKeyRequest_(keyRequest, timeCount, onEncryptedKeys);
+    // Treat an eventual timeout as a network Nack.
+    this.handleNetworkNack_
+      (interest, new NetworkNack(), timeSlot, onEncryptedKeys, onError);
 };
 
 /**
@@ -384,6 +386,7 @@ Producer.prototype.handleTimeout_ = function
 Producer.prototype.handleNetworkNack_ = function
   (interest, networkNack, timeSlot, onEncryptedKeys, onError)
 {
+  // We have run out of options....
   var timeCount = Math.round(timeSlot);
   this.updateKeyRequest_
     (this.keyRequests_[timeCount], timeCount, onEncryptedKeys);
