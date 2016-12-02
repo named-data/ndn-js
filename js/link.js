@@ -47,7 +47,7 @@ var Link = function Link(value)
 
     if (!this.getContent().isNull()) {
       try {
-        this.delegations_.wireDecode(getContent());
+        this.delegations_.wireDecode(this.getContent());
         this.getMetaInfo().setType(ContentType.LINK);
       }
       catch (ex) {
