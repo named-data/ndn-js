@@ -1,9 +1,11 @@
-Interim changes since NDN-JS v0.12.0 (2016-11-17)
+Interim changes since NDN-JS v0.12.0 (2016-12-02)
 -------------------------------------------------
 
 Changes
 * https://redmine.named-data.net/issues/3798 In KeyChain.verifyData and verifyInterest,
   use onValidationFailed callbacks which include a reason string.
+* https://redmine.named-data.net/issues/3543 Support for Link objects in the
+  encrypt package Producer and Consumer.
 * Examples: Added fetch-media.html .
 
 NDN-JS v0.12.0 (2016-11-02)
