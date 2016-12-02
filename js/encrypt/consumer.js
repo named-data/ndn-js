@@ -23,6 +23,7 @@ var Blob = require('../util/blob.js').Blob; /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var NetworkNack = require('../network-nack.js').NetworkNack; /** @ignore */
+var Link = require('../link.js').Link; /** @ignore */
 var EncryptedContent = require('./encrypted-content.js').EncryptedContent; /** @ignore */
 var EncryptError = require('./encrypt-error.js').EncryptError; /** @ignore */
 var EncryptParams = require('./algo/encrypt-params.js').EncryptParams; /** @ignore */
@@ -45,17 +46,29 @@ var NdnCommon = require('../util/ndn-common.js').NdnCommon;
  * the Name.
  * @param {ConsumerDb} database The ConsumerDb database for storing decryption
  * keys.
+ * @param {Link} cKeyLink (optional) The Link object to use in Interests for
+ * C-KEY retrieval. This makes a copy of the Link object. If the Link object's
+ * getDelegations().size() is zero, don't use it. If omitted, don't use a Link
+ * object.
+ * @param {Link} dKeyLink (optional) The Link object to use in Interests for
+ * D-KEY retrieval. This makes a copy of the Link object. If the Link object's
+ * getDelegations().size() is zero, don't use it. If omitted, don't use a Link
+ * object.
  * @note This class is an experimental feature. The API may change.
  * @constructor
  */
 var Consumer = function Consumer
-  (face, keyChain, groupName, consumerName, database)
+  (face, keyChain, groupName, consumerName, database, cKeyLink, dKeyLink)
 {
   this.database_ = database;
   this.keyChain_ = keyChain;
   this.face_ = face;
   this.groupName_ = new Name(groupName);
   this.consumerName_ = new Name(consumerName);
+  this.cKeyLink_ =
+    (cKeyLink == undefined ? Consumer.NO_LINK : new Link(cKeyLink));
+  this.dKeyLink_ =
+    (dKeyLink == undefined ? Consumer.NO_LINK : new Link(dKeyLink));
 
   // The map key is the C-KEY name URI string. The value is the encoded key Blob.
   // (Use a string because we can't use the Name object as the key in JavaScript.)
@@ -82,13 +95,22 @@ exports.Consumer = Consumer;
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
+ * @param link {Link} (optional) The Link object to use in Interests for data
+ * retrieval. This makes a copy of the Link object. If the Link object's
+ * getDelegations().size() is zero, don't use it. If omitted, don't use a Link
+ * object.
  */
-Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
+Consumer.prototype.consume = function
+  (contentName, onConsumeComplete, onError, link)
 {
+  if (link == undefined)
+    link = Consumer.NO_LINK;
+
   var interest = new Interest(contentName);
   var thisConsumer = this;
+  // Copy the Link object since the passed link may become invalid.
   this.sendInterest_
-    (interest, 1,
+    (interest, 1, new Link(link),
      function(validData) {
        // Decrypt the content.
        thisConsumer.decryptContent_(validData, function(plainText) {
@@ -287,7 +309,7 @@ Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
     var interest = new Interest(interestName);
     var thisConsumer = this;
     this.sendInterest_
-      (interest, 1,
+      (interest, 1, this.cKeyLink_,
        function(validCKeyData) {
          thisConsumer.decryptCKey_(validCKeyData, function(cKeyBits) {
            thisConsumer.cKeyMap_[cKeyName.toUri()] = cKeyBits;
@@ -333,7 +355,7 @@ Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
     var interest = new Interest(interestName);
     var thisConsumer = this;
     this.sendInterest_
-      (interest, 1,
+      (interest, 1, this.dKeyLink_,
        function(validDKeyData) {
          thisConsumer.decryptDKeyPromise_(validDKeyData)
          .then(function(dKeyBits) {
@@ -408,13 +430,16 @@ Consumer.prototype.decryptDKeyPromise_ = function(dKeyData)
  * onError(EncryptError.ErrorCode.DataRetrievalFailure, interest.getName().toUri()).
  * @param {Interest} interest The Interest to express.
  * @param {number} nRetrials The number of retrials left after a timeout.
+ * @param {Link} link The Link object to use in the Interest. This does not make
+ * a copy of the Link object. If the Link object's getDelegations().size() is
+ * zero, don't use it.
  * @param {function} onVerified When the fetched Data packet validation
  * succeeds, this calls onVerified(data).
  * @param {function} onError This calls onError(errorCode, message) for an error,
  * where errorCode is an error code from EncryptError.ErrorCode.
  */
 Consumer.prototype.sendInterest_ = function
-  (interest, nRetrials, onVerified, onError)
+  (interest, nRetrials, link, onVerified, onError)
 {
   // Prepare the callback functions.
   var thisConsumer = this;
@@ -453,9 +478,19 @@ Consumer.prototype.sendInterest_ = function
       onNetworkNack(interest, new NetworkNack());
   };
 
-  // Express the Interest.
+  var request;
+  if (link.getDelegations().size() === 0)
+    // We can use the supplied interest without copying.
+    request = interest;
+  else {
+    // Copy the supplied interest and add the Link.
+    request = new Interest(interest);
+    // This will use a cached encoding if available.
+    request.setLinkWireEncoding(link.wireEncode());
+  }
+
   try {
-    this.face_.expressInterest(interest, onData, onTimeout, onNetworkNack);
+    this.face_.expressInterest(request, onData, onTimeout, onNetworkNack);
   } catch (ex) {
     Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
   }
@@ -473,3 +508,5 @@ Consumer.prototype.getDecryptionKeyPromise_ = function(decryptionKeyName)
 {
   return this.database_.getKeyPromise(decryptionKeyName);
 };
+
+Consumer.NO_LINK = new Link();
