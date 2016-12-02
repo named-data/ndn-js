@@ -323,7 +323,7 @@ Producer.prototype.sendKeyInterest_ = function
 
   function onNetworkNack(interest, networkNack) {
     thisProducer.handleNetworkNack_
-      (interest, networkNack, timeSlot, onEncryptedKeys);
+      (interest, networkNack, timeSlot, onEncryptedKeys, onError);
   }
 
   var request;
@@ -382,7 +382,7 @@ Producer.prototype.handleTimeout_ = function
  * key Data packets. If onEncryptedKeys is null, this does not use it.
  */
 Producer.prototype.handleNetworkNack_ = function
-  (interest, networkNack, timeSlot, onEncryptedKeys)
+  (interest, networkNack, timeSlot, onEncryptedKeys, onError)
 {
   var timeCount = Math.round(timeSlot);
   this.updateKeyRequest_
