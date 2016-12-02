@@ -22,6 +22,7 @@
 var Blob = require('../util/blob.js').Blob; /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
+var NetworkNack = require('../network-nack.js').NetworkNack; /** @ignore */
 var EncryptedContent = require('./encrypted-content.js').EncryptedContent; /** @ignore */
 var EncryptError = require('./encrypt-error.js').EncryptError; /** @ignore */
 var EncryptParams = require('./algo/encrypt-params.js').EncryptParams; /** @ignore */
@@ -87,7 +88,7 @@ Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
   var interest = new Interest(contentName);
   var thisConsumer = this;
   this.sendInterest_
-    (interest,
+    (interest, 1,
      function(validData) {
        // Decrypt the content.
        thisConsumer.decryptContent_(validData, function(plainText) {
@@ -286,7 +287,7 @@ Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
     var interest = new Interest(interestName);
     var thisConsumer = this;
     this.sendInterest_
-      (interest,
+      (interest, 1,
        function(validCKeyData) {
          thisConsumer.decryptCKey_(validCKeyData, function(cKeyBits) {
            thisConsumer.cKeyMap_[cKeyName.toUri()] = cKeyBits;
@@ -332,7 +333,7 @@ Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
     var interest = new Interest(interestName);
     var thisConsumer = this;
     this.sendInterest_
-      (interest,
+      (interest, 1,
        function(validDKeyData) {
          thisConsumer.decryptDKeyPromise_(validDKeyData)
          .then(function(dKeyBits) {
@@ -401,14 +402,19 @@ Consumer.prototype.decryptDKeyPromise_ = function(dKeyData)
 /**
  * Express the interest, call verifyData for the fetched Data packet and call
  * onVerified if verify succeeds. If verify fails, call
- * onError(EncryptError.ErrorCode.Validation, "verifyData failed").
+ * onError(EncryptError.ErrorCode.Validation, "verifyData failed"). If the
+ * interest times out, re-express nRetrials times. If the interest times out
+ * nRetrials times, or for a network Nack, call
+ * onError(EncryptError.ErrorCode.DataRetrievalFailure, interest.getName().toUri()).
  * @param {Interest} interest The Interest to express.
+ * @param {number} nRetrials The number of retrials left after a timeout.
  * @param {function} onVerified When the fetched Data packet validation
  * succeeds, this calls onVerified(data).
  * @param {function} onError This calls onError(errorCode, message) for an error,
  * where errorCode is an error code from EncryptError.ErrorCode.
  */
-Consumer.prototype.sendInterest_ = function(interest, onVerified, onError)
+Consumer.prototype.sendInterest_ = function
+  (interest, nRetrials, onVerified, onError)
 {
   // Prepare the callback functions.
   var thisConsumer = this;
@@ -430,25 +436,26 @@ Consumer.prototype.sendInterest_ = function(interest, onVerified, onError)
     }
   };
 
-  var onTimeout = function(interest) {
-    // We should re-try at least once.
+  function onNetworkNack(interest, networkNack) {
+    // We have run out of options. Report a retrieval failure.
     try {
-      thisConsumer.face_.expressInterest
-        (interest, onData, function(contentInterest) {
-        try {
-          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
-        } catch (ex) {
-          console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-        }
-       });
+      onError(EncryptError.ErrorCode.DataRetrievalFailure,
+              interest.getName().toUri());
     } catch (ex) {
-      Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
+      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
     }
+  }
+
+  var onTimeout = function(interest) {
+    if (nRetrials > 0)
+      thisConsumer.sendInterest_(interest, nRetrials - 1, onVerified, onError);
+    else
+      onNetworkNack(interest, new NetworkNack());
   };
 
   // Express the Interest.
   try {
-    this.face_.expressInterest(interest, onData, onTimeout);
+    this.face_.expressInterest(interest, onData, onTimeout, onNetworkNack);
   } catch (ex) {
     Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
   }
