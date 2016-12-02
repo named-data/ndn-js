@@ -24,6 +24,7 @@ var assert = require("assert");
 var fs = require("fs");
 var Name = require('../../..').Name;
 var Data = require('../../..').Data;
+var Link = require('../../..').Link;
 var Blob = require('../../..').Blob;
 var MemoryIdentityStorage = require('../../..').MemoryIdentityStorage;
 var MemoryPrivateKeyStorage = require('../../..').MemoryPrivateKeyStorage;
@@ -384,6 +385,56 @@ describe ("TestProducer", function() {
     // out. The result vector should not contain elements that have timed out.
     var testDb = new Sqlite3ProducerDb(databaseFilePath);
     var producer = new Producer(prefix, suffix, face, keyChain, testDb);
+    producer.createContentKey
+      (testTime, function(result) {
+      try {
+        assert.equal(timeoutCount, 4);
+        assert.equal(result.length, 0);
+        done();
+      } catch (ex) { done(ex); }
+    },
+      function(contentKeyName) {},
+      function(errorCode, message) { done(new Error(message)); });
+  });
+
+  it("ProducerWithLink", function(done) {
+    var prefix = new Name("/prefix");
+    var suffix = new Name("/suffix");
+    var expectedInterest = new Name(prefix);
+    expectedInterest.append(Encryptor.NAME_COMPONENT_READ);
+    expectedInterest.append(suffix);
+    expectedInterest.append(Encryptor.NAME_COMPONENT_E_KEY);
+
+    var testTime = Common.fromIsoString("20150101T100001");
+
+    var timeoutCount = 0;
+
+    // Prepare a TestFace to instantly answer calls to expressInterest.
+    var TestFace = function TestFace() {};
+    TestFace.prototype.expressInterest = function
+      (interest, onData, onTimeout, onNetworkNack)
+    {
+      try {
+        assert.ok(expectedInterest.equals(interest.getName()));
+        assert.equal(interest.getLink().getDelegations().size(), 3);
+        ++timeoutCount;
+        onTimeout(interest);
+
+        return 0;
+      } catch (ex) { done(ex); }
+    };
+
+    var face = new TestFace();
+
+    // Verify that if no response is received, the producer appropriately times
+    // out. The result vector should not contain elements that have timed out.
+    var link = new Link();
+    link.addDelegation(10,  new Name("/test1"));
+    link.addDelegation(20,  new Name("/test2"));
+    link.addDelegation(100, new Name("/test3"));
+    keyChain.sign(link, certificateName);
+    var testDb = new Sqlite3ProducerDb(databaseFilePath);
+    var producer = new Producer(prefix, suffix, face, keyChain, testDb, 3, link);
     producer.createContentKey
       (testTime, function(result) {
       try {
