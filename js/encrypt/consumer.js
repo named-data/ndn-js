@@ -473,7 +473,7 @@ Consumer.prototype.sendInterest_ = function
 
   var onTimeout = function(interest) {
     if (nRetrials > 0)
-      thisConsumer.sendInterest_(interest, nRetrials - 1, onVerified, onError);
+      thisConsumer.sendInterest_(interest, nRetrials - 1, link, onVerified, onError);
     else
       onNetworkNack(interest, new NetworkNack());
   };
