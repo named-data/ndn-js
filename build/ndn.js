@@ -23642,7 +23642,7 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
         } catch (ex) {
           console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
         }
-        return;
+        return null;
       }
       thisManager.certificateCache.insertCertificate(certificate);
       thisManager.checkVerificationPolicy
@@ -23763,7 +23763,7 @@ ConfigPolicyManager.prototype.loadTrustAnchorCertificates = function()
  * components.
  * @param {BoostInfoTree} rule The rule from the configuration file that matches
  * the data or interest.
- * @param {Array<strng>} failureReason If matching fails, set failureReason[0]
+ * @param {Array<string>} failureReason If matching fails, set failureReason[0]
  * to the failure reason.
  * @return {boolean} True if matches.
  */
@@ -23821,7 +23821,7 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
         return true;
       else {
         failureReason[0] = "The hierarchical objectName \"" + objectName.toUri() +
-          "\" is not a prefix of \"" + identityPrefix + "\"";
+          "\" is not a prefix of \"" + identityPrefix.toUri() + "\"";
         return false;
       }
     }
@@ -24075,7 +24075,7 @@ ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
  * of this key, or within the grace interval on first use.
  * @param {Name} keyName The name of the public key used to sign the interest.
  * @param {number} timestamp The timestamp extracted from the interest name.
- * @param {Array<strng>} failureReason If matching fails, set failureReason[0]
+ * @param {Array<string>} failureReason If matching fails, set failureReason[0]
  * to the failure reason.
  * @return {boolean} True if timestamp is fresh as described above.
  */
@@ -25440,7 +25440,7 @@ KeyChain.prototype.signWithSha256 = function(target, wireFormat)
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {function} onValidationFailed If the signature check fails, this calls
- * onValidationFailed(data, reason).
+ * onValidationFailed(data, reason) with the Data object and reason string.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -25496,7 +25496,8 @@ KeyChain.prototype.verifyData = function
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {function} onValidationFailed If the signature check fails, this calls
- * onValidationFailed(interest, reason).
+ * onValidationFailed(interest, reason) with the Interest object and reason
+ * string.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -27658,7 +27659,7 @@ var Link = function Link(value)
 
     if (!this.getContent().isNull()) {
       try {
-        this.delegations_.wireDecode(getContent());
+        this.delegations_.wireDecode(this.getContent());
         this.getMetaInfo().setType(ContentType.LINK);
       }
       catch (ex) {
@@ -30439,6 +30440,8 @@ ConsumerDb.prototype.deleteKeyPromise = function(keyName, useSync)
 var Blob = require('../util/blob.js').Blob; /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
+var NetworkNack = require('../network-nack.js').NetworkNack; /** @ignore */
+var Link = require('../link.js').Link; /** @ignore */
 var EncryptedContent = require('./encrypted-content.js').EncryptedContent; /** @ignore */
 var EncryptError = require('./encrypt-error.js').EncryptError; /** @ignore */
 var EncryptParams = require('./algo/encrypt-params.js').EncryptParams; /** @ignore */
@@ -30461,17 +30464,29 @@ var NdnCommon = require('../util/ndn-common.js').NdnCommon;
  * the Name.
  * @param {ConsumerDb} database The ConsumerDb database for storing decryption
  * keys.
+ * @param {Link} cKeyLink (optional) The Link object to use in Interests for
+ * C-KEY retrieval. This makes a copy of the Link object. If the Link object's
+ * getDelegations().size() is zero, don't use it. If omitted, don't use a Link
+ * object.
+ * @param {Link} dKeyLink (optional) The Link object to use in Interests for
+ * D-KEY retrieval. This makes a copy of the Link object. If the Link object's
+ * getDelegations().size() is zero, don't use it. If omitted, don't use a Link
+ * object.
  * @note This class is an experimental feature. The API may change.
  * @constructor
  */
 var Consumer = function Consumer
-  (face, keyChain, groupName, consumerName, database)
+  (face, keyChain, groupName, consumerName, database, cKeyLink, dKeyLink)
 {
   this.database_ = database;
   this.keyChain_ = keyChain;
   this.face_ = face;
   this.groupName_ = new Name(groupName);
   this.consumerName_ = new Name(consumerName);
+  this.cKeyLink_ =
+    (cKeyLink == undefined ? Consumer.NO_LINK : new Link(cKeyLink));
+  this.dKeyLink_ =
+    (dKeyLink == undefined ? Consumer.NO_LINK : new Link(dKeyLink));
 
   // The map key is the C-KEY name URI string. The value is the encoded key Blob.
   // (Use a string because we can't use the Name object as the key in JavaScript.)
@@ -30498,63 +30513,33 @@ exports.Consumer = Consumer;
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
+ * @param link {Link} (optional) The Link object to use in Interests for data
+ * retrieval. This makes a copy of the Link object. If the Link object's
+ * getDelegations().size() is zero, don't use it. If omitted, don't use a Link
+ * object.
  */
-Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
+Consumer.prototype.consume = function
+  (contentName, onConsumeComplete, onError, link)
 {
+  if (link == undefined)
+    link = Consumer.NO_LINK;
+
   var interest = new Interest(contentName);
-
-  // Prepare the callback functions.
   var thisConsumer = this;
-  var onData = function(contentInterest, contentData) {
-    // The Interest has no selectors, so assume the library correctly
-    // matched with the Data name before calling onData.
-
-    try {
-      thisConsumer.keyChain_.verifyData(contentData, function(validData) {
-        // Decrypt the content.
-        thisConsumer.decryptContent_(validData, function(plainText) {
-          try {
-            onConsumeComplete(contentData, plainText);
-          } catch (ex) {
-            console.log("Error in onConsumeComplete: " + NdnCommon.getErrorWithStackTrace(ex));
-          }
-        }, onError);
-      }, function(d, reason) {
-        try {
-          onError
-            (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
-             reason);
-        } catch (ex) {
-          console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-        }
-      });
-    } catch (ex) {
-      Consumer.Error.callOnError(onError, ex, "verifyData error: ");
-    }
-  };
-
-  var onTimeout = function(contentInterest) {
-    // We should re-try at least once.
-    try {
-      thisConsumer.face_.expressInterest
-        (interest, onData, function(contentInterest) {
-        try {
-          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
-        } catch (ex) {
-          console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-        }
-       });
-    } catch (ex) {
-      Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
-    }
-  };
-
-  // Express the Interest.
-  try {
-    this.face_.expressInterest(interest, onData, onTimeout);
-  } catch (ex) {
-    Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
-  }
+  // Copy the Link object since the passed link may become invalid.
+  this.sendInterest_
+    (interest, 1, new Link(link),
+     function(validData) {
+       // Decrypt the content.
+       thisConsumer.decryptContent_(validData, function(plainText) {
+         try {
+           onConsumeComplete(validData, plainText);
+         } catch (ex) {
+           console.log("Error in onConsumeComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+         }
+       }, onError);
+     },
+     onError);
 };
 
 /**
@@ -30740,48 +30725,17 @@ Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
     var interestName = new Name(cKeyName);
     interestName.append(Encryptor.NAME_COMPONENT_FOR).append(this.groupName_);
     var interest = new Interest(interestName);
-
-    // Prepare the callback functions.
     var thisConsumer = this;
-    var onData = function(cKeyInterest, cKeyData) {
-      // The Interest has no selectors, so assume the library correctly
-      // matched with the Data name before calling onData.
-
-      try {
-        thisConsumer.keyChain_.verifyData(cKeyData, function(validCKeyData) {
-          thisConsumer.decryptCKey_(validCKeyData, function(cKeyBits) {
-            thisConsumer.cKeyMap_[cKeyName.toUri()] = cKeyBits;
-            Consumer.decrypt_
-              (dataEncryptedContent, cKeyBits, onPlainText, onError);
-          }, onError);
-        }, function(d, reason) {
-          onError
-            (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
-             reason);
-        });
-      } catch (ex) {
-        Consumer.Error.callOnError(onError, ex, "verifyData error: ");
-      }
-    };
-
-    var onTimeout = function(dKeyInterest) {
-      // We should re-try at least once.
-      try {
-        thisConsumer.face_.expressInterest
-          (interest, onData, function(contentInterest) {
-          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
-         });
-      } catch (ex) {
-        Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
-      }
-    };
-
-    // Express the Interest.
-    try {
-      thisConsumer.face_.expressInterest(interest, onData, onTimeout);
-    } catch (ex) {
-      Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
-    }
+    this.sendInterest_
+      (interest, 1, this.cKeyLink_,
+       function(validCKeyData) {
+         thisConsumer.decryptCKey_(validCKeyData, function(cKeyBits) {
+           thisConsumer.cKeyMap_[cKeyName.toUri()] = cKeyBits;
+           Consumer.decrypt_
+             (dataEncryptedContent, cKeyBits, onPlainText, onError);
+         }, onError);
+       },
+       onError);
   }
 };
 
@@ -30817,51 +30771,20 @@ Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
     var interestName = new Name(dKeyName);
     interestName.append(Encryptor.NAME_COMPONENT_FOR).append(this.consumerName_);
     var interest = new Interest(interestName);
-
-    // Prepare the callback functions.
     var thisConsumer = this;
-    var onData = function(dKeyInterest, dKeyData) {
-      // The Interest has no selectors, so assume the library correctly
-      // matched with the Data name before calling onData.
-
-      try {
-        thisConsumer.keyChain_.verifyData(dKeyData, function(validDKeyData) {
-          thisConsumer.decryptDKeyPromise_(validDKeyData)
-          .then(function(dKeyBits) {
-            thisConsumer.dKeyMap_[dKeyName.toUri()] = dKeyBits;
-            Consumer.decrypt_
-              (cKeyEncryptedContent, dKeyBits, onPlainText, onError);
-          }, function(ex) {
-            Consumer.Error.callOnError(onError, ex, "decryptDKey error: ");
-          });
-        }, function(d, reason) {
-          onError
-            (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
-             reason);
-        });
-      } catch (ex) {
-        Consumer.Error.callOnError(onError, ex, "verifyData error: ");
-      }
-    };
-
-    var onTimeout = function(dKeyInterest) {
-      // We should re-try at least once.
-      try {
-        thisConsumer.face_.expressInterest
-          (interest, onData, function(contentInterest) {
-          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
+    this.sendInterest_
+      (interest, 1, this.dKeyLink_,
+       function(validDKeyData) {
+         thisConsumer.decryptDKeyPromise_(validDKeyData)
+         .then(function(dKeyBits) {
+           thisConsumer.dKeyMap_[dKeyName.toUri()] = dKeyBits;
+           Consumer.decrypt_
+             (cKeyEncryptedContent, dKeyBits, onPlainText, onError);
+         }, function(ex) {
+           Consumer.Error.callOnError(onError, ex, "decryptDKey error: ");
          });
-      } catch (ex) {
-        Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
-      }
-    };
-
-    // Express the Interest.
-    try {
-      thisConsumer.face_.expressInterest(interest, onData, onTimeout);
-    } catch (ex) {
-      Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
-    }
+       },
+       onError);
   }
 };
 
@@ -30917,6 +30840,81 @@ Consumer.prototype.decryptDKeyPromise_ = function(dKeyData)
 };
 
 /**
+ * Express the interest, call verifyData for the fetched Data packet and call
+ * onVerified if verify succeeds. If verify fails, call
+ * onError(EncryptError.ErrorCode.Validation, "verifyData failed"). If the
+ * interest times out, re-express nRetrials times. If the interest times out
+ * nRetrials times, or for a network Nack, call
+ * onError(EncryptError.ErrorCode.DataRetrievalFailure, interest.getName().toUri()).
+ * @param {Interest} interest The Interest to express.
+ * @param {number} nRetrials The number of retrials left after a timeout.
+ * @param {Link} link The Link object to use in the Interest. This does not make
+ * a copy of the Link object. If the Link object's getDelegations().size() is
+ * zero, don't use it.
+ * @param {function} onVerified When the fetched Data packet validation
+ * succeeds, this calls onVerified(data).
+ * @param {function} onError This calls onError(errorCode, message) for an error,
+ * where errorCode is an error code from EncryptError.ErrorCode.
+ */
+Consumer.prototype.sendInterest_ = function
+  (interest, nRetrials, link, onVerified, onError)
+{
+  // Prepare the callback functions.
+  var thisConsumer = this;
+  var onData = function(contentInterest, contentData) {
+    try {
+      thisConsumer.keyChain_.verifyData
+        (contentData, onVerified,
+         function(d, reason) {
+           try {
+             onError
+               (EncryptError.ErrorCode.Validation, "verifyData failed. Reason: " +
+                reason);
+           } catch (ex) {
+             console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+           }
+         });
+    } catch (ex) {
+      Consumer.Error.callOnError(onError, ex, "verifyData error: ");
+    }
+  };
+
+  function onNetworkNack(interest, networkNack) {
+    // We have run out of options. Report a retrieval failure.
+    try {
+      onError(EncryptError.ErrorCode.DataRetrievalFailure,
+              interest.getName().toUri());
+    } catch (ex) {
+      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
+
+  var onTimeout = function(interest) {
+    if (nRetrials > 0)
+      thisConsumer.sendInterest_(interest, nRetrials - 1, link, onVerified, onError);
+    else
+      onNetworkNack(interest, new NetworkNack());
+  };
+
+  var request;
+  if (link.getDelegations().size() === 0)
+    // We can use the supplied interest without copying.
+    request = interest;
+  else {
+    // Copy the supplied interest and add the Link.
+    request = new Interest(interest);
+    // This will use a cached encoding if available.
+    request.setLinkWireEncoding(link.wireEncode());
+  }
+
+  try {
+    this.face_.expressInterest(request, onData, onTimeout, onNetworkNack);
+  } catch (ex) {
+    Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
+  }
+};
+
+/**
  * Get the encoded blob of the decryption key with decryptionKeyName from the
  * database.
  * @param {Name} decryptionKeyName The key name.
@@ -30928,6 +30926,8 @@ Consumer.prototype.getDecryptionKeyPromise_ = function(decryptionKeyName)
 {
   return this.database_.getKeyPromise(decryptionKeyName);
 };
+
+Consumer.NO_LINK = new Link();
 /**
  * Copyright (C) 2015-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -31015,6 +31015,7 @@ EncryptError.ErrorCode = {
   InvalidEncryptedFormat:      33,
   NoDecryptKey:                34,
   EncryptionFailure:           35,
+  DataRetrievalFailure:        36,
   General:                     100
 };
 /**
@@ -32382,6 +32383,8 @@ ProducerDb.getFixedTimeSlot = function(timeSlot)
 var Name = require('../name.js').Name; /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var Data = require('../data.js').Data; /** @ignore */
+var Link = require('../link.js').Link; /** @ignore */
+var NetworkNack = require('../network-nack.js').NetworkNack; /** @ignore */
 var Exclude = require('../exclude.js').Exclude; /** @ignore */
 var Encryptor = require('./algo/encryptor.js').Encryptor; /** @ignore */
 var EncryptParams = require('./algo/encrypt-params.js').EncryptParams; /** @ignore */
@@ -32416,16 +32419,22 @@ var SyncPromise = require('../util/sync-promise.js').SyncPromise;
  * @param {ProducerDb} database The ProducerDb database for storing keys.
  * @param {number} repeatAttempts (optional) The maximum retry for retrieving
  * keys. If omitted, use a default value of 3.
+ * @param {Link} keyRetrievalLink (optional) The Link object to use in Interests
+ * for key retrieval. This makes a copy of the Link object. If the Link object's
+ * getDelegations().size() is zero, don't use it. If omitted, don't use a Link
+ * object.
  * @note This class is an experimental feature. The API may change.
  * @constructor
  */
 var Producer = function Producer
-  (prefix, dataType, face, keyChain, database, repeatAttempts)
+  (prefix, dataType, face, keyChain, database, repeatAttempts, keyRetrievalLink)
 {
   this.face_ = face;
   this.keyChain_ = keyChain;
   this.database_ = database;
   this.maxRepeatAttempts_ = (repeatAttempts == undefined ? 3 : repeatAttempts);
+  this.keyRetrievalLink_ =
+    (keyRetrievalLink == undefined ? Producer.NO_LINK : new Link(keyRetrievalLink));
 
   // The map key is the key name URI string. The value is an object with fields
   // "keyName" and "keyInfo" where "keyName" is the same Name used for the key
@@ -32676,10 +32685,21 @@ Producer.prototype.sendKeyInterest_ = function
 
   function onNetworkNack(interest, networkNack) {
     thisProducer.handleNetworkNack_
-      (interest, networkNack, timeSlot, onEncryptedKeys);
+      (interest, networkNack, timeSlot, onEncryptedKeys, onError);
   }
 
-  this.face_.expressInterest(interest, onKey, onTimeout, onNetworkNack);
+  var request;
+  if (this.keyRetrievalLink_.getDelegations().size() === 0)
+    // We can use the supplied interest without copying.
+    request = interest;
+  else {
+    // Copy the supplied interest and add the Link.
+    request = new Interest(interest);
+    // This will use a cached encoding if available.
+    request.setLinkWireEncoding(this.keyRetrievalLink_.wireEncode());
+  }
+
+  this.face_.expressInterest(request, onKey, onTimeout, onNetworkNack);
 };
 
 /**
@@ -32708,8 +32728,9 @@ Producer.prototype.handleTimeout_ = function
     this.sendKeyInterest_(interest, timeSlot, onEncryptedKeys, onError);
   }
   else
-    // No more retrials.
-    this.updateKeyRequest_(keyRequest, timeCount, onEncryptedKeys);
+    // Treat an eventual timeout as a network Nack.
+    this.handleNetworkNack_
+      (interest, new NetworkNack(), timeSlot, onEncryptedKeys, onError);
 };
 
 /**
@@ -32724,8 +32745,9 @@ Producer.prototype.handleTimeout_ = function
  * key Data packets. If onEncryptedKeys is null, this does not use it.
  */
 Producer.prototype.handleNetworkNack_ = function
-  (interest, networkNack, timeSlot, onEncryptedKeys)
+  (interest, networkNack, timeSlot, onEncryptedKeys, onError)
 {
+  // We have run out of options....
   var timeCount = Math.round(timeSlot);
   this.updateKeyRequest_
     (this.keyRequests_[timeCount], timeCount, onEncryptedKeys);
@@ -33096,6 +33118,7 @@ Producer.excludeRange = function(exclude, from, to)
 
 Producer.START_TIME_STAMP_INDEX = -2;
 Producer.END_TIME_STAMP_INDEX = -1;
+Producer.NO_LINK = new Link();
 /**
  * Copyright (C) 2015-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
