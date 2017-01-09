@@ -127,6 +127,10 @@ Tlv.Encrypt_WhiteIntervalList = 141;
 Tlv.Encrypt_BlackIntervalList = 142;
 Tlv.Encrypt_Schedule = 143;
 
+Tlv.ValidityPeriod_ValidityPeriod = 253;
+Tlv.ValidityPeriod_NotBefore = 254;
+Tlv.ValidityPeriod_NotAfter = 255;
+
 /**
  * Strip off the lower 32 bits of x and divide by 2^32, returning the "high
  * bytes" above 32 bits.  This is necessary because JavaScript << and >> are
