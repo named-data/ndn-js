@@ -1,6 +1,6 @@
 /**
  * This class represents the digest tree for chrono-sync2013.
- * Copyright (C) 2014-2016 Regents of the University of California.
+ * Copyright (C) 2014-2017 Regents of the University of California.
  * @author: Zhehao Wang, based on Jeff T.'s implementation in ndn-cpp
  *
  * This program is free software: you can redistribute it and/or modify

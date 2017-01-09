@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014-2016 Regents of the University of California.
+ * Copyright (C) 2014-2017 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From PyNDN ndn_regex.py by Adeola Bannis.
  * Originally from Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>.

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014-2016 Regents of the University of California.
+ * Copyright (C) 2014-2017 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx NamingConventions unit tests:
  * https://github.com/named-data/ndn-cxx/blob/master/tests/unit-tests/test-name.cpp.

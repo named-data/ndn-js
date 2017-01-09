@@ -1,6 +1,6 @@
 /**
  * Encapsulate a Buffer and support dynamic reallocation.
- * Copyright (C) 2013-2016 Regents of the University of California.
+ * Copyright (C) 2013-2017 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
