@@ -22,6 +22,7 @@
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
 var KeyLocator = require('./key-locator.js').KeyLocator;
+var ValidityPeriod = require('./security/validity-period.js').ValidityPeriod;
 
 /**
  * Create a new Sha256WithEcdsaSignature object, possibly copying values from
@@ -38,10 +39,13 @@ var Sha256WithEcdsaSignature = function Sha256WithEcdsaSignature(value)
   if (typeof value === 'object' && value instanceof Sha256WithEcdsaSignature) {
     // Copy the values.
     this.keyLocator_ = new ChangeCounter(new KeyLocator(value.getKeyLocator()));
+    this.validityPeriod_ = new ChangeCounter(new ValidityPeriod
+      (value.getValidityPeriod()));
     this.signature_ = value.signature_;
   }
   else {
     this.keyLocator_ = new ChangeCounter(new KeyLocator());
+    this.validityPeriod_ = new ChangeCounter(new ValidityPeriod());
     this.signature_ = new Blob();
   }
 
@@ -67,6 +71,15 @@ Sha256WithEcdsaSignature.prototype.clone = function()
 Sha256WithEcdsaSignature.prototype.getKeyLocator = function()
 {
   return this.keyLocator_.get();
+};
+
+/**
+ * Get the validity period.
+ * @return {ValidityPeriod} The validity period.
+ */
+Sha256WithEcdsaSignature.prototype.getValidityPeriod = function()
+{
+  return this.validityPeriod_.get();
 };
 
 /**
@@ -110,6 +123,7 @@ Sha256WithEcdsaSignature.prototype.getChangeCount = function()
 {
   // Make sure each of the checkChanged is called.
   var changed = this.keyLocator_.checkChanged();
+  changed = this.validityPeriod_.checkChanged() || changed;
   if (changed)
     // A child object has changed, so update the change count.
     ++this.changeCount_;

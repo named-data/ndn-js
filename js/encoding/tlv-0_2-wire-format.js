@@ -37,6 +37,7 @@ var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha25
 var ControlParameters = require('../control-parameters.js').ControlParameters; /** @ignore */
 var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ignore */
 var NetworkNack = require('../network-nack.js').NetworkNack; /** @ignore */
+var Schedule = require('../encrypt/schedule.js').Schedule; /** @ignore */
 var IncomingFaceId = require('../lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
@@ -935,6 +936,39 @@ Tlv0_2WireFormat.decodeKeyLocator = function
   decoder.finishNestedTlvs(endOffset);
 };
 
+Tlv0_2WireFormat.encodeValidityPeriod_ = function(validityPeriod, encoder)
+{
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeBlobTlv(Tlv.ValidityPeriod_NotAfter,
+    new Blob(Schedule.toIsoString(validityPeriod.getNotAfter())).buf());
+  encoder.writeBlobTlv(Tlv.ValidityPeriod_NotBefore,
+    new Blob(Schedule.toIsoString(validityPeriod.getNotBefore())).buf());
+
+  encoder.writeTypeAndLength
+    (Tlv.ValidityPeriod_ValidityPeriod, encoder.getLength() - saveLength);
+};
+
+Tlv0_2WireFormat.decodeValidityPeriod_ = function(validityPeriod, decoder)
+{
+  var endOffset = decoder.readNestedTlvsStart(Tlv.ValidityPeriod_ValidityPeriod);
+
+  validityPeriod.clear();
+
+  // Set copy false since we just immediately get the string.
+  var isoString = new Blob
+    (decoder.readBlobTlv(Tlv.ValidityPeriod_NotBefore), false);
+  var notBefore = Schedule.fromIsoString(isoString.toString());
+  isoString = new Blob
+    (decoder.readBlobTlv(Tlv.ValidityPeriod_NotAfter), false);
+  var notAfter = Schedule.fromIsoString(isoString.toString());
+
+  validityPeriod.setPeriod(notBefore, notAfter);
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
 /**
  * An internal method to encode signature as the appropriate form of
  * SignatureInfo in NDN-TLV.
@@ -967,12 +1001,18 @@ Tlv0_2WireFormat.encodeSignatureInfo_ = function(signature, encoder)
 
   // Encode backwards.
   if (signature instanceof Sha256WithRsaSignature) {
+    if (signature.getValidityPeriod().hasPeriod())
+      Tlv0_2WireFormat.encodeValidityPeriod_
+        (signature.getValidityPeriod(), encoder);
     Tlv0_2WireFormat.encodeKeyLocator
       (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
   }
   else if (signature instanceof Sha256WithEcdsaSignature) {
+    if (signature.getValidityPeriod().hasPeriod())
+      Tlv0_2WireFormat.encodeValidityPeriod_
+        (signature.getValidityPeriod(), encoder);
     Tlv0_2WireFormat.encodeKeyLocator
       (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
     encoder.writeNonNegativeIntegerTlv
@@ -1009,12 +1049,18 @@ Tlv0_2WireFormat.decodeSignatureInfo = function(data, decoder, copy)
     var signatureInfo = data.getSignature();
     Tlv0_2WireFormat.decodeKeyLocator
       (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder, copy);
+    if (decoder.peekType(Tlv.ValidityPeriod_ValidityPeriod, endOffset))
+      Tlv0_2WireFormat.decodeValidityPeriod_
+        (signatureInfo.getValidityPeriod(), decoder);
   }
   else if (signatureType == Tlv.SignatureType_SignatureSha256WithEcdsa) {
     data.setSignature(new Sha256WithEcdsaSignature());
     var signatureInfo = data.getSignature();
     Tlv0_2WireFormat.decodeKeyLocator
       (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder, copy);
+    if (decoder.peekType(Tlv.ValidityPeriod_ValidityPeriod, endOffset))
+      Tlv0_2WireFormat.decodeValidityPeriod_
+        (signatureInfo.getValidityPeriod(), decoder);
   }
   else if (signatureType == Tlv.SignatureType_SignatureHmacWithSha256) {
     data.setSignature(new HmacWithSha256Signature());

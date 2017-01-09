@@ -44,6 +44,7 @@ exports.EcdsaKeyParams = require('./js/security/key-params.js').EcdsaKeyParams;
 exports.AesKeyParams = require('./js/security/key-params.js').AesKeyParams;
 exports.DigestAlgorithm = require('./js/security/security-types.js').DigestAlgorithm;
 exports.EncryptMode = require('./js/security/security-types.js').EncryptMode;
+exports.ValidityPeriod = require('./js/security/validity-period.js').ValidityPeriod;
 exports.CertificateExtension = require('./js/security/certificate/certificate-extension.js').CertificateExtension;
 exports.CertificateSubjectDescription = require('./js/security/certificate/certificate-subject-description.js').CertificateSubjectDescription;
 exports.Certificate = require('./js/security/certificate/certificate.js').Certificate;
