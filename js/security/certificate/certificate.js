@@ -154,6 +154,11 @@ Certificate.prototype.isTooLate = function()
   return now > this.notAfter;
 };
 
+Certificate.prototype.isInValidityPeriod = function(time)
+{
+  return this.getSignature().getValidityPeriod().isValid(time);
+};
+
 /**
  * Encode the certificate fields in DER format.
  * @return {DerSequence} The DER encoded contents of the certificate.
