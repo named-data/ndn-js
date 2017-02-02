@@ -112,6 +112,18 @@ Sha256WithRsaSignature.prototype.setKeyLocator = function(keyLocator)
 };
 
 /**
+ * Set the validity period to a copy of the given ValidityPeriod.
+ * @param {ValidityPeriod} validityPeriod The ValidityPeriod which is copied.
+ */
+Sha256WithRsaSignature.prototype.setValidityPeriod = function(validityPeriod)
+{
+  this.validityPeriod_.set(typeof validityPeriod === 'object' &&
+                           validityPeriod instanceof ValidityPeriod ?
+    new ValidityPeriod(validityPeriod) : new ValidityPeriod());
+  ++this.changeCount_;
+};
+
+/**
  * Set the data packet's signature bytes.
  * @param {Blob} signature
  */
