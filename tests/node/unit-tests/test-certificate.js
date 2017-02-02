@@ -2,6 +2,7 @@
  * Copyright (C) 2016-2017 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx Certificate unit tests:
+ * https://github.com/named-data/ndn-cxx/blob/master/tests/unit-tests/security/v2/certificate.t.cpp
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -24,9 +25,11 @@ var Name = require('../../..').Name;
 var Data = require('../../..').Data;
 var Blob = require('../../..').Blob;
 var Certificate = require('../../..').Certificate;
+var KeyLocator = require('../../..').KeyLocator;
 var KeyLocatorType = require('../../..').KeyLocatorType;
 var Common = require('./unit-tests-common.js').UnitTestsCommon;
 var Sha256WithRsaSignature = require('../../..').Sha256WithRsaSignature;
+var ValidityPeriod = require('../../..').ValidityPeriod;
 
 var PUBLIC_KEY = new Buffer([
 0x30, 0x81, 0x9d, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
@@ -67,13 +70,13 @@ var SIG_VALUE = new Buffer([
 
 var CERT = new Buffer([
 0x06, 0xFD, 0x01, 0xBB, // Data
-  0x07, 0x33, // Name /ndn/site1/ksk-1416425377094/KEY/0123/%FD%00%00%01I%C9%8B
+  0x07, 0x33, // Name /ndn/site1/KEY/ksk-1416425377094/0123/%FD%00%00%01I%C9%8B
     0x08, 0x03, 0x6E, 0x64, 0x6E,
     0x08, 0x05, 0x73, 0x69, 0x74, 0x65, 0x31,
+    0x08, 0x03, 0x4B, 0x45, 0x59,
     0x08, 0x11,
       0x6B, 0x73, 0x6B, 0x2D, 0x31, 0x34, 0x31, 0x36, 0x34, 0x32, 0x35, 0x33, 0x37, 0x37, 0x30, 0x39,
       0x34,
-    0x08, 0x03, 0x4B, 0x45, 0x59,
     0x08, 0x04, 0x30, 0x31, 0x32, 0x33,
     0x08, 0x07, 0xFD, 0x00, 0x00, 0x01, 0x49, 0xC9, 0x8B,
   0x14, 0x09, // MetaInfo
@@ -92,18 +95,18 @@ var CERT = new Buffer([
     0xEF, 0xED, 0x35, 0xE7, 0x7A, 0x62, 0xEA, 0x76, 0x7C, 0xBB, 0x08, 0x26, 0xC7, 0x02, 0x01, 0x11,
   0x16, 0x55, // SignatureInfo
     0x1B, 0x01, 0x01, // SignatureType
-    0x1C, 0x26, // KeyLocator: /ndn/site1/ksk-2516425377094/KEY
+    0x1C, 0x26, // KeyLocator: /ndn/site1/KEY/ksk-2516425377094
       0x07, 0x24,
         0x08, 0x03, 0x6E, 0x64, 0x6E,
         0x08, 0x05, 0x73, 0x69, 0x74, 0x65, 0x31,
+        0x08, 0x03, 0x4B, 0x45, 0x59,
         0x08, 0x11,
           0x6B, 0x73, 0x6B, 0x2D, 0x32, 0x35, 0x31, 0x36, 0x34, 0x32, 0x35, 0x33, 0x37, 0x37, 0x30, 0x39,
           0x34,
-        0x08, 0x03, 0x4B, 0x45, 0x59,
-    0xFD, 0x00, 0xFD, 0x26, // ValidityPeriod
-      0xFD, 0x00, 0xFE, 0x0F, // NotBefore = 20150814T223739
+    0xFD, 0x00, 0xFD, 0x26, // ValidityPeriod: (20150814T223739, 20150818T223738)
+      0xFD, 0x00, 0xFE, 0x0F,
         0x32, 0x30, 0x31, 0x35, 0x30, 0x38, 0x31, 0x34, 0x54, 0x32, 0x32, 0x33, 0x37, 0x33, 0x39,
-      0xFD, 0x00, 0xFF, 0x0F, // NotAfter =  20150818T223739
+      0xFD, 0x00, 0xFF, 0x0F,
         0x32, 0x30, 0x31, 0x35, 0x30, 0x38, 0x31, 0x38, 0x54, 0x32, 0x32, 0x33, 0x37, 0x33, 0x38,
   0x17, 0x80, // SignatureValue
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -115,6 +118,27 @@ var CERT = new Buffer([
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 ]);
+
+function generateFakeSignature()
+{
+  var signatureInfo = new Sha256WithRsaSignature();
+
+  var keyLocatorName = new Name("/ndn/site1/KEY/ksk-2516425377094");
+  var keyLocator = new KeyLocator();
+  keyLocator.setType(KeyLocatorType.KEYNAME);
+  keyLocator.setKeyName(keyLocatorName);
+  signatureInfo.setKeyLocator(keyLocator);
+
+  var period = new ValidityPeriod();
+  period.setPeriod(Common.fromIsoString("20141111T050000"),
+                   Common.fromIsoString("20141111T060000"));
+  signatureInfo.setValidityPeriod(period);
+
+  var block2 = new Blob(SIG_VALUE, false);
+  signatureInfo.setSignature(block2);
+
+  return signatureInfo;
+}
 
 describe('TestCertificate', function() {
   it('Construction', function() {
@@ -128,32 +152,18 @@ describe('TestCertificate', function() {
   it('ValidityPeriodChecking', function() {
     var certificate = new Certificate();
     certificate.setName
-      (new Name("/ndn/site1/ksk-1416425377094/KEY/0123/%FD%00%00%01I%C9%8B"));
+      (new Name("/ndn/site1/KEY/ksk-1416425377094/0123/%FD%00%00%01I%C9%8B"));
     certificate.getMetaInfo().setFreshnessPeriod(3600 * 1000.0);
     certificate.setContent(new Blob(PUBLIC_KEY, false));
+    certificate.setSignature(generateFakeSignature());
 
-    certificate.setSignature(new Sha256WithRsaSignature());
-    var signatureInfo = certificate.getSignature();
-
-    signatureInfo.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-    signatureInfo.getKeyLocator().setKeyName
-      (new Name("/ndn/site1/ksk-2516425377094/KEY"));
-
-    var notBefore = Common.fromIsoString("20150819T120000");
-    var notAfter =  Common.fromIsoString("20150823T120000");
-    signatureInfo.getValidityPeriod().setPeriod(notBefore, notAfter);
-
-    signatureInfo.setSignature(new Blob(SIG_VALUE, false));
-
-    assert.equal(false, certificate.isInValidityPeriod
-      (Common.fromIsoString("20150819T115959")));
     assert.equal(true,  certificate.isInValidityPeriod
-      (Common.fromIsoString("20150819T120000")));
+      (Common.fromIsoString("20141111T050000")));
     assert.equal(true,  certificate.isInValidityPeriod
-      (Common.fromIsoString("20150823T120000")));
+      (Common.fromIsoString("20141111T060000")));
     assert.equal(false, certificate.isInValidityPeriod
-      (Common.fromIsoString("20150823T120001")));
+      (Common.fromIsoString("20141111T045959")));
     assert.equal(false, certificate.isInValidityPeriod
-      (Common.fromIsoString("20150921T130000")));
+      (Common.fromIsoString("20141111T060001")));
   });
 });
