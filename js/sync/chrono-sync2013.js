@@ -131,6 +131,34 @@ var ChronoSync2013 = function ChronoSync2013
 
 exports.ChronoSync2013 = ChronoSync2013;
 
+/**
+ * Get a copy of the current list of producer data prefixes, and the
+ * associated session number. You can use these in getProducerSequenceNo().
+ * This includes the prefix for this user.
+ * @return Array<ChronoSync2013.PrefixAndSessionNo> A copy of the list of each
+ * producer prefix and session number.
+ */
+ChronoSync2013.prototype.getProducerPrefixes = function()
+{
+  var prefixes = [];
+
+  for (var i = 0; i < this.digest_tree.digestnode.length; ++i) {
+    var node = this.digest_tree.get(i);
+    prefixes.push
+      (new ChronoSync2013.PrefixAndSessionNo
+       (node.getDataPrefix(), node.getSessionNo()));
+  }
+  return prefixes;
+};
+
+/**
+ * Get the current sequence number in the digest tree for the given
+ * producer dataPrefix and sessionNo.
+ * @param {string} dataPrefix The producer data prefix as a Name URI string.
+ * @param {number} sessionNo The producer session number.
+ * @return {number} The current producer sequence number, or -1 if the producer
+ * namePrefix and sessionNo are not in the digest tree.
+ */
 ChronoSync2013.prototype.getProducerSequenceNo = function(dataPrefix, sessionNo)
 {
   var index = this.digest_tree.find(dataPrefix, sessionNo);
@@ -254,6 +282,35 @@ ChronoSync2013.SyncState.prototype.getSequenceNo = function()
 {
   return this.sequenceNo_;
 }
+
+/**
+ * A PrefixAndSessionNo holds a user's data prefix and session number (used to
+ * return a list from getProducerPrefixes).
+ */
+ChronoSync2013.PrefixAndSessionNo = function ChronoSync2013PrefixAndSessionNo
+  (dataPrefixUri, sessionNo)
+{
+  this.dataPrefixUri_ = dataPrefixUri;
+  this.sessionNo_ = sessionNo;
+};
+
+/**
+ * Get the application data prefix.
+ * @return {string} The application data prefix as a Name URI string.
+ */
+ChronoSync2013.PrefixAndSessionNo.prototype.getDataPrefix = function()
+{
+  return this.dataPrefixUri_;
+};
+
+/**
+ * Get the session number associated with the application data prefix.
+ * @return {number] The session number.
+ */
+ChronoSync2013.PrefixAndSessionNo.prototype.getSessionNo = function()
+{
+  return this.sessionNo_;
+};
 
 // Private methods for ChronoSync2013 class,
 /**
