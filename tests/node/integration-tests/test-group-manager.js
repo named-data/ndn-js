@@ -185,6 +185,8 @@ describe ("TestGroupManager", function() {
     certificate.setName(new Name("/ndn/memberA/KEY/ksk-123/ID-CERT/123"));
     var contentPublicKey = new PublicKey(encryptKeyBlob);
     certificate.setPublicKeyInfo(contentPublicKey);
+    certificate.setNotBefore(0);
+    certificate.setNotAfter(0);
     certificate.encode();
 
     var signatureInfoBlob = new Blob(SIG_INFO, false);
