@@ -350,7 +350,7 @@ describe ("TestConsumer", function() {
     });
   });
 
-  it("CosumerWithLink", function(done) {
+  it("ConsumerWithLink", function(done) {
     var contentData = createEncryptedContent();
     var cKeyData = createEncryptedCKey();
     var dKeyData = createEncryptedDKey();
