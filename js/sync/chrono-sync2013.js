@@ -176,17 +176,27 @@ ChronoSync2013.prototype.getProducerSequenceNo = function(dataPrefix, sessionNo)
  * update with the name applicationBroadcastPrefix + the new root digest.
  * After this, application should publish the content for the new sequence number.
  * Get the new sequence number with getSequenceNo().
+ * @param {Blob} applicationInfo (optional) This appends applicationInfo to the
+ * content of the sync messages. This same info is provided to the receiving
+ * application in the SyncState state object provided to the
+ * onReceivedSyncState callback.
  */
-ChronoSync2013.prototype.publishNextSequenceNo = function()
+ChronoSync2013.prototype.publishNextSequenceNo = function(applicationInfo)
 {
+  applicationInfo = applicationInfo instanceof Blob ?
+    applicationInfo : new Blob(applicationInfo, true);
+
   this.usrseq ++;
-  var content = [new this.SyncState({ name:this.applicationDataPrefixUri,
-                                 type:'UPDATE',
-                                 seqno:{
-                                   seq:this.usrseq,
-                                   session:this.session
-                                  }
-                                })];
+  var fields = { name: this.applicationDataPrefixUri,
+                 type: 'UPDATE',
+                 seqno:{
+                   seq: this.usrseq,
+                   session: this.session
+                 }
+               };
+  if (!applicationInfo.isNull() && applicationInfo.size() > 0)
+    fields.application_info = applicationInfo.buf();
+  var content = [new this.SyncState(fields)];
   var content_t = new this.SyncStateMsg({ss:content});
   this.broadcastSyncState(this.digest_tree.getRoot(), content_t);
 
@@ -248,11 +258,13 @@ ChronoSync2013.prototype.shutdown = function()
  * Sync::SyncState, but we make a separate class so that we don't need the
  * Protobuf definition in the ChronoSync API.
  */
-ChronoSync2013.SyncState = function ChronoSync2013SyncState(dataPrefixUri, sessionNo, sequenceNo)
+ChronoSync2013.SyncState = function ChronoSync2013SyncState
+  (dataPrefixUri, sessionNo, sequenceNo, applicationInfo)
 {
   this.dataPrefixUri_ = dataPrefixUri;
   this.sessionNo_ = sessionNo;
   this.sequenceNo_ = sequenceNo;
+  this.applicationInfo_ = applicationInfo;
 };
 
 /**
@@ -281,6 +293,17 @@ ChronoSync2013.SyncState.prototype.getSessionNo = function()
 ChronoSync2013.SyncState.prototype.getSequenceNo = function()
 {
   return this.sequenceNo_;
+}
+
+/**
+ * Get the application info which was included when the sender published the
+ * next sequence number.
+ * @return {Blob} The applicationInfo Blob. If the sender did not provide any,
+ * return an isNull Blob.
+ */
+ChronoSync2013.SyncState.prototype.getApplicationInfo = function()
+{
+  return this.applicationInfo_;
 }
 
 /**
@@ -443,12 +466,26 @@ ChronoSync2013.prototype.onData = function(interest, co)
       isRecovery = false;
   }
 
+  // Send the interests to fetch the application data.
   var syncStates = [];
 
   for (var i = 0; i < content.length; i++) {
+    // Only report UPDATE sync states.
     if (content[i].type == 0) {
+      var applicationInfo;
+      if (content[i].application_info) {
+        var binaryInfo = content[i].application_info.toBinary();
+        if (binaryInfo.length > 0)
+          applicationInfo = new Blob(new Buffer(binaryInfo, "binary"), false);
+        else
+          applicationInfo = new Blob();
+      }
+      else
+        applicationInfo = new Blob();
+      
       syncStates.push(new ChronoSync2013.SyncState
-        (content[i].name, content[i].seqno.session, content[i].seqno.seq));
+        (content[i].name, content[i].seqno.session, content[i].seqno.seq,
+         applicationInfo));
     }
   }
 
