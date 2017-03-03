@@ -247,7 +247,7 @@ ProtobufTlv.toName = function(componentArray)
   var name = new Name();
   for (var i = 0; i < componentArray.length; ++i)
     name.append
-      (new Blob(new Buffer(componentArray[i].toBinary(), "binary")), false);
+      (new Blob(new Buffer(componentArray[i].toBinary(), "binary"), false));
 
   return name;
 };
