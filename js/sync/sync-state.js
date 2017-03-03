@@ -26,6 +26,13 @@ var SyncStateProto = {
                     "name": "seqno",
                     "id": 3,
                     "options": {}
+                },
+                {
+                    "rule": "optional",
+                    "type": "bytes",
+                    "name": "application_info",
+                    "id": 4,
+                    "options": {}
                 }
             ],
             "enums": [
