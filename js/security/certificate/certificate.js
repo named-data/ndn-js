@@ -141,7 +141,7 @@ Certificate.prototype.getPublicKeyInfo = function()
 Certificate.prototype.isTooEarly = function()
 {
   var now = new Date().getTime();
-  return now < this.notBefore;
+  return now < this.getNotBefore();
 };
 
 /**
@@ -151,7 +151,7 @@ Certificate.prototype.isTooEarly = function()
 Certificate.prototype.isTooLate = function()
 {
   var now = new Date().getTime();
-  return now > this.notAfter;
+  return now > this.getNotAfter();
 };
 
 Certificate.prototype.isInValidityPeriod = function(time)
@@ -167,8 +167,8 @@ Certificate.prototype.toDer = function()
 {
   var root = new DerNode.DerSequence();
   var validity = new DerNode.DerSequence();
-  var notBefore = new DerNode.DerGeneralizedTime(this.notBefore);
-  var notAfter = new DerNode.DerGeneralizedTime(this.notAfter);
+  var notBefore = new DerNode.DerGeneralizedTime(this.getNotBefore());
+  var notAfter = new DerNode.DerGeneralizedTime(this.getNotAfter());
 
   validity.addChild(notBefore);
   validity.addChild(notAfter);
@@ -261,8 +261,8 @@ Certificate.prototype.toString = function()
   s += "  " + this.getName().toUri() + "\n";
   s += "Validity:\n";
 
-  var notBeforeStr = Certificate.toIsoString(Math.round(this.notBefore));
-  var notAfterStr = Certificate.toIsoString(Math.round(this.notAfter));
+  var notBeforeStr = Certificate.toIsoString(Math.round(this.getNotBefore()));
+  var notAfterStr = Certificate.toIsoString(Math.round(this.getNotAfter()));
 
   s += "  NotBefore: " + notBeforeStr + "\n";
   s += "  NotAfter: " + notAfterStr + "\n";
