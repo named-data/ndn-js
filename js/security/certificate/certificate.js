@@ -135,6 +135,19 @@ Certificate.prototype.getPublicKeyInfo = function()
 };
 
 /**
+ * Get the public key DER encoding.
+ * @returns {Blob} The DER encoding Blob.
+ * @throws Error if the public key is not set.
+ */
+Certificate.prototype.getPublicKeyDer = function()
+{
+  if (this.key.getKeyDer().isNull())
+    throw new Error("The public key is not set");
+
+  return this.key.getKeyDer();
+};
+
+/**
  * Check if the certificate is valid.
  * @return {Boolean} True if the current time is earlier than notBefore.
  */
@@ -273,7 +286,7 @@ Certificate.prototype.toString = function()
   }
 
   s += "Public key bits:\n";
-  var keyDer = this.key.getKeyDer();
+  var keyDer = this.getPublicKeyDer();
   var encodedKey = keyDer.buf().toString('base64');
   for (var i = 0; i < encodedKey.length; i += 64)
     s += encodedKey.substring(i, Math.min(i + 64, encodedKey.length)) + "\n";
