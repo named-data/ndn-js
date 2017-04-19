@@ -52,7 +52,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     this.signature_ = new ChangeCounter(data.getSignature().clone());
     this.content_ = data.content_;
     this.defaultWireEncoding_ = data.getDefaultWireEncoding();
-    this.defaultFullName_ = data.defaultFullName_;
+    this.defaultFullName_ = new Name(data.defaultFullName_);
     this.defaultWireEncodingFormat_ = data.defaultWireEncodingFormat_;
   }
   else {
