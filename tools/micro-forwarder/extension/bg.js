@@ -30,7 +30,7 @@ var MicroForwarder = function MicroForwarder()
   this.PIT_ = [];   // of PitEntry
   this.FIB_ = [];   // of FibEntry
   this.faces_ = []; // of ForwarderFace
-  this.CS_ = {};    // of CS
+  this.CS_ = {};    // Key: The Data name URI. Value: The Data object.
 
   // Add a listener to wait for a connection request from a tab and add a face.
   var thisForwarder = this;
