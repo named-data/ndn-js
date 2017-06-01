@@ -6,8 +6,7 @@ NDN-JS is the first native version of the NDN protocol written in JavaScript.  I
 implements the NDN-TLV wire format.
 
 The project by the UCLA NDN team - for more information on NDN, see
-	http://named-data.net/
-	http://ndn.ucla.edu/
+	https://named-data.net/
 
 See the file [INSTALL](https://github.com/named-data/ndn-js/blob/master/INSTALL) for build and install instructions.
 
@@ -31,7 +30,7 @@ Overview
 --------
 This is a young project, with minimal documentation that we are slowly enhancing.  Please
 submit any bugs or issues to the NDN-JS issue tracker:
-http://redmine.named-data.net/projects/ndn-js/issues
+https://redmine.named-data.net/projects/ndn-js/issues
 
 The primary goal of NDN-JS is to provide a pure Javascript implementation of the NDN API
 that enables developers to create browser-based or Node.js-based applications using Named Data Networking.
