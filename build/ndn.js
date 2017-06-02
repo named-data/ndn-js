@@ -11343,7 +11343,7 @@ ProtobufTlv.toName = function(componentArray)
   var name = new Name();
   for (var i = 0; i < componentArray.length; ++i)
     name.append
-      (new Blob(new Buffer(componentArray[i].toBinary(), "binary")), false);
+      (new Blob(new Buffer(componentArray[i].toBinary(), "binary"), false));
 
   return name;
 };
@@ -12140,6 +12140,9 @@ DerNode.prototype.decodeHeader = function(inputBuf, startIdx)
     var lenCount = sizeLen & ((1<<7) - 1);
     size = 0;
     while (lenCount > 0) {
+      if (inputBuf.length <= idx)
+        throw new DerDecodingException
+          ("DerNode::decodeHeader: The input length is too small");
       var b = inputBuf[idx];
       idx += 1;
       header.ensureLength(headerPosition + 1);
@@ -12208,6 +12211,9 @@ DerNode.parse = function(inputBuf, startIdx)
   if (startIdx == undefined)
     startIdx = 0;
 
+  if (inputBuf.length <= startIdx)
+    throw new DerDecodingException
+      ("DerNode::parse: The input length is too small");
   var nodeType = inputBuf[startIdx] & 0xff;
   // Don't increment idx. We're just peeking.
 
@@ -17249,7 +17255,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     this.signature_ = new ChangeCounter(data.getSignature().clone());
     this.content_ = data.content_;
     this.defaultWireEncoding_ = data.getDefaultWireEncoding();
-    this.defaultFullName_ = data.defaultFullName_;
+    this.defaultFullName_ = new Name(data.defaultFullName_);
     this.defaultWireEncodingFormat_ = data.defaultWireEncodingFormat_;
   }
   else {
@@ -18346,13 +18352,26 @@ Certificate.prototype.getPublicKeyInfo = function()
 };
 
 /**
+ * Get the public key DER encoding.
+ * @returns {Blob} The DER encoding Blob.
+ * @throws Error if the public key is not set.
+ */
+Certificate.prototype.getPublicKeyDer = function()
+{
+  if (this.key.getKeyDer().isNull())
+    throw new Error("The public key is not set");
+
+  return this.key.getKeyDer();
+};
+
+/**
  * Check if the certificate is valid.
  * @return {Boolean} True if the current time is earlier than notBefore.
  */
 Certificate.prototype.isTooEarly = function()
 {
   var now = new Date().getTime();
-  return now < this.notBefore;
+  return now < this.getNotBefore();
 };
 
 /**
@@ -18362,7 +18381,7 @@ Certificate.prototype.isTooEarly = function()
 Certificate.prototype.isTooLate = function()
 {
   var now = new Date().getTime();
-  return now > this.notAfter;
+  return now > this.getNotAfter();
 };
 
 Certificate.prototype.isInValidityPeriod = function(time)
@@ -18378,8 +18397,8 @@ Certificate.prototype.toDer = function()
 {
   var root = new DerNode.DerSequence();
   var validity = new DerNode.DerSequence();
-  var notBefore = new DerNode.DerGeneralizedTime(this.notBefore);
-  var notAfter = new DerNode.DerGeneralizedTime(this.notAfter);
+  var notBefore = new DerNode.DerGeneralizedTime(this.getNotBefore());
+  var notAfter = new DerNode.DerGeneralizedTime(this.getNotAfter());
 
   validity.addChild(notBefore);
   validity.addChild(notAfter);
@@ -18472,8 +18491,8 @@ Certificate.prototype.toString = function()
   s += "  " + this.getName().toUri() + "\n";
   s += "Validity:\n";
 
-  var notBeforeStr = Certificate.toIsoString(Math.round(this.notBefore));
-  var notAfterStr = Certificate.toIsoString(Math.round(this.notAfter));
+  var notBeforeStr = Certificate.toIsoString(Math.round(this.getNotBefore()));
+  var notAfterStr = Certificate.toIsoString(Math.round(this.getNotAfter()));
 
   s += "  NotBefore: " + notBeforeStr + "\n";
   s += "  NotAfter: " + notAfterStr + "\n";
@@ -18484,7 +18503,7 @@ Certificate.prototype.toString = function()
   }
 
   s += "Public key bits:\n";
-  var keyDer = this.key.getKeyDer();
+  var keyDer = this.getPublicKeyDer();
   var encodedKey = keyDer.buf().toString('base64');
   for (var i = 0; i < encodedKey.length; i += 64)
     s += encodedKey.substring(i, Math.min(i + 64, encodedKey.length)) + "\n";
@@ -35051,17 +35070,27 @@ ChronoSync2013.prototype.getProducerSequenceNo = function(dataPrefix, sessionNo)
  * update with the name applicationBroadcastPrefix + the new root digest.
  * After this, application should publish the content for the new sequence number.
  * Get the new sequence number with getSequenceNo().
+ * @param {Blob} applicationInfo (optional) This appends applicationInfo to the
+ * content of the sync messages. This same info is provided to the receiving
+ * application in the SyncState state object provided to the
+ * onReceivedSyncState callback.
  */
-ChronoSync2013.prototype.publishNextSequenceNo = function()
+ChronoSync2013.prototype.publishNextSequenceNo = function(applicationInfo)
 {
+  applicationInfo = applicationInfo instanceof Blob ?
+    applicationInfo : new Blob(applicationInfo, true);
+
   this.usrseq ++;
-  var content = [new this.SyncState({ name:this.applicationDataPrefixUri,
-                                 type:'UPDATE',
-                                 seqno:{
-                                   seq:this.usrseq,
-                                   session:this.session
-                                  }
-                                })];
+  var fields = { name: this.applicationDataPrefixUri,
+                 type: 'UPDATE',
+                 seqno:{
+                   seq: this.usrseq,
+                   session: this.session
+                 }
+               };
+  if (!applicationInfo.isNull() && applicationInfo.size() > 0)
+    fields.application_info = applicationInfo.buf();
+  var content = [new this.SyncState(fields)];
   var content_t = new this.SyncStateMsg({ss:content});
   this.broadcastSyncState(this.digest_tree.getRoot(), content_t);
 
@@ -35123,11 +35152,13 @@ ChronoSync2013.prototype.shutdown = function()
  * Sync::SyncState, but we make a separate class so that we don't need the
  * Protobuf definition in the ChronoSync API.
  */
-ChronoSync2013.SyncState = function ChronoSync2013SyncState(dataPrefixUri, sessionNo, sequenceNo)
+ChronoSync2013.SyncState = function ChronoSync2013SyncState
+  (dataPrefixUri, sessionNo, sequenceNo, applicationInfo)
 {
   this.dataPrefixUri_ = dataPrefixUri;
   this.sessionNo_ = sessionNo;
   this.sequenceNo_ = sequenceNo;
+  this.applicationInfo_ = applicationInfo;
 };
 
 /**
@@ -35156,6 +35187,17 @@ ChronoSync2013.SyncState.prototype.getSessionNo = function()
 ChronoSync2013.SyncState.prototype.getSequenceNo = function()
 {
   return this.sequenceNo_;
+}
+
+/**
+ * Get the application info which was included when the sender published the
+ * next sequence number.
+ * @return {Blob} The applicationInfo Blob. If the sender did not provide any,
+ * return an isNull Blob.
+ */
+ChronoSync2013.SyncState.prototype.getApplicationInfo = function()
+{
+  return this.applicationInfo_;
 }
 
 /**
@@ -35318,12 +35360,26 @@ ChronoSync2013.prototype.onData = function(interest, co)
       isRecovery = false;
   }
 
+  // Send the interests to fetch the application data.
   var syncStates = [];
 
   for (var i = 0; i < content.length; i++) {
+    // Only report UPDATE sync states.
     if (content[i].type == 0) {
+      var applicationInfo;
+      if (content[i].application_info) {
+        var binaryInfo = content[i].application_info.toBinary();
+        if (binaryInfo.length > 0)
+          applicationInfo = new Blob(new Buffer(binaryInfo, "binary"), false);
+        else
+          applicationInfo = new Blob();
+      }
+      else
+        applicationInfo = new Blob();
+      
       syncStates.push(new ChronoSync2013.SyncState
-        (content[i].name, content[i].seqno.session, content[i].seqno.seq));
+        (content[i].name, content[i].seqno.session, content[i].seqno.seq,
+         applicationInfo));
     }
   }
 
@@ -35826,6 +35882,13 @@ var SyncStateProto = {
                     "type": "SeqNo",
                     "name": "seqno",
                     "id": 3,
+                    "options": {}
+                },
+                {
+                    "rule": "optional",
+                    "type": "bytes",
+                    "name": "application_info",
+                    "id": 4,
                     "options": {}
                 }
             ],
