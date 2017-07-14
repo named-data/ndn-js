@@ -112,6 +112,39 @@ ValidityPeriod.prototype.isValid = function(time)
 };
 
 /**
+ * If the signature is a type that has a ValidityPeriod (so that
+ * getFromSignature will succeed), return true. Note: This is a static method of
+ * ValidityPeriod instead of a method of Signature so that the Signature base
+ * class does not need to be overloaded with all the different kinds of
+ * information that various signature algorithms may use.
+ * @param {Signature} An object of a subclass of Signature.
+ * @returns {boolean} True if the signature is a type that has a ValidityPeriod,
+ * otherwise false.
+ */
+ValidityPeriod.canGetFromSignature = function(signature)
+{
+  return signature instanceof Sha256WithRsaSignature ||
+         signature instanceof Sha256WithEcdsaSignature;
+};
+
+/**
+ * If the signature is a type that has a ValidityPeriod, then return it.
+ * Otherwise throw an error.
+ * @param {Signature} An object of a subclass of Signature.
+ * @returns {ValidityPeriod} The signature's ValidityPeriod. It is an error if
+ * signature doesn't have a ValidityPeriod.
+ */
+ValidityPeriod.getFromSignature = function(signature)
+{
+  if (signature instanceof Sha256WithRsaSignature ||
+      signature instanceof Sha256WithEcdsaSignature)
+    return signature.getKeyLocator();
+  else
+    throw new Error
+      ("ValidityPeriod.getFromSignature: Signature type does not have a ValidityPeriod");
+};
+
+/**
  * Get the change count, which is incremented each time this object is changed.
  * @return {number} The change count.
  */
