@@ -22,7 +22,7 @@
 /** @ignore */
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
-var KeyLocator = require('./key-locator.js').KeyLocator;
+var KeyLocator = require('./key-locator.js').KeyLocator; /** @ignore */
 var ValidityPeriod = require('./security/validity-period.js').ValidityPeriod;
 
 /**
