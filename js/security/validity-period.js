@@ -1,5 +1,4 @@
 /**
- * This class represents an NDN Data MetaInfo object.
  * Copyright (C) 2016-2017 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx src/security https://github.com/named-data/ndn-cxx
@@ -118,7 +117,7 @@ ValidityPeriod.prototype.isValid = function(time)
  * class does not need to be overloaded with all the different kinds of
  * information that various signature algorithms may use.
  * @param {Signature} An object of a subclass of Signature.
- * @returns {boolean} True if the signature is a type that has a ValidityPeriod,
+ * @return {boolean} True if the signature is a type that has a ValidityPeriod,
  * otherwise false.
  */
 ValidityPeriod.canGetFromSignature = function(signature)
@@ -131,7 +130,7 @@ ValidityPeriod.canGetFromSignature = function(signature)
  * If the signature is a type that has a ValidityPeriod, then return it.
  * Otherwise throw an error.
  * @param {Signature} An object of a subclass of Signature.
- * @returns {ValidityPeriod} The signature's ValidityPeriod. It is an error if
+ * @return {ValidityPeriod} The signature's ValidityPeriod. It is an error if
  * signature doesn't have a ValidityPeriod.
  */
 ValidityPeriod.getFromSignature = function(signature)
