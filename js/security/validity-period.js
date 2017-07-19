@@ -122,8 +122,9 @@ ValidityPeriod.prototype.isValid = function(time)
  */
 ValidityPeriod.canGetFromSignature = function(signature)
 {
-  return signature instanceof Sha256WithRsaSignature ||
-         signature instanceof Sha256WithEcdsaSignature;
+  return signature.constructor != undefined &&
+    (signature.constructor.name === "Sha256WithRsaSignature" ||
+     signature.constructor.name === "Sha256WithEcdsaSignature");
 };
 
 /**
@@ -135,9 +136,10 @@ ValidityPeriod.canGetFromSignature = function(signature)
  */
 ValidityPeriod.getFromSignature = function(signature)
 {
-  if (signature instanceof Sha256WithRsaSignature ||
-      signature instanceof Sha256WithEcdsaSignature)
-    return signature.getKeyLocator();
+  if (signature.constructor != undefined &&
+      (signature.constructor.name === "Sha256WithRsaSignature" ||
+       signature.constructor.name === "Sha256WithEcdsaSignature"))
+    return signature.getValidityPeriod();
   else
     throw new Error
       ("ValidityPeriod.getFromSignature: Signature type does not have a ValidityPeriod");
