@@ -159,6 +159,7 @@ def build (bld):
                  "js/security/policy/config-policy-manager.js",
                  "js/security/policy/no-verify-policy-manager.js",
                  "js/security/policy/self-verify-policy-manager.js",
+                 "js/security/v2/certificate-v2.js",
                  "js/security/key-chain.js",
                  "js/exclude.js",
                  "js/interest.js",
