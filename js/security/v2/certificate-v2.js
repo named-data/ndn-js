@@ -321,7 +321,7 @@ CertificateV2.extractIdentityFromCertName = function(certificateName)
  */
 CertificateV2.extractKeyNameFromCertName = function(certificateName)
 {
-  if (!isValidName(certificateName)) {
+  if (!CertificateV2.isValidName(certificateName)) {
     throw new InvalidArgumentException(new Error
       ("Certificate name `" + certificateName.toUri() +
         "` does not follow the naming conventions"));
