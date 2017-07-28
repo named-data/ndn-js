@@ -259,8 +259,8 @@ KeyChain.prototype.setDefaultKeyForIdentity = function
 };
 
 /**
- * Generate a pair of RSA keys for the specified identity and set it as default
- * key for the identity.
+ * Generate a pair of RSA keys for the specified identity and set it as the
+ * default key for the identity.
  * @param {Name} identityName The name of the identity.
  * @param {boolean} isKsk (optional) true for generating a Key-Signing-Key (KSK),
  * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
