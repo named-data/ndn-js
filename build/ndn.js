@@ -13746,98 +13746,6 @@ MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMillisecon
          nowMilliseconds >= this.timeoutTimeMilliseconds;
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * From PyNDN ndn_regex.py by Adeola Bannis.
- * Originally from Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-/** @ignore */
-var Name = require('../name.js').Name;
-
-/**
- * An NdnRegexMatcher has static methods to convert an NDN regex
- * (http://redmine.named-data.net/projects/ndn-cxx/wiki/Regex) to a JavaScript
- * RegExp that can match against URIs.
- * @constructor
- */
-var NdnRegexMatcher = function NdnRegexMatcher()
-{
-};
-
-exports.NdnRegexMatcher = NdnRegexMatcher;
-
-/**
- * Determine if the provided NDN regex matches the given Name.
- * @param {string} pattern The NDN regex.
- * @param {Name} name The Name to match against the regex.
- * @return {Object} The match object from String.match, or null if the pattern
- * does not match.
- */
-NdnRegexMatcher.match = function(pattern, name)
-{
-  var nameUri = name.toUri();
-
-  pattern = NdnRegexMatcher.sanitizeSets(pattern);
-
-  pattern = pattern.replace(/<>/g, "(?:<.+?>)");
-  pattern = pattern.replace(/>/g, "");
-  pattern = pattern.replace(/<(?!!)/g, "/");
-
-  return nameUri.match(new RegExp(pattern));
-};
-
-NdnRegexMatcher.sanitizeSets = function(pattern)
-{
-  var newPattern = pattern;
-
-  // Positive sets can be changed to (comp1|comp2).
-  // Negative sets must be changed to negative lookahead assertions.
-
-  var regex1 = /\[(\^?)(.*?)\]/g;
-  var match;
-  while ((match = regex1.exec(pattern)) !== null) {
-    // Insert | between components.
-    // Match 2 is the last match, so we use the hack of working backwards from
-    //   lastIndex.  If possible, this should be changed to a more direct solution.
-    var start = regex1.lastIndex - "]".length - match[2].length;
-    var end = start + match[2].length;
-    if (start - end === 0)
-      continue;
-    var oldStr = match[2];
-    var newStr = oldStr.replace(/></g, ">|<");
-    newPattern = newPattern.substr(0, start) + newStr + newPattern.substr(end);
-  }
-
-  // Replace [] with (),  or (?! ) for negative lookahead.
-  // If we use negative lookahead, we also have to consume one component.
-  var isNegative = newPattern.indexOf("[^") >= 0;
-  if (isNegative) {
-    newPattern = newPattern.replace(/\[\^/g, "(?:(?!");
-    newPattern = newPattern.replace(/\]/g, ")(?:/.*)*)");
-  }
-  else {
-    newPattern = newPattern.replace(/\[/g, "(");
-    newPattern = newPattern.replace(/\]/g, ")");
-  }
-
-  return newPattern;
-};
-/**
  * Copyright (C) 2015-2017 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx util/segment-fetcher https://github.com/named-data/ndn-cxx
@@ -14203,6 +14111,1308 @@ SegmentFetcher.prototype.onTimeout = function(interest)
 SegmentFetcher.endsWithSegmentNumber = function(name)
 {
   return name.size() >= 1 && name.get(-1).isSegment();
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * @constructor
+ */
+var NdnRegexBackrefManager = function NdnRegexBackrefManager()
+{
+  // Array of NdnRegexMatcherBase
+  this.backrefs_ = []
+};
+
+exports.NdnRegexBackrefManager = NdnRegexBackrefManager;
+
+/**
+ * @param {NdnRegexMatcherBase} matcher
+ * @return {number}
+ */
+NdnRegexBackrefManager.prototype.pushRef = function(matcher)
+{
+  last = this.backrefs_.length;
+  this.backrefs_.push(matcher);
+
+  return last;
+};
+
+NdnRegexBackrefManager.prototype.popRef = function()
+{
+  this.backrefs_.pop();
+};
+
+/**
+ * @return {number}
+ */
+NdnRegexBackrefManager.prototype.size = function()
+{
+  return this.backrefs_.length;
+};
+
+/**
+ * @param {number} i
+ * @return {NdnRegexMatcherBase}
+ */
+NdnRegexBackrefManager.prototype.getBackref = function(i)
+{
+  return this.backrefs_[i];
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var NdnRegexBackrefManager = require('./ndn-regex-backref-manager.js').NdnRegexBackrefManager;
+
+/**
+ * Create an instance of the abstract class NdnRegexMatcherBase.
+ * @param {string} expr The expression.
+ * @param {number} type The type as an int from the
+ * NdnRegexMatcherBase.NdnRegexExprType enum.
+ * @param {NdnRegexBackrefManager} backrefManager (optional) The
+ * NdnRegexBackrefManager to use. If omitted, use a new
+ * NdnRegexBackrefManager().
+ * @constructor
+ */
+var NdnRegexMatcherBase = function NdnRegexMatcherBase
+  (expr, type, backrefManager)
+{
+  // Array of NdnRegexMatcherBase
+  this.matchers_ = [];
+  // Array of Name.Component
+  this.matchResult_ = [];
+
+  this.expr_ = expr;
+  this.type_ = type;
+  if (backrefManager == undefined)
+    backrefManager = new NdnRegexBackrefManager();
+  this.backrefManager_ = backrefManager;
+};
+
+exports.NdnRegexMatcherBase = NdnRegexMatcherBase;
+
+/**
+ * Create a new NdnRegexMatcherBase.Error to report errors using
+ * NdnRegexMatcherBase methods.
+ * Call with: throw new NdnRegexMatcherBase.Error(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+NdnRegexMatcherBase.Error = function NdnRegexMatcherBaseError(error)
+{
+  if (error) {
+    error.__proto__ = NdnRegexMatcherBase.Error.prototype;
+    return error;
+  }
+}
+
+NdnRegexMatcherBase.Error.prototype = new Error();
+NdnRegexMatcherBase.Error.prototype.name = "NdnRegexMatcherBaseError";
+
+NdnRegexMatcherBase.NdnRegexExprType = {
+  TOP:            0,
+  PATTERN_LIST:   1,
+  REPEAT_PATTERN: 2,
+  BACKREF:        3,
+  COMPONENT_SET:  4,
+  COMPONENT:      5,
+  PSEUDO:         6
+};
+
+/**
+ * @param {Name} name
+ * @param {number} offset
+ * @param {number} len
+ * @return {boolean}
+ */
+NdnRegexMatcherBase.prototype.match = function(name, offset, len)
+{
+  var result = false;
+
+  this.matchResult_ = [];
+
+  if (this.recursiveMatch_(0, name, offset, len)) {
+    var i = offset;
+    while (i < offset + len) {
+      this.matchResult_.push(name.get(i));
+      ++i;
+    }
+    result = true;
+  }
+  else
+    result = false;
+
+  return result;
+};
+
+/**
+ * Get the list of matched name components.
+ * @return {Array<Name.Component>} The matched name components. You must not
+ * modify this list.
+ */
+NdnRegexMatcherBase.prototype.getMatchResult = function()
+{
+  return this.matchResult_;
+};
+
+/**
+ * @return {string}
+ */
+NdnRegexMatcherBase.prototype.getExpr = function()
+{
+  return this.expr_;
+};
+
+/**
+ * Compile the regular expression to generate more matchers when necessary.
+ */
+NdnRegexMatcherBase.prototype.compile_ = function()
+{
+  throw new Error("NdnRegexMatcherBase.compile is not implemented");
+};
+
+/**
+ *
+ * @param {number} matcherNo
+ * @param {Name} name
+ * @param {number} offset
+ * @param {number} len
+ * @return {boolean}
+ */
+NdnRegexMatcherBase.prototype.recursiveMatch_ = function
+  (matcherNo, name, offset, len)
+{
+  var tried = len;
+
+  if (matcherNo >= this.matchers_.length)
+      return (len == 0);
+
+  var matcher = this.matchers_[matcherNo];
+
+  while (tried >= 0) {
+    if (matcher.match(name, offset, tried) &&
+        this.recursiveMatch_
+          (matcherNo + 1, name, offset + tried, len - tried))
+      return true;
+    --tried;
+  }
+
+  return false;
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var NdnRegexMatcherBase = require('./ndn-regex-matcher-base.js').NdnRegexMatcherBase;
+
+/**
+ * Create an NdnRegexBackrefMatcher.
+ * @param {string} expr
+ * @param {NdnRegexBackrefManager} backrefManager The back-reference manager.
+ * @constructor
+ */
+var NdnRegexBackrefMatcher = function NdnRegexBackrefMatcher
+  (expr, backrefManager)
+{
+  // Call the base constructor.
+  NdnRegexMatcherBase.call
+    (this, expr, NdnRegexMatcherBase.NdnRegexExprType.BACKREF, backrefManager);
+};
+
+NdnRegexBackrefMatcher.prototype = new NdnRegexMatcherBase();
+NdnRegexBackrefMatcher.prototype.name = "NdnRegexBackrefMatcher";
+
+exports.NdnRegexBackrefMatcher = NdnRegexBackrefMatcher;
+
+NdnRegexBackrefMatcher.prototype.lateCompile = function()
+{
+  this.compile_();
+};
+
+NdnRegexBackrefMatcher.prototype.compile_ = function()
+{
+  if (this.expr_.length < 2)
+    throw new NdnRegexMatcherBase.Error(new Error
+      ("Unrecognized format: " + this.expr_));
+
+  var lastIndex = this.expr_.length - 1;
+  if ('(' === this.expr_[0] && ')' === this.expr_[lastIndex]) {
+    var matcher = new NdnRegexPatternListMatcher
+      (this.expr_.substring(1, lastIndex), this.backrefManager_);
+    this.matchers_.push(matcher);
+  }
+  else
+    throw new NdnRegexMatcherBase.Error(new Error
+      ("Unrecognized format: " + this.expr_));
+};
+
+// Put this last to avoid a require loop.
+/** @ignore */
+var NdnRegexPatternListMatcher = require('./ndn-regex-pattern-list-matcher.js').NdnRegexPatternListMatcher;
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var NdnRegexMatcherBase = require('./ndn-regex-matcher-base.js').NdnRegexMatcherBase; /** @ignore */
+var NdnRegexPseudoMatcher = require('./ndn-regex-pseudo-matcher.js').NdnRegexPseudoMatcher;
+
+/**
+ * Create a RegexComponent matcher from expr.
+ * @param {string} expr The standard regular expression to match a component.
+ * @param {NdnRegexBackrefManager} backrefManager The back-reference manager.
+ * @param {boolean} isExactMatch (optional) The flag to provide exact match. If
+ * omitted, use true.
+ * @constructor
+ */
+var NdnRegexComponentMatcher = function NdnRegexComponentMatcher
+  (expr, backrefManager, isExactMatch)
+{
+  // Call the base constructor.
+  NdnRegexMatcherBase.call
+    (this, expr, NdnRegexMatcherBase.NdnRegexExprType.COMPONENT, backrefManager);
+
+  if (isExactMatch === undefined)
+    isExactMatch = true;
+
+  this.componentRegex_ = null;
+  // Array of NdnRegexPseudoMatcher
+  this.pseudoMatchers_ = [];
+
+  this.isExactMatch_ = isExactMatch;
+
+  this.compile_();
+};
+
+NdnRegexComponentMatcher.prototype = new NdnRegexMatcherBase();
+NdnRegexComponentMatcher.prototype.name = "NdnRegexComponentMatcher";
+
+exports.NdnRegexComponentMatcher = NdnRegexComponentMatcher;
+
+/**
+ * @param {Name} name
+ * @param {number} offset
+ * @param {number} len
+ * @return {boolean}
+ */
+NdnRegexComponentMatcher.prototype.match = function(name, offset, len)
+{
+  this.matchResult_ = [];
+
+  if (this.expr_ == "") {
+    this.matchResult_.push(name.get(offset));
+    return true;
+  }
+
+  if (this.isExactMatch_) {
+    var targetStr = name.get(offset).toEscapedString();
+    var subResult = targetStr.match(this.componentRegex_);
+    if (subResult !== null) {
+      for (var i = 1; i < subResult.length; ++i) {
+        this.pseudoMatchers_[i].resetMatchResult();
+        this.pseudoMatchers_[i].setMatchResult(subResult[i]);
+      }
+
+      this.matchResult_.push(name.get(offset));
+      return true;
+    }
+  }
+  else
+    throw new NdnRegexMatcherBase.Error(new Error
+      ("Non-exact component search is not supported yet"));
+
+  return false;
+};
+
+NdnRegexComponentMatcher.prototype.compile_ = function()
+{
+  this.componentRegex_ = new RegExp(this.expr_);
+
+  this.pseudoMatchers_ = [];
+  this.pseudoMatchers_.push(new NdnRegexPseudoMatcher());
+
+  // Imitate C++ mark_count by just counting the number of open parentheses.
+  if (this.expr_.indexOf('\\(') >= 0)
+    // We don't expect escaped parentheses, so don't try to handle them.
+    throw new NdnRegexMatcherBase.Error(new Error
+      ("Can't count subexpressions in regex with escaped parentheses: " + expr_));
+  var markCount = 0;
+  for (var i = 0; i < this.expr_.length; ++i) {
+    if (this.expr_[i] === '(')
+      ++markCount;
+  }
+
+  for (var i = 1; i <= markCount; ++i) {
+    var pMatcher = new NdnRegexPseudoMatcher();
+    this.pseudoMatchers_.push(pMatcher);
+    this.backrefManager_.pushRef(pMatcher);
+  }
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var NdnRegexMatcherBase = require('./ndn-regex-matcher-base.js').NdnRegexMatcherBase;
+
+/**
+ * Create an NdnRegexComponentSetMatcher matcher from expr.
+ * @param {string} expr The standard regular expression to match a component.
+ * @param {NdnRegexBackrefManager} backrefManager The back-reference manager.
+ * @constructor
+ */
+var NdnRegexComponentSetMatcher = function NdnRegexComponentSetMatcher
+  (expr, backrefManager)
+{
+  // Call the base constructor.
+  NdnRegexMatcherBase.call
+    (this, expr, NdnRegexMatcherBase.NdnRegexExprType.COMPONENT_SET,
+     backrefManager);
+
+  // Array of NdnRegexComponentMatcher
+  this.components_ = [];
+  this.isInclusion_ = true;
+
+  this.compile_();
+};
+
+NdnRegexComponentSetMatcher.prototype = new NdnRegexMatcherBase();
+NdnRegexComponentSetMatcher.prototype.name = "NdnRegexComponentSetMatcher";
+
+exports.NdnRegexComponentSetMatcher = NdnRegexComponentSetMatcher;
+
+/**
+ * @param {Name} name
+ * @param {number} offset
+ * @param {number} len
+ * @return {boolean}
+ */
+NdnRegexComponentSetMatcher.prototype.match = function(name, offset, len)
+{
+  isMatched = false;
+
+  // ComponentSet only matches one component.
+  if (len !== 1)
+    return false;
+
+  for (var i = 0; i < this.components_.length; ++i) {
+    var matcher = this.components_[i];
+    if (matcher.match(name, offset, len)) {
+      isMatched = true;
+      break;
+    }
+  }
+
+  this.matchResult_ = [];
+
+  if (this.isInclusion_ ? isMatched : !isMatched) {
+    this.matchResult_.push(name.get(offset));
+    return true;
+  }
+  else
+    return false;
+};
+
+/**
+ * Compile the regular expression to generate more matchers when necessary.
+ */
+NdnRegexComponentSetMatcher.prototype.compile_ = function()
+{
+  if (this.expr_.length < 2)
+    throw new NdnRegexMatcherBase.Error(new Error
+      ("Regexp compile error (cannot parse " + this.expr_ + ")"));
+
+  if (this.expr_[0] === '<')
+    this.compileSingleComponent_();
+  else if (this.expr_[0] === '[') {
+    var lastIndex = this.expr_.length - 1;
+    if (']' !== this.expr_[lastIndex])
+      throw new NdnRegexMatcherBase.Error(new Error
+        ("Regexp compile error (no matching ']' in " + this.expr_ + ")"));
+
+    if ('^' === this.expr_[1]) {
+      this.isInclusion_ = false;
+      this.compileMultipleComponents_(2, lastIndex);
+    }
+    else
+      this.compileMultipleComponents_(1, lastIndex);
+  }
+  else
+    throw new NdnRegexMatcherBase.Error(new Error
+      ("Regexp compile error (cannot parse " + this.expr_ + ")"));
+};
+
+/**
+ * @param {number} index
+ * @returns {number}
+ */
+NdnRegexComponentSetMatcher.prototype.extractComponent_ = function(index)
+{
+  var lcount = 1;
+  var rcount = 0;
+
+  while (lcount > rcount) {
+    if (index >= this.expr_.length)
+      throw new NdnRegexMatcherBase.Error(new Error
+        ("Error: angle brackets mismatch"));
+
+    if (this.expr_[index] === '<')
+      lcount += 1;
+    else if (this.expr_[index] === '>')
+      rcount += 1;
+
+    index += 1;
+  }
+
+  return index;
+};
+
+NdnRegexComponentSetMatcher.prototype.compileSingleComponent_ = function()
+{
+  var end = this.extractComponent_(1);
+
+  if (this.expr_.length !== end)
+    throw new NdnRegexMatcherBase.Error(new Error
+      ("Component expr error " + this.expr_));
+  else {
+    component = new NdnRegexComponentMatcher
+      (this.expr_.substring(1, end - 1), this.backrefManager_);
+
+    this.components_.push(component);
+  }
+};
+
+/**
+ * @param {number} start
+ * @param {number} lastIndex
+ */
+NdnRegexComponentSetMatcher.prototype.compileMultipleComponents_ = function
+  (start, lastIndex)
+{
+  var index = start;
+  var tempIndex = start;
+
+  while (index < lastIndex) {
+    if ('<' !== this.expr_[index])
+      throw new NdnRegexMatcherBase.Error(new Error
+        ("Component expr error " + this.expr_));
+
+    tempIndex = index + 1;
+    index = this.extractComponent_(tempIndex);
+
+    component = new NdnRegexComponentMatcher
+      (this.expr_.substring(tempIndex, index - 1), this.backrefManager_);
+
+    this.components_.push(component);
+  }
+
+  if (index != lastIndex)
+    throw new NdnRegexMatcherBase.Error(new Error
+      ("Not sufficient expr to parse " + this.expr_));
+};
+
+// Put this last to avoid a require loop.
+/** @ignore */
+var NdnRegexComponentMatcher = require('./ndn-regex-component-matcher.js').NdnRegexComponentMatcher;
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var NdnRegexMatcherBase = require('./ndn-regex-matcher-base.js').NdnRegexMatcherBase;
+
+/**
+ * Create an NdnRegexPatternListMatcher.
+ * @param {string} expr
+ * @param {NdnRegexBackrefManager} backrefManager The back-reference manager.
+ * @constructor
+ */
+var NdnRegexPatternListMatcher = function NdnRegexPatternListMatcher
+  (expr, backrefManager)
+{
+  // Call the base constructor.
+  NdnRegexMatcherBase.call
+    (this, expr, NdnRegexMatcherBase.NdnRegexExprType.PATTERN_LIST,
+     backrefManager);
+
+  this.compile_();
+};
+
+NdnRegexPatternListMatcher.prototype = new NdnRegexMatcherBase();
+NdnRegexPatternListMatcher.prototype.name = "NdnRegexPatternListMatcher";
+
+exports.NdnRegexPatternListMatcher = NdnRegexPatternListMatcher;
+
+NdnRegexPatternListMatcher.prototype.compile_ = function()
+{
+  var length = this.expr_.length;
+  var index = [0];
+  var subHead = index[0];
+
+  while (index[0] < length) {
+    subHead = index[0];
+
+    if (!this.extractPattern_(subHead, index))
+      throw new NdnRegexMatcherBase.Error(new Error("Compile error"));
+  }
+};
+
+/**
+ * @param {number} index
+ * @param {Array<number>} Update next[0].
+ * @returns {boolean}
+ */
+NdnRegexPatternListMatcher.prototype.extractPattern_ = function(index, next)
+{
+  var start = index;
+  var end = index;
+  var indicator = index;
+
+  if (this.expr_[index] === '(') {
+    index += 1;
+    index = this.extractSubPattern_('(', ')', index);
+    indicator = index;
+    end = this.extractRepetition_(index);
+    if (indicator === end) {
+      var matcher = new NdnRegexBackrefMatcher
+        (this.expr_.substring(start, end), this.backrefManager_);
+      this.backrefManager_.pushRef(matcher);
+      matcher.lateCompile();
+
+      this.matchers_.push(matcher);
+    }
+    else
+      this.matchers_.push(new NdnRegexRepeatMatcher
+        (this.expr_.substring(start, end), this.backrefManager_,
+         indicator - start));
+  }
+  else if (this.expr_[index] === '<') {
+    index += 1;
+    index = this.extractSubPattern_('<', '>', index);
+    indicator = index;
+    end = this.extractRepetition_(index);
+    this.matchers_.push(new NdnRegexRepeatMatcher
+      (this.expr_.substring(start, end), this.backrefManager_, indicator - start));
+  }
+  else if (this.expr_[index] === '[') {
+    index += 1;
+    index = this.extractSubPattern_('[', ']', index);
+    indicator = index;
+    end = this.extractRepetition_(index);
+    this.matchers_.push(new NdnRegexRepeatMatcher
+      (this.expr_.substring(start, end), this.backrefManager_,
+       indicator - start));
+  }
+  else
+    throw new NdnRegexMatcherBase.Error(new Error("Unexpected syntax"));
+
+  next[0] = end;
+
+  return true;
+};
+
+/**
+ * @param {string} left
+ * @param {string} right
+ * @param {number} index
+ * @returns {number}
+ */
+NdnRegexPatternListMatcher.prototype.extractSubPattern_ = function
+  (left, right, index)
+{
+  var lcount = 1;
+  var rcount = 0;
+
+  while (lcount > rcount) {
+    if (index >= this.expr_.length)
+      throw new NdnRegexMatcherBase.Error(new Error("Parenthesis mismatch"));
+
+    if (left == this.expr_[index])
+      lcount += 1;
+
+    if (right == this.expr_[index])
+      rcount += 1;
+
+    index += 1;
+  }
+
+  return index;
+};
+
+/**
+ * @param {number} index
+ * @returns {number}
+ */
+NdnRegexPatternListMatcher.prototype.extractRepetition_ = function(index)
+{
+  var exprSize = this.expr_.length;
+
+  if (index === exprSize)
+    return index;
+
+  if ('+' == this.expr_[index] || '?' == this.expr_[index] ||
+      '*' == this.expr_[index]) {
+    ++index;
+    return index;
+  }
+
+  if ('{' == this.expr_[index]) {
+    while ('}' != this.expr_[index]) {
+      ++index;
+      if (index === exprSize)
+        break;
+    }
+
+    if (index === exprSize)
+      throw new NdnRegexMatcherBase.Error(new Error("Missing right brace bracket"));
+    else {
+      ++index;
+      return index;
+    }
+  }
+  else
+    return index;
+};
+
+// Put these last to avoid a require loop.
+/** @ignore */
+var NdnRegexBackrefMatcher = require('./ndn-regex-backref-matcher.js').NdnRegexBackrefMatcher; /** @ignore */
+var NdnRegexRepeatMatcher = require('./ndn-regex-repeat-matcher.js').NdnRegexRepeatMatcher;
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var NdnRegexMatcherBase = require('./ndn-regex-matcher-base.js').NdnRegexMatcherBase;
+
+/**
+ * Create an NdnRegexPseudoMatcher.
+ * @constructor
+ */
+var NdnRegexPseudoMatcher = function NdnRegexPseudoMatcher()
+{
+  // Call the base constructor.
+  NdnRegexMatcherBase.call
+    (this, "", NdnRegexMatcherBase.NdnRegexExprType.PSEUDO);
+};
+
+NdnRegexPseudoMatcher.prototype = new NdnRegexMatcherBase();
+NdnRegexPseudoMatcher.prototype.name = "NdnRegexPseudoMatcher";
+
+exports.NdnRegexPseudoMatcher = NdnRegexPseudoMatcher;
+
+NdnRegexPseudoMatcher.prototype.compile_ = function()
+{
+};
+
+/**
+ * @param {string} value
+ */
+NdnRegexPseudoMatcher.prototype.setMatchResult = function(value)
+{
+  this.matchResult_.push(new Name.Component(value));
+};
+
+NdnRegexPseudoMatcher.prototype.resetMatchResult = function()
+{
+  this.matchResult_ = [];
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var NdnRegexMatcherBase = require('./ndn-regex-matcher-base.js').NdnRegexMatcherBase;
+
+/**
+ * Create an NdnRegexRepeatMatcher.
+ * @param {string} expr
+ * @param {NdnRegexBackrefManager} backrefManager The back-reference manager.
+ * @param {number} indicator
+ * @constructor
+ */
+var NdnRegexRepeatMatcher = function NdnRegexRepeatMatcher
+  (expr, backrefManager, indicator)
+{
+  // Call the base constructor.
+  NdnRegexMatcherBase.call
+    (this, expr, NdnRegexMatcherBase.NdnRegexExprType.REPEAT_PATTERN,
+     backrefManager);
+  this.repeatMin_ = 0;
+  this.repeatMax_ = 0;
+
+  this.indicator_ = indicator;
+
+  this.compile_();
+};
+
+NdnRegexRepeatMatcher.prototype = new NdnRegexMatcherBase();
+NdnRegexRepeatMatcher.prototype.name = "NdnRegexRepeatMatcher";
+
+exports.NdnRegexRepeatMatcher = NdnRegexRepeatMatcher;
+
+/**
+ * @param {Name} name
+ * @param {number} offset
+ * @param {number} len
+ * @return {boolean}
+ */
+NdnRegexRepeatMatcher.prototype.match = function(name, offset, len)
+{
+  this.matchResult_ = [];
+
+  if (0 === this.repeatMin_) {
+    if (0 === len)
+      return true;
+  }
+
+  if (this.recursiveMatch2_(0, name, offset, len)) {
+    for (var i = offset; i < offset + len; ++i)
+      this.matchResult_.push(name.get(i));
+    return true;
+  }
+  else
+    return false;
+};
+
+/**
+ * Compile the regular expression to generate more matchers when necessary.
+ */
+NdnRegexRepeatMatcher.prototype.compile_ = function()
+{
+  var matcher;
+
+  if ('(' == this.expr_[0]) {
+    matcher = new NdnRegexBackrefMatcher
+      (this.expr_.substring(0, this.indicator_), this.backrefManager_);
+    this.backrefManager_.pushRef(matcher);
+    matcher.lateCompile();
+  }
+  else
+    matcher = new NdnRegexComponentSetMatcher
+      (this.expr_.substring(0, this.indicator_), this.backrefManager_);
+
+  this.matchers_.push(matcher);
+
+  this.parseRepetition_();
+};
+
+NdnRegexRepeatMatcher.prototype.parseRepetition_ = function()
+{
+  var exprSize = this.expr_.length;
+  var MAX_REPETITIONS = 32767;
+
+  if (exprSize === this.indicator_) {
+    this.repeatMin_ = 1;
+    this.repeatMax_ = 1;
+
+    return true;
+  }
+  else {
+    if (exprSize === this.indicator_ + 1) {
+      if ('?' == this.expr_[this.indicator_]) {
+        this.repeatMin_ = 0;
+        this.repeatMax_ = 1;
+        return true;
+      }
+      if ('+' == this.expr_[this.indicator_]) {
+        this.repeatMin_ = 1;
+        this.repeatMax_ = MAX_REPETITIONS;
+        return true;
+      }
+      if ('*' == this.expr_[this.indicator_]) {
+        this.repeatMin_ = 0;
+        this.repeatMax_ = MAX_REPETITIONS;
+        return true;
+      }
+    }
+    else {
+      var repeatStruct = this.expr_.substring(this.indicator_, exprSize);
+      var rsSize = repeatStruct.length;
+      var min = 0;
+      var max = 0;
+
+      if (repeatStruct.match(new RegExp("\\{[0-9]+,[0-9]+\\}")) != null) {
+        separator = repeatStruct.indexOf(',');
+        min = parseInt(repeatStruct.substring(1, separator));
+        max = parseInt(repeatStruct.substring(separator + 1, rsSize - 1));
+      }
+      else if (repeatStruct.match(new RegExp("\\{,[0-9]+\\}")) != null) {
+        separator = repeatStruct.indexOf(',');
+        min = 0;
+        max = parseInt(repeatStruct.substring(separator + 1, rsSize - 1));
+      }
+      else if (repeatStruct.match(new RegExp("\\{[0-9]+,\\}")) != null) {
+        separator = repeatStruct.indexOf(',');
+        min = parseInt(repeatStruct.substring(1, separator));
+        max = MAX_REPETITIONS;
+      }
+      else if (repeatStruct.match(new RegExp("\\{[0-9]+\\}")) != null) {
+        min = parseInt(repeatStruct.substring(1, rsSize - 1));
+        max = min;
+      }
+      else
+        throw new NdnRegexMatcherBase.Error(new Error
+          ("Error: RegexRepeatMatcher.ParseRepetition(): Unrecognized format " +
+           this.expr_));
+
+      if (min > MAX_REPETITIONS || max > MAX_REPETITIONS || min > max)
+        throw new NdnRegexMatcherBase.Error(new Error
+          ("Error: RegexRepeatMatcher.ParseRepetition(): Wrong number " +
+           this.expr_));
+
+      this.repeatMin_ = min;
+      this.repeatMax_ = max;
+
+      return true;
+    }
+  }
+
+  return false;
+};
+
+/**
+ * 
+ * @param {number} repeat
+ * @param {Name} name
+ * @param {number} offset
+ * @param {number} len
+ * @returns {boolean}
+ */
+NdnRegexRepeatMatcher.prototype.recursiveMatch2_ = function
+  (repeat, name, offset, len)
+{
+  var tried = len;
+  var matcher = this.matchers_[0];
+
+  if (0 < len && repeat >= this.repeatMax_)
+    return false;
+
+  if (0 === len && repeat < this.repeatMin_)
+    return false;
+
+  if (0 == len && repeat >= this.repeatMin_)
+    return true;
+
+  while (tried >= 0) {
+    if (matcher.match(name, offset, tried) &&
+        this.recursiveMatch2_(repeat + 1, name, offset + tried,
+                              len - tried))
+      return true;
+    --tried;
+  }
+
+  return false;
+};
+
+// Put these last to avoid a require loop.
+/** @ignore */
+var NdnRegexBackrefMatcher = require('./ndn-regex-backref-matcher.js').NdnRegexBackrefMatcher; /** @ignore */
+var NdnRegexComponentSetMatcher = require('./ndn-regex-component-set-matcher.js').NdnRegexComponentSetMatcher;
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var NdnRegexMatcherBase = require('./ndn-regex-matcher-base.js').NdnRegexMatcherBase;
+var NdnRegexBackrefManager = require('./ndn-regex-backref-manager.js').NdnRegexBackrefManager;
+var NdnRegexPatternListMatcher = require('./ndn-regex-pattern-list-matcher.js').NdnRegexPatternListMatcher;
+
+/**
+ * Create an NdnRegexTopMatcher.
+ * @param {string} expr The expression.
+ * @param {string} expand (optional) If omitted, use "".
+ * @constructor
+ */
+var NdnRegexTopMatcher = function NdnRegexTopMatcher(expr, expand)
+{
+  // Call the base constructor.
+  NdnRegexMatcherBase.call
+    (this, expr, NdnRegexMatcherBase.NdnRegexExprType.TOP);
+
+  if (expand == undefined)
+    expand = "";
+
+  this.primaryMatcher_ = null;
+  this.secondaryMatcher_ = null;
+  this.primaryBackrefManager_ = new NdnRegexBackrefManager();
+  this.secondaryBackrefManager_ = new NdnRegexBackrefManager();
+  this.isSecondaryUsed_ = false;
+
+  this.expand_ = expand;
+
+  this.compile_();
+};
+
+NdnRegexTopMatcher.prototype = new NdnRegexMatcherBase();
+NdnRegexTopMatcher.prototype.name = "NdnRegexTopMatcher";
+
+exports.NdnRegexTopMatcher = NdnRegexTopMatcher;
+
+/**
+ * @param {Name} name
+ * @param {number} offset (optinal) Ignored.
+ * @param {number} len (optinal) Ignored.
+ * @return {boolean}
+ */
+NdnRegexTopMatcher.prototype.match = function(name, offset, len)
+{
+  this.isSecondaryUsed_ = false;
+
+  this.matchResult_ = [];
+
+  if (this.primaryMatcher_.match(name, 0, name.size())) {
+    this.matchResult_ = [];
+    var result = this.primaryMatcher_.getMatchResult();
+    for (var i = 0; i < result.length; ++i)
+      this.matchResult_.push(result[i]);
+    return true;
+  }
+  else {
+    if (this.secondaryMatcher_ != null &&
+        this.secondaryMatcher_.match(name, 0, name.size())) {
+      this.matchResult_ = [];
+      var result = this.secondaryMatcher_.getMatchResult();
+      for (var i = 0; i < result.length; ++i)
+        this.matchResult_.push(result[i]);
+      this.isSecondaryUsed_ = true;
+      return true;
+    }
+
+    return false;
+  }
+};
+
+/**
+ * @param {string} expandStr (optional) If omitted, use "".
+ */
+NdnRegexTopMatcher.prototype.expand = function(expandStr)
+{
+  if (expandStr == undefined)
+    expandStr = "";
+
+  var result = new Name();
+
+  var backrefManager = (this.isSecondaryUsed_ ? this.secondaryBackrefManager_
+                                              : this.primaryBackrefManager_);
+
+  var backrefNo = backrefManager.size();
+
+  var usingExpand;
+  if (expandStr != "")
+    usingExpand = expandStr;
+  else
+    usingExpand = this.expand_;
+
+  var offset = [0];
+  while (offset[0] < usingExpand.length) {
+    var item = NdnRegexTopMatcher.getItemFromExpand_(usingExpand, offset);
+    if (item[0] == '<')
+      result.append(item.substring(1, item.length - 1));
+
+    if (item[0] == '\\') {
+      var index = parseInt(item.substring(1, item.length));
+
+      if (0 === index) {
+        for (var i = 0; i < this.matchResult_.length; ++i)
+          result.append(this.matchResult_[i]);
+      }
+      else if (index <= backrefNo) {
+        var tempResult = backrefManager.getBackref(index - 1).getMatchResult();
+        for (var i = 0; i < tempResult.length; ++i)
+          result.append(tempResult[i]);
+      }
+      else
+        throw new NdnRegexMatcherBase.Error(new Error
+          ("Exceeded the range of back reference"));
+    }
+  }
+
+  return result;
+};
+
+/**
+ * @param {Name} name
+ * @param {boolean} hasAnchor (optional) If omitted, use false.
+ * @return {NdnRegexTopMatcher}
+ */
+NdnRegexTopMatcher.fromName = function(name, hasAnchor)
+{
+  if (hasAnchor == undefined)
+    hasAnchor = false;
+
+  var regexStr = "^";
+
+  for (var i = 0; i < name.size(); ++i) {
+    regexStr += "<";
+    regexStr += NdnRegexTopMatcher.convertSpecialChar_
+      (name.get(i).toEscapedString());
+    regexStr += ">";
+  }
+
+  if (hasAnchor)
+    regexStr += "$";
+
+  return new NdnRegexTopMatcher(regexStr);
+};
+
+NdnRegexTopMatcher.prototype.compile_ = function()
+{
+  var errMsg = "Error: RegexTopMatcher.Compile(): ";
+
+  var expr = this.expr_;
+
+  if ('$' != expr[expr.length - 1])
+    expr = expr + "<.*>*";
+  else
+    expr = expr.substring(0, expr.length - 1);
+
+  if ('^' != expr[0])
+    this.secondaryMatcher_ = new NdnRegexPatternListMatcher
+      ("<.*>*" + expr, this.secondaryBackrefManager_);
+  else
+    expr = expr.substring(1);
+
+  this.primaryMatcher_ = new NdnRegexPatternListMatcher
+     (expr, this.primaryBackrefManager_);
+};
+
+/**
+ * @param {string} expand
+ * @param {Array<number>} offset This updates offset[0].
+ * #return {string}
+ */
+NdnRegexTopMatcher.getItemFromExpand_ = function(expand, offset)
+{
+  var begin = offset[0];
+
+  if (expand[offset[0]] == '\\') {
+    ++offset[0];
+    if (offset[0] >= expand.length)
+      throw new NdnRegexMatcherBase.Error(new Error
+        ("Wrong format of expand string!"));
+
+    while (offset[0] < expand.length &&
+           expand[offset[0]] <= '9' && expand[offset[0]] >= '0') {
+      ++offset[0];
+      if (offset[0] > expand.length)
+        throw new NdnRegexMatcherBase.Error(new Error
+          ("Wrong format of expand string!"));
+    }
+
+    if (offset[0] > begin + 1)
+      return expand.substring(begin, offset[0]);
+    else
+      throw new NdnRegexMatcherBase.Error(new Error
+        ("Wrong format of expand string!"));
+  }
+  else if (expand[offset[0]] == '<') {
+    ++offset[0];
+    if (offset[0] >= expand.length)
+      throw new NdnRegexMatcherBase.Error(new Error
+        ("Wrong format of expand string!"));
+
+    var left = 1;
+    var right = 0;
+    while (right < left) {
+      if (expand[offset[0]] == '<')
+        ++left;
+      if (expand[offset[0]] == '>')
+        ++right;
+
+      ++offset[0];
+      if (offset[0] >= expand.length)
+        throw new NdnRegexMatcherBase.Error(new Error
+          ("Wrong format of expand string!"));
+    }
+
+    return expand.substring(begin, offset[0]);
+  }
+  else
+    throw new NdnRegexMatcherBase.Error(new Error
+      ("Wrong format of expand string!"));
+};
+
+/**
+ * @param {string} str
+ * @return {string}
+ */
+NdnRegexTopMatcher.convertSpecialChar_ = function(str)
+{
+  newStr = "";
+  for (var i = 0; i < str.length; ++i) {
+    var c = str[i];
+    if (c == '.' ||
+        c == '[' ||
+        c == '{' ||
+        c == '}' ||
+        c == '(' ||
+        c == ')' ||
+        c == '\\' ||
+        c == '*' ||
+        c == '+' ||
+        c == '?' ||
+        c == '|' ||
+        c == '^' ||
+        c == '$') {
+      newStr += '\\';
+      newStr += c;
+    }
+    else
+      newStr += c;
+  }
+
+  return newStr;
 };
 /**
  * Copyright (C) 2014-2017 Regents of the University of California.
@@ -16273,8 +17483,9 @@ Object.defineProperty(KeyLocator.prototype, "keyData",
     set: function(val) { this.setKeyData(val); } });
 
 // Put this last to avoid a require loop.
-var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
-var Sha256WithEcdsaSignature = require('./sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature;
+/** @ignore */
+var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('./sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
 var HmacWithSha256Signature = require('./hmac-with-sha256-signature.js').HmacWithSha256Signature;
 /**
  * This class represents an NDN Data MetaInfo object.
@@ -23531,7 +24742,7 @@ var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
 var BoostInfoParser = require('../../util/boost-info-parser.js').BoostInfoParser; /** @ignore */
-var NdnRegexMatcher = require('../../util/ndn-regex-matcher.js').NdnRegexMatcher; /** @ignore */
+var NdnRegexTopMatcher = require('../../util/regex/ndn-regex-top-matcher.js').NdnRegexTopMatcher; /** @ignore */
 var CertificateCache = require('./certificate-cache.js').CertificateCache; /** @ignore */
 var ValidationRequest = require('./validation-request.js').ValidationRequest; /** @ignore */
 var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
@@ -24013,10 +25224,10 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
     // This just means the data/interest name has the signing identity as a prefix.
     // That means everything before "ksk-?" in the key name.
     var identityRegex = "^([^<KEY>]*)<KEY>(<>*)<ksk-.+><ID-CERT>";
-    var identityMatch = NdnRegexMatcher.match(identityRegex, signatureName);
-    if (identityMatch != null) {
-      var identityPrefix = new Name(identityMatch[1]).append
-        (new Name(identityMatch[2]));
+    var identityMatch = new NdnRegexTopMatcher(identityRegex);
+    if (identityMatch.match(signatureName)) {
+      var identityPrefix = identityMatch.expand("\\1").append
+        (identityMatch.expand("\\2"));
       if (ConfigPolicyManager.matchesRelation
           (objectName, identityPrefix, "is-prefix-of"))
         return true;
@@ -24054,7 +25265,7 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
     // Is this a simple regex?
     var keyRegex = keyLocatorInfo.getFirstValue("regex");
     if (keyRegex != null) {
-      if (NdnRegexMatcher.match(keyRegex, signatureName) != null)
+      if (new NdnRegexTopMatcher(simpleKeyRegex).match(signatureName))
         return true;
       else {
         failureReason[0] = "The custom signatureName \"" + signatureName.toUri() +
@@ -24075,31 +25286,31 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
       var relationType = hyperRelation.getFirstValue("h-relation");
       if (keyRegex != null && keyExpansion != null && nameRegex != null &&
           nameExpansion != null && relationType != null) {
-        var keyMatch = NdnRegexMatcher.match(keyRegex, signatureName);
-        if (keyMatch == null || keyMatch[1] === undefined) {
+        var keyMatch = new NdnRegexTopMatcher(keyRegex);
+        if (!keyMatch.match(signatureName)) {
           failureReason[0] = "The custom hyper-relation signatureName \"" +
             signatureName.toUri() + "\" does not match the keyRegex \"" +
             keyRegex + "\"";
           return false;
         }
-        var keyMatchPrefix = ConfigPolicyManager.expand(keyMatch, keyExpansion);
+        var keyMatchPrefix = keyMatch.expand(keyExpansion);
 
-        var nameMatch = NdnRegexMatcher.match(nameRegex, objectName);
-        if (nameMatch == null || nameMatch[1] === undefined) {
+        var nameMatch = new NdnRegexTopMatcher(nameRegex);
+        if (!nameMatch.match(objectName)) {
           failureReason[0] = "The custom hyper-relation objectName \"" +
             objectName.toUri() + "\" does not match the nameRegex \"" +
             nameRegex + "\"";
           return false;
         }
-        var nameMatchStr = ConfigPolicyManager.expand(nameMatch, nameExpansion);
+        var nameMatchExpansion = nameMatch.expand(nameExpansion);
 
         if (ConfigPolicyManager.matchesRelation
-            (new Name(nameMatchStr), new Name(keyMatchPrefix), relationType))
+            (nameMatchExpansion, keyMatchPrefix, relationType))
           return true;
         else {
           failureReason[0] = "The custom hyper-relation nameMatch \"" +
-            nameMatchStr + "\" does not match the keyMatchPrefix \"" +
-            keyMatchPrefix + "\" using relation " + relationType;
+            nameMatchExpansion.toUri() + "\" does not match the keyMatchPrefix \"" +
+            keyMatchPrefix.toUri() + "\" using relation " + relationType;
           return false;
         }
       }
@@ -24108,22 +25319,6 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
 
   failureReason[0] = "Unrecognized checkerType: " + checkerType;
   return false;
-};
-
-/**
- * Similar to Python expand, return expansion where every \1, \2, etc. is
- * replaced by match[1], match[2], etc.  Note: Even though this is a general
- * utility function, we define it locally because it is only tested to work in
- * the cases used by this class.
- * @param {Object} match The match object from String.match.
- * @param {string} expansion The string with \1, \2, etc. to replace from match.
- * @return {string} The expanded string.
- */
-ConfigPolicyManager.expand = function(match, expansion)
-{
-  return expansion.replace
-    (/\\(\d)/g,
-     function(fullMatch, n) { return match[parseInt(n)];})
 };
 
 /**
@@ -24194,7 +25389,7 @@ ConfigPolicyManager.prototype.findMatchingRule = function(objName, matchType)
             passed = ConfigPolicyManager.matchesRelation(objName, matchName, matchRelation);
           }
           else
-            passed = (NdnRegexMatcher.match(regexPattern, objName) !== null);
+            passed = new NdnRegexTopMatcher(regexPattern).match(objName);
 
           if (!passed)
             break;
@@ -27470,7 +28665,7 @@ ControlResponse.prototype.setBodyAsControlParameters = function(controlParameter
 
 /** @ignore */
 var Name = require('./name.js').Name; /** @ignore */
-var NdnRegexMatcher = require('./util/ndn-regex-matcher.js').NdnRegexMatcher;
+var NdnRegexTopMatcher = require('./util/regex/ndn-regex-top-matcher.js').NdnRegexTopMatcher;
 
 /**
  * An InterestFilter holds a Name prefix and optional regex match expression for
@@ -27542,8 +28737,8 @@ InterestFilter.prototype.doesMatch = function(name)
     if (!this.prefix.match(name))
       return false;
 
-    return null != NdnRegexMatcher.match
-      (this.regexFilterPattern, name.getSubName(this.prefix.size()));
+    return new NdnRegexTopMatcher(this.regexFilterPattern).match
+      (name.getSubName(this.prefix.size()));
   }
   else
     // Just perform a prefix match.
@@ -27574,20 +28769,16 @@ InterestFilter.prototype.getRegexFilter = function() { return this.regexFilter; 
 
 /**
  * If regexFilter doesn't already have them, add ^ to the beginning and $ to
- * the end since these are required by NdnRegexMatcher.match.
+ * the end since these are required by NdnRegexTopMatcher.
  * @param {string} regexFilter The regex filter.
  * @return {string} The regex pattern with ^ and $.
  */
 InterestFilter.makePattern = function(regexFilter)
 {
-  if (regexFilter.length == 0)
-    // We don't expect this.
-    return "^$";
-
   var pattern = regexFilter;
-  if (pattern[0] != '^')
+  if (!(pattern.length >= 1 && pattern[0] == '^'))
     pattern = "^" + pattern;
-  if (pattern[pattern.length - 1] != '$')
+  if (!(pattern.length >= 1 && pattern[-1] == '$'))
     pattern = pattern + "$";
 
   return pattern;
