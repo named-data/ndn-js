@@ -30,7 +30,7 @@ var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
 var BoostInfoParser = require('../../util/boost-info-parser.js').BoostInfoParser; /** @ignore */
-var NdnRegexMatcher = require('../../util/ndn-regex-matcher.js').NdnRegexMatcher; /** @ignore */
+var NdnRegexTopMatcher = require('../../util/regex/ndn-regex-top-matcher.js').NdnRegexTopMatcher; /** @ignore */
 var CertificateCache = require('./certificate-cache.js').CertificateCache; /** @ignore */
 var ValidationRequest = require('./validation-request.js').ValidationRequest; /** @ignore */
 var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
@@ -512,10 +512,10 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
     // This just means the data/interest name has the signing identity as a prefix.
     // That means everything before "ksk-?" in the key name.
     var identityRegex = "^([^<KEY>]*)<KEY>(<>*)<ksk-.+><ID-CERT>";
-    var identityMatch = NdnRegexMatcher.match(identityRegex, signatureName);
-    if (identityMatch != null) {
-      var identityPrefix = new Name(identityMatch[1]).append
-        (new Name(identityMatch[2]));
+    var identityMatch = new NdnRegexTopMatcher(identityRegex);
+    if (identityMatch.match(signatureName)) {
+      var identityPrefix = identityMatch.expand("\\1").append
+        (identityMatch.expand("\\2"));
       if (ConfigPolicyManager.matchesRelation
           (objectName, identityPrefix, "is-prefix-of"))
         return true;
@@ -553,7 +553,7 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
     // Is this a simple regex?
     var keyRegex = keyLocatorInfo.getFirstValue("regex");
     if (keyRegex != null) {
-      if (NdnRegexMatcher.match(keyRegex, signatureName) != null)
+      if (new NdnRegexTopMatcher(simpleKeyRegex).match(signatureName))
         return true;
       else {
         failureReason[0] = "The custom signatureName \"" + signatureName.toUri() +
@@ -574,31 +574,31 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
       var relationType = hyperRelation.getFirstValue("h-relation");
       if (keyRegex != null && keyExpansion != null && nameRegex != null &&
           nameExpansion != null && relationType != null) {
-        var keyMatch = NdnRegexMatcher.match(keyRegex, signatureName);
-        if (keyMatch == null || keyMatch[1] === undefined) {
+        var keyMatch = new NdnRegexTopMatcher(keyRegex);
+        if (!keyMatch.match(signatureName)) {
           failureReason[0] = "The custom hyper-relation signatureName \"" +
             signatureName.toUri() + "\" does not match the keyRegex \"" +
             keyRegex + "\"";
           return false;
         }
-        var keyMatchPrefix = ConfigPolicyManager.expand(keyMatch, keyExpansion);
+        var keyMatchPrefix = keyMatch.expand(keyExpansion);
 
-        var nameMatch = NdnRegexMatcher.match(nameRegex, objectName);
-        if (nameMatch == null || nameMatch[1] === undefined) {
+        var nameMatch = new NdnRegexTopMatcher(nameRegex);
+        if (!nameMatch.match(objectName)) {
           failureReason[0] = "The custom hyper-relation objectName \"" +
             objectName.toUri() + "\" does not match the nameRegex \"" +
             nameRegex + "\"";
           return false;
         }
-        var nameMatchStr = ConfigPolicyManager.expand(nameMatch, nameExpansion);
+        var nameMatchExpansion = nameMatch.expand(nameExpansion);
 
         if (ConfigPolicyManager.matchesRelation
-            (new Name(nameMatchStr), new Name(keyMatchPrefix), relationType))
+            (nameMatchExpansion, keyMatchPrefix, relationType))
           return true;
         else {
           failureReason[0] = "The custom hyper-relation nameMatch \"" +
-            nameMatchStr + "\" does not match the keyMatchPrefix \"" +
-            keyMatchPrefix + "\" using relation " + relationType;
+            nameMatchExpansion.toUri() + "\" does not match the keyMatchPrefix \"" +
+            keyMatchPrefix.toUri() + "\" using relation " + relationType;
           return false;
         }
       }
@@ -607,22 +607,6 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
 
   failureReason[0] = "Unrecognized checkerType: " + checkerType;
   return false;
-};
-
-/**
- * Similar to Python expand, return expansion where every \1, \2, etc. is
- * replaced by match[1], match[2], etc.  Note: Even though this is a general
- * utility function, we define it locally because it is only tested to work in
- * the cases used by this class.
- * @param {Object} match The match object from String.match.
- * @param {string} expansion The string with \1, \2, etc. to replace from match.
- * @return {string} The expanded string.
- */
-ConfigPolicyManager.expand = function(match, expansion)
-{
-  return expansion.replace
-    (/\\(\d)/g,
-     function(fullMatch, n) { return match[parseInt(n)];})
 };
 
 /**
@@ -693,7 +677,7 @@ ConfigPolicyManager.prototype.findMatchingRule = function(objName, matchType)
             passed = ConfigPolicyManager.matchesRelation(objName, matchName, matchRelation);
           }
           else
-            passed = (NdnRegexMatcher.match(regexPattern, objName) !== null);
+            passed = new NdnRegexTopMatcher(regexPattern).match(objName);
 
           if (!passed)
             break;
