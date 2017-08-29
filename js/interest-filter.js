@@ -19,7 +19,7 @@
 
 /** @ignore */
 var Name = require('./name.js').Name; /** @ignore */
-var NdnRegexMatcher = require('./util/ndn-regex-matcher.js').NdnRegexMatcher;
+var NdnRegexTopMatcher = require('./util/regex/ndn-regex-top-matcher.js').NdnRegexTopMatcher;
 
 /**
  * An InterestFilter holds a Name prefix and optional regex match expression for
@@ -91,8 +91,8 @@ InterestFilter.prototype.doesMatch = function(name)
     if (!this.prefix.match(name))
       return false;
 
-    return null != NdnRegexMatcher.match
-      (this.regexFilterPattern, name.getSubName(this.prefix.size()));
+    return new NdnRegexTopMatcher(this.regexFilterPattern).match
+      (name.getSubName(this.prefix.size()));
   }
   else
     // Just perform a prefix match.
@@ -123,20 +123,16 @@ InterestFilter.prototype.getRegexFilter = function() { return this.regexFilter; 
 
 /**
  * If regexFilter doesn't already have them, add ^ to the beginning and $ to
- * the end since these are required by NdnRegexMatcher.match.
+ * the end since these are required by NdnRegexTopMatcher.
  * @param {string} regexFilter The regex filter.
  * @return {string} The regex pattern with ^ and $.
  */
 InterestFilter.makePattern = function(regexFilter)
 {
-  if (regexFilter.length == 0)
-    // We don't expect this.
-    return "^$";
-
   var pattern = regexFilter;
-  if (pattern[0] != '^')
+  if (!(pattern.length >= 1 && pattern[0] == '^'))
     pattern = "^" + pattern;
-  if (pattern[pattern.length - 1] != '$')
+  if (!(pattern.length >= 1 && pattern[-1] == '$'))
     pattern = pattern + "$";
 
   return pattern;
