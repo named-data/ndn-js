@@ -121,7 +121,6 @@ def build (bld):
                  "js/encoding/der/der-node.js",
                  "js/util/boost-info-parser.js",
                  "js/util/memory-content-cache.js",
-                 "js/util/ndn-regex-matcher.js",
                  "js/util/segment-fetcher.js",
                  "js/util/regex/ndn-regex-backref-manager.js",
                  "js/util/regex/ndn-regex-matcher-base.js",
