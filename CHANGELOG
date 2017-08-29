@@ -1,3 +1,10 @@
+Interim changes since NDN-JS v0.13.0 (2017-08-29)
+---------------------------
+
+Bug fixes
+* https://redmine.named-data.net/issues/4023 Ported the latest NDN regex code
+  from ndn-cxx which fixes errors for complex expressions.
+
 NDN-JS v0.13.0 (2017-03-16)
 ---------------------------
 
