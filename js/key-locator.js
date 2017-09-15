@@ -232,7 +232,7 @@ Object.defineProperty(KeyLocator.prototype, "keyData",
   { get: function() { return this.getKeyDataAsBuffer(); },
     set: function(val) { this.setKeyData(val); } });
 
-// Put this last to avoid a require loop.
+// Put these last to avoid a require loop.
 /** @ignore */
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var Sha256WithEcdsaSignature = require('./sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
