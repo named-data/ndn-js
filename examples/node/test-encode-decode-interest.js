@@ -132,7 +132,7 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
 ]);
 
 var TlvInterest = new Buffer([
-0x05, 0x50, // Interest
+0x05, 0x5C, // Interest
   0x07, 0x0A, 0x08, 0x03, 0x6E, 0x64, 0x6E, 0x08, 0x03, 0x61, 0x62, 0x63, // Name
   0x09, 0x38, // Selectors
     0x0D, 0x01, 0x04, // MinSuffixComponents
@@ -146,8 +146,12 @@ var TlvInterest = new Buffer([
       0x13, 0x00, // Any
     0x11, 0x01, 0x01, // ChildSelector
     0x12, 0x00, // MustBeFesh
-  0x0A, 0x04, 0x61, 0x62, 0x61, 0x62, // Nonce
+  0x0A, 0x04, 0x61, 0x62, 0x61, 0x62,	// Nonce
   0x0C, 0x02, 0x75, 0x30, // InterestLifetime
+  0x1e, 0x0a, // ForwardingHint
+        0x1f, 0x08, // Delegation
+              0x1e, 0x01, 0x01, // Preference=1
+              0x07, 0x03, 0x08, 0x01, 0x41, // Name=/A
 1
 ]);
 
@@ -179,6 +183,15 @@ function dumpInterest(interest)
   console.log("mustBeFresh: " + (interest.getMustBeFresh() ? "true" : "false"));
   console.log("nonce: " +
     (interest.getNonce().size() > 0 ? interest.getNonce().toHex() : "<none>"));
+  if (interest.getForwardingHint().size() > 0) {
+    console.log("forwardingHint:");
+    for (var i = 0; i < interest.getForwardingHint().size(); ++i)
+      console.log("  Preference: " +
+        interest.getForwardingHint().get(i).getPreference() + ", Name: " +
+        interest.getForwardingHint().get(i).getName().toUri());
+  }
+  else
+    console.log("forwardingHint: <none>");
 }
 
 function main()
@@ -210,6 +223,7 @@ function main()
     ([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
       0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F]));
   freshInterest.getExclude().appendComponent(new Name("abc").get(0)).appendAny();
+  freshInterest.getForwardingHint().add(1, new Name("/A"));
 
   var identityStorage = new MemoryIdentityStorage();
   var privateKeyStorage = new MemoryPrivateKeyStorage();

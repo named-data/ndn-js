@@ -53,6 +53,7 @@ Tlv.FinalBlockId =     26;
 Tlv.SignatureType =    27;
 Tlv.KeyLocator =       28;
 Tlv.KeyLocatorDigest = 29;
+Tlv.ForwardingHint =   30;
 Tlv.SelectedDelegation = 32;
 Tlv.FaceInstance =     128;
 Tlv.ForwardingEntry =  129;

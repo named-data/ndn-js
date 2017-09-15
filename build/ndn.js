@@ -10172,6 +10172,7 @@ Tlv.FinalBlockId =     26;
 Tlv.SignatureType =    27;
 Tlv.KeyLocator =       28;
 Tlv.KeyLocatorDigest = 29;
+Tlv.ForwardingHint =   30;
 Tlv.SelectedDelegation = 32;
 Tlv.FaceInstance =     128;
 Tlv.ForwardingEntry =  129;
@@ -27349,6 +27350,7 @@ var Name = require('./name.js').Name; /** @ignore */
 var Exclude = require('./exclude.js').Exclude; /** @ignore */
 var Link = require('./link.js').Link; /** @ignore */
 var KeyLocator = require('./key-locator.js').KeyLocator; /** @ignore */
+var DelegationSet = require('./delegation-set.js').DelegationSet; /** @ignore */
 var IncomingFaceId = require('./lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
@@ -27388,6 +27390,8 @@ var Interest = function Interest
     this.childSelector_ = interest.childSelector_;
     this.mustBeFresh_ = interest.mustBeFresh_;
     this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
+    this.forwardingHint_ = new ChangeCounter
+      (new DelegationSet(interest.getForwardingHint()));
     this.nonce_ = interest.nonce_;
     this.linkWireEncoding_ = interest.linkWireEncoding_;
     this.linkWireEncodingFormat_ = interest.linkWireEncodingFormat_;
@@ -27411,6 +27415,7 @@ var Interest = function Interest
     this.childSelector_ = childSelector;
     this.mustBeFresh_ = true;
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
+    this.forwardingHint_ = new ChangeCounter(new DelegationSet());
     this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
       nonce : new Blob(nonce, true);
     this.linkWireEncoding_ = new Blob();
@@ -27635,6 +27640,16 @@ Interest.prototype.getNonce = function()
 };
 
 /**
+ * Get the forwarding hint object which you can modify to add or remove
+ * forwarding hints.
+ * @return {DelegationSet} The forwarding hint as a DelegationSet.
+ */
+Interest.prototype.getForwardingHint = function()
+{
+  return this.forwardingHint_.get();
+};
+
+/**
  * @deprecated Use getNonce. This method returns a Buffer which is the former
  * behavior of getNonce, and should only be used while updating your code.
  */
@@ -27647,6 +27662,7 @@ Interest.prototype.getNonceAsBuffer = function()
  * Check if this interest has a link object (or a link wire encoding which
  * can be decoded to make the link object).
  * @return {boolean} True if this interest has a link object, false if not.
+ * @deprecated Use getForwardingHint.
  */
 Interest.prototype.hasLink = function()
 {
@@ -27658,6 +27674,7 @@ Interest.prototype.hasLink = function()
  * @return {Link} The link object, or null if not specified.
  * @throws DecodingException For error decoding the link wire encoding (if
  * necessary).
+ * @deprecated Use getForwardingHint.
  */
 Interest.prototype.getLink = function()
 {
@@ -27687,6 +27704,7 @@ Interest.prototype.getLink = function()
  * the Link. If omitted, use WireFormat.getDefaultWireFormat().
  * @return {Blob} The wire encoding, or an isNull Blob if the link is not
  * specified.
+ * @deprecated Use getForwardingHint.
  */
 Interest.prototype.getLinkWireEncoding = function(wireFormat)
 {
@@ -27705,6 +27723,7 @@ Interest.prototype.getLinkWireEncoding = function(wireFormat)
 /**
  * Get the selected delegation index.
  * @return {number} The selected delegation index. If not specified, return null.
+ * @deprecated Use getForwardingHint.
  */
 Interest.prototype.getSelectedDelegationIndex = function()
 {
@@ -27834,6 +27853,25 @@ Interest.prototype.setExclude = function(exclude)
 };
 
 /**
+ * Set this interest to use a copy of the given DelegationSet object as the
+ * forwarding hint.
+ * Note: You can also call getForwardingHint and change the forwarding hint
+ * directly.
+ * @param {DelegationSet} forwardingHint The DelegationSet object to use as the
+ * forwarding  hint. This makes a copy of the object. If no forwarding hint is
+ * specified, set to a new default DelegationSet() with no entries.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setForwardingHint = function(forwardingHint)
+{
+  this.forwardingHint_.set
+    (typeof forwardingHint === 'object' && forwardingHint instanceof DelegationSet ?
+     new DelegationSet(forwardingHint) : new DelegationSet());
+  ++this.changeCount_;
+  return this;
+};
+
+/**
  * Set the link wire encoding bytes, without decoding them. If there is
  * a link object, set it to null. If you later call getLink(), it will
  * decode the wireEncoding to create the link object.
@@ -27842,6 +27880,7 @@ Interest.prototype.setExclude = function(exclude)
  * @param {WireFormat} wireFormat The wire format of the encoding, to be used
  * later if necessary to decode. If omitted, use WireFormat.getDefaultWireFormat().
  * @return {Interest} This Interest so that you can chain calls to update values.
+ * @deprecated Use setForwardingHint.
  */
 Interest.prototype.setLinkWireEncoding = function(encoding, wireFormat)
 {
@@ -27860,6 +27899,7 @@ Interest.prototype.setLinkWireEncoding = function(encoding, wireFormat)
 /**
  * Clear the link wire encoding and link object so that getLink() returns null.
  * @return {Interest} This Interest so that you can chain calls to update values.
+ * @deprecated Use setForwardingHint.
  */
 Interest.prototype.unsetLink = function()
 {
@@ -27871,6 +27911,7 @@ Interest.prototype.unsetLink = function()
  * @param {number} selectedDelegationIndex The selected delegation index. If not
  * specified, set to null.
  * @return {Interest} This Interest so that you can chain calls to update values.
+ * @deprecated Use setForwardingHint.
  */
 Interest.prototype.setSelectedDelegationIndex = function(selectedDelegationIndex)
 {
@@ -28075,6 +28116,7 @@ Interest.prototype.getChangeCount = function()
   var changed = this.name_.checkChanged();
   changed = this.keyLocator_.checkChanged() || changed;
   changed = this.exclude_.checkChanged() || changed;
+  changed = this.forwardingHint_.checkChanged() || changed;
   if (changed)
     // A child object has changed, so update the change count.
     ++this.changeCount_;
@@ -28829,6 +28871,8 @@ var DelegationSet = function DelegationSet(value)
     this.delegations_ = value.delegations_.slice(0);
   else
     this.delegations_ = []; // of DelegationSet.Delegation.
+
+  this.changeCount_ = 0;
 };
 
 exports.DelegationSet = DelegationSet;
@@ -28905,6 +28949,7 @@ DelegationSet.prototype.add = function(preference, name)
   }
 
   this.delegations_.splice(i, 0, newDelegation);
+  ++this.changeCount_;
 };
 
 /**
@@ -28918,6 +28963,7 @@ DelegationSet.prototype.add = function(preference, name)
 DelegationSet.prototype.addUnsorted = function(preference, name)
 {
   this.delegations_.push(new DelegationSet.Delegation(preference, name));
+  ++this.changeCount_;
 };
 
 /**
@@ -28938,13 +28984,19 @@ DelegationSet.prototype.remove = function(name)
     }
   }
 
+  if (wasRemoved)
+    ++this.changeCount_;
   return wasRemoved;
 };
 
 /**
  * Clear the list of delegations.
  */
-DelegationSet.prototype.clear = function() { this.delegations_ = []; };
+DelegationSet.prototype.clear = function()
+{ 
+  this.delegations_ = [];
+  ++this.changeCount_;
+};
 
 /**
  * Get the number of delegation entries.
@@ -29001,6 +29053,15 @@ DelegationSet.prototype.wireDecode = function(input, wireFormat)
     wireFormat.decodeDelegationSet(this, input.buf(), false);
   else
     wireFormat.decodeDelegationSet(this, input, true);
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @return {number} The change count.
+ */
+DelegationSet.prototype.getChangeCount = function()
+{
+  return this.changeCount_;
 };
 /**
  * Copyright (C) 2016-2017 Regents of the University of California.
@@ -29365,6 +29426,20 @@ Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
+  if (interest.getForwardingHint().size() > 0) {
+    if (interest.getSelectedDelegationIndex() != null)
+      throw new Error
+        ("An Interest may not have a selected delegation when encoding a forwarding hint");
+    if (interest.hasLink())
+      throw new Error
+        ("An Interest may not have a link object when encoding a forwarding hint");
+
+    var forwardingHintSaveLength = encoder.getLength();
+    Tlv0_2WireFormat.encodeDelegationSet_(interest.getForwardingHint(), encoder);
+    encoder.writeTypeAndLength(
+      Tlv.ForwardingHint, encoder.getLength() - forwardingHintSaveLength);
+  }
+
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.SelectedDelegation, interest.getSelectedDelegationIndex());
   var linkWireEncoding = interest.getLinkWireEncoding(this);
@@ -29446,6 +29521,14 @@ Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
   var nonce = decoder.readBlobTlv(Tlv.Nonce);
   interest.setInterestLifetimeMilliseconds
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.InterestLifetime, endOffset));
+
+  if (decoder.peekType(Tlv.ForwardingHint, endOffset)) {
+    var forwardingHintEndOffset = decoder.readNestedTlvsStart
+      (Tlv.ForwardingHint);
+    Tlv0_2WireFormat.decodeDelegationSet_
+      (interest.getForwardingHint(), forwardingHintEndOffset, decoder, copy);
+    decoder.finishNestedTlvs(forwardingHintEndOffset);
+  }
 
   if (decoder.peekType(Tlv.Data, endOffset)) {
     // Get the bytes of the Link TLV.
@@ -29809,18 +29892,7 @@ Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input, copy)
 Tlv0_2WireFormat.prototype.encodeDelegationSet = function(delegationSet)
 {
   var encoder = new TlvEncoder(256);
-
-  // Encode backwards.
-  for (var i = delegationSet.size() - 1; i >= 0; --i) {
-    var saveLength = encoder.getLength();
-
-    Tlv0_2WireFormat.encodeName(delegationSet.get(i).getName(), encoder);
-    encoder.writeNonNegativeIntegerTlv
-      (Tlv.Link_Preference, delegationSet.get(i).getPreference());
-
-    encoder.writeTypeAndLength
-      (Tlv.Link_Delegation, encoder.getLength() - saveLength);
-  }
+  Tlv0_2WireFormat.encodeDelegationSet_(delegationSet, encoder);
 
   return new Blob(encoder.getOutput(), false);
 };
@@ -29845,19 +29917,8 @@ Tlv0_2WireFormat.prototype.decodeDelegationSet = function
     copy = true;
 
   var decoder = new TlvDecoder(input);
-  var endOffset = input.length;
-
-  delegationSet.clear();
-  while (decoder.getOffset() < endOffset) {
-    decoder.readTypeAndLength(Tlv.Link_Delegation);
-    var preference = decoder.readNonNegativeIntegerTlv(Tlv.Link_Preference);
-    var name = new Name();
-    Tlv0_2WireFormat.decodeName(name, decoder, copy);
-
-    // Add unsorted to preserve the order so that Interest selected delegation
-    // index will work.
-    delegationSet.addUnsorted(preference, name);
-  }
+  Tlv0_2WireFormat.decodeDelegationSet_
+    (delegationSet, input.length, decoder, copy);
 };
 
 /**
@@ -30514,6 +30575,59 @@ Tlv0_2WireFormat.decodeControlParameters = function
       Tlv.ControlParameters_ExpirationPeriod, endOffset));
 
   decoder.finishNestedTlvs(endOffset);
+};
+
+/**
+ * Encode delegationSet to the encoder as a sequence of NDN-TLV Delegation.
+ * Note that the sequence of Delegation does not have an outer TLV type and
+ * length because (when used in a Link object) it is intended to use the type 
+ * and length of a Data packet's Content.
+ * @param {DelegationSet} delegationSet The DelegationSet object to encode.
+ * @param {TlvEncoder} encoder The TlvEncoder to receive the encoding.
+ */
+Tlv0_2WireFormat.encodeDelegationSet_ = function(delegationSet, encoder)
+{
+  // Encode backwards.
+  for (var i = delegationSet.size() - 1; i >= 0; --i) {
+    var saveLength = encoder.getLength();
+
+    Tlv0_2WireFormat.encodeName(delegationSet.get(i).getName(), encoder);
+    encoder.writeNonNegativeIntegerTlv
+      (Tlv.Link_Preference, delegationSet.get(i).getPreference());
+
+    encoder.writeTypeAndLength
+      (Tlv.Link_Delegation, encoder.getLength() - saveLength);
+  }
+};
+
+/**
+ * Decode input as a sequence of NDN-TLV Delegation and set the fields of the
+ * delegationSet object. Note that the sequence of Delegation does not have an
+ * outer TLV type and length because (when used in a Link object) it is intended
+ * to use the type and length of a Data packet's Content.
+ * @param {DelegationSet} delegationSet The DelegationSet object whose fields
+ * are updated.
+ * @param {number} endOffset Decode elements up to endOffset in the input. This
+ * does not call finishNestedTlvs.
+ * @param {TlvDecoder} decoder The decoder with the input to decode.
+ * @param {boolean} copy If true, copy from the input when making new Blob
+ * values. If false, then Blob values share memory with the input, which must
+ * remain unchanged while the Blob values are used.
+ */
+Tlv0_2WireFormat.decodeDelegationSet_ = function
+  (delegationSet, endOffset, decoder, copy)
+{
+  delegationSet.clear();
+  while (decoder.getOffset() < endOffset) {
+    decoder.readTypeAndLength(Tlv.Link_Delegation);
+    var preference = decoder.readNonNegativeIntegerTlv(Tlv.Link_Preference);
+    var name = new Name();
+    Tlv0_2WireFormat.decodeName(name, decoder, copy);
+
+    // Add unsorted to preserve the order so that Interest selected delegation
+    // index will work.
+    delegationSet.addUnsorted(preference, name);
+  }
 };
 /**
  * Copyright (C) 2013-2017 Regents of the University of California.
