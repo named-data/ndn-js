@@ -43,6 +43,7 @@
             interest.setExclude(new Exclude());
             interest.getExclude().appendComponent(Name.fromEscapedString("abc"));
             interest.getExclude().appendAny();
+            interest.getForwardingHint().add(1, new Name("/A"));
 
             var output = EncodingUtils.encodeToHexInterest(interest);
 
@@ -91,6 +92,15 @@
                 output += "Nonce: " + interest.getNonce().toHex() + "<br/>";
             if (interest.getExclude() != null )
                 output += "Exclude: " + interest.getExclude().toUri() + "<br/>";
+            if (interest.getForwardingHint().size() > 0) {
+              output += "forwardingHint:" + "<br/>";
+              for (var i = 0; i < interest.getForwardingHint().size(); ++i)
+                output += "&nbsp;&nbsp;Preference: " +
+                  interest.getForwardingHint().get(i).getPreference() + ", Name: " +
+                  interest.getForwardingHint().get(i).getName().toUri() + "<br/>";
+            }
+            else
+              output += "forwardingHint: <none>" + "<br/>";
 
             document.getElementById('result').innerHTML = output;
         }
