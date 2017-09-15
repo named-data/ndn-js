@@ -1,3 +1,17 @@
+Interim changes since NDN-JS v0.13.0 (2017-09-15)
+-------------------------------------------------
+
+Bug fixes
+* https://redmine.named-data.net/issues/4023 Ported the latest NDN regex code
+  from ndn-cxx which fixes errors for complex expressions.
+
+Changes
+* https://redmine.named-data.net/issues/4251 Added Interest get/setForwardingHint.
+
+Deprecated
+* In Interest, deprecated link object and selected delegation methods.
+  Use get/setForwardingHint.
+
 NDN-JS v0.13.0 (2017-03-16)
 ---------------------------
 

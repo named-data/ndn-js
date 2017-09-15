@@ -282,26 +282,6 @@ describe('TestFaceRegisterMethods', function() {
   });
 });
 
-describe('TestFaceInterestMethods', function() {
-  // Mocha will wait until a callback calls "done" before running the "it" test.
-  beforeEach(function(done) {
-    face = new Face({host: "localhost"});
-    uri = "/";
-    counter = runExpressNameTest(done, face, uri);
-  });
-
-  it('AnyInterest', function() {
-    assert.ok(counter.onTimeoutCallCount == 0, 'Timeout on expressed interest');
-
-    // check that the callback was correct
-    assert.equal(counter.onDataCallCount, 1, 'Expected 1 onData callback, got ' + counter.onDataCallCount);
-
-    // just check that the interest was returned correctly?
-    var callbackInterest = counter.interest;
-    assert.ok(callbackInterest.getName().equals(new Name(uri)), 'Interest returned on callback had different name');
-  });
-});
-
 /*
 TODO: Replace this with a test that connects to a Face on localhost
 def test_specific_interest(self):
@@ -322,6 +302,7 @@ def test_specific_interest(self):
 describe('TestFaceInterestMethods', function() {
   // Mocha will wait until a callback calls "done" before running the "it" test.
   beforeEach(function(done) {
+    face = new Face({host: "localhost"});
     uri = "/test123/timeout";
     counter = runExpressNameTest(done, face, uri);
   });

@@ -28,6 +28,7 @@ var Name = require('./name.js').Name; /** @ignore */
 var Exclude = require('./exclude.js').Exclude; /** @ignore */
 var Link = require('./link.js').Link; /** @ignore */
 var KeyLocator = require('./key-locator.js').KeyLocator; /** @ignore */
+var DelegationSet = require('./delegation-set.js').DelegationSet; /** @ignore */
 var IncomingFaceId = require('./lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
@@ -67,6 +68,8 @@ var Interest = function Interest
     this.childSelector_ = interest.childSelector_;
     this.mustBeFresh_ = interest.mustBeFresh_;
     this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
+    this.forwardingHint_ = new ChangeCounter
+      (new DelegationSet(interest.getForwardingHint()));
     this.nonce_ = interest.nonce_;
     this.linkWireEncoding_ = interest.linkWireEncoding_;
     this.linkWireEncodingFormat_ = interest.linkWireEncodingFormat_;
@@ -90,6 +93,7 @@ var Interest = function Interest
     this.childSelector_ = childSelector;
     this.mustBeFresh_ = true;
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
+    this.forwardingHint_ = new ChangeCounter(new DelegationSet());
     this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
       nonce : new Blob(nonce, true);
     this.linkWireEncoding_ = new Blob();
@@ -314,6 +318,16 @@ Interest.prototype.getNonce = function()
 };
 
 /**
+ * Get the forwarding hint object which you can modify to add or remove
+ * forwarding hints.
+ * @return {DelegationSet} The forwarding hint as a DelegationSet.
+ */
+Interest.prototype.getForwardingHint = function()
+{
+  return this.forwardingHint_.get();
+};
+
+/**
  * @deprecated Use getNonce. This method returns a Buffer which is the former
  * behavior of getNonce, and should only be used while updating your code.
  */
@@ -326,6 +340,7 @@ Interest.prototype.getNonceAsBuffer = function()
  * Check if this interest has a link object (or a link wire encoding which
  * can be decoded to make the link object).
  * @return {boolean} True if this interest has a link object, false if not.
+ * @deprecated Use getForwardingHint.
  */
 Interest.prototype.hasLink = function()
 {
@@ -337,6 +352,7 @@ Interest.prototype.hasLink = function()
  * @return {Link} The link object, or null if not specified.
  * @throws DecodingException For error decoding the link wire encoding (if
  * necessary).
+ * @deprecated Use getForwardingHint.
  */
 Interest.prototype.getLink = function()
 {
@@ -366,6 +382,7 @@ Interest.prototype.getLink = function()
  * the Link. If omitted, use WireFormat.getDefaultWireFormat().
  * @return {Blob} The wire encoding, or an isNull Blob if the link is not
  * specified.
+ * @deprecated Use getForwardingHint.
  */
 Interest.prototype.getLinkWireEncoding = function(wireFormat)
 {
@@ -384,6 +401,7 @@ Interest.prototype.getLinkWireEncoding = function(wireFormat)
 /**
  * Get the selected delegation index.
  * @return {number} The selected delegation index. If not specified, return null.
+ * @deprecated Use getForwardingHint.
  */
 Interest.prototype.getSelectedDelegationIndex = function()
 {
@@ -513,6 +531,25 @@ Interest.prototype.setExclude = function(exclude)
 };
 
 /**
+ * Set this interest to use a copy of the given DelegationSet object as the
+ * forwarding hint.
+ * Note: You can also call getForwardingHint and change the forwarding hint
+ * directly.
+ * @param {DelegationSet} forwardingHint The DelegationSet object to use as the
+ * forwarding  hint. This makes a copy of the object. If no forwarding hint is
+ * specified, set to a new default DelegationSet() with no entries.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setForwardingHint = function(forwardingHint)
+{
+  this.forwardingHint_.set
+    (typeof forwardingHint === 'object' && forwardingHint instanceof DelegationSet ?
+     new DelegationSet(forwardingHint) : new DelegationSet());
+  ++this.changeCount_;
+  return this;
+};
+
+/**
  * Set the link wire encoding bytes, without decoding them. If there is
  * a link object, set it to null. If you later call getLink(), it will
  * decode the wireEncoding to create the link object.
@@ -521,6 +558,7 @@ Interest.prototype.setExclude = function(exclude)
  * @param {WireFormat} wireFormat The wire format of the encoding, to be used
  * later if necessary to decode. If omitted, use WireFormat.getDefaultWireFormat().
  * @return {Interest} This Interest so that you can chain calls to update values.
+ * @deprecated Use setForwardingHint.
  */
 Interest.prototype.setLinkWireEncoding = function(encoding, wireFormat)
 {
@@ -539,6 +577,7 @@ Interest.prototype.setLinkWireEncoding = function(encoding, wireFormat)
 /**
  * Clear the link wire encoding and link object so that getLink() returns null.
  * @return {Interest} This Interest so that you can chain calls to update values.
+ * @deprecated Use setForwardingHint.
  */
 Interest.prototype.unsetLink = function()
 {
@@ -550,6 +589,7 @@ Interest.prototype.unsetLink = function()
  * @param {number} selectedDelegationIndex The selected delegation index. If not
  * specified, set to null.
  * @return {Interest} This Interest so that you can chain calls to update values.
+ * @deprecated Use setForwardingHint.
  */
 Interest.prototype.setSelectedDelegationIndex = function(selectedDelegationIndex)
 {
@@ -754,6 +794,7 @@ Interest.prototype.getChangeCount = function()
   var changed = this.name_.checkChanged();
   changed = this.keyLocator_.checkChanged() || changed;
   changed = this.exclude_.checkChanged() || changed;
+  changed = this.forwardingHint_.checkChanged() || changed;
   if (changed)
     // A child object has changed, so update the change count.
     ++this.changeCount_;
