@@ -107,6 +107,20 @@ Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
+  if (interest.getForwardingHint().size() > 0) {
+    if (interest.getSelectedDelegationIndex() != null)
+      throw new Error
+        ("An Interest may not have a selected delegation when encoding a forwarding hint");
+    if (interest.hasLink())
+      throw new Error
+        ("An Interest may not have a link object when encoding a forwarding hint");
+
+    var forwardingHintSaveLength = encoder.getLength();
+    Tlv0_2WireFormat.encodeDelegationSet_(interest.getForwardingHint(), encoder);
+    encoder.writeTypeAndLength(
+      Tlv.ForwardingHint, encoder.getLength() - forwardingHintSaveLength);
+  }
+
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.SelectedDelegation, interest.getSelectedDelegationIndex());
   var linkWireEncoding = interest.getLinkWireEncoding(this);
@@ -188,6 +202,14 @@ Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
   var nonce = decoder.readBlobTlv(Tlv.Nonce);
   interest.setInterestLifetimeMilliseconds
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.InterestLifetime, endOffset));
+
+  if (decoder.peekType(Tlv.ForwardingHint, endOffset)) {
+    var forwardingHintEndOffset = decoder.readNestedTlvsStart
+      (Tlv.ForwardingHint);
+    Tlv0_2WireFormat.decodeDelegationSet_
+      (interest.getForwardingHint(), forwardingHintEndOffset, decoder, copy);
+    decoder.finishNestedTlvs(forwardingHintEndOffset);
+  }
 
   if (decoder.peekType(Tlv.Data, endOffset)) {
     // Get the bytes of the Link TLV.
@@ -551,18 +573,7 @@ Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input, copy)
 Tlv0_2WireFormat.prototype.encodeDelegationSet = function(delegationSet)
 {
   var encoder = new TlvEncoder(256);
-
-  // Encode backwards.
-  for (var i = delegationSet.size() - 1; i >= 0; --i) {
-    var saveLength = encoder.getLength();
-
-    Tlv0_2WireFormat.encodeName(delegationSet.get(i).getName(), encoder);
-    encoder.writeNonNegativeIntegerTlv
-      (Tlv.Link_Preference, delegationSet.get(i).getPreference());
-
-    encoder.writeTypeAndLength
-      (Tlv.Link_Delegation, encoder.getLength() - saveLength);
-  }
+  Tlv0_2WireFormat.encodeDelegationSet_(delegationSet, encoder);
 
   return new Blob(encoder.getOutput(), false);
 };
@@ -587,19 +598,8 @@ Tlv0_2WireFormat.prototype.decodeDelegationSet = function
     copy = true;
 
   var decoder = new TlvDecoder(input);
-  var endOffset = input.length;
-
-  delegationSet.clear();
-  while (decoder.getOffset() < endOffset) {
-    decoder.readTypeAndLength(Tlv.Link_Delegation);
-    var preference = decoder.readNonNegativeIntegerTlv(Tlv.Link_Preference);
-    var name = new Name();
-    Tlv0_2WireFormat.decodeName(name, decoder, copy);
-
-    // Add unsorted to preserve the order so that Interest selected delegation
-    // index will work.
-    delegationSet.addUnsorted(preference, name);
-  }
+  Tlv0_2WireFormat.decodeDelegationSet_
+    (delegationSet, input.length, decoder, copy);
 };
 
 /**
@@ -1256,4 +1256,57 @@ Tlv0_2WireFormat.decodeControlParameters = function
       Tlv.ControlParameters_ExpirationPeriod, endOffset));
 
   decoder.finishNestedTlvs(endOffset);
+};
+
+/**
+ * Encode delegationSet to the encoder as a sequence of NDN-TLV Delegation.
+ * Note that the sequence of Delegation does not have an outer TLV type and
+ * length because (when used in a Link object) it is intended to use the type 
+ * and length of a Data packet's Content.
+ * @param {DelegationSet} delegationSet The DelegationSet object to encode.
+ * @param {TlvEncoder} encoder The TlvEncoder to receive the encoding.
+ */
+Tlv0_2WireFormat.encodeDelegationSet_ = function(delegationSet, encoder)
+{
+  // Encode backwards.
+  for (var i = delegationSet.size() - 1; i >= 0; --i) {
+    var saveLength = encoder.getLength();
+
+    Tlv0_2WireFormat.encodeName(delegationSet.get(i).getName(), encoder);
+    encoder.writeNonNegativeIntegerTlv
+      (Tlv.Link_Preference, delegationSet.get(i).getPreference());
+
+    encoder.writeTypeAndLength
+      (Tlv.Link_Delegation, encoder.getLength() - saveLength);
+  }
+};
+
+/**
+ * Decode input as a sequence of NDN-TLV Delegation and set the fields of the
+ * delegationSet object. Note that the sequence of Delegation does not have an
+ * outer TLV type and length because (when used in a Link object) it is intended
+ * to use the type and length of a Data packet's Content.
+ * @param {DelegationSet} delegationSet The DelegationSet object whose fields
+ * are updated.
+ * @param {number} endOffset Decode elements up to endOffset in the input. This
+ * does not call finishNestedTlvs.
+ * @param {TlvDecoder} decoder The decoder with the input to decode.
+ * @param {boolean} copy If true, copy from the input when making new Blob
+ * values. If false, then Blob values share memory with the input, which must
+ * remain unchanged while the Blob values are used.
+ */
+Tlv0_2WireFormat.decodeDelegationSet_ = function
+  (delegationSet, endOffset, decoder, copy)
+{
+  delegationSet.clear();
+  while (decoder.getOffset() < endOffset) {
+    decoder.readTypeAndLength(Tlv.Link_Delegation);
+    var preference = decoder.readNonNegativeIntegerTlv(Tlv.Link_Preference);
+    var name = new Name();
+    Tlv0_2WireFormat.decodeName(name, decoder, copy);
+
+    // Add unsorted to preserve the order so that Interest selected delegation
+    // index will work.
+    delegationSet.addUnsorted(preference, name);
+  }
 };
