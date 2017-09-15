@@ -1,0 +1,16 @@
+language: node_js
+sudo: false
+node_js:
+  - "8"
+branches:
+  only:
+    - master
+script:
+  - npm install -g jsdoc
+  - jsdoc --recurse --destination doc js README.md
+after_success:
+  - ssh-keyscan -H $HOSTNAME 2>&1 | tee -a $HOME/.ssh/known_hosts
+  - openssl aes-256-cbc -K $encrypted_2891f088a2e3_key -iv $encrypted_2891f088a2e3_iv -in .travis.d/id-rsa.enc -out .travis.d/id-rsa -d
+  - mkdir -p ~/.ssh && mv .travis.d/id-rsa ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+  - rsync -arv --delete --progress doc/ $USERNAME@$HOSTNAME:/var/www/named-data.net/www/doc/ndn-ccl/latest/NDN-JS
+  # TODO: sync tagged versions
