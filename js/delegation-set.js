@@ -44,6 +44,8 @@ var DelegationSet = function DelegationSet(value)
     this.delegations_ = value.delegations_.slice(0);
   else
     this.delegations_ = []; // of DelegationSet.Delegation.
+
+  this.changeCount_ = 0;
 };
 
 exports.DelegationSet = DelegationSet;
@@ -120,6 +122,7 @@ DelegationSet.prototype.add = function(preference, name)
   }
 
   this.delegations_.splice(i, 0, newDelegation);
+  ++this.changeCount_;
 };
 
 /**
@@ -133,6 +136,7 @@ DelegationSet.prototype.add = function(preference, name)
 DelegationSet.prototype.addUnsorted = function(preference, name)
 {
   this.delegations_.push(new DelegationSet.Delegation(preference, name));
+  ++this.changeCount_;
 };
 
 /**
@@ -153,13 +157,19 @@ DelegationSet.prototype.remove = function(name)
     }
   }
 
+  if (wasRemoved)
+    ++this.changeCount_;
   return wasRemoved;
 };
 
 /**
  * Clear the list of delegations.
  */
-DelegationSet.prototype.clear = function() { this.delegations_ = []; };
+DelegationSet.prototype.clear = function()
+{ 
+  this.delegations_ = [];
+  ++this.changeCount_;
+};
 
 /**
  * Get the number of delegation entries.
@@ -216,4 +226,13 @@ DelegationSet.prototype.wireDecode = function(input, wireFormat)
     wireFormat.decodeDelegationSet(this, input.buf(), false);
   else
     wireFormat.decodeDelegationSet(this, input, true);
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @return {number} The change count.
+ */
+DelegationSet.prototype.getChangeCount = function()
+{
+  return this.changeCount_;
 };
