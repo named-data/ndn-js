@@ -159,7 +159,7 @@ CertificateCacheV2.prototype.deleteCertificate = function(certificateName)
 /**
  * Clear all certificates from the cache.
  */
-CertificateCacheV2.prototype.reset = function()
+CertificateCacheV2.prototype.clear = function()
 {
   this.certificatesByName_ = [];
   // TODO: certificatesByTime_.clear();
