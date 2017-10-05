@@ -22,24 +22,39 @@
  * A ValidityPeriod is used in a Data packet's SignatureInfo and represents the
  * begin and end times of a certificate's validity period.
  *
- * Create a new ValidityPeriod object, possibly copying values from another
- * object.
- * @param {ValidityPeriod} value (optional) If value is a ValidityPeriod, copy
- * its values. If value is omitted, reate a default ValidityPeriodLite where the
- * period is not specified.
+ * There are three forms of the ValidityPeriod constructor:
+ * ValidityPeriod() - Create a default ValidityPeriod where the period is not
+ * specified.
+ * ValidityPeriod(validityPeriod) - Create a new ValidityPeriod with a copy of
+ * the fields in the given validityPeriod object.
+ * ValidityPeriod(notBefore, notAfter) - Create a ValidityPeriod with the given
+ * period.
+ * @param {ValidityPeriod} validityPeriod The ValidityPeriod to copy.
+ * @param {number} notBefore The beginning of the validity period range as
+ * milliseconds since Jan 1, 1970 UTC. Note that this is rounded up to the
+ * nearest whole second.
+ * @param {number} notAfter The end of the validity period range as milliseconds
+ * since Jan 1, 1970 UTC. Note that this is rounded down to the nearest whole
+ * second.
  * @constructor
  */
-var ValidityPeriod = function ValidityPeriod(value)
+var ValidityPeriod = function ValidityPeriod(validityPeriodOrNotBefore, notAfter)
 {
-  if (typeof value === 'object' && value instanceof ValidityPeriod) {
+  this.changeCount_ = 0;
+
+  if (typeof validityPeriodOrNotBefore === 'object' &&
+      validityPeriodOrNotBefore instanceof ValidityPeriod) {
     // Copy values.
-    this.notBefore_ = value.notBefore_;
-    this.notAfter_ = value.notAfter_;
+    validityPeriod = validityPeriodOrNotBefore;
+    this.notBefore_ = validityPeriod.notBefore_;
+    this.notAfter_ = validityPeriod.notAfter_;
+  }
+  else if (notAfter != undefined) {
+    notBefore = validityPeriodOrNotBefore;
+    this.setPeriod(notBefore, notAfter)
   }
   else
     this.clear();
-
-  this.changeCount_ = 0;
 };
 
 exports.ValidityPeriod = ValidityPeriod;
