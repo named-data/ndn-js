@@ -207,7 +207,8 @@ CertificateV2.prototype.getValidityPeriod = function()
 
 /**
  * Check if the time falls within the validity period.
- * @param {number} time The time to check as milliseconds since Jan 1, 1970 UTC.
+ * @param {number} time (optional) The time to check as milliseconds since
+ * Jan 1, 1970 UTC. If omitted, use the current time.
  * @return {boolean} True if the beginning of the validity period is less than
  * or equal to time and time is less than or equal to the end of the validity
  * period.
