@@ -58,7 +58,7 @@ PibImpl.Error.prototype.name = "PibImplError";
  * Set the corresponding TPM information to tpmLocator. This method does not
  * reset the contents of the PIB.
  * @param {string} tpmLocator The TPM locator string.
- * @return {SyncPromise} A promise which fulfills when the TPM locator is set.
+ * @return {Promise|SyncPromise} A promise which fulfills when the TPM locator is set.
  */
 PibImpl.prototype.setTpmLocatorPromise = function(tpmLocator)
 {
@@ -68,7 +68,7 @@ PibImpl.prototype.setTpmLocatorPromise = function(tpmLocator)
 
 /**
  * Get the TPM Locator.
- * @return {SyncPromise} A promise which returns the TPM locator string.
+ * @return {Promise|SyncPromise} A promise which returns the TPM locator string.
  */
 PibImpl.prototype.getTpmLocatorPromise = function()
 {
@@ -79,7 +79,7 @@ PibImpl.prototype.getTpmLocatorPromise = function()
 /**
  * Check for the existence of an identity.
  * @param {Name} identityName The name of the identity.
- * @return {SyncPromise} A promise which returns true if the identity exists,
+ * @return {Promise|SyncPromise} A promise which returns true if the identity exists,
  * otherwise false.
  */
 PibImpl.prototype.hasIdentityPromise = function(identityName)
@@ -93,7 +93,7 @@ PibImpl.prototype.hasIdentityPromise = function(identityName)
  * identity has been set, set the added identity as the default.
  * @param {Name} identityName The name of the identity to add. This copies the
  * name.
- * @return {SyncPromise} A promise which fulfills when the identity is added.
+ * @return {Promise|SyncPromise} A promise which fulfills when the identity is added.
  */
 PibImpl.prototype.addIdentityPromise = function(identityName)
 {
@@ -106,7 +106,7 @@ PibImpl.prototype.addIdentityPromise = function(identityName)
  * identity is being removed, no default identity will be selected. If the
  * identity does not exist, do nothing.
  * @param {Name} identityName The name of the identity to remove.
- * @return {SyncPromise} A promise which fulfills when the identity is removed.
+ * @return {Promise|SyncPromise} A promise which fulfills when the identity is removed.
  */
 PibImpl.prototype.removeIdentityPromise = function(identityName)
 {
@@ -116,7 +116,7 @@ PibImpl.prototype.removeIdentityPromise = function(identityName)
 
 /**
  * Erase all certificates, keys, and identities.
- * @return {SyncPromise} A promise which fulfills when the identities are cleared.
+ * @return {Promise|SyncPromise} A promise which fulfills when the identities are cleared.
  */
 PibImpl.prototype.clearIdentitiesPromise = function()
 {
@@ -126,7 +126,7 @@ PibImpl.prototype.clearIdentitiesPromise = function()
 
 /**
  * Get the names of all the identities.
- * @return {SyncPromise} A promise which returns a fresh set of identity names
+ * @return {Promise|SyncPromise} A promise which returns a fresh set of identity names
  * as an array of Name. The Name objects are fresh copies.
  */
 PibImpl.prototype.getIdentitiesPromise = function()
@@ -140,7 +140,7 @@ PibImpl.prototype.getIdentitiesPromise = function()
  * identity with identityName does not exist, then it will be created.
  * @param {Name} identityName The name for the default identity. This copies the
  * name.
- * @return {SyncPromise} A promise which fulfills when the default identity is
+ * @return {Promise|SyncPromise} A promise which fulfills when the default identity is
  * set.
  */
 PibImpl.prototype.setDefaultIdentityPromise = function(identityName)
@@ -151,7 +151,7 @@ PibImpl.prototype.setDefaultIdentityPromise = function(identityName)
 
 /**
  * Get the default identity.
- * @return {SyncPromise} A promise which returns the Name of the default
+ * @return {Promise|SyncPromise} A promise which returns the Name of the default
  * identity as a fresh copy, or a promise rejected with Pib.Error for no default
  * identity.
  */
@@ -166,7 +166,7 @@ PibImpl.prototype.getDefaultIdentityPromise = function()
 /**
  * Check for the existence of a key with keyName.
  * @param {Name} keyName The name of the key.
- * @return {SyncPromise} A promise which returns true if the key exists,
+ * @return {Promise|SyncPromise} A promise which returns true if the key exists,
  * otherwise false. Return false if the identity does not exist.
  */
 PibImpl.prototype.hasKeyPromise = function(keyName)
@@ -184,7 +184,7 @@ PibImpl.prototype.hasKeyPromise = function(keyName)
  * This copies the name.
  * @param {Name} keyName The name of the key. This copies the name.
  * @param {Buffer} key The public key bits. This copies the array.
- * @return {SyncPromise} A promise which fulfills when the key is added.
+ * @return {Promise|SyncPromise} A promise which fulfills when the key is added.
  */
 PibImpl.prototype.addKeyPromise = function(identityName, keyName, key)
 {
@@ -196,7 +196,7 @@ PibImpl.prototype.addKeyPromise = function(identityName, keyName, key)
  * Remove the key with keyName and its related certificates. If the key does not
  * exist, do nothing.
  * @param {Name} keyName The name of the key.
- * @return {SyncPromise} A promise which fulfills when the key is removed.
+ * @return {Promise|SyncPromise} A promise which fulfills when the key is removed.
  */
 PibImpl.prototype.removeKeyPromise = function(keyName)
 {
@@ -207,7 +207,7 @@ PibImpl.prototype.removeKeyPromise = function(keyName)
 /**
  * Get the key bits of a key with name keyName.
  * @param {Name} keyName The name of the key.
- * @return {SyncPromise} A promise which returns the key bits as a Blob, or a
+ * @return {Promise|SyncPromise} A promise which returns the key bits as a Blob, or a
  * promise rejected with Pib.Error if the key does not exist.
  */
 PibImpl.prototype.getKeyBitsPromise = function(keyName)
@@ -236,7 +236,7 @@ PibImpl.prototype.getKeysOfIdentityPromise = function(identityName)
  * identityName.
  * @param {Name} identityName The name of the identity. This copies the name.
  * @param {Name} keyName The name of the key. This copies the name.
- * @return {SyncPromise} A promise which fulfills when the default key is set,
+ * @return {Promise|SyncPromise} A promise which fulfills when the default key is set,
  * or a promise rejected with Pib.Error if the key does not exist.
  */
 PibImpl.prototype.setDefaultKeyOfIdentityPromise = function
@@ -249,7 +249,7 @@ PibImpl.prototype.setDefaultKeyOfIdentityPromise = function
 /**
  * Get the name of the default key for the identity with name identityName.
  * @param {Name} identityName The name of the identity.
- * @return {SyncPromise} A promise which returns the name of the default key as
+ * @return {Promise|SyncPromise} A promise which returns the name of the default key as
  * a fresh copy, or a promise rejected with Pib.Error if the identity does not
  * exist.
  */
@@ -264,7 +264,7 @@ PibImpl.prototype.getDefaultKeyOfIdentityPromise = function(identityName)
 /**
  * Check for the existence of a certificate with name certificateName.
  * @param {Name} certificateName The name of the certificate.
- * @return {SyncPromise} A promise which returns true if the certificate exists,
+ * @return {Promise|SyncPromise} A promise which returns true if the certificate exists,
  * otherwise false.
  */
 PibImpl.prototype.hasCertificatePromise = function(certificateName)
@@ -283,7 +283,7 @@ PibImpl.prototype.hasCertificatePromise = function(certificateName)
  * certificate's identity becomes the default.
  * @param {CertificateV2} certificate The certificate to add. This copies the
  * object.
- * @return {SyncPromise} A promise which fulfills when the certificate is added.
+ * @return {Promise|SyncPromise} A promise which fulfills when the certificate is added.
  */
 PibImpl.prototype.addCertificatePromise = function(certificate)
 {
@@ -295,7 +295,7 @@ PibImpl.prototype.addCertificatePromise = function(certificate)
  * Remove the certificate with name certificateName. If the certificate does not
  * exist, do nothing.
  * @param {Name} certificateName The name of the certificate.
- * @return {SyncPromise} A promise which fulfills when the certificate is
+ * @return {Promise|SyncPromise} A promise which fulfills when the certificate is
  * removed.
  */
 PibImpl.prototype.removeCertificatePromise = function(certificateName)
@@ -307,7 +307,7 @@ PibImpl.prototype.removeCertificatePromise = function(certificateName)
 /**
  * Get the certificate with name certificateName.
  * @param {Name} certificateName The name of the certificate.
- * @return {SyncPromise} A promise which returns the CertificateV2, or a promise
+ * @return {Promise|SyncPromise} A promise which returns the CertificateV2, or a promise
  * rejected with Pib.Error if the certificate does not exist.
  */
 PibImpl.prototype.getCertificatePromise = function(certificateName)
@@ -321,7 +321,7 @@ PibImpl.prototype.getCertificatePromise = function(certificateName)
  * certificate names can be used to create a CertificateContainer. With a
  * certificate name and a backend implementation, one can obtain the certificate.
  * @param {Name} keyName The name of the key.
- * @return {SyncPromise} A promise which returns the set of certificate names as
+ * @return {Promise|SyncPromise} A promise which returns the set of certificate names as
  * an array of Name. The Name objects are fresh copies. If the key does not
  * exist, return an empty array.
  */
@@ -337,7 +337,7 @@ PibImpl.prototype.getCertificatesOfKeyPromise = function(keyName)
  * @param {Name} keyName The name of the key.
  * @param {Name} certificateName The name of the certificate. This copies the
  * name.
- * @return {SyncPromise} A promise which fulfills when the default certificate
+ * @return {Promise|SyncPromise} A promise which fulfills when the default certificate
  * is set, or a promise rejected with Pib.Error if the certificate with name
  * certificateName does not exist.
  */
@@ -351,7 +351,7 @@ PibImpl.prototype.setDefaultCertificateOfKeyPromise = function
 /**
  * Get the default certificate for the key with eyName.
  * @param {Name} keyName The name of the key.
- * @return {SyncPromise} A promise which returns a copy of the default
+ * @return {Promise|SyncPromise} A promise which returns a copy of the default
  * CertificateV2, or a promise rejected with Pib.Error if the default
  * certificate does not exist.
  */
