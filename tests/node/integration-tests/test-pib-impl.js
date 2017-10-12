@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2017 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx unit tests:
  * https://github.com/named-data/ndn-cxx/blob/master/tests/unit-tests/security/pib/pib-impl.t.cpp
@@ -24,7 +24,7 @@ var assert = require("assert");
 var Name = require('../../..').Name;
 var Pib = require('../../..').Pib;
 var PibMemory = require('../../..').PibMemory;
-var PibDataFixture = require('./pib-data-fixture.js').PibDataFixture;
+var PibDataFixture = require('../unit-tests//pib-data-fixture.js').PibDataFixture;
 
 var PibMemoryFixture = function PibMemoryFixture()
 {
