@@ -496,7 +496,7 @@ PibMemory.prototype.getCertificatePromise = function(certificateName)
 
 /**
  * Get a list of certificate names of the key with id keyName. The returned
- * certificate names can be used to create a CertificateContainer. With a
+ * certificate names can be used to create a PibCertificateContainer. With a
  * certificate name and a backend implementation, one can obtain the certificate.
  * @param {Name} keyName The name of the key.
  * @return {SyncPromise} A promise which returns the set of certificate names as
