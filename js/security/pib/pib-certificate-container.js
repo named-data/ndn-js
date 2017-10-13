@@ -27,14 +27,17 @@ var CertificateV2 = require('../v2/certificate-v2.js').CertificateV2;
  * A PibCertificateContainer is used to search/enumerate the certificates of a
  * key. (A PibCertificateContainer object can only be created by PibKey.)
  *
- * Create a CertificateContainer for a key with keyName. This constructor
- * should only be called by PibKeyImpl.
+ * You should not call this private constructor. Instead, use
+ * PibCertificateContainer.makePromise().
  *
  * @param {Name} keyName The name of the key, which is copied.
  * @param {PibImpl} pibImpl The PIB backend implementation.
+ * @param {Array<string>} certificateNames The set of certificate
+ * names as an array of Name, as returned by getCertificatesOfKeyPromise.
  * @constructor
  */
-var PibCertificateContainer = function PibCertificateContainer(keyName, pibImpl)
+var PibCertificateContainer = function PibCertificateContainer
+  (keyName, pibImpl, certificateNames)
 {
   // The cache of loaded certificates. certificateName URI string => CertificateV2.
   // (Use a string because we can't use the Name object as the key in JavaScript.)
@@ -46,24 +49,44 @@ var PibCertificateContainer = function PibCertificateContainer(keyName, pibImpl)
     throw new Error("The pibImpl is null");
 
   // A set of Name URI string.
-  // This will be initialized asynchronously by getCertificateNameUrisPromise_().
   // (Use a string because we can't use indexOf with a Name object.)
-  this.certificateNameUris_ = null;
+  this.certificateNameUris_ = [];
+  for (var i in certificateNames)
+    this.certificateNameUris_.push(certificateNames[i].toUri());
 };
 
 exports.PibCertificateContainer = PibCertificateContainer;
 
 /**
- * Get the number of certificates in the container.
- * @return {Promise|SyncPromise} A promise which returns the number of
- * certificates.
+ * Create a PibCertificateContainer for a key with keyName.
+ * This method that returns a Promise is needed instead of a normal constructor
+ * since it uses asynchronous PibImpl methods to initialize the object.
+ * This method should only be called by PibKeyImpl.
+ *
+ * @param {Name} keyName The name of the key, which is copied.
+ * @param {PibImpl} pibImpl The PIB backend implementation.
+ * @param {Promise|SyncPromise} A promise which returns the new
+ * PibCertificateContainer.
  */
-PibCertificateContainer.prototype.sizePromise = function()
+PibCertificateContainer.makePromise = function(keyName, pibImpl)
 {
-  return this.getCertificateNameUrisPromise_()
-  .then(function(certificateNameUris) {
-    return SyncPromise.resolve(certificateNameUris.length);
+  if (pibImpl == null)
+    return SyncPromise.reject(new Error("The pibImpl is null"));
+
+  return pibImpl.getCertificatesOfKeyPromise(keyName)
+  .then(function(certificateNames) {
+    return SyncPromise.resolve(new PibCertificateContainer
+      (keyName, pibImpl, certificateNames));
   });
+};
+
+/**
+ * Get the number of certificates in the container.
+ * @return {number} The number of certificates.
+ */
+PibCertificateContainer.prototype.size = function()
+{
+  return this.certificateNameUris_.length;
 };
 
 /**
@@ -81,20 +104,15 @@ PibCertificateContainer.prototype.addPromise = function(certificate)
     return SyncPromise.reject(new Error("The certificate name `" +
       certificate.getKeyName().toUri() + "` does not match the key name"));
 
-  var thisContainer = this;
-
   var certificateNameUri = certificate.getName().toUri();
-  return this.getCertificateNameUrisPromise_()
-  .then(function(certificateNameUris) {
-    if (certificateNameUris.indexOf(certificateNameUri) < 0)
-      // Not already in the set.
-      certificateNameUris.push(certificateNameUri);
+  if (this.certificateNameUris_.indexOf(certificateNameUri) < 0)
+    // Not already in the set.
+    this.certificateNameUris_.push(certificateNameUri);
 
-    // Copy the certificate.
-    thisContainer.certificates_[certificateNameUri] =
-      new CertificateV2(certificate);
-    return thisContainer.pibImpl_.addCertificatePromise(certificate);
-  });
+  // Copy the certificate.
+  this.certificates_[certificateNameUri] =
+    new CertificateV2(certificate);
+  return this.pibImpl_.addCertificatePromise(certificate);
 };
 
 /**
@@ -112,20 +130,15 @@ PibCertificateContainer.prototype.removePromise = function(certificateName)
     return SyncPromise.reject(new Error("Certificate name `" +
       certificateName.toUri() + "` is invalid or does not match key name"));
 
-  var thisContainer = this;
-
   var certificateNameUri = certificateName.toUri();
-  return this.getCertificateNameUrisPromise_()
-  .then(function(certificateNameUris) {
-    var index = certificateNameUris.indexOf(certificateNameUri);
-    // Do nothing if it doesn't exist.
-    if (index >= 0)
-      certificateNameUris.splice(index, 1);
+  var index = this.certificateNameUris_.indexOf(certificateNameUri);
+  // Do nothing if it doesn't exist.
+  if (index >= 0)
+    this.certificateNameUris_.splice(index, 1);
 
-    delete thisContainer.certificates_[certificateNameUri];
+  delete this.certificates_[certificateNameUri];
 
-    return thisContainer.pibImpl_.removeCertificatePromise(certificateName);
-  });
+  return this.pibImpl_.removeCertificatePromise(certificateName);
 };
 
 /**
@@ -161,28 +174,3 @@ PibCertificateContainer.prototype.getPromise = function(certificateName)
     return SyncPromise.resolve(new CertificateV2(certificate));
   });
 };
-
-/**
- * If this.certificateNameUris_ is still null, initialize it asynchronously.
- * Otherwise, just return this.certificateNameUris_.
- * @return {Promise|SyncPromise} A promise which returns the set of certificate
- * names URIs as an array of strings.
- */
-PibCertificateContainer.prototype.getCertificateNameUrisPromise_ = function()
-{
-  if (this.certificateNameUris_ !== null)
-    return SyncPromise.resolve(this.certificateNameUris_);
-  else {
-    var thisContainer = this;
-
-    return this.pibImpl_.getCertificatesOfKeyPromise(this.keyName_)
-    .then(function(certificateNames) {
-      thisContainer.certificateNameUris_ = [];
-      for (var i in certificateNames)
-        thisContainer.certificateNameUris_.push(certificateNames[i].toUri());
-
-      return SyncPromise.resolve(thisContainer.certificateNameUris_);
-    });
-  }
-};
-

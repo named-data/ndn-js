@@ -37,23 +37,20 @@ describe ("TestPibCertificateContainer", function() {
   it("Basic", function(done) {
     var fixture = this.fixture;
     var pibImpl = new PibMemory();
-    var container2;
+    var container, container2;
 
     // Start with an empty container.
-    var container = new PibCertificateContainer(fixture.id1Key1Name, pibImpl);
-    return container.sizePromise()
-    .then(function(size) {
-      assert.equal(0, size);
+    return PibCertificateContainer.makePromise(fixture.id1Key1Name, pibImpl)
+    .then(function(localContainer) {
+      container = localContainer;
+      assert.equal(0, container.size());
       assert.equal(0, Object.keys(container.certificates_).length);
 
       // Add a certificate.
       return container.addPromise(fixture.id1Key1Cert1);
     })
     .then(function() {
-      return container.sizePromise();
-    })
-    .then(function(size) {
-      assert.equal(1, size);
+      assert.equal(1, container.size());
       assert.equal(1, Object.keys(container.certificates_).length);
       assert.ok
         (container.certificates_[fixture.id1Key1Cert1.getName().toUri()] !== undefined);
@@ -62,10 +59,7 @@ describe ("TestPibCertificateContainer", function() {
       return container.addPromise(fixture.id1Key1Cert1);
     })
     .then(function() {
-      return container.sizePromise();
-    })
-    .then(function(size) {
-      assert.equal(1, size);
+      assert.equal(1, container.size());
       assert.equal(1, Object.keys(container.certificates_).length);
       assert.ok
         (container.certificates_[fixture.id1Key1Cert1.getName().toUri()] !== undefined);
@@ -74,10 +68,7 @@ describe ("TestPibCertificateContainer", function() {
       return container.addPromise(fixture.id1Key1Cert2);
     })
     .then(function() {
-      return container.sizePromise();
-    })
-    .then(function(size) {
-      assert.equal(2, size);
+      assert.equal(2, container.size());
       assert.equal(2, Object.keys(container.certificates_).length);
       assert.ok
         (container.certificates_[fixture.id1Key1Cert1.getName().toUri()] !== undefined);
@@ -116,40 +107,31 @@ describe ("TestPibCertificateContainer", function() {
       assert.ok(cert2.wireEncode().equals(fixture.id1Key1Cert2.wireEncode()));
 
       // Create another container with the same PibImpl. The cache should be empty.
-      container2 = new PibCertificateContainer(fixture.id1Key1Name, pibImpl);
-      return container2.sizePromise();
+      return PibCertificateContainer.makePromise(fixture.id1Key1Name, pibImpl);
     })
-    .then(function(size) {
-      assert.equal(2, size);
+    .then(function(localContainer) {
+      container2 = localContainer;
+      assert.equal(2, container2.size());
       assert.equal(0, Object.keys(container2.certificates_).length);
 
       // Get a certificate. The cache should be filled.
       return container2.getPromise(fixture.id1Key1Cert1.getName());
     })
     .then(function() {
-      return container2.sizePromise();
-    })
-    .then(function(size) {
-      assert.equal(2, size);
+      assert.equal(2, container2.size());
       assert.equal(1, Object.keys(container2.certificates_).length);
 
       return container2.getPromise(fixture.id1Key1Cert2.getName());
     })
     .then(function() {
-      return container2.sizePromise();
-    })
-    .then(function(size) {
-      assert.equal(2, size);
+      assert.equal(2, container2.size());
       assert.equal(2, Object.keys(container2.certificates_).length);
 
       // Remove a certificate.
       return container2.removePromise(fixture.id1Key1Cert1.getName());
     })
     .then(function() {
-      return container2.sizePromise();
-    })
-    .then(function(size) {
-      assert.equal(1, size);
+      assert.equal(1, container2.size());
       assert.equal(1, Object.keys(container2.certificates_).length);
       assert.ok
         (container2.certificates_[fixture.id1Key1Cert1.getName().toUri()] ===
@@ -162,10 +144,7 @@ describe ("TestPibCertificateContainer", function() {
       return container2.removePromise(fixture.id1Key1Cert2.getName());
     })
     .then(function() {
-      return container2.sizePromise();
-    })
-    .then(function(size) {
-      assert.equal(0, size);
+      assert.equal(0, container2.size());
       assert.equal(0, Object.keys(container2.certificates_).length);
       assert.ok
         (container2.certificates_[fixture.id1Key1Cert2.getName().toUri()] ===
@@ -180,10 +159,12 @@ describe ("TestPibCertificateContainer", function() {
   it("Errors", function(done) {
     var fixture = this.fixture;
     var pibImpl = new PibMemory();
+    var container;
 
-    var container = new PibCertificateContainer(fixture.id1Key1Name, pibImpl);
-    return Promise.resolve()
-    .then(function() {
+    return PibCertificateContainer.makePromise(fixture.id1Key1Name, pibImpl)
+    .then(function(localContainer) {
+      container = localContainer;
+
       return container.addPromise(fixture.id1Key2Cert1)
       .then(function() {
         assert.fail('', '', "Did not throw the expected exception");
