@@ -25,7 +25,7 @@ var Name = require('../../..').Name;
 var Pib = require('../../..').Pib;
 var PibMemory = require('../../..').PibMemory;
 var PibDataFixture = require('./pib-data-fixture.js').PibDataFixture;
-var PibCertificateContainer = require('../../../js/security/pib/pib-certificate-container').PibCertificateContainer;
+var PibCertificateContainer = require('../../../js/security/pib/pib-certificate-container.js').PibCertificateContainer;
 
 describe ("TestPibCertificateContainer", function() {
   beforeEach(function(done) {
