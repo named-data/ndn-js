@@ -32,7 +32,7 @@ var CertificateV2 = require('../v2/certificate-v2.js').CertificateV2;
  *
  * @param {Name} keyName The name of the key, which is copied.
  * @param {PibImpl} pibImpl The PIB backend implementation.
- * @param {Array<string>} certificateNames The set of certificate
+ * @param {Array<Name>} certificateNames The set of certificate
  * names as an array of Name, as returned by getCertificatesOfKeyPromise.
  * @constructor
  */
