@@ -19,7 +19,7 @@
  */
 
 /** @ignore */
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
  * PibImpl is an abstract base class for the PIB implementation used by the Pib
