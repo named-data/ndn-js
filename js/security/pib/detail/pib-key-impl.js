@@ -139,27 +139,27 @@ PibKeyImpl.makePromise = function(keyName, arg2, arg3)
 
 /**
  * Get the key name.
- * @returns {Name} The key name. You must not change the object. If you need to
+ * @return {Name} The key name. You must not change the object. If you need to
  * change it, make a copy.
  */
 PibKeyImpl.prototype.getName = function() { return this.keyName_; };
 
 /**
  * Get the name of the identity this key belongs to.
- * @returns {Name} The name of the identity. You must not change the object. If
+ * @return {Name} The name of the identity. You must not change the object. If
  * you need to change it, make a copy.
  */
 PibKeyImpl.prototype.getIdentityName = function() { return this.identityName_; };
 
 /**
  * Get the key type.
- * @returns {number} The key type as an int from the KeyType enum.
+ * @return {number} The key type as an int from the KeyType enum.
  */
 PibKeyImpl.prototype.getKeyType = function() { return this.keyType_; };
 
 /**
  * Get the public key encoding.
- * @returns {Blob} The public key encoding.
+ * @return {Blob} The public key encoding.
  */
 PibKeyImpl.prototype.getPublicKey = function() { return this.keyEncoding_; };
 
