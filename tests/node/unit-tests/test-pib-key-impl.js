@@ -451,9 +451,6 @@ describe ("TestPibKeyImpl", function() {
           assert.fail('', '', "Did not throw the expected exception");
       });
     })
-    .then(function() {
-      return Promise.resolve();
-    })
     // When done is called, Mocha displays errors from assert.ok.
     .then(done, done);
   });
