@@ -121,9 +121,9 @@ var SigningInfo = function SigningInfo(arg1, arg2)
     throw new Error("SigningInfo: Unrecognized type");
 };
 
-SigningInfo.SignerType = function SigningInfoSignerType() {};
-
 exports.SigningInfo = SigningInfo;
+
+SigningInfo.SignerType = function SigningInfoSignerType() {};
 
 /** No signer is specified. Use default settings or follow the trust schema. */
 SigningInfo.SignerType.NULL = 0;
