@@ -49,7 +49,7 @@ GroupManagerDb.Error = function GroupManagerDbError(error)
     error.__proto__ = GroupManagerDb.Error.prototype;
     return error;
   }
-}
+};
 
 GroupManagerDb.Error.prototype = new Error();
 GroupManagerDb.Error.prototype.name = "GroupManagerDbError";

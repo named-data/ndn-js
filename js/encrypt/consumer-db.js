@@ -47,7 +47,7 @@ ConsumerDb.Error = function ConsumerDbError(error)
     error.__proto__ = ConsumerDb.Error.prototype;
     return error;
   }
-}
+};
 
 ConsumerDb.Error.prototype = new Error();
 ConsumerDb.Error.prototype.name = "ConsumerDbError";

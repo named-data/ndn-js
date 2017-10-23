@@ -47,7 +47,7 @@ PibImpl.Error = function PibImplError(error)
     error.__proto__ = PibImpl.Error.prototype;
     return error;
   }
-}
+};
 
 PibImpl.Error.prototype = new Error();
 PibImpl.Error.prototype.name = "PibImplError";
