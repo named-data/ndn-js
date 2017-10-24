@@ -73,6 +73,8 @@ KeyParams.prototype.getKeyIdType = function() { return this.keyIdType_; };
 
 KeyParams.prototype.getKeyId = function() { return this.keyId_; };
 
+KeyParams.prototype.setKeyId = function(keyId) { this.keyId_ = keyId; };
+
 /**
  * Possible forms of the constructor are:
  * RsaKeyParams(keyId, size)
