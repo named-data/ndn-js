@@ -161,6 +161,19 @@ TpmBackEnd.prototype.deleteKeyPromise = function(keyName)
 
 // TODO: exportKey
 
+/**
+ * Import an encoded private key with name keyName in PKCS #8 format, possibly
+ * passwprd-encrypted.
+ * @param {Name} keyName The name of the key to use in the TPM.
+ * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
+ * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
+ * an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key. If the
+ * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
+ * If the password is None, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with TpmBackEnd.Error for an error importing the key.
+ */
 TpmBackEnd.prototype.importKeyPromise = function(keyName, pkcs8, password)
 {
   var thisTpm = this;
