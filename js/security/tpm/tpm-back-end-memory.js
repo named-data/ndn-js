@@ -134,15 +134,13 @@ TpmBackEndMemory.prototype.doImportKeyPromise_ = function
     return SyncPromise.reject(new TpmBackEnd.Error(new Error
       ("Private key password-encryption is not implemented")));
 
-  var thisTpm = this;
-
-  var key = new TpmPrivateKey();
-  return key.loadPkcs8Promise(pkcs8)
-  .then(function() {
-    thisTpm.keys_[keyName.toUri()] = key;
+  try {
+    var key = new TpmPrivateKey();
+    key.loadPkcs8(pkcs8);
+    this.keys_[keyName.toUri()] = key;
     return SyncPromise.resolve();
-  }, function(err) {
+  } catch (ex) {
     return SyncPromise.reject(new TpmBackEnd.Error(new Error
-      ("Cannot import private key: " + err)));
-  });
+      ("Cannot import private key: " + ex)));
+  }
 };
