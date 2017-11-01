@@ -65,15 +65,18 @@ exports.PibCertificateContainer = PibCertificateContainer;
  *
  * @param {Name} keyName The name of the key, which is copied.
  * @param {PibImpl} pibImpl The PIB backend implementation.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @param {Promise|SyncPromise} A promise which returns the new
  * PibCertificateContainer.
  */
-PibCertificateContainer.makePromise = function(keyName, pibImpl)
+PibCertificateContainer.makePromise = function(keyName, pibImpl, useSync)
 {
   if (pibImpl == null)
     return SyncPromise.reject(new Error("The pibImpl is null"));
 
-  return pibImpl.getCertificatesOfKeyPromise(keyName)
+  return pibImpl.getCertificatesOfKeyPromise(keyName, useSync)
   .then(function(certificateNames) {
     return SyncPromise.resolve(new PibCertificateContainer
       (keyName, pibImpl, certificateNames));
@@ -94,11 +97,14 @@ PibCertificateContainer.prototype.size = function()
  * replaces it.
  * @param {CertificateV2} certificate The certificate to add. This copies the
  * object.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with Error if the name of the certificate does not match the
  * key name.
  */
-PibCertificateContainer.prototype.addPromise = function(certificate)
+PibCertificateContainer.prototype.addPromise = function(certificate, useSync)
 {
   if (!this.keyName_.equals(certificate.getKeyName()))
     return SyncPromise.reject(new Error("The certificate name `" +
@@ -112,17 +118,21 @@ PibCertificateContainer.prototype.addPromise = function(certificate)
   // Copy the certificate.
   this.certificates_[certificateNameUri] =
     new CertificateV2(certificate);
-  return this.pibImpl_.addCertificatePromise(certificate);
+  return this.pibImpl_.addCertificatePromise(certificate, useSync);
 };
 
 /**
  * Remove the certificate with name certificateName from the container. If the
  * certificate does not exist, do nothing.
  * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with Error if certificateName does not match the key name.
  */
-PibCertificateContainer.prototype.removePromise = function(certificateName)
+PibCertificateContainer.prototype.removePromise = function
+  (certificateName, useSync)
 {
   if (!CertificateV2.isValidName(certificateName) ||
       !CertificateV2.extractKeyNameFromCertName(certificateName).equals
@@ -138,17 +148,20 @@ PibCertificateContainer.prototype.removePromise = function(certificateName)
 
   delete this.certificates_[certificateNameUri];
 
-  return this.pibImpl_.removeCertificatePromise(certificateName);
+  return this.pibImpl_.removeCertificatePromise(certificateName, useSync);
 };
 
 /**
  * Get the certificate with certificateName from the container.
  * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {SyncPromise} A promise which returns a copy of the CertificateV2, or
  * a promise rejected with Error if certificateName does not match the key name,
  * or a promise rejected with Pib.Error if the certificate does not exist.
  */
-PibCertificateContainer.prototype.getPromise = function(certificateName)
+PibCertificateContainer.prototype.getPromise = function(certificateName, useSync)
 {
   var certificateNameUri = certificateName.toUri();
   var cachedCertificate = this.certificates_[certificateNameUri];
@@ -166,7 +179,7 @@ PibCertificateContainer.prototype.getPromise = function(certificateName)
 
   var thisContainer = this;
 
-  return this.pibImpl_.getCertificatePromise(certificateName)
+  return this.pibImpl_.getCertificatePromise(certificateName, useSync)
   .then(function(certificate) {
     thisContainer.certificates_[certificateNameUri] = certificate;
     // Make a copy.

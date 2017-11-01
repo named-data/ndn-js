@@ -63,15 +63,18 @@ exports.PibIdentityContainer = PibIdentityContainer;
  * This method should only be called by Pib.
  *
  * @param {PibImpl} pibImpl The PIB backend implementation.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @param {Promise|SyncPromise} A promise which returns the new
  * PibIdentityContainer.
  */
-PibIdentityContainer.makePromise = function(pibImpl)
+PibIdentityContainer.makePromise = function(pibImpl, useSync)
 {
   if (pibImpl == null)
     return SyncPromise.reject(new Error("The pibImpl is null"));
 
-  return pibImpl.getIdentitiesPromise()
+  return pibImpl.getIdentitiesPromise(useSync)
   .then(function(identityNames) {
     return SyncPromise.resolve(new PibIdentityContainer(pibImpl, identityNames));
   });
@@ -90,23 +93,26 @@ PibIdentityContainer.prototype.size = function()
  * Add an identity with name identityName into the container. Create the
  * identity if it does not exist.
  * @param {Name} identityName The name of the identity, which is copied.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the PibIdentity object.
  */
-PibIdentityContainer.prototype.addPromise = function(identityName)
+PibIdentityContainer.prototype.addPromise = function(identityName, useSync)
 {
   var identityNameUri = identityName.toUri();
   if (this.identityNameUris_.indexOf(identityNameUri) < 0) {
     var thisContainer = this;
 
     this.identityNameUris_.push(identityNameUri);
-    return PibIdentityImpl.makePromise(identityName, this.pibImpl_, true)
+    return PibIdentityImpl.makePromise(identityName, this.pibImpl_, true, useSync)
     .then(function(pibIdentityImpl) {
       thisContainer.identities_[identityNameUri] = pibIdentityImpl;
-      return thisContainer.getPromise(identityName);
+      return thisContainer.getPromise(identityName, useSync);
     });
   }
   else
-    return this.getPromise(identityName);
+    return this.getPromise(identityName, useSync);
 };
 
 /**
@@ -114,9 +120,12 @@ PibIdentityContainer.prototype.addPromise = function(identityName)
  * related keys and certificates. If the default identity is being removed, no
  * default identity will be selected. If the identity does not exist, do nothing.
  * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished.
  */
-PibIdentityContainer.prototype.removePromise = function(identityName)
+PibIdentityContainer.prototype.removePromise = function(identityName, useSync)
 {
   var identityNameUri = identityName.toUri();
   var index = this.identityNameUris_.indexOf(identityNameUri);
@@ -126,16 +135,19 @@ PibIdentityContainer.prototype.removePromise = function(identityName)
 
   delete this.identities_[identityNameUri];
 
-  return this.pibImpl_.removeIdentityPromise(identityName);
+  return this.pibImpl_.removeIdentityPromise(identityName, useSync);
 };
 
 /**
  * Get the identity with name identityName from the container.
  * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {SyncPromise} A promise which returns the PibIdentity object, or a
  * promise rejected with Pib.Error if the identity does not exist.
  */
-PibIdentityContainer.prototype.getPromise = function(identityName)
+PibIdentityContainer.prototype.getPromise = function(identityName, useSync)
 {
   var identityNameUri = identityName.toUri();
   var pibIdentityImpl = this.identities_[identityNameUri];
@@ -143,7 +155,7 @@ PibIdentityContainer.prototype.getPromise = function(identityName)
   if (pibIdentityImpl == undefined) {
     var thisContainer = this;
 
-    return PibIdentityImpl.makePromise(identityName, this.pibImpl_, false)
+    return PibIdentityImpl.makePromise(identityName, this.pibImpl_, false, useSync)
     .then(function(pibIdentityImpl) {
       thisContainer.identities_[identityNameUri] = pibIdentityImpl;
 
@@ -157,14 +169,17 @@ PibIdentityContainer.prototype.getPromise = function(identityName)
 /**
  * Reset the state of the container. This method removes all loaded identities
  * and retrieves identity names from the PIB implementation.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {SyncPromise} A promise which fulfills when finished.
  */
-PibIdentityContainer.prototype.resetPromise = function()
+PibIdentityContainer.prototype.resetPromise = function(useSync)
 {
   var thisContainer = this;
 
   this.identities_ = {};
-  return this.pibImpl_.getIdentitiesPromise()
+  return this.pibImpl_.getIdentitiesPromise(useSync)
   .then(function(identityNames) {
     thisContainer.identityNameUris_ = [];
     for (var i in identityNames)

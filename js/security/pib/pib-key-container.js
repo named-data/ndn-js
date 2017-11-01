@@ -67,15 +67,18 @@ exports.PibKeyContainer = PibKeyContainer;
  *
  * @param {Name} identityName The name of the identity, which is copied.
  * @param {PibImpl} pibImpl The PIB backend implementation.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @param {Promise|SyncPromise} A promise which returns the new
  * PibKeyContainer.
  */
-PibKeyContainer.makePromise = function(identityName, pibImpl)
+PibKeyContainer.makePromise = function(identityName, pibImpl, useSync)
 {
   if (pibImpl == null)
     return SyncPromise.reject(new Error("The pibImpl is null"));
 
-  return pibImpl.getKeysOfIdentityPromise(identityName)
+  return pibImpl.getKeysOfIdentityPromise(identityName, useSync)
   .then(function(keyNames) {
     return SyncPromise.resolve(new PibKeyContainer
       (identityName, pibImpl, keyNames));
@@ -96,11 +99,14 @@ PibKeyContainer.prototype.size = function()
  * already exists, this replaces it.
  * @param {Buffer} key The buffer of encoded key bytes.
  * @param {Name} keyName The name of the key, which is copied.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the PibKey object, or a
  * promise rejected with Error if the name of the key does not match the
  * identity name.
  */
-PibKeyContainer.prototype.addPromise = function(key, keyName)
+PibKeyContainer.prototype.addPromise = function(key, keyName, useSync)
 {
   if (!this.identityName_.equals(PibKey.extractIdentityFromKeyName(keyName)))
     return SyncPromise.reject(new Error("The key name `" + keyName.toUri() +
@@ -114,11 +120,11 @@ PibKeyContainer.prototype.addPromise = function(key, keyName)
 
   var thisContainer = this;
 
-  return PibKeyImpl.makePromise(keyName, key, this.pibImpl_)
+  return PibKeyImpl.makePromise(keyName, key, this.pibImpl_, useSync)
   .then(function(pibKeyImpl) {
     thisContainer.keys_[keyNameUri] = pibKeyImpl;
 
-    return thisContainer.getPromise(keyName);
+    return thisContainer.getPromise(keyName, useSync);
   });
 };
 
@@ -126,10 +132,13 @@ PibKeyContainer.prototype.addPromise = function(key, keyName)
  * Remove the key with name keyName from the container, and its related
  * certificates. If the key does not exist, do nothing.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with Error if keyName does not match the identity name.
  */
-PibKeyContainer.prototype.removePromise = function(keyName)
+PibKeyContainer.prototype.removePromise = function(keyName, useSync)
 {
   if (!this.identityName_.equals(PibKey.extractIdentityFromKeyName(keyName)))
     return SyncPromise.reject(new Error("Key name `" + keyName.toUri() +
@@ -143,17 +152,20 @@ PibKeyContainer.prototype.removePromise = function(keyName)
 
   delete this.keys_[keyNameUri];
 
-  return this.pibImpl_.removeKeyPromise(keyName);
+  return this.pibImpl_.removeKeyPromise(keyName, useSync);
 };
 
 /**
  * Get the key with name keyName from the container.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the PibKey object, or a
  * promise rejected with Error if keyName does not match the identity name, or a
  * promise rejected with Pib.Error if the key does not exist.
  */
-PibKeyContainer.prototype.getPromise = function(keyName)
+PibKeyContainer.prototype.getPromise = function(keyName, useSync)
 {
   if (!this.identityName_.equals(PibKey.extractIdentityFromKeyName(keyName)))
     return SyncPromise.reject(new Error("Key name `" + keyName.toUri() +
@@ -165,7 +177,7 @@ PibKeyContainer.prototype.getPromise = function(keyName)
   if (pibKeyImpl == undefined) {
     var thisContainer = this;
 
-    return PibKeyImpl.makePromise(keyName, this.pibImpl_)
+    return PibKeyImpl.makePromise(keyName, this.pibImpl_, useSync)
     .then(function(pibKeyImpl) {
       thisContainer.keys_[keyNameUri] = pibKeyImpl;
 

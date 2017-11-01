@@ -54,14 +54,17 @@ PibIdentity.prototype.getName = function()
 /**
  * Get the key with name keyName.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the PibKey object, or a
  * promise rejected with Pib.Error if the key does not exist, or a promise
  * rejected with Error if the backend implementation instance is invalid.
  */
-PibIdentity.prototype.getKeyPromise = function(keyName)
+PibIdentity.prototype.getKeyPromise = function(keyName, useSync)
 {
   try {
-    return this.lock_().getKeyPromise(keyName);
+    return this.lock_().getKeyPromise(keyName, useSync);
   } catch (ex) {
     return SyncPromise.reject(ex);
   }
@@ -69,15 +72,18 @@ PibIdentity.prototype.getKeyPromise = function(keyName)
 
 /**
  * Get the default key of this Identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the PibKey object of
  * the default key, or a promise rejected with Pib.Error if the default key has
  * not been set, or a promise rejected with Error if the backend implementation
  * instance is invalid.
  */
-PibIdentity.prototype.getDefaultKeyPromise = function()
+PibIdentity.prototype.getDefaultKeyPromise = function(useSync)
 {
   try {
-    return this.lock_().getDefaultKeyPromise();
+    return this.lock_().getDefaultKeyPromise(useSync);
   } catch (ex) {
     return SyncPromise.reject(ex);
   }
@@ -89,13 +95,16 @@ PibIdentity.prototype.getDefaultKeyPromise = function()
  * default for the identity. This should only be called by KeyChain.
  * @param {Buffer} key The public key bits. This copies the buffer.
  * @param {Name} keyName The name of the key. This copies the name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the PibKey object, or a
  * promise rejected with Error if the backend implementation instance is invalid.
  */
-PibIdentity.prototype.addKeyPromise_ = function(key, keyName)
+PibIdentity.prototype.addKeyPromise_ = function(key, keyName, useSync)
 {
   try {
-    return this.lock_().addKeyPromise(key, keyName);
+    return this.lock_().addKeyPromise(key, keyName, useSync);
   } catch (ex) {
     return SyncPromise.reject(ex);
   }
@@ -105,13 +114,16 @@ PibIdentity.prototype.addKeyPromise_ = function(key, keyName)
  * Remove the key with keyName and its related certificates. If the key does not
  * exist, do nothing. This should only be called by KeyChain.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with Error if the backend implementation instance is invalid.
  */
-PibIdentity.prototype.removeKeyPromise_ = function(keyName)
+PibIdentity.prototype.removeKeyPromise_ = function(keyName, useSync)
 {
   try {
-    return this.lock_().removeKeyPromise(keyName);
+    return this.lock_().removeKeyPromise(keyName, useSync);
   } catch (ex) {
     return SyncPromise.reject(ex);
   }
@@ -119,14 +131,17 @@ PibIdentity.prototype.removeKeyPromise_ = function(keyName)
 
 /**
  * setDefaultKey has two forms:
- * setDefaultKey(keyName) - Set the key with name keyName as the default key of
- * the identity.
- * setDefaultKey(key, keyName) - Add a key with name keyName and set it as the
+ * setDefaultKey(keyName, useSync) - Set the key with name keyName as the
  * default key of the identity.
+ * setDefaultKey(key, keyName, useSync) - Add a key with name keyName and set it
+ * as the default key of the identity.
  * This should only be called by KeyChain.
  * @param {Buffer} key The buffer of encoded key bytes. (This is only used when
  * calling setDefaultKey(key, keyName). )
  * @param {Name} keyName The name of the key. This copies the name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {SyncPromise} A promise which returns the PibKey object of the
  * default key, or a promise rejected with Error the name of the key does not
  * match the identity name (or if the backend implementation instance is 
@@ -134,10 +149,10 @@ PibIdentity.prototype.removeKeyPromise_ = function(keyName)
  * setDefaultKey(keyName) and the key does not exist, or if calling
  * setDefaultKey(key, keyName) and a key with the same name already exists.
  */
-PibIdentity.prototype.setDefaultKeyPromise_ = function(keyOrKeyName, arg2)
+PibIdentity.prototype.setDefaultKeyPromise_ = function(keyOrKeyName, arg2, arg3)
 {
   try {
-    return this.lock_().setDefaultKeyPromise(keyOrKeyName, arg2);
+    return this.lock_().setDefaultKeyPromise(keyOrKeyName, arg2, arg3);
   } catch (ex) {
     return SyncPromise.reject(ex);
   }

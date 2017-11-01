@@ -98,32 +98,38 @@ Pib.prototype.getPibLocator = function()
  * different from the existing one, the PIB will be reset. Otherwise, nothing
  * will be changed.
  * @param {string} tpmLocator The TPM locator.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @returns {Promise|SyncPromise} A promise which fulfills when finished.
  */
-Pib.prototype.setTpmLocatorPromise = function(tpmLocator)
+Pib.prototype.setTpmLocatorPromise = function(tpmLocator, useSync)
 {
   var thisPib = this;
 
-  return this.pibImpl_.getTpmLocatorPromise()
+  return this.pibImpl_.getTpmLocatorPromise(useSync)
   .then(function(pibTpmLocator) {
     if (tpmLocator == pibTpmLocator)
       return SyncPromise.resolve();
 
-    return thisPib.resetPromise_();
+    return thisPib.resetPromise_(useSync);
   })
   .then(function() {
-    return thisPib.pibImpl_.setTpmLocatorPromise(tpmLocator);
+    return thisPib.pibImpl_.setTpmLocatorPromise(tpmLocator, useSync);
   });
 };
 
 /**
  * Get the TPM Locator.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the TPM locator string,
  * or a promise rejected with Pib.Error if the TPM locator is empty.
  */
-Pib.prototype.getTpmLocatorPromise = function()
+Pib.prototype.getTpmLocatorPromise = function(useSync)
 {
-  return this.pibImpl_.getTpmLocatorPromise()
+  return this.pibImpl_.getTpmLocatorPromise(useSync)
   .then(function(tpmLocator) {
     if (tpmLocator == "")
       return SyncPromise.reject(new Pib.Error(new Error
@@ -136,36 +142,42 @@ Pib.prototype.getTpmLocatorPromise = function()
 /**
  * Get the identity with name identityName.
  * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the PibIdentity object,
  * or a promise rejected with Pib.Error if the identity does not exist.
  */
-Pib.prototype.getIdentityPromise = function(identityName)
+Pib.prototype.getIdentityPromise = function(identityName, useSync)
 {
-  return this.getIdentitiesPromise_()
+  return this.getIdentitiesPromise_(useSync)
   .then(function(identities) {
-    return identities.getPromise(identityName);
+    return identities.getPromise(identityName, useSync);
   });
 };
 
 /**
  * Get the default identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the PibIdentity object
  * of the default identity, or a promise rejected with Pib.Error for no default
  * identity.
  */
-Pib.prototype.getDefaultIdentityPromise = function()
+Pib.prototype.getDefaultIdentityPromise = function(useSync)
 {
   if (this.defaultIdentity_ == null) {
     var thisPib = this;
     var identities;
 
-    return this.getIdentitiesPromise_()
+    return this.getIdentitiesPromise_(useSync)
     .then(function(localIdentities) {
       identities = localIdentities;
-      return thisPib.pibImpl_.getDefaultIdentityPromise();
+      return thisPib.pibImpl_.getDefaultIdentityPromise(useSync);
     })
     .then(function(defaultIdentity) {
-      return identities.getPromise(defaultIdentity);
+      return identities.getPromise(defaultIdentity, useSync);
     })
     .then(function(identity) {
       thisPib.defaultIdentity_ = identity;
@@ -179,22 +191,25 @@ Pib.prototype.getDefaultIdentityPromise = function()
 /**
  * Reset the content in the PIB, including a reset of the TPM locator. This
  * should only be called by KeyChain.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished.
  */
-Pib.prototype.resetPromise_ = function()
+Pib.prototype.resetPromise_ = function(useSync)
 {
   var thisPib = this;
 
-  return this.pibImpl_.clearIdentitiesPromise()
+  return this.pibImpl_.clearIdentitiesPromise(useSync)
   .then(function() {
-    return thisPib.pibImpl_.setTpmLocatorPromise("");
+    return thisPib.pibImpl_.setTpmLocatorPromise("", useSync);
   })
   .then(function() {
     thisPib.defaultIdentity_ = null;
-    return thisPib.getIdentitiesPromise_()
+    return thisPib.getIdentitiesPromise_(useSync)
   })
   .then(function(identities) {
-    return identities.resetPromise();
+    return identities.resetPromise(useSync);
   });
 };
 
@@ -202,14 +217,17 @@ Pib.prototype.resetPromise_ = function()
  * Add an identity with name identityName. Create the identity if it does not
  * exist. This should only be called by KeyChain.
  * @param {Name} identityName The name of the identity, which is copied.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the PibIdentity object
  * of the added identity.
  */
-Pib.prototype.addIdentityPromise_ = function(identityName)
+Pib.prototype.addIdentityPromise_ = function(identityName, useSync)
 {
-  return this.getIdentitiesPromise_()
+  return this.getIdentitiesPromise_(useSync)
   .then(function(identities) {
-    return identities.addPromise(identityName);
+    return identities.addPromise(identityName, useSync);
   });
 };
 
@@ -219,17 +237,20 @@ Pib.prototype.addIdentityPromise_ = function(identityName)
  * will be selected.  If the identity does not exist, do nothing. This should
  * only be called by KeyChain.
  * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished.
  */
-Pib.prototype.removeIdentityPromise_ = function(identityName)
+Pib.prototype.removeIdentityPromise_ = function(identityName, useSync)
 {
   if (this.defaultIdentity_ != null &&
       this.defaultIdentity_.getName().equals(identityName))
     this.defaultIdentity_ = null;
 
-  return this.getIdentitiesPromise_()
+  return this.getIdentitiesPromise_(useSync)
   .then(function(identities) {
-    return identities.removePromise(identityName);
+    return identities.removePromise(identityName, useSync);
   });
 };
 
@@ -237,16 +258,19 @@ Pib.prototype.removeIdentityPromise_ = function(identityName)
  * Set the identity with name identityName as the default identity. Create the
  * identity if it does not exist. This should only be called by KeyChain.
  * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the PibIdentity object
  * of the default identity.
  */
-Pib.prototype.setDefaultIdentityPromise_ = function(identityName)
+Pib.prototype.setDefaultIdentityPromise_ = function(identityName, useSync)
 {
   var thisPib = this;
 
-  return this.getIdentitiesPromise_()
+  return this.getIdentitiesPromise_(useSync)
   .then(function(identities) {
-    return identities.addPromise(identityName);
+    return identities.addPromise(identityName, useSync);
   })
   .then(function(identity) {
     thisPib.defaultIdentity_ = identity;
@@ -261,15 +285,18 @@ Pib.prototype.setDefaultIdentityPromise_ = function(identityName)
 /**
  * If this.identities_ is not null, return it. Otherwise, set it using
  * PibIdentityContainer.makePromise.
- * return {Promise|SyncPromise} A promise which returns the PibIdentityContainer.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibIdentityContainer.
  */
-Pib.prototype.getIdentitiesPromise_ = function()
+Pib.prototype.getIdentitiesPromise_ = function(useSync)
 {
   if (this.identities_ != null)
     return SyncPromise.resolve(this.identities_);
 
   var thisPib = this;
-  return PibIdentityContainer.makePromise(this.pibImpl_)
+  return PibIdentityContainer.makePromise(this.pibImpl_, useSync)
   .then(function(container) {
     thisPib.identities_ = container;
     return SyncPromise.resolve(container);

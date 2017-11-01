@@ -31,6 +31,7 @@ var RsaKeyParams = require('./key-params.js').RsaKeyParams; /** @ignore */
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
 var Pib = require('./pib/pib.js').Pib; /** @ignore */
 var PibImpl = require('./pib/pib-impl.js').PibImpl; /** @ignore */
+var PibKey = require('./pib/pib-key.js').PibKey; /** @ignore */
 var Tpm = require('./tpm/tpm.js').Tpm; /** @ignore */
 var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
@@ -60,7 +61,7 @@ var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVe
  * use the PIB and TPM defined by the given locators, which creates a security
  * v2 KeyChain that uses CertificateV2, Pib, Tpm and Validator (instead of v1
  * Certificate, IdentityStorage, PrivateKeyStorage and PolicyManager).
- * KeyChain(identityManager = None, policyManager = None) - Create a security v1
+ * KeyChain(identityManager = null, policyManager = null) - Create a security v1
  * KeyChain to use the optional identityManager and policyManager.
  * KeyChain(pibImpl, tpmBackEnd, policyManager) - Create a KeyChain using this
  * temporary constructor for the transition to security v2, which creates a
@@ -279,18 +280,43 @@ KeyChain.prototype.getTpm = function()
  * Buffer).
  */
 KeyChain.prototype.signPromise = function
-  (target, paramsOrCertificateName, wireFormat)
+  (target, paramsOrCertificateName, wireFormat, useSync)
 {
-  if (paramsOrCertificateName instanceof WireFormat) {
-    // Shift the arguments.
-    wireFormat = paramsOrCertificateName;
-    paramsOrCertificateName = null;
-  }
+  var arg2 = paramsOrCertificateName;
+  var arg3 = wireFormat;
+  var arg4 = useSync;
+  // arg2,                    arg3,       arg4
+  // paramsOrCertificateName, wireFormat, useSync
+  // paramsOrCertificateName, wireFormat, null
+  // paramsOrCertificateName, useSync,    null
+  // paramsOrCertificateName, null,       null
+  // wireFormat,              useSync,    null
+  // wireFormat,              null,       null
+  // useSync,                 null,       null
+  // null,                    null,       null
+  if (arg2 instanceof SigningInfo || arg2 instanceof Name)
+    paramsOrCertificateName = arg2;
+  else
+    paramsOrCertificateName = undefined;
+
+  if (arg2 instanceof WireFormat)
+    wireFormat = arg2;
+  else if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else
+    wireFormat = undefined;
+
+  if (typeof arg2 === "boolean")
+    useSync = arg2;
+  else if (typeof arg3 === "boolean")
+    useSync = arg3;
+  else if (typeof arg4 === "boolean")
+    useSync = arg4;
+  else
+    useSync = false;
 
   if (wireFormat == undefined)
     wireFormat = WireFormat.getDefaultWireFormat();
-
-  var useSync = false; // debug: set this properly
 
   var thisKeyChain = this;
 
@@ -325,7 +351,7 @@ KeyChain.prototype.signPromise = function
 
         var signingInfo = new SigningInfo();
         signingInfo.setSigningCertificateName(certificateName);
-        return thisKeyChain.signPromise(target, signingInfo, wireFormat)
+        return thisKeyChain.signPromise(target, signingInfo, wireFormat, useSync)
         .catch(function(err) {
           return SyncPromise.reject(new SecurityException(new Error
             ("Error in sign: " + err)));
@@ -350,7 +376,7 @@ KeyChain.prototype.signPromise = function
       var data = target;
 
       var keyName = [null];
-      return thisKeyChain.prepareSignatureInfoPromise_(params, keyName)
+      return thisKeyChain.prepareSignatureInfoPromise_(params, keyName, useSync)
       .then(function(signatureInfo) {
         data.setSignature(signatureInfo);
 
@@ -358,7 +384,7 @@ KeyChain.prototype.signPromise = function
         var encoding = data.wireEncode(wireFormat);
 
         return thisKeyChain.signBufferPromise_
-          (encoding.signedBuf(), keyName[0], params.getDigestAlgorithm());
+          (encoding.signedBuf(), keyName[0], params.getDigestAlgorithm(), useSync);
       })
       .then(function(signatureBytes) {
         data.getSignature().setSignature(signatureBytes);
@@ -373,7 +399,7 @@ KeyChain.prototype.signPromise = function
       var signatureInfo;
 
       var keyName = [null];
-      return thisKeyChain.prepareSignatureInfoPromise_(params, keyName)
+      return thisKeyChain.prepareSignatureInfoPromise_(params, keyName, useSync)
       .then(function(localSignatureInfo) {
         signatureInfo = localSignatureInfo;
 
@@ -385,7 +411,7 @@ KeyChain.prototype.signPromise = function
         // Encode once to get the signed portion, and sign.
         var encoding = interest.wireEncode(wireFormat);
         return thisKeyChain.signBufferPromise_
-          (encoding.signedBuf(), keyName[0], params.getDigestAlgorithm());
+          (encoding.signedBuf(), keyName[0], params.getDigestAlgorithm(), useSync);
       })
       .then(function(signatureBytes) {
         signatureInfo.setSignature(signatureBytes);
@@ -400,10 +426,10 @@ KeyChain.prototype.signPromise = function
       var buffer = target;
 
       var keyName = [null];
-      return thisKeyChain.prepareSignatureInfoPromise_(params, keyName)
+      return thisKeyChain.prepareSignatureInfoPromise_(params, keyName, useSync)
       .then(function(signatureInfo) {
         return thisKeyChain.signBufferPromise_
-          (buffer, keyName[0], params.getDigestAlgorithm());
+          (buffer, keyName[0], params.getDigestAlgorithm(), useSync);
       });
     }
   });
@@ -510,12 +536,21 @@ KeyChain.prototype.sign = function
  * key. This copies the values from the SafeBag.
  * @param {Buffer} password (optional) The password for decrypting the private
  * key. If the password is supplied, use it to decrypt the PKCS #8
- * EncryptedPrivateKeyInfo. If the password is omitted or None, import an
+ * EncryptedPrivateKeyInfo. If the password is omitted or null, import an
  * unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished.
  */
-KeyChain.prototype.importSafeBagPromise = function(safeBag, password)
+KeyChain.prototype.importSafeBagPromise = function(safeBag, password, useSync)
 {
+  if (typeof password === 'boolean') {
+    // password is omitted, so shift.
+    useSync = password;
+    password = null;
+  }
+
   var certificate;
   try {
     certificate = new CertificateV2(safeBag.getCertificate());
@@ -531,16 +566,16 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password)
 
   return SyncPromise.resolve()
   .then(function() {
-    return thisKeyChain.tpm_.hasKeyPromise(keyName);
+    return thisKeyChain.tpm_.hasKeyPromise(keyName, useSync);
   })
   .then(function(hasKey) {
     if (hasKey)
       return SyncPromise.reject(new KeyChain.Error(new Error
         ("Private key `" + keyName.toUri() + "` already exists")));
 
-    return thisKeyChain.pib_.getIdentityPromise(identity)
+    return thisKeyChain.pib_.getIdentityPromise(identity, useSync)
     .then(function(existingId) {
-      return existingId.getKeyPromise(keyName);
+      return existingId.getKeyPromise(keyName, useSync);
     })
     .then(function() {
       return SyncPromise.reject(new KeyChain.Error(new Error
@@ -552,7 +587,7 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password)
   })
   .then(function() {
     return thisKeyChain.tpm_.importPrivateKeyPromise_
-      (keyName, safeBag.getPrivateKeyBag().buf(), password)
+      (keyName, safeBag.getPrivateKeyBag().buf(), password, useSync)
     .catch(function(err) {
       return SyncPromise.reject(new KeyChain.Error(new Error
         ("Failed to import private key `" + keyName.toUri() + "`")));
@@ -561,12 +596,12 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password)
   .then(function() {
     // Check the consistency of the private key and certificate.
     return thisKeyChain.tpm_.signPromise
-      (content.buf(), keyName, DigestAlgorithm.SHA256)
+      (content.buf(), keyName, DigestAlgorithm.SHA256, useSync)
     .then(function(localSignatureBits) {
       signatureBits = localSignatureBits;
       return SyncPromise.resolve();
     }, function(err) {
-      return thisKeyChain.tpm_.deleteKeyPromise_(keyName)
+      return thisKeyChain.tpm_.deleteKeyPromise_(keyName, useSync)
       .then(function() {
         return SyncPromise.reject(new KeyChain.Error(new Error
           ("Invalid private key `" + keyName.toUri() + "`")));
@@ -578,8 +613,8 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password)
     try {
       publicKey = new PublicKey(publicKeyBits);
     } catch (ex) {
-      // Promote to Pib.Error.
-      return thisKeyChain.tpm_.deleteKeyPromise_(keyName)
+      // Promote to KeyChain.Error.
+      return thisKeyChain.tpm_.deleteKeyPromise_(keyName, useSync)
       .then(function() {
         return SyncPromise.reject(new KeyChain.Error(new Error
           ("Error decoding public key " + ex)));
@@ -591,7 +626,7 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password)
   })
   .then(function(isVerified) {
     if (!isVerified) {
-      return thisKeyChain.tpm_.deleteKeyPromise_(keyName)
+      return thisKeyChain.tpm_.deleteKeyPromise_(keyName, useSync)
       .then(function() {
         return SyncPromise.reject(new KeyChain.Error(new Error
           ("Certificate `" + certificate.getName().toUri() +
@@ -600,13 +635,13 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password)
     }
 
     // The consistency is verified. Add to the PIB.
-    return thisKeyChain.pib_.addIdentityPromise_(identity);
+    return thisKeyChain.pib_.addIdentityPromise_(identity, useSync);
   })
   .then(function(id) {
-    return id.addKeyPromise_(certificate.getPublicKey().buf(), keyName);
+    return id.addKeyPromise_(certificate.getPublicKey().buf(), keyName, useSync);
   })
   .then(function(key) {
-    return key.addCertificatePromise_(certificate);
+    return key.addCertificatePromise_(certificate, useSync);
   });
 };
 
@@ -619,7 +654,7 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password)
  * key. This copies the values from the SafeBag.
  * @param {Buffer} password (optional) The password for decrypting the private
  * key. If the password is supplied, use it to decrypt the PKCS #8
- * EncryptedPrivateKeyInfo. If the password is omitted or None, import an
+ * EncryptedPrivateKeyInfo. If the password is omitted or null, import an
  * unencrypted PKCS #8 PrivateKeyInfo.
  * @param {function} onComplete (optional) This calls onComplete() when finished.
  * If omitted, just return when finished. (Some crypto libraries only use a
@@ -799,10 +834,10 @@ KeyChain.prototype.getDefaultCertificateName = function(onComplete, onError)
     return SyncPromise.complete(onComplete, onError,
       this.pib_.getDefaultIdentityPromise(!onComplete)
       .then(function(identity) {
-        return identity.getDefaultKeyPromise();
+        return identity.getDefaultKeyPromise(!onComplete);
       })
       .then(function(key) {
-        return key.getDefaultCertificatePromise();
+        return key.getDefaultCertificatePromise(!onComplete);
       })
       .then(function(certificate) {
         return SyncPromise.resolve(certificate.getName());
@@ -1323,11 +1358,15 @@ KeyChain.DEFAULT_KEY_PARAMS = new RsaKeyParams();
  * name.
  * @param {SigningInfo} params The signing parameters.
  * @param {Array<Name>} keyName Set keyName[0] to the signing key name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns a new Signature object
  * with the SignatureInfo, or a promise rejected with InvalidSigningInfoError
  * when the requested signing method cannot be satisfied.
  */
-KeyChain.prototype.prepareSignatureInfoPromise_ = function(params, keyName)
+KeyChain.prototype.prepareSignatureInfoPromise_ = function
+  (params, keyName, useSync)
 {
   var identity = null;
   var key = null;
@@ -1336,7 +1375,7 @@ KeyChain.prototype.prepareSignatureInfoPromise_ = function(params, keyName)
   return SyncPromise.resolve()
   .then(function() {
     if (params.getSignerType() == SigningInfo.SignerType.NULL) {
-      return thisKeyChain.pib_.getDefaultIdentityPromise()
+      return thisKeyChain.pib_.getDefaultIdentityPromise(useSync)
       .then(function(localIdentity) {
         identity = localIdentity;
         return SyncPromise.resolve(null);
@@ -1349,7 +1388,7 @@ KeyChain.prototype.prepareSignatureInfoPromise_ = function(params, keyName)
     else if (params.getSignerType() == SigningInfo.SignerType.ID) {
       identity = params.getPibIdentityPromise();
       if (identity == null) {
-        return thisKeyChain.pib_.getIdentityPromise(params.getSignerName())
+        return thisKeyChain.pib_.getIdentityPromise(params.getSignerName(), useSync)
         .then(function(localIdentity) {
           identity = localIdentity;
           return SyncPromise.resolve(null);
@@ -1368,9 +1407,9 @@ KeyChain.prototype.prepareSignatureInfoPromise_ = function(params, keyName)
         identityName = PibKey.extractIdentityFromKeyName(
           params.getSignerName());
 
-        return thisKeyChain.pib_.getIdentityPromise(identityName)
+        return thisKeyChain.pib_.getIdentityPromise(identityName, useSync)
         .then(function(localIdentity) {
-          return localIdentity.getKeyPromise(params.getSignerName())
+          return localIdentity.getKeyPromise(params.getSignerName(), useSync)
           .then(function(localKey) {
             key = localKey;
             // We will use the PIB key instance, so reset the identity.
@@ -1390,11 +1429,11 @@ KeyChain.prototype.prepareSignatureInfoPromise_ = function(params, keyName)
       var identityName = CertificateV2.extractIdentityFromCertName
         (params.getSignerName());
 
-      return thisKeyChain.pib_.getIdentityPromise(identityName)
+      return thisKeyChain.pib_.getIdentityPromise(identityName, useSync)
       .then(function(localIdentity) {
         identity = localIdentity;
         return identity.getKeyPromise
-          (CertificateV2.extractKeyNameFromCertName(params.getSignerName()))
+          (CertificateV2.extractKeyNameFromCertName(params.getSignerName()), useSync)
         .then(function(localKey) {
           key = localKey;
           return SyncPromise.resolve(null);
@@ -1426,7 +1465,7 @@ KeyChain.prototype.prepareSignatureInfoPromise_ = function(params, keyName)
       return SyncPromise.resolve()
       .then(function() {
         if (identity != null && key == null) {
-          return identity.getDefaultKeyPromise()
+          return identity.getDefaultKeyPromise(useSync)
           .then(function(localKey) {
             key = localKey;
             return SyncPromise.resolve(null);
@@ -1474,11 +1513,15 @@ KeyChain.prototype.prepareSignatureInfoPromise_ = function(params, keyName)
  * @param {Name} keyName The name of the key.
  * @param {number} digestAlgorithm The digest algorithm as an int from the
  * DigestAlgorithm enum.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the signature Blob (or
  * an isNull Blob if the key does not exist), or a promise rejected
  * with TpmBackEnd.Error for an error in signing.
  */
-KeyChain.prototype.signBufferPromise_ = function(buffer, keyName, digestAlgorithm)
+KeyChain.prototype.signBufferPromise_ = function
+  (buffer, keyName, digestAlgorithm, useSync)
 {
   if (keyName.equals(SigningInfo.getDigestSha256Identity())) {
     var hash = Crypto.createHash('sha256');
@@ -1486,7 +1529,7 @@ KeyChain.prototype.signBufferPromise_ = function(buffer, keyName, digestAlgorith
     return SyncPromise.resolve(new Blob(hash.digest(), false));
   }
 
-  return this.tpm_.signPromise(buffer, keyName, digestAlgorithm);
+  return this.tpm_.signPromise(buffer, keyName, digestAlgorithm, useSync);
 };
 
 // Private security v1 methods

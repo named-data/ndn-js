@@ -79,15 +79,18 @@ PibKey.prototype.getPublicKey = function() { return this.lock_().getPublicKey();
 /**
  * Get the certificate with name certificateName.
  * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns a copy of the
  * CertificateV2, or a promise rejected with Error if certificateName does not
  * match the key name (or if the backend implementation instance is invalid), or
  * a promise rejected with Pib.Error if the certificate does not exist.
  */
-PibKey.prototype.getCertificatePromise = function(certificateName)
+PibKey.prototype.getCertificatePromise = function(certificateName, useSync)
 {
   try {
-    return this.lock_().getCertificatePromise(certificateName);
+    return this.lock_().getCertificatePromise(certificateName, useSync);
   } catch (ex) {
     return SyncPromise.reject(ex);
   }
@@ -95,15 +98,18 @@ PibKey.prototype.getCertificatePromise = function(certificateName)
 
 /**
  * Get the default certificate for this Key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the default
  * CertificateV2, or a promise rejected with Error if the backend implementation
  * instance is invalid, or a promise rejected with Pib.Error if the default
  * certificate does not exist.
  */
-PibKey.prototype.getDefaultCertificatePromise = function()
+PibKey.prototype.getDefaultCertificatePromise = function(useSync)
 {
   try {
-    return this.lock_().getDefaultCertificatePromise();
+    return this.lock_().getDefaultCertificatePromise(useSync);
   } catch (ex) {
     return SyncPromise.reject(ex);
   }
@@ -158,40 +164,49 @@ PibKey.extractIdentityFromKeyName = function(keyName)
  * default for the key. This should only be called by KeyChain.
  * @param {CertificateV2} certificate The certificate to add. This copies the
  * object.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with Error if the name of the certificate does not match the
  * key name.
  */
-PibKey.prototype.addCertificatePromise_ = function(certificate)
+PibKey.prototype.addCertificatePromise_ = function(certificate, useSync)
 {
-  return this.lock_().addCertificatePromise(certificate);
+  return this.lock_().addCertificatePromise(certificate, useSync);
 };
 
 /**
  * Remove the certificate with name certificateName. If the certificate does not
  * exist, do nothing. This should only be called by KeyChain.
  * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with Error if certificateName does not match the key name.
  */
-PibKey.prototype.removeCertificatePromise_ = function(certificateName)
+PibKey.prototype.removeCertificatePromise_ = function(certificateName, useSync)
 {
-  return this.lock_().removeCertificatePromise(certificateName);
+  return this.lock_().removeCertificatePromise(certificateName, useSync);
 };
 
 /**
  * Set the existing certificate with name certificateName as the default
  * certificate. This should only be called by KeyChain.
  * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the default
  * CertificateV2, or a promise rejected with Error if certificateName does not
  * match the key name, or a promise rejected with Pib.Error if
  * certificateOrCertificateName is the certificate Name and the certificate does
  * not exist.
  */
-PibKey.prototype.setDefaultCertificatePromise_ = function(certificateName)
+PibKey.prototype.setDefaultCertificatePromise_ = function(certificateName, useSync)
 {
-  return this.lock_().setDefaultCertificatePromise(certificateName);
+  return this.lock_().setDefaultCertificatePromise(certificateName, useSync);
 };
 
 /**

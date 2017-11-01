@@ -305,7 +305,7 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
            (new Blob(), "The identityStorage doesn't have the key named " +
               keyName.toUri());
        },
-       this.identityStorage_.getKeyPromise(keyName));
+       this.identityStorage_.getKeyPromise(keyName, !onComplete));
   }
   else if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
            this.pibImpl_ != null) {
@@ -317,7 +317,7 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
            (new Blob(), "The identityStorage doesn't have the key named " +
               keyName.toUri());
        },
-       this.pibImpl_.getKeyBitsPromise(keyLocator.getKeyName()));
+       this.pibImpl_.getKeyBitsPromise(keyLocator.getKeyName(), !onComplete));
   }
   else
     // Can't find a key to verify.

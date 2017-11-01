@@ -86,22 +86,28 @@ Tpm.prototype.getTpmLocator = function()
 /**
  * Check if the key with name keyName exists in the TPM.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns true if the key exists.
  */
-Tpm.prototype.hasKeyPromise = function(keyName)
+Tpm.prototype.hasKeyPromise = function(keyName, useSync)
 {
-  return this.backEnd_.hasKeyPromise(keyName);
+  return this.backEnd_.hasKeyPromise(keyName, useSync);
 };
 
 /**
  * Get the public portion of an asymmetric key pair with name keyName.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the encoded public key
  * Blob (or an isNull Blob if the key does not exist).
  */
-Tpm.prototype.getPublicKeyPromise = function(keyName)
+Tpm.prototype.getPublicKeyPromise = function(keyName, useSync)
 {
-  return this.findKeyPromise_(keyName)
+  return this.findKeyPromise_(keyName, useSync)
   .then(function(key) {
     if (key == null)
       return SyncPromise.resolve(new Blob());
@@ -117,18 +123,21 @@ Tpm.prototype.getPublicKeyPromise = function(keyName)
  * @param {Name} keyName The name of the key.
  * @param {number} digestAlgorithm The digest algorithm as an int from the
  * DigestAlgorithm enum.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the signature Blob (or
  * an isNull Blob if the key does not exist), or a promise rejected
  * with TpmBackEnd.Error for an error in signing.
  */
-Tpm.prototype.signPromise = function(data, keyName, digestAlgorithm)
+Tpm.prototype.signPromise = function(data, keyName, digestAlgorithm, useSync)
 {
-  return this.findKeyPromise_(keyName)
+  return this.findKeyPromise_(keyName, useSync)
   .then(function(key) {
     if (key == null)
       return SyncPromise.resolve(new Blob());
     else
-      return key.signPromise(digestAlgorithm, data);
+      return key.signPromise(digestAlgorithm, data, useSync);
   });
 };
 
@@ -137,17 +146,20 @@ Tpm.prototype.signPromise = function(data, keyName, digestAlgorithm)
  * name keyName.
  * @param {Buffer} cipherText The cipher text byte buffer.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the decrypted data Blob
  * (or an isNull Blob if the key does not exist).
  */
-Tpm.prototype.decryptPromise = function(cipherText, keyName)
+Tpm.prototype.decryptPromise = function(cipherText, keyName, useSync)
 {
-  return this.findKeyPromise_(keyName)
+  return this.findKeyPromise_(keyName, useSync)
   .then(function(key) {
     if (key == null)
       return SyncPromise.resolve(new Blob());
     else
-      return key.decryptPromise(cipherText);
+      return key.decryptPromise(cipherText, useSync);
   });
 };
 
@@ -167,18 +179,21 @@ Tpm.prototype.getBackEnd_ = function() { return this.backEnd_; };
  * named /<identityName>/[keyId]/KEY . This should only be called by KeyChain.
  * @param {Name} identityName The name if the identity.
  * @param {KeyParams} params The KeyParams for creating the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the Name of the created
  * key, or a promise rejected with Tpm.Error if params is invalid or if the key
  * type is unsupported, or a promise rejected with TpmBackEnd.Error if the key
  * already exists or cannot be created.
  */
-Tpm.prototype.createKeyPromise_ = function(identityName, params)
+Tpm.prototype.createKeyPromise_ = function(identityName, params, useSync)
 {
   if (params.getKeyType() == KeyType.RSA ||
       params.getKeyType() == KeyType.ECDSA) {
     var thisTpm = this;
 
-    this.backEnd_.createKeyPromise(identityName, params)
+    this.backEnd_.createKeyPromise(identityName, params, useSync)
     .then(function(keyHandle) {
       var keyName = keyHandle.getKeyName()
       thisTpm.keys_[keyName.toUri()] = keyHandle;
@@ -195,14 +210,17 @@ Tpm.prototype.createKeyPromise_ = function(identityName, params)
  * Note: Continuing to use existing Key handles on a deleted key results in
  * undefined behavior. This should only be called by KeyChain.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with TpmBackEnd.Error if the deletion fails.
  */
-Tpm.prototype.deleteKeyPromise_ = function(keyName)
+Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
 {
   delete this.keys_[keyName.toUri()];
 
-  return this.backEnd_.deleteKeyPromise(keyName);
+  return this.backEnd_.deleteKeyPromise(keyName, useSync);
 };
 
 // TODO: exportPrivateKeyPromise_
@@ -216,13 +234,16 @@ Tpm.prototype.deleteKeyPromise_ = function(keyName)
  * an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {Buffer} password The password for decrypting the private key. If the
  * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is None, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which return true for success, false 
  * if importing fails.
  */
-Tpm.prototype.importPrivateKeyPromise_ = function(keyName, pkcs8, password)
+Tpm.prototype.importPrivateKeyPromise_ = function(keyName, pkcs8, password, useSync)
 {
-  return this.backEnd_.importKeyPromise(keyName, pkcs8, password)
+  return this.backEnd_.importKeyPromise(keyName, pkcs8, password, useSync)
   .then(function() {
     return SyncPromise.resolve(true);
   }, function() {
@@ -234,10 +255,13 @@ Tpm.prototype.importPrivateKeyPromise_ = function(keyName, pkcs8, password)
  * Get the TpmKeyHandle with name keyName, using backEnd_.getKeyHandlePromise if
  * it is not already cached in keys_.
  * @param {Name} keyName The name of the key, which is copied.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which return the TpmKeyHandle in the
  * keys_ cache, or null if no key exists with name keyName.
  */
-Tpm.prototype.findKeyPromise_ = function(keyName)
+Tpm.prototype.findKeyPromise_ = function(keyName, useSync)
 {
   var keyNameUri = keyName.toUri();
   var handle = this.keys_[keyNameUri];
@@ -246,7 +270,7 @@ Tpm.prototype.findKeyPromise_ = function(keyName)
     return SyncPromise.resolve(handle);
 
   var thisTpm = this;
-  return this.backEnd_.getKeyHandlePromise(keyName)
+  return this.backEnd_.getKeyHandlePromise(keyName, useSync)
   .then(function(handle) {
     if (handle != null) {
       thisTpm.keys_[keyNameUri] = handle;

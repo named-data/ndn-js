@@ -47,11 +47,12 @@ exports.PibKeyImpl = PibKeyImpl;
 
 /**
  * Create a PibKeyImpl. This method has two forms:
- * PibKeyImpl(keyName, keyEncoding, pibImpl) - Create a PibKeyImpl with keyName.
- * If the key does not exist in the backend implementation, add it by creating
- * it from the keyEncoding. If a key with keyName already exists, overwrite it.
- * PibKeyImpl(keyName, pibImpl) - Create a PibKeyImpl with keyName. Initialize
- * the cached key encoding with pibImpl.getKeyBits().
+ * PibKeyImpl(keyName, keyEncoding, pibImpl, useSync) - Create a PibKeyImpl with
+ * keyName. If the key does not exist in the backend implementation, add it by
+ * creating it from the keyEncoding. If a key with keyName already exists,
+ * overwrite it.
+ * PibKeyImpl(keyName, pibImpl, useSync) - Create a PibKeyImpl with keyName.
+ * Initialize the cached key encoding with pibImpl.getKeyBits().
  * This method that returns a Promise is needed instead of a normal constructor
  * since it uses asynchronous PibImpl methods to initialize the object.
  *
@@ -60,32 +61,36 @@ exports.PibKeyImpl = PibKeyImpl;
  * (This is only used in the constructor form
  * PibKeyImpl(keyName, keyEncoding, pibImpl) .)
  * @param {PibImpl) pibImpl: The Pib backend implementation.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @param {Promise|SyncPromise} A promise which returns the new PibKeyImpl, or a
  * promise which is rejected with Pib.Error if the constructor is the form
  * PibKeyImpl(keyName, pibImpl) (without the keyEncoding) and the key with
  * keyName does not exist.
  */
-PibKeyImpl.makePromise = function(keyName, arg2, arg3)
+PibKeyImpl.makePromise = function(keyName, arg2, arg3, arg4)
 {
   var pibKeyImpl = new PibKeyImpl();
 
   pibKeyImpl.defaultCertificate_ = null;
 
   if (arg2 instanceof PibImpl) {
-    // PibKeyImpl(keyName, pibImpl)
-    pibImpl = arg2;
+    // PibKeyImpl(keyName, pibImpl, useSync)
+    var pibImpl = arg2;
+    var useSync = arg3;
 
     if (pibImpl == null)
       return SyncPromise.reject(new Error("The pibImpl is null"));
 
-    return PibCertificateContainer.makePromise(keyName, pibImpl)
+    return PibCertificateContainer.makePromise(keyName, pibImpl, useSync)
     .then(function(container) {
       pibKeyImpl.identityName_ = PibKey.extractIdentityFromKeyName(keyName);
       pibKeyImpl.keyName_ = new Name(keyName);
       pibKeyImpl.pibImpl_ = pibImpl;
       pibKeyImpl.certificates_ = container;
 
-      return pibKeyImpl.pibImpl_.getKeyBitsPromise(pibKeyImpl.keyName_);
+      return pibKeyImpl.pibImpl_.getKeyBitsPromise(pibKeyImpl.keyName_, useSync);
     })
     .then(function(keyBits) {
       pibKeyImpl.keyEncoding_ = keyBits;
@@ -106,13 +111,14 @@ PibKeyImpl.makePromise = function(keyName, arg2, arg3)
   }
   else {
     // PibKeyImpl(keyName, keyEncoding, pibImpl)
-    keyEncoding = arg2;
-    pibImpl = arg3;
+    var keyEncoding = arg2;
+    var pibImpl = arg3;
+    var useSync = arg4;
 
     if (pibImpl == null)
       return SyncPromise.reject(new Error("The pibImpl is null"));
 
-    return PibCertificateContainer.makePromise(keyName, pibImpl)
+    return PibCertificateContainer.makePromise(keyName, pibImpl, useSync)
     .then(function(container) {
       pibKeyImpl.identityName_ = PibKey.extractIdentityFromKeyName(keyName);
       pibKeyImpl.keyName_ = new Name(keyName);
@@ -129,7 +135,7 @@ PibKeyImpl.makePromise = function(keyName, arg2, arg3)
       }
 
       return pibKeyImpl.pibImpl_.addKeyPromise
-        (pibKeyImpl.identityName_, pibKeyImpl.keyName_, keyEncoding);
+        (pibKeyImpl.identityName_, pibKeyImpl.keyName_, keyEncoding, useSync);
     })
     .then(function() {
       return SyncPromise.resolve(pibKeyImpl);
@@ -170,42 +176,51 @@ PibKeyImpl.prototype.getPublicKey = function() { return this.keyEncoding_; };
  * default for the key.
  * @param {CertificateV2} certificate The certificate to add. This copies
  * the object.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with Error if the name of the certificate does not match the
  * key name.
  */
-PibKeyImpl.prototype.addCertificatePromise = function(certificate)
+PibKeyImpl.prototype.addCertificatePromise = function(certificate, useSync)
 {
-  return this.certificates_.addPromise(certificate);
+  return this.certificates_.addPromise(certificate, useSync);
 };
 
 /**
  * Remove the certificate with name certificateName. If the certificate does not
  * exist, do nothing.
  * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with Error if certificateName does not match the key name.
  */
-PibKeyImpl.prototype.removeCertificatePromise = function(certificateName)
+PibKeyImpl.prototype.removeCertificatePromise = function(certificateName, useSync)
 {
   if (this.defaultCertificate_ !== null &&
       this.defaultCertificate_.getName().equals(certificateName))
     this.defaultCertificate_ = null;
 
-  return this.certificates_.removePromise(certificateName);
+  return this.certificates_.removePromise(certificateName, useSync);
 };
 
 /**
  * Get the certificate with name certificateName.
  * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns a copy of the
  * CertificateV2, or a promise rejected with Error if certificateName does not
  * match the key name, or a promise rejected with Pib.Error if the certificate
  * does not exist.
  */
-PibKeyImpl.prototype.getCertificatePromise = function(certificateName)
+PibKeyImpl.prototype.getCertificatePromise = function(certificateName, useSync)
 {
-  return this.certificates_.getPromise(certificateName);
+  return this.certificates_.getPromise(certificateName, useSync);
 };
 
 /**
@@ -215,6 +230,9 @@ PibKeyImpl.prototype.getCertificatePromise = function(certificateName)
  * which must exist. Otherwise certificateOrCertificateName is the CertificateV2
  * to add (if necessary) and set as the default.
  * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the default
  * CertificateV2, or a promise rejected with Error if certificateName does not
  * match the key name, or a promise rejected with Pib.Error if
@@ -222,7 +240,7 @@ PibKeyImpl.prototype.getCertificatePromise = function(certificateName)
  * not exist.
  */
 PibKeyImpl.prototype.setDefaultCertificatePromise = function
-  (certificateOrCertificateName)
+  (certificateOrCertificateName, useSync)
 {
   var thisImpl = this;
   var certificateName;
@@ -241,12 +259,12 @@ PibKeyImpl.prototype.setDefaultCertificatePromise = function
   })
   .then(function(localCertificateName) {
     certificateName = localCertificateName;
-    return thisImpl.certificates_.getPromise(certificateName);
+    return thisImpl.certificates_.getPromise(certificateName, useSync);
   })
   .then(function(certificate) {
     thisImpl.defaultCertificate_ = certificate;
     return thisImpl.pibImpl_.setDefaultCertificateOfKeyPromise
-      (thisImpl.keyName_, certificateName);
+      (thisImpl.keyName_, certificateName, useSync);
   })
   .then(function() {
     return SyncPromise.resolve(thisImpl.defaultCertificate_);
@@ -255,16 +273,19 @@ PibKeyImpl.prototype.setDefaultCertificatePromise = function
 
 /**
  * Get the default certificate for this Key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the default
  * CertificateV2, or a promise rejected with Pib.Error if the default
  * certificate does not exist.
  */
-PibKeyImpl.prototype.getDefaultCertificatePromise = function()
+PibKeyImpl.prototype.getDefaultCertificatePromise = function(useSync)
 {
   var thisImpl = this;
 
   if (this.defaultCertificate_ === null) {
-    return this.pibImpl_.getDefaultCertificateOfKeyPromise(this.keyName_)
+    return this.pibImpl_.getDefaultCertificateOfKeyPromise(this.keyName_, useSync)
     .then(function(certificate) {
       thisImpl.defaultCertificate_ = certificate;
       return SyncPromise.resolve(thisImpl.defaultCertificate_);

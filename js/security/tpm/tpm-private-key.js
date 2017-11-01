@@ -244,12 +244,16 @@ TpmPrivateKey.prototype.derivePublicKey = function()
  * @param {number} algorithmType (optional) This decrypts according to
  * algorithmType which is an int from the EncryptAlgorithmType enum. If omitted,
  * use RsaOaep.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the decrypted data Blob,
  * or a promise rejected with TpmPrivateKey.Error if the private key is not
  * loaded, if decryption is not supported for this key type, or for error
  * decrypting.
  */
-TpmPrivateKey.prototype.decryptPromise = function(cipherText, algorithmType)
+TpmPrivateKey.prototype.decryptPromise = function
+  (cipherText, algorithmType, useSync)
 {
   if (algorithmType == undefined)
     algorithmType = EncryptAlgorithmType.RsaOaep;
@@ -285,12 +289,15 @@ TpmPrivateKey.prototype.decryptPromise = function(cipherText, algorithmType)
  * @param {Buffer} data The input byte buffer.
  * @param {number} digestAlgorithm The digest algorithm as an int from the
  * DigestAlgorithm enum.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the signature Blob (or
  * an isNull Blob if this private key is not initialized), or a promise rejected
  * with TpmPrivateKey.Error for unrecognized digestAlgorithm or an error in
  * signing.
  */
-TpmPrivateKey.prototype.signPromise = function(data, digestAlgorithm)
+TpmPrivateKey.prototype.signPromise = function(data, digestAlgorithm, useSync)
 {
   if (digestAlgorithm != DigestAlgorithm.SHA256)
     return SyncPromise.reject(new TpmPrivateKey.Error(new Error
@@ -322,12 +329,15 @@ TpmPrivateKey.prototype.signPromise = function(data, digestAlgorithm)
  * Generate a key pair according to keyParams and return a new TpmPrivateKey
  * with the private key. You can get the public key with derivePublicKey.
  * @param {KeyParams} keyParams The parameters of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the new TpmPrivateKey,
  * or a promise rejected with Error if the key type is not supported, or a
  * promise rejected with TpmPrivateKey.Error for an invalid key size, or an
  * error generating.
  */
-TpmPrivateKey.generatePrivateKeyPromise = function(keyParams)
+TpmPrivateKey.generatePrivateKeyPromise = function(keyParams, useSync)
 {
   // TODO: Check for UseSubtleCrypto.
   // TODO: Check for RSAKey in the browser.

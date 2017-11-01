@@ -37,36 +37,45 @@ exports.TpmKeyHandle = TpmKeyHandle;
 /**
  * Compute a digital signature from the byte buffer using this key with
  * digestAlgorithm.
- * @param {Buffer} data The input byte buffer.
  * @param {number} digestAlgorithm The digest algorithm as an int from the
  * DigestAlgorithm enum.
+ * @param {Buffer} data The input byte buffer.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the signature Blob (or
  * an isNull Blob for an unrecognized digestAlgorithm), or a promise rejected
  * with TpmBackEnd.Error for an error in signing.
  */
-TpmKeyHandle.prototype.signPromise = function(digestAlgorithm, data)
+TpmKeyHandle.prototype.signPromise = function(digestAlgorithm, data, useSync)
 {
-  return this.doSignPromise_(digestAlgorithm, data);
+  return this.doSignPromise_(digestAlgorithm, data, useSync);
 };
 
 /**
  * Return the plain text which is decrypted from cipherText using this key.
  * @param {Buffer} cipherText The cipher text byte buffer.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the decrypted data Blob,
  * or a promise rejected with TpmPrivateKey.Error for error decrypting.
  */
-TpmKeyHandle.prototype.decryptPromise = function(cipherText)
+TpmKeyHandle.prototype.decryptPromise = function(cipherText, useSync)
 {
-  return this.doDecryptPromise_(cipherText);
+  return this.doDecryptPromise_(cipherText, useSync);
 };
 
 /**
  * Get the encoded public key derived from this key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Blob} The public key encoding Blob.
  */
-TpmKeyHandle.prototype.derivePublicKey = function()
+TpmKeyHandle.prototype.derivePublicKey = function(useSync)
 {
-  return this.doDerivePublicKey_();
+  return this.doDerivePublicKey_(useSync);
 };
 
 TpmKeyHandle.prototype.setKeyName = function(keyName)
@@ -81,11 +90,14 @@ TpmKeyHandle.prototype.getKeyName = function() { return this.keyName_; };
  * @param {Buffer} data The input byte buffer.
  * @param {number} digestAlgorithm The digest algorithm as an int from the
  * DigestAlgorithm enum.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the signature Blob (or
  * an isNull Blob for an unrecognized digestAlgorithm), or a promise rejected
  * with TpmBackEnd.Error for an error in signing.
  */
-TpmKeyHandle.prototype.doSignPromise_ = function(digestAlgorithm, data)
+TpmKeyHandle.prototype.doSignPromise_ = function(digestAlgorithm, data, useSync)
 {
   return SyncPromise.reject(new Error
     ("TpmKeyHandle.doSignPromise_ is not implemented"));
@@ -94,10 +106,13 @@ TpmKeyHandle.prototype.doSignPromise_ = function(digestAlgorithm, data)
 /**
  * A protected method to do the work of decrypt().
  * @param {Buffer} cipherText The cipher text byte buffer.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the decrypted data Blob,
  * or a promise rejected with TpmPrivateKey.Error for error decrypting.
  */
-TpmKeyHandle.prototype.doDecryptPromise_ = function(cipherText)
+TpmKeyHandle.prototype.doDecryptPromise_ = function(cipherText, useSync)
 {
   return SyncPromise.reject(new Error
     ("TpmKeyHandle.doDecryptPromise_ is not implemented"));
@@ -105,9 +120,12 @@ TpmKeyHandle.prototype.doDecryptPromise_ = function(cipherText)
 
 /**
  * A protected method to do the work of derivePublicKey().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @returns {Blob} The public key encoding Blob.
  */
-TpmKeyHandle.prototype.doDerivePublicKey_ = function()
+TpmKeyHandle.prototype.doDerivePublicKey_ = function(useSync)
 {
   return SyncPromise.reject(new Error
     ("TpmKeyHandle.doDerivePublicKey_ is not implemented"));

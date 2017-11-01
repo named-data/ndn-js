@@ -58,9 +58,12 @@ PibImpl.Error.prototype.name = "PibImplError";
  * Set the corresponding TPM information to tpmLocator. This method does not
  * reset the contents of the PIB.
  * @param {string} tpmLocator The TPM locator string.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when the TPM locator is set.
  */
-PibImpl.prototype.setTpmLocatorPromise = function(tpmLocator)
+PibImpl.prototype.setTpmLocatorPromise = function(tpmLocator, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.setTpmLocatorPromise is not implemented"));
@@ -68,9 +71,12 @@ PibImpl.prototype.setTpmLocatorPromise = function(tpmLocator)
 
 /**
  * Get the TPM Locator.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the TPM locator string.
  */
-PibImpl.prototype.getTpmLocatorPromise = function()
+PibImpl.prototype.getTpmLocatorPromise = function(useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.getTpmLocatorPromise is not implemented"));
@@ -79,10 +85,13 @@ PibImpl.prototype.getTpmLocatorPromise = function()
 /**
  * Check for the existence of an identity.
  * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns true if the identity exists,
  * otherwise false.
  */
-PibImpl.prototype.hasIdentityPromise = function(identityName)
+PibImpl.prototype.hasIdentityPromise = function(identityName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.hasIdentityPromise is not implemented"));
@@ -93,9 +102,12 @@ PibImpl.prototype.hasIdentityPromise = function(identityName)
  * identity has been set, set the added identity as the default.
  * @param {Name} identityName The name of the identity to add. This copies the
  * name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when the identity is added.
  */
-PibImpl.prototype.addIdentityPromise = function(identityName)
+PibImpl.prototype.addIdentityPromise = function(identityName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.addIdentityPromise is not implemented"));
@@ -106,9 +118,12 @@ PibImpl.prototype.addIdentityPromise = function(identityName)
  * identity is being removed, no default identity will be selected. If the
  * identity does not exist, do nothing.
  * @param {Name} identityName The name of the identity to remove.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when the identity is removed.
  */
-PibImpl.prototype.removeIdentityPromise = function(identityName)
+PibImpl.prototype.removeIdentityPromise = function(identityName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.removeIdentityPromise is not implemented"));
@@ -116,9 +131,12 @@ PibImpl.prototype.removeIdentityPromise = function(identityName)
 
 /**
  * Erase all certificates, keys, and identities.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when the identities are cleared.
  */
-PibImpl.prototype.clearIdentitiesPromise = function()
+PibImpl.prototype.clearIdentitiesPromise = function(useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.clearIdentitiesPromise is not implemented"));
@@ -126,10 +144,13 @@ PibImpl.prototype.clearIdentitiesPromise = function()
 
 /**
  * Get the names of all the identities.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns a fresh set of identity names
  * as an array of Name. The Name objects are fresh copies.
  */
-PibImpl.prototype.getIdentitiesPromise = function()
+PibImpl.prototype.getIdentitiesPromise = function(useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.getIdentitiesPromise is not implemented"));
@@ -140,10 +161,13 @@ PibImpl.prototype.getIdentitiesPromise = function()
  * identity with identityName does not exist, then it will be created.
  * @param {Name} identityName The name for the default identity. This copies the
  * name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when the default identity is
  * set.
  */
-PibImpl.prototype.setDefaultIdentityPromise = function(identityName)
+PibImpl.prototype.setDefaultIdentityPromise = function(identityName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.setDefaultIdentityPromise is not implemented"));
@@ -151,11 +175,14 @@ PibImpl.prototype.setDefaultIdentityPromise = function(identityName)
 
 /**
  * Get the default identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the Name of the default
  * identity as a fresh copy, or a promise rejected with Pib.Error for no default
  * identity.
  */
-PibImpl.prototype.getDefaultIdentityPromise = function()
+PibImpl.prototype.getDefaultIdentityPromise = function(useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.getDefaultIdentityPromise is not implemented"));
@@ -166,10 +193,13 @@ PibImpl.prototype.getDefaultIdentityPromise = function()
 /**
  * Check for the existence of a key with keyName.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns true if the key exists,
  * otherwise false. Return false if the identity does not exist.
  */
-PibImpl.prototype.hasKeyPromise = function(keyName)
+PibImpl.prototype.hasKeyPromise = function(keyName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.hasKeyPromise is not implemented"));
@@ -184,9 +214,12 @@ PibImpl.prototype.hasKeyPromise = function(keyName)
  * This copies the name.
  * @param {Name} keyName The name of the key. This copies the name.
  * @param {Buffer} key The public key bits. This copies the array.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when the key is added.
  */
-PibImpl.prototype.addKeyPromise = function(identityName, keyName, key)
+PibImpl.prototype.addKeyPromise = function(identityName, keyName, key, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.addKeyPromise is not implemented"));
@@ -196,9 +229,12 @@ PibImpl.prototype.addKeyPromise = function(identityName, keyName, key)
  * Remove the key with keyName and its related certificates. If the key does not
  * exist, do nothing.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when the key is removed.
  */
-PibImpl.prototype.removeKeyPromise = function(keyName)
+PibImpl.prototype.removeKeyPromise = function(keyName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.removeKeyPromise is not implemented"));
@@ -207,10 +243,13 @@ PibImpl.prototype.removeKeyPromise = function(keyName)
 /**
  * Get the key bits of a key with name keyName.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the key bits as a Blob, or a
  * promise rejected with Pib.Error if the key does not exist.
  */
-PibImpl.prototype.getKeyBitsPromise = function(keyName)
+PibImpl.prototype.getKeyBitsPromise = function(keyName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.getKeyBitsPromise is not implemented"));
@@ -221,11 +260,14 @@ PibImpl.prototype.getKeyBitsPromise = function(keyName)
  * returned key names can be used to create a KeyContainer. With a key name and
  * a backend implementation, one can create a Key front end instance.
  * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return SyncPromise} A promise which returns the set of key names as an array
  * of Name. The Name objects are fresh copies. If the identity does not exist,
  * return an empty array.
  */
-PibImpl.prototype.getKeysOfIdentityPromise = function(identityName)
+PibImpl.prototype.getKeysOfIdentityPromise = function(identityName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.getKeysOfIdentityPromise is not implemented"));
@@ -236,11 +278,14 @@ PibImpl.prototype.getKeysOfIdentityPromise = function(identityName)
  * identityName.
  * @param {Name} identityName The name of the identity. This copies the name.
  * @param {Name} keyName The name of the key. This copies the name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when the default key is set,
  * or a promise rejected with Pib.Error if the key does not exist.
  */
 PibImpl.prototype.setDefaultKeyOfIdentityPromise = function
-  (identityName, keyName)
+  (identityName, keyName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.setDefaultKeyOfIdentityPromise is not implemented"));
@@ -249,11 +294,14 @@ PibImpl.prototype.setDefaultKeyOfIdentityPromise = function
 /**
  * Get the name of the default key for the identity with name identityName.
  * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the name of the default key as
  * a fresh copy, or a promise rejected with Pib.Error if the identity does not
  * exist.
  */
-PibImpl.prototype.getDefaultKeyOfIdentityPromise = function(identityName)
+PibImpl.prototype.getDefaultKeyOfIdentityPromise = function(identityName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.getDefaultKeyOfIdentityPromise is not implemented"));
@@ -264,10 +312,13 @@ PibImpl.prototype.getDefaultKeyOfIdentityPromise = function(identityName)
 /**
  * Check for the existence of a certificate with name certificateName.
  * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns true if the certificate exists,
  * otherwise false.
  */
-PibImpl.prototype.hasCertificatePromise = function(certificateName)
+PibImpl.prototype.hasCertificatePromise = function(certificateName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.hasCertificatePromise is not implemented"));
@@ -283,9 +334,12 @@ PibImpl.prototype.hasCertificatePromise = function(certificateName)
  * certificate's identity becomes the default.
  * @param {CertificateV2} certificate The certificate to add. This copies the
  * object.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when the certificate is added.
  */
-PibImpl.prototype.addCertificatePromise = function(certificate)
+PibImpl.prototype.addCertificatePromise = function(certificate, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.addCertificatePromise is not implemented"));
@@ -295,10 +349,13 @@ PibImpl.prototype.addCertificatePromise = function(certificate)
  * Remove the certificate with name certificateName. If the certificate does not
  * exist, do nothing.
  * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when the certificate is
  * removed.
  */
-PibImpl.prototype.removeCertificatePromise = function(certificateName)
+PibImpl.prototype.removeCertificatePromise = function(certificateName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.removeCertificatePromise is not implemented"));
@@ -307,10 +364,13 @@ PibImpl.prototype.removeCertificatePromise = function(certificateName)
 /**
  * Get the certificate with name certificateName.
  * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the CertificateV2, or a promise
  * rejected with Pib.Error if the certificate does not exist.
  */
-PibImpl.prototype.getCertificatePromise = function(certificateName)
+PibImpl.prototype.getCertificatePromise = function(certificateName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.getCertificatePromise is not implemented"));
@@ -321,11 +381,14 @@ PibImpl.prototype.getCertificatePromise = function(certificateName)
  * certificate names can be used to create a PibCertificateContainer. With a
  * certificate name and a backend implementation, one can obtain the certificate.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the set of certificate names as
  * an array of Name. The Name objects are fresh copies. If the key does not
  * exist, return an empty array.
  */
-PibImpl.prototype.getCertificatesOfKeyPromise = function(keyName)
+PibImpl.prototype.getCertificatesOfKeyPromise = function(keyName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.getCertificatesOfKeyPromise is not implemented"));
@@ -337,12 +400,15 @@ PibImpl.prototype.getCertificatesOfKeyPromise = function(keyName)
  * @param {Name} keyName The name of the key.
  * @param {Name} certificateName The name of the certificate. This copies the
  * name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when the default certificate
  * is set, or a promise rejected with Pib.Error if the certificate with name
  * certificateName does not exist.
  */
 PibImpl.prototype.setDefaultCertificateOfKeyPromise = function
-  (keyName, certificateName)
+  (keyName, certificateName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.setDefaultCertificateOfKeyPromise is not implemented"));
@@ -351,11 +417,14 @@ PibImpl.prototype.setDefaultCertificateOfKeyPromise = function
 /**
  * Get the default certificate for the key with eyName.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns a copy of the default
  * CertificateV2, or a promise rejected with Pib.Error if the default
  * certificate does not exist.
  */
-PibImpl.prototype.getDefaultCertificateOfKeyPromise = function(keyName)
+PibImpl.prototype.getDefaultCertificateOfKeyPromise = function(keyName, useSync)
 {
   return SyncPromise.reject(new Error
     ("PibImpl.getDefaultCertificateOfKeyPromise is not implemented"));

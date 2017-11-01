@@ -61,11 +61,14 @@ TpmBackEnd.Error.prototype.name = "TpmBackEndError";
 /**
  * Check if the key with name keyName exists in the TPM.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {SyncPromise} A promise which returns true if the key exists.
  */
-TpmBackEnd.prototype.hasKeyPromise = function(keyName)
+TpmBackEnd.prototype.hasKeyPromise = function(keyName, useSync)
 {
-  return this.doHasKeyPromise_(keyName);
+  return this.doHasKeyPromise_(keyName, useSync);
 };
 
 /**
@@ -73,23 +76,29 @@ TpmBackEnd.prototype.hasKeyPromise = function(keyName)
  * times with the same keyName will return different TpmKeyHandle objects that
  * all refer to the same key.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns a TpmKeyHandle of the
  * key, or returns null if the key does not exist.
  */
-TpmBackEnd.prototype.getKeyHandlePromise = function(keyName)
+TpmBackEnd.prototype.getKeyHandlePromise = function(keyName, useSync)
 {
-  return this.doGetKeyHandlePromise_(keyName);
+  return this.doGetKeyHandlePromise_(keyName, useSync);
 };
 
 /**
  * Create a key for the identityName according to params.
  * @param {Name} identityName The name if the identity.
  * @param {KeyParams} params The KeyParams for creating the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns a TpmKeyHandle of the
  * created key, or a promise rejected with TpmBackEnd.Error if the key cannot be
  * created.
  */
-TpmBackEnd.prototype.createKeyPromise = function(identityName, params)
+TpmBackEnd.prototype.createKeyPromise = function(identityName, params, useSync)
 {
   var thisTpm = this;
 
@@ -99,7 +108,7 @@ TpmBackEnd.prototype.createKeyPromise = function(identityName, params)
     if (params.getKeyIdType() == KeyIdType.USER_SPECIFIED) {
       // The keyId is pre-set.
       var keyName = PibKey.constructKeyName(identityName, params.getKeyId());
-      return thisTpm.hasKeyPromise(keyName)
+      return thisTpm.hasKeyPromise(keyName, useSync)
       .then(function(hasKey) {
         if (hasKey)
           return SyncPromise.reject(new Tpm.Error(new Error
@@ -120,7 +129,7 @@ TpmBackEnd.prototype.createKeyPromise = function(identityName, params)
         keyId = new Name.Component(new Blob(random, false));
         var keyName = PibKey.constructKeyName(identityName, keyId);
 
-        return thisTpm.hasKeyPromise(keyName)
+        return thisTpm.hasKeyPromise(keyName, useSync)
         .then(function(hasKey) {
           if (!hasKey)
             // We got a unique one.
@@ -142,7 +151,7 @@ TpmBackEnd.prototype.createKeyPromise = function(identityName, params)
         ("Unsupported key id type")));
   })
   .then(function() {
-    return thisTpm.doCreateKeyPromise_(identityName, params);
+    return thisTpm.doCreateKeyPromise_(identityName, params, useSync);
   });
 };
 
@@ -151,12 +160,15 @@ TpmBackEnd.prototype.createKeyPromise = function(identityName, params)
  * Note: Continuing to use existing Key handles on a deleted key results in
  * undefined behavior.
  * @param {Name} keyName The name of the key to delete.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with TpmBackEnd.Error if the deletion fails.
  */
-TpmBackEnd.prototype.deleteKeyPromise = function(keyName)
+TpmBackEnd.prototype.deleteKeyPromise = function(keyName, useSync)
 {
-  return this.doDeleteKeyPromise_(keyName);
+  return this.doDeleteKeyPromise_(keyName, useSync);
 };
 
 // TODO: exportKey
@@ -170,21 +182,24 @@ TpmBackEnd.prototype.deleteKeyPromise = function(keyName)
  * an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {Buffer} password The password for decrypting the private key. If the
  * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is None, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with TpmBackEnd.Error for an error importing the key.
  */
-TpmBackEnd.prototype.importKeyPromise = function(keyName, pkcs8, password)
+TpmBackEnd.prototype.importKeyPromise = function(keyName, pkcs8, password, useSync)
 {
   var thisTpm = this;
 
-  return this.hasKeyPromise(keyName)
+  return this.hasKeyPromise(keyName, useSync)
   .then(function(hasKey) {
     if (hasKey)
       return SyncPromise.reject(new TpmBackEnd.Error(new Error
         ("Key `" + keyName.toUri() + "` already exists")));
     else
-      return thisTpm.doImportKeyPromise_(keyName, pkcs8, password);
+      return thisTpm.doImportKeyPromise_(keyName, pkcs8, password, useSync);
   });
 };
 
@@ -226,9 +241,12 @@ TpmBackEnd.setKeyName = function(keyHandle, identityName, params)
 /**
  * A protected method to check if the key with name keyName exists in the TPM.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns true if the key exists.
  */
-TpmBackEnd.prototype.doHasKeyPromise_ = function(keyName)
+TpmBackEnd.prototype.doHasKeyPromise_ = function(keyName, useSync)
 {
   return SyncPromise.reject(new Error
     ("TpmBackEnd.doHasKeyPromise_ is not implemented"));
@@ -237,10 +255,13 @@ TpmBackEnd.prototype.doHasKeyPromise_ = function(keyName)
 /**
  * A protected method to get the handle of the key with name keyName.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns a TpmKeyHandle of the
  * key, or returns null if the key does not exist.
  */
-TpmBackEnd.prototype.doGetKeyHandlePromise_ = function(keyName)
+TpmBackEnd.prototype.doGetKeyHandlePromise_ = function(keyName, useSync)
 {
   return SyncPromise.reject(new Error
     ("TpmBackEnd.doGetKeyHandlePromise_ is not implemented"));
@@ -252,11 +273,14 @@ TpmBackEnd.prototype.doGetKeyHandlePromise_ = function(keyName)
  * the returned TpmKeyHandle.
  * @param {Name} identityName The name if the identity.
  * @param {KeyParams} params The KeyParams for creating the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the TpmKeyHandle of
  * the created key, or a promise rejected with TpmBackEnd.Error if the key
  * cannot be created.
  */
-TpmBackEnd.prototype.doCreateKeyPromise_ = function(identityName, params)
+TpmBackEnd.prototype.doCreateKeyPromise_ = function(identityName, params, useSync)
 {
   return SyncPromise.reject(new Error
     ("TpmBackEnd.doCreateKeyPromise_ is not implemented"));
@@ -266,10 +290,13 @@ TpmBackEnd.prototype.doCreateKeyPromise_ = function(identityName, params)
  * A protected method to delete the key with name keyName. If the key doesn't
  * exist, do nothing.
  * @param {Name} keyName The name of the key to delete.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with TpmBackEnd.Error if the deletion fails.
  */
-TpmBackEnd.prototype.doDeleteKeyPromise_ = function(keyName)
+TpmBackEnd.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
 {
   return SyncPromise.reject(new Error
     ("TpmBackEnd.doDeleteKeyPromise_ is not implemented"));
@@ -286,12 +313,15 @@ TpmBackEnd.prototype.doDeleteKeyPromise_ = function(keyName)
  * an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {Buffer} password The password for decrypting the private key. If the
  * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is None, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with TpmBackEnd.Error for an error importing the key.
  */
 TpmBackEnd.prototype.doImportKeyPromise_ = function
-  (keyName, pkcs8, password)
+  (keyName, pkcs8, password, useSync)
 {
   return SyncPromise.reject(new Error
     ("TpmBackEnd.doImportKeyPromise_ is not implemented"));

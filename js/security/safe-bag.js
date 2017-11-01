@@ -127,7 +127,7 @@ SafeBag.makeSelfSignedCertificate_ = function
   // Create a temporary in-memory Tpm and import the private key.
   var tpm = new Tpm("", "", new TpmBackEndMemory());
   SyncPromise.complete(null,
-    tpm.importPrivateKeyPromise_(keyName, privateKeyBag.buf(), password));
+    tpm.importPrivateKeyPromise_(keyName, privateKeyBag.buf(), password, true));
 
   // Set the signature info.
   if (publicKey.getKeyType() == KeyType.RSA)
@@ -147,7 +147,7 @@ SafeBag.makeSelfSignedCertificate_ = function
   // Encode once to get the signed portion.
   var encoding = certificate.wireEncode(wireFormat);
   var signatureBytes = SyncPromise.complete(null,
-    tpm.signPromise(encoding.signedBuf(), keyName, digestAlgorithm));
+    tpm.signPromise(encoding.signedBuf(), keyName, digestAlgorithm, true));
   signatureInfo.setSignature(signatureBytes);
 
   // Encode again to include the signature.
