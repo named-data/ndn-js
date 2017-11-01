@@ -31,7 +31,7 @@ var EncryptParams = require('../../..').EncryptParams;
 var EncryptAlgorithmType = require('../../..').EncryptAlgorithmType;
 var PibKey = require('../../..').PibKey;
 var Tpm = require('../../..').Tpm;
-var PolicyManager = require('../../..').PolicyManager;
+var VerificationHelpers = require('../../..').VerificationHelpers;
 var TpmBackEndMemory = require('../../..').TpmBackEndMemory;
 
 describe ("TestTpmBackEnds", function() {
@@ -138,11 +138,10 @@ describe ("TestTpmBackEnds", function() {
       .then(function(signature) {
         var publicKey = key.derivePublicKey();
 
-        // TODO: Move verify to PublicKey?
-        var result;
-        PolicyManager.verifySha256WithRsaSignature
-          (signature, new SignedBlob(content, 0, content.size()), publicKey,
-           function(localResult) { result = localResult; });
+        return VerificationHelpers.verifySignaturePromise
+          (content, signature, publicKey);
+      })
+      .then(function(result) {
         assert.equal(true, result);
 
         return tpm.deleteKeyPromise(keyName);
