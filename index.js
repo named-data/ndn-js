@@ -49,6 +49,7 @@ exports.EncryptMode = require('./js/security/security-types.js').EncryptMode;
 exports.SafeBag = require('./js/security/safe-bag.js').SafeBag;
 exports.SigningInfo = require('./js/security/signing-info.js').SigningInfo;
 exports.ValidityPeriod = require('./js/security/validity-period.js').ValidityPeriod;
+exports.VerificationHelpers = require('./js/security/verification-helpers.js').VerificationHelpers;
 exports.CertificateExtension = require('./js/security/certificate/certificate-extension.js').CertificateExtension;
 exports.CertificateSubjectDescription = require('./js/security/certificate/certificate-subject-description.js').CertificateSubjectDescription;
 exports.Certificate = require('./js/security/certificate/certificate.js').Certificate;
