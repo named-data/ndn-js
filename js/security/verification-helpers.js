@@ -23,6 +23,7 @@ var Crypto = require('../crypto.js'); /** @ignore */
 var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var Blob = require('../util/blob.js').Blob; /** @ignore */
 var KeyType = require('./security-types.js').KeyType; /** @ignore */
+var UseSubtleCrypto = require("../use-subtle-crypto-node.js").UseSubtleCrypto; /** @ignore */
 var DigestAlgorithm = require('./security-types.js').DigestAlgorithm;
 
 /**
@@ -40,13 +41,22 @@ exports.VerificationHelpers = VerificationHelpers;
  * @param {PublicKey} publicKey The object containing the public key.
  * @param {number} digestAlgorithm (optional) The digest algorithm as an int
  * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns true if verification
  * succeeds, false if verification fails, or a promise rejected with Error for
  * an invalid public key type or digestAlgorithm.
  */
 VerificationHelpers.verifySignaturePromise = function
-  (buffer, signature, publicKey, digestAlgorithm)
+  (buffer, signature, publicKey, digestAlgorithm, useSync)
 {
+  if (typeof digestAlgorithm === 'boolean') {
+    // digestAlgorithm is omitted, so shift.
+    useSync = digestAlgorithm;
+    digestAlgorithm = undefined;
+  }
+
   if (buffer instanceof Blob)
     buffer = buffer.buf();
   if (signature instanceof Blob)
@@ -56,43 +66,60 @@ VerificationHelpers.verifySignaturePromise = function
 
   if (digestAlgorithm == DigestAlgorithm.SHA256) {
     if (publicKey.getKeyType() == KeyType.RSA) {
-      // TODO: Check for UseSubtleCrypto.
+      if (UseSubtleCrypto() && !useSync) {
+        var algo = {name:"RSASSA-PKCS1-v1_5", hash:{name:"SHA-256"}};
 
-      if (VerificationHelpers.verifyUsesString_ === null)
-        VerificationHelpers.setVerifyUsesString_();
+        return crypto.subtle.importKey
+          ("spki", publicKey.getKeyDer().buf().buffer, algo, true, ["verify"])
+        .then(function(key) {
+          return crypto.subtle.verify(algo, key, signature, buffer)
+        });
+      }
+      else {
+        try {
+          if (VerificationHelpers.verifyUsesString_ === null)
+            VerificationHelpers.setVerifyUsesString_();
 
-      // The crypto verifier requires a PEM-encoded public key.
-      var keyBase64 = publicKey.getKeyDer().buf().toString('base64');
-      var keyPem = "-----BEGIN PUBLIC KEY-----\n";
-      for (var i = 0; i < keyBase64.length; i += 64)
-        keyPem += (keyBase64.substr(i, 64) + "\n");
-      keyPem += "-----END PUBLIC KEY-----";
+          // The crypto verifier requires a PEM-encoded public key.
+          var keyBase64 = publicKey.getKeyDer().buf().toString('base64');
+          var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+          for (var i = 0; i < keyBase64.length; i += 64)
+            keyPem += (keyBase64.substr(i, 64) + "\n");
+          keyPem += "-----END PUBLIC KEY-----";
 
-      var verifier = Crypto.createVerify('RSA-SHA256');
-      verifier.update(buffer);
-      var signatureBytes = VerificationHelpers.verifyUsesString_ ?
-        signature.toString('binary') : signature;
-      return SyncPromise.resolve(verifier.verify(keyPem, signatureBytes));
+          var verifier = Crypto.createVerify('RSA-SHA256');
+          verifier.update(buffer);
+          var signatureBytes = VerificationHelpers.verifyUsesString_ ?
+            signature.toString('binary') : signature;
+          return SyncPromise.resolve(verifier.verify(keyPem, signatureBytes));
+        } catch (ex) {
+          return SyncPromise.reject(new Error
+            ("verifySignature: Error is RSA verify: " + ex));
+        }
+      }
     }
     else if (publicKey.getKeyType() == KeyType.ECDSA) {
-      // TODO: Check for UseSubtleCrypto.
+      try {
+        if (VerificationHelpers.verifyUsesString_ === null)
+          VerificationHelpers.setVerifyUsesString_();
 
-      if (VerificationHelpers.verifyUsesString_ === null)
-        VerificationHelpers.setVerifyUsesString_();
+        // The crypto verifier requires a PEM-encoded public key.
+        var keyBase64 =  publicKey.getKeyDer().buf().toString("base64");
+        var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+        for (var i = 0; i < keyBase64.length; i += 64)
+          keyPem += (keyBase64.substr(i, 64) + "\n");
+        keyPem += "-----END PUBLIC KEY-----";
 
-      // The crypto verifier requires a PEM-encoded public key.
-      var keyBase64 =  publicKey.getKeyDer().buf().toString("base64");
-      var keyPem = "-----BEGIN PUBLIC KEY-----\n";
-      for (var i = 0; i < keyBase64.length; i += 64)
-        keyPem += (keyBase64.substr(i, 64) + "\n");
-      keyPem += "-----END PUBLIC KEY-----";
-
-      // Just create a "sha256". The Crypto library will infer ECDSA from the key.
-      var verifier = Crypto.createVerify("sha256");
-      verifier.update(buffer);
-      var signatureBytes = VerificationHelpers.verifyUsesString_ ?
-        signature.toString('binary') : signature;
-      return SyncPromise.resolve(verifier.verify(keyPem, signatureBytes));
+        // Just create a "sha256". The Crypto library will infer ECDSA from the key.
+        var verifier = Crypto.createVerify("sha256");
+        verifier.update(buffer);
+        var signatureBytes = VerificationHelpers.verifyUsesString_ ?
+          signature.toString('binary') : signature;
+        return SyncPromise.resolve(verifier.verify(keyPem, signatureBytes));
+      } catch (ex) {
+        return SyncPromise.reject(new Error
+          ("verifySignature: Error is ECDSA verify: " + ex));
+      }
     }
     else
       return SyncPromise.reject(new Error("verifySignature: Invalid key type"));
