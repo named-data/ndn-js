@@ -49,9 +49,12 @@ TpmBackEndMemory.getScheme = function() { return "tpm-memory"; };
 /**
  * A protected method to check if the key with name keyName exists in the TPM.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns true if the key exists.
  */
-TpmBackEndMemory.prototype.doHasKeyPromise_ = function(keyName)
+TpmBackEndMemory.prototype.doHasKeyPromise_ = function(keyName, useSync)
 {
   return SyncPromise.resolve(keyName.toUri() in this.keys_);
 };
@@ -59,10 +62,13 @@ TpmBackEndMemory.prototype.doHasKeyPromise_ = function(keyName)
 /**
  * A protected method to get the handle of the key with name keyName.
  * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns a TpmKeyHandle of the
  * key, or returns null if the key does not exist.
  */
-TpmBackEndMemory.prototype.doGetKeyHandlePromise_ = function(keyName)
+TpmBackEndMemory.prototype.doGetKeyHandlePromise_ = function(keyName, useSync)
 {
   var key = this.keys_[keyName.toUri()];
   if (key == undefined)
@@ -77,15 +83,19 @@ TpmBackEndMemory.prototype.doGetKeyHandlePromise_ = function(keyName)
  * the returned TpmKeyHandle.
  * @param {Name} identityName The name if the identity.
  * @param {KeyParams} params The KeyParams for creating the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the TpmKeyHandle of
  * the created key, or a promise rejected with TpmBackEnd.Error if the key
  * cannot be created.
  */
-TpmBackEndMemory.prototype.doCreateKeyPromise_ = function(identityName, params)
+TpmBackEndMemory.prototype.doCreateKeyPromise_ = function
+  (identityName, params, useSync)
 {
   var thisTpm = this;
 
-  return TpmPrivateKey.generatePrivateKeyPromise(params)
+  return TpmPrivateKey.generatePrivateKeyPromise(params, useSync)
   .then(function(key) {
     var keyHandle = new TpmKeyHandleMemory(key);
 
@@ -103,10 +113,13 @@ TpmBackEndMemory.prototype.doCreateKeyPromise_ = function(identityName, params)
  * A protected method to delete the key with name keyName. If the key doesn't
  * exist, do nothing.
  * @param {Name} keyName The name of the key to delete.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with TpmBackEnd.Error if the deletion fails.
  */
-TpmBackEndMemory.prototype.doDeleteKeyPromise_ = function(keyName)
+TpmBackEndMemory.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
 {
   delete this.keys_[keyName.toUri()];
   return SyncPromise.resolve();
@@ -124,11 +137,14 @@ TpmBackEndMemory.prototype.doDeleteKeyPromise_ = function(keyName)
  * @param {Buffer} password The password for decrypting the private key. If the
  * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
  * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with TpmBackEnd.Error for an error importing the key.
  */
 TpmBackEndMemory.prototype.doImportKeyPromise_ = function
-  (keyName, pkcs8, password)
+  (keyName, pkcs8, password, useSync)
 {
   if (password != null)
     return SyncPromise.reject(new TpmBackEnd.Error(new Error

@@ -52,17 +52,21 @@ exports.TpmKeyHandleMemory = TpmKeyHandleMemory;
 
 /**
  * A protected method to do the work of sign().
- * @param {Buffer} data The input byte buffer.
  * @param {number} digestAlgorithm The digest algorithm as an int from the
  * DigestAlgorithm enum.
+ * @param {Buffer} data The input byte buffer.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the signature Blob (or
  * an isNull Blob for an unrecognized digestAlgorithm), or a promise rejected
  * with TpmBackEnd.Error for an error in signing.
  */
-TpmKeyHandleMemory.prototype.doSignPromise_ = function(digestAlgorithm, data)
+TpmKeyHandleMemory.prototype.doSignPromise_ = function
+  (digestAlgorithm, data, useSync)
 {
   if (digestAlgorithm == DigestAlgorithm.SHA256) {
-    return this.key_.signPromise(data, digestAlgorithm)
+    return this.key_.signPromise(data, digestAlgorithm, useSync)
     .catch(function(err) {
       return SyncPromise.reject(new TpmBackEnd.Error(new Error
         ("Error in TpmPrivateKey.sign: " + err)));
@@ -75,12 +79,15 @@ TpmKeyHandleMemory.prototype.doSignPromise_ = function(digestAlgorithm, data)
 /**
  * A protected method to do the work of decrypt().
  * @param {Buffer} cipherText The cipher text byte buffer.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the decrypted data Blob,
  * or a promise rejected with TpmPrivateKey.Error for error decrypting.
  */
-TpmKeyHandleMemory.prototype.doDecryptPromise_ = function(cipherText)
+TpmKeyHandleMemory.prototype.doDecryptPromise_ = function(cipherText, useSync)
 {
-  return this.key_.decryptPromise(cipherText)
+  return this.key_.decryptPromise(cipherText, useSync)
   .catch(function(err) {
     return SyncPromise.reject(new TpmBackEnd.Error(new Error
       ("Error in TpmPrivateKey.decrypt: " + err)));
