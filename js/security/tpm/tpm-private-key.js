@@ -31,6 +31,7 @@ var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
 var DerInteger = require('../../encoding/der/der-node.js').DerNode.DerInteger; /** @ignore */
 var OID = require('../../encoding/oid.js').OID; /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
 var rsaKeygen = null;
 try {
   // This should be installed with: sudo npm install rsa-keygen
@@ -303,23 +304,56 @@ TpmPrivateKey.prototype.signPromise = function(data, digestAlgorithm, useSync)
     return SyncPromise.reject(new TpmPrivateKey.Error(new Error
       ("TpmPrivateKey.sign: Unsupported digest algorithm")));
 
-  // TODO: Check for UseSubtleCrypto.
+  if (UseSubtleCrypto() && !useSync) {
+    var algo = {name:"RSASSA-PKCS1-v1_5", hash:{name:"SHA-256"}};
 
-  var signer;
-  if (this.keyType_ === KeyType.RSA)
-    signer = Crypto.createSign("RSA-SHA256");
-  else if (this.keyType === KeyType.ECDSA)
-    // Just create a "sha256". The Crypto library will infer ECDSA from the key.
-    signer = Crypto.createSign("sha256");
-  else
-    return SyncPromise.resolve(new Blob());
+    var promise;
+    if (!this.privateKey_.subtleKey) {
+      // This is the first time in the session that we're using crypto subtle
+      // with this key so we have to convert to pkcs8 and import it. Assigning
+      // it to this.privateKey_.subtleKey means we only have to do this once per
+      // session, giving us a small but not insignificant, performance boost.
+      var privateDER = DataUtils.privateKeyPemToDer(this.privateKey_);
+      var pkcs8 = TpmPrivateKey.encodePkcs8PrivateKey
+        (privateDER, new OID(TpmPrivateKey.RSA_ENCRYPTION_OID),
+         new DerNode.DerNull()).buf();
+      var thisKey = this;
 
-  signer.update(data);
-  var signature = new Buffer
-    (DataUtils.toNumbersIfString(signer.sign(this.privateKey_)));
-  var result = new Blob(signature, false);
+      promise = crypto.subtle.importKey
+        ("pkcs8", pkcs8.buffer, algo, true, ["sign"])
+      .then(function(subtleKey) {
+        // Cache the crypto.subtle key object.
+        thisKey.privateKey_.subtleKey = subtleKey;
+        return crypto.subtle.sign(algo, subtleKey, data);
+      });
+    }
+    else
+      // The crypto.subtle key has been cached on a previous sign or from keygen.
+      promise = crypto.subtle.sign(algo, this.privateKey_.subtleKey, data);
 
-  return SyncPromise.resolve(result);
+    return promise
+    .then(function(signature) {
+      var result = new Blob(new Uint8Array(signature), true);
+      return Promise.resolve(result);
+    });
+  }
+  else {
+    var signer;
+    if (this.keyType_ === KeyType.RSA)
+      signer = Crypto.createSign("RSA-SHA256");
+    else if (this.keyType === KeyType.ECDSA)
+      // Just create a "sha256". The Crypto library will infer ECDSA from the key.
+      signer = Crypto.createSign("sha256");
+    else
+      return SyncPromise.resolve(new Blob());
+
+    signer.update(data);
+    var signature = new Buffer
+      (DataUtils.toNumbersIfString(signer.sign(this.privateKey_)));
+    var result = new Blob(signature, false);
+
+    return SyncPromise.resolve(result);
+  }
 };
 
 // TODO: toPkcs1
@@ -362,6 +396,103 @@ TpmPrivateKey.generatePrivateKeyPromise = function(keyParams, useSync)
   result.keyType_ = keyParams.getKeyType();
 
   return SyncPromise.resolve(result);
+};
+
+/**
+ * Encode the private key to a PKCS #8 private key. We do this explicitly here
+ * to avoid linking to extra OpenSSL libraries.
+ * @param {Buffer} privateKeyDer The input private key DER.
+ * @param {OID} oid The OID of the privateKey.
+ * @param {DerNode} parameters The DerNode of the parameters for the OID.
+ * @return {Blob} The PKCS #8 private key DER.
+ */
+TpmPrivateKey.encodePkcs8PrivateKey = function(privateKeyDer, oid, parameters)
+{
+  var algorithmIdentifier = new DerNode.DerSequence();
+  algorithmIdentifier.addChild(new DerNode.DerOid(oid));
+  algorithmIdentifier.addChild(parameters);
+
+  var result = new DerNode.DerSequence();
+  result.addChild(new DerNode.DerInteger(0));
+  result.addChild(algorithmIdentifier);
+  result.addChild(new DerNode.DerOctetString(privateKeyDer));
+
+  return result.encode();
+};
+
+/**
+ * Encode the RSAKey private key as a PKCS #1 private key.
+ * @param {RSAKey} rsaKey The RSAKey private key.
+ * @return {Blob} The PKCS #1 private key DER.
+ */
+TpmPrivateKey.encodePkcs1PrivateKeyFromRSAKey = function(rsaKey)
+{
+  // Imitate KJUR getEncryptedPKCS5PEMFromRSAKey.
+  var result = new DerNode.DerSequence();
+
+  result.addChild(new DerNode.DerInteger(0));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.n)));
+  result.addChild(new DerNode.DerInteger(rsaKey.e));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.d)));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.p)));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.q)));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.dmp1)));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.dmq1)));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.coeff)));
+
+  return result.encode();
+};
+
+/**
+ * Encode the public key values in the RSAKey private key as a
+ * SubjectPublicKeyInfo.
+ * @param {RSAKey} rsaKey The RSAKey private key with the public key values.
+ * @return {Blob} The SubjectPublicKeyInfo DER.
+ */
+TpmPrivateKey.encodePublicKeyFromRSAKey = function(rsaKey)
+{
+  var rsaPublicKey = new DerNode.DerSequence();
+
+  rsaPublicKey.addChild(new DerNode.DerInteger
+    (TpmPrivateKey.bigIntegerToBuffer(rsaKey.n)));
+  rsaPublicKey.addChild(new DerNode.DerInteger(rsaKey.e));
+
+  var algorithmIdentifier = new DerNode.DerSequence();
+  algorithmIdentifier.addChild
+    (new DerNode.DerOid(new OID(TpmPrivateKey.RSA_ENCRYPTION_OID)));
+  algorithmIdentifier.addChild(new DerNode.DerNull());
+
+  var result = new DerNode.DerSequence();
+
+  result.addChild(algorithmIdentifier);
+  result.addChild(new DerNode.DerBitString(rsaPublicKey.encode().buf(), 0));
+
+  return result.encode();
+};
+
+/**
+ * Convert a BigInteger to a Buffer.
+ * @param {BigInteger} bigInteger The BigInteger.
+ * @return {Buffer} The Buffer.
+ */
+TpmPrivateKey.bigIntegerToBuffer = function(bigInteger)
+{
+  // Imitate KJUR.asn1.ASN1Util.bigIntToMinTwosComplementsHex.
+  var hex = bigInteger.toString(16);
+  if (hex.substr(0, 1) == "-")
+    throw new Error
+      ("TpmPrivateKey.bigIntegerToBuffer: Negative integers are not currently supported");
+
+  if (hex.length % 2 == 1)
+    // Odd number of characters.
+    hex = "0" + hex;
+  else {
+    if (! hex.match(/^[0-7]/))
+      // The first byte is >= 0x80, so prepend a zero to keep it positive.
+      hex = "00" + hex;
+  }
+
+  return new Buffer(hex, 'hex');
 };
 
 TpmPrivateKey.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
