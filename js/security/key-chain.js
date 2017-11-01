@@ -24,13 +24,29 @@ var Name = require('../name.js').Name; /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var Data = require('../data.js').Data; /** @ignore */
 var Blob = require('../util/blob.js').Blob; /** @ignore */
+var ConfigFile = require('../util/config-file.js').ConfigFile; /** @ignore */
 var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
 var SecurityException = require('./security-exception.js').SecurityException; /** @ignore */
 var RsaKeyParams = require('./key-params.js').RsaKeyParams; /** @ignore */
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var Pib = require('./pib/pib.js').Pib; /** @ignore */
+var PibImpl = require('./pib/pib-impl.js').PibImpl; /** @ignore */
+var Tpm = require('./tpm/tpm.js').Tpm; /** @ignore */
 var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
 var IdentityManager = require('./identity/identity-manager.js').IdentityManager; /** @ignore */
+var CertificateV2 = require('./v2/certificate-v2.js').CertificateV2; /** @ignore */
+var SigningInfo = require('./signing-info.js').SigningInfo; /** @ignore */
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
+var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
+var KeyLocator = require('../key-locator.js').KeyLocator; /** @ignore */
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
+var DigestAlgorithm = require('./security-types.js').DigestAlgorithm; /** @ignore */
+var KeyType = require('./security-types.js').KeyType; /** @ignore */
+var ValidityPeriod = require('./validity-period.js').ValidityPeriod; /** @ignore */
+var VerificationHelpers = require('./verification-helpers.js').VerificationHelpers; /** @ignore */
+var PublicKey = require('./certificate/public-key.js').PublicKey; /** @ignore */
 var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVerifyPolicyManager;
 
 /**
@@ -39,29 +55,601 @@ var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVe
  * Note: This class is an experimental feature. See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/key-chain.html .
  *
- * Create a new KeyChain with the identityManager and policyManager.
+ * There are four forms to create a KeyChain:
+ * KeyChain(pibLocator, tpmLocator, allowReset = false) - Create a KeyChain to
+ * use the PIB and TPM defined by the given locators, which creates a security
+ * v2 KeyChain that uses CertificateV2, Pib, Tpm and Validator (instead of v1
+ * Certificate, IdentityStorage, PrivateKeyStorage and PolicyManager).
+ * KeyChain(identityManager = None, policyManager = None) - Create a security v1
+ * KeyChain to use the optional identityManager and policyManager.
+ * KeyChain(pibImpl, tpmBackEnd, policyManager) - Create a KeyChain using this
+ * temporary constructor for the transition to security v2, which creates a
+ * security v2 KeyChain but still uses the v1 PolicyManager.
+ * Finally, the default constructor KeyChain() creates a KeyChain with the
+ * default PIB and TPM, which are platform-dependent and can be overridden
+ * system-wide or individually by the user. The default constructor creates a
+ * security v2 KeyChain that uses CertificateV2, Pib, Tpm and Validator.
+ * However, if the default security v1 database file still exists, and the
+ * default security v2 database file does not yet exists, then assume that the
+ * system is running an older NFD and create a security v1 KeyChain with the
+ * default IdentityManager and a NoVerifyPolicyManager.
+ * @param {string} pibLocator The PIB locator, e.g., "pib-sqlite3:/example/dir".
+ * @param {string} tpmLocator The TPM locator, e.g., "tpm-memory:".
+ * @param {boolean} allowReset (optional) If True, the PIB will be reset when
+ * the supplied tpmLocator mismatches the one in the PIB. If omitted, don't
+ * allow reset.
  * @param {IdentityManager} identityManager (optional) The identity manager as a
  * subclass of IdentityManager. If omitted, use the default IdentityManager
  * constructor.
- * @param {PolicyManager} policyManager (optional) The policy manager as a
+ * @param {PolicyManager} policyManager: (optional) The policy manager as a
  * subclass of PolicyManager. If omitted, use NoVerifyPolicyManager.
+ * @param {PibImpl} pibImpl The PibImpl when using the constructor form
+ * KeyChain(pibImpl, tpmBackEnd, policyManager).
+ * @param {TpmBackEnd} tpmBackEnd: The TpmBackEnd when using the constructor
+ * form KeyChain(pibImpl, tpmBackEnd, policyManager).
  * @throws SecurityException if this is not in Node.js and this uses the default
  * IdentityManager constructor. (See IdentityManager for details.)
  * @constructor
  */
-var KeyChain = function KeyChain(identityManager, policyManager)
+var KeyChain = function KeyChain(arg1, arg2, arg3)
 {
-  if (!identityManager)
-    identityManager = new IdentityManager();
-  if (!policyManager)
-    policyManager = new NoVerifyPolicyManager();
+  this.identityManager_ = null;  // for security v1
+  this.policyManager_ = null;    // for security v1
+  this.face_ = null;             // for security v1
 
-  this.identityManager = identityManager;
-  this.policyManager = policyManager;
-  this.face = null;
+  this.pib_ = null;
+  this.tpm_ = null;
+
+  if (arg1 == undefined) {
+    // The default constructor.
+/* debug
+    if (os.path.isfile(BasicIdentityStorage.getDefaultDatabaseFilePath()) and
+        not os.path.isfile(PibSqlite3.getDefaultDatabaseFilePath())):
+*/
+    if (true) {
+      // The security v1 SQLite file still exists and the security v2
+      //   does not yet.
+      arg1 = new IdentityManager();
+      arg2 = new NoVerifyPolicyManager();
+    }
+    else {
+      // Set the security v2 locators to default empty strings.
+      arg1 = "";
+      arg2 = "";
+    }
+  }
+
+  if (typeof arg1 === 'string') {
+    var pibLocator = arg1;
+    var tpmLocator = arg2;
+    var allowReset = arg3;
+    if (allowReset == undefined)
+      allowReset = false;
+
+    this.isSecurityV1_ = false;
+
+    // PIB locator.
+    var pibScheme = [null];
+    var pibLocation = [null];
+    KeyChain.parseAndCheckPibLocator_(pibLocator, pibScheme, pibLocation);
+    var canonicalPibLocator = pibScheme[0] + ":" + pibLocation[0];
+
+    // Create the PIB.
+    this.pib_ = KeyChain._createPib(canonicalPibLocator);
+    var oldTpmLocator = "";
+    try {
+      oldTpmLocator = this.pib_.getTpmLocator();
+    } catch (ex) {
+      // The TPM locator is not set in the PIB yet.
+    }
+
+    // TPM locator.
+    var tpmScheme = [null];
+    var tpmLocation = [null];
+    KeyChain.parseAndCheckTpmLocator_(tpmLocator, tpmScheme, tpmLocation);
+    var canonicalTpmLocator = tpmScheme[0] + ":" + tpmLocation[0];
+
+    var config = new ConfigFile();
+    if (canonicalPibLocator == KeyChain.getDefaultPibLocator_(config)) {
+      // The default PIB must use the default TPM.
+      if (oldTpmLocator != "" &&
+          oldTpmLocator != KeyChain.getDefaultTpmLocator_(config)) {
+        this.pib_.reset_();
+        canonicalTpmLocator = this.getDefaultTpmLocator_(config);
+      }
+    }
+    else {
+      // Check the consistency of the non-default PIB.
+      if (oldTpmLocator != "" && oldTpmLocator != canonicalTpmLocator) {
+        if (allowReset)
+          this.pib_.reset_();
+        else
+          throw new LocatorMismatchError(new Error
+            ("The supplied TPM locator does not match the TPM locator in the PIB: " +
+             oldTpmLocator + " != " + canonicalTpmLocator));
+      }
+    }
+
+    // Note that a key mismatch may still happen if the TPM locator is
+    // initially set to a wrong one or if the PIB was shared by more than
+    // one TPM before. This is due to the old PIB not having TPM info.
+    // The new PIB should not have this problem.
+    this.tpm_ = KeyChain.createTpm_(canonicalTpmLocator);
+    this.pib_.setTpmLocator(canonicalTpmLocator);
+  }
+  else if (arg1 instanceof PibImpl) {
+    var pibImpl = arg1;
+    var tpmBackEnd = arg2;
+    var policyManager = arg3;
+
+    this.isSecurityV1_ = false;
+    this.policyManager_ = policyManager;
+
+    this.pib_ = new Pib("", "", pibImpl);
+    this.tpm_ = new Tpm("", "", tpmBackEnd);
+  }
+  else {
+    var identityManager = arg1;
+    var policyManager = arg2;
+
+    this.isSecurityV1_ = true;
+    if (identityManager == undefined)
+      identityManager = new IdentityManager();
+    if (policyManager == undefined)
+      policyManager = new NoVerifyPolicyManager();
+
+    this.identityManager_ = identityManager;
+    this.policyManager_ = policyManager;
+  }
 };
 
 exports.KeyChain = KeyChain;
+
+/**
+ * Create a KeyChain.Error which represents an error in KeyChain processing.
+ * Call with: throw new KeyChain.Error(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+KeyChain.Error = function KeyChainError(error)
+{
+  if (error) {
+    error.__proto__ = KeyChain.Error.prototype;
+    return error;
+  }
+};
+
+KeyChain.Error.prototype = new Error();
+KeyChain.Error.prototype.name = "KeyChainError";
+
+/**
+ * @return {Pib}
+ */
+KeyChain.prototype.getPib = function()
+{
+  if (this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("getPib is not supported for security v1"));
+
+  return this.pib_;
+};
+
+/**
+ * @return {Tpm}
+ */
+KeyChain.prototype.getTpm = function()
+{
+  if (this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("getTpm is not supported for security v1"));
+
+  return this.tpm_;
+};
+
+// Identity management
+
+// Key management
+
+// Certificate management
+
+// Signing
+
+/**
+ * Sign the target. If it is a Data or Interest object, set its signature. If it
+ * is a Buffer, produce a Signature object.
+ * @param {Data|Interest|Buffer} target If this is a Data object, wire encode
+ * for signing, replace its Signature object based on the type of key and other
+ * info in the SigningInfo params or default identity, and update the
+ * wireEncoding. If this is an Interest object, wire encode for signing, append
+ * a SignatureInfo to the Interest name, sign the name components and append a
+ * final name component with the signature bits. If it is a buffer, sign it and
+ * return a Signature object.
+ * @param {SigningInfo|Name} paramsOrCertificateName (optional) If a SigningInfo,
+ * it is the signing parameters. If a Name, it is the certificate name of the
+ * key to use for signing. If omitted and this is a security v1 KeyChain then
+ * use the IdentityManager to get the default identity. Otherwise, use the PIB
+ * to get the default key of the default identity.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the target (if target is
+ * Data or Interest), or returns the generated Signature object (if target is a
+ * Buffer).
+ */
+KeyChain.prototype.signPromise = function
+  (target, paramsOrCertificateName, wireFormat)
+{
+  if (paramsOrCertificateName instanceof WireFormat) {
+    // Shift the arguments.
+    wireFormat = paramsOrCertificateName;
+    paramsOrCertificateName = null;
+  }
+
+  if (wireFormat == undefined)
+    wireFormat = WireFormat.getDefaultWireFormat();
+
+  var useSync = false; // debug: set this properly
+
+  var thisKeyChain = this;
+
+  return SyncPromise.resolve()
+  .then(function() {
+    if (paramsOrCertificateName == undefined) {
+      // Convert sign(target) into sign(target, paramsOrCertificateName)
+      if (thisKeyChain.isSecurityV1_) {
+        return thisKeyChain.prepareDefaultCertificateNamePromise_(useSync)
+        .then(function(name) {
+          paramsOrCertificateName = name;
+          return SyncPromise.resolve();
+        });
+      }
+      else {
+        paramsOrCertificateName = KeyChain.defaultSigningInfo_;
+        return SyncPromise.resolve();
+      }
+    }
+    else
+      return SyncPromise.resolve();
+  })
+  .then(function() {
+    if (paramsOrCertificateName instanceof Name) {
+      var certificateName = paramsOrCertificateName;
+
+      if (!thisKeyChain.isSecurityV1_) {
+        // Make and use a SigningInfo for backwards compatibility.
+        if (!((target instanceof Interest) || (target instanceof Data)))
+          return SyncPromise.reject(new SecurityException(new Error
+("sign(buffer, certificateName) is not supported for security v2. Use sign with SigningInfo.")));
+
+        var signingInfo = new SigningInfo();
+        signingInfo.setSigningCertificateName(certificateName);
+        return thisKeyChain.signPromise(target, signingInfo, wireFormat)
+        .catch(function(err) {
+          return SyncPromise.reject(new SecurityException(new Error
+            ("Error in sign: " + err)));
+        });
+      }
+      else {
+        if (target instanceof Interest)
+          return thisKeyChain.identityManager_.signInterestByCertificatePromise
+            (target, certificateName, wireFormat, useSync);
+        else if (target instanceof Data)
+          return thisKeyChain.identityManager_.signByCertificatePromise
+            (target, certificateName, wireFormat, useSync);
+        else
+          return thisKeyChain.identityManager_.signByCertificatePromise
+            (target, certificateName, useSync);
+      }
+    }
+
+    var params = paramsOrCertificateName;
+
+    if (target instanceof Data) {
+      var data = target;
+
+      var keyName = [null];
+      return thisKeyChain.prepareSignatureInfoPromise_(params, keyName)
+      .then(function(signatureInfo) {
+        data.setSignature(signatureInfo);
+
+        // Encode once to get the signed portion.
+        var encoding = data.wireEncode(wireFormat);
+
+        return thisKeyChain.signBufferPromise_
+          (encoding.signedBuf(), keyName[0], params.getDigestAlgorithm());
+      })
+      .then(function(signatureBytes) {
+        data.getSignature().setSignature(signatureBytes);
+
+        // Encode again to include the signature.
+        data.wireEncode(wireFormat);
+        return SyncPromise.resolve(data);
+      });
+    }
+    else if (target instanceof Interest) {
+      var interest = target;
+      var signatureInfo;
+
+      var keyName = [null];
+      return thisKeyChain.prepareSignatureInfoPromise_(params, keyName)
+      .then(function(localSignatureInfo) {
+        signatureInfo = localSignatureInfo;
+
+        // Append the encoded SignatureInfo.
+        interest.getName().append(wireFormat.encodeSignatureInfo(signatureInfo));
+
+        // Append an empty signature so that the "signedPortion" is correct.
+        interest.getName().append(new Name.Component());
+        // Encode once to get the signed portion, and sign.
+        var encoding = interest.wireEncode(wireFormat);
+        return thisKeyChain.signBufferPromise_
+          (encoding.signedBuf(), keyName[0], params.getDigestAlgorithm());
+      })
+      .then(function(signatureBytes) {
+        signatureInfo.setSignature(signatureBytes);
+
+        // Remove the empty signature and append the real one.
+        interest.setName(interest.getName().getPrefix(-1).append
+          (wireFormat.encodeSignatureValue(signatureInfo)));
+        return SyncPromise.resolve(interest);
+      });
+    }
+    else {
+      var buffer = target;
+
+      var keyName = [null];
+      return thisKeyChain.prepareSignatureInfoPromise_(params, keyName)
+      .then(function(signatureInfo) {
+        return thisKeyChain.signBufferPromise_
+          (buffer, keyName[0], params.getDigestAlgorithm());
+      });
+    }
+  });
+};
+
+/**
+ * Sign the target. If it is a Data or Interest object, set its signature. If it
+ * is a Buffer, produce a Signature object.
+ * @param {Data|Interest|Buffer} target If this is a Data object, wire encode
+ * for signing, replace its Signature object based on the type of key and other
+ * info in the SigningInfo params or default identity, and update the
+ * wireEncoding. If this is an Interest object, wire encode for signing, append
+ * a SignatureInfo to the Interest name, sign the name components and append a
+ * final name component with the signature bits. If it is a buffer, sign it and
+ * return a Signature object.
+ * @param {SigningInfo|Name} paramsOrCertificateName (optional) If a SigningInfo,
+ * it is the signing parameters. If a Name, it is the certificate name of the
+ * key to use for signing. If omitted and this is a security v1 KeyChain then
+ * use the IdentityManager to get the default identity. Otherwise, use the PIB
+ * to get the default key of the default identity.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {function} onComplete (optional) If target is a Data object, this calls
+ * onComplete(data) with the supplied Data object which has been modified to set
+ * its signature. If target is an Interest object, this calls
+ * onComplete(interest) with the supplied Interest object which has been
+ * modified to set its signature. If target is a Buffer, this calls
+ * onComplete(signature) where signature is the produced Signature object. If
+ * omitted, the return value is described below. (Some crypto libraries only use
+ * a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {Signature} If onComplete is omitted, return the generated Signature
+ * object (if target is a Buffer) or the target (if target is Data or Interest).
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete as
+ * described above.
+ */
+KeyChain.prototype.sign = function
+  (target, paramsOrCertificateName, wireFormat, onComplete, onError)
+{
+  var arg2 = paramsOrCertificateName;
+  var arg3 = wireFormat;
+  var arg4 = onComplete;
+  var arg5 = onError;
+  // arg2,                    arg3,       arg4,       arg5
+  // paramsOrCertificateName, wireFormat, onComplete, onError
+  // paramsOrCertificateName, wireFormat, null,       null
+  // paramsOrCertificateName, onComplete, onError,    null
+  // paramsOrCertificateName, null,       null,       null
+  // wireFormat,              onComplete, onError,    null
+  // wireFormat,              null,       null,       null
+  // onComplete,              onError,    null,       null
+  // null,                    null,       null,       null
+  if (arg2 instanceof SigningInfo || arg2 instanceof Name)
+    paramsOrCertificateName = arg2;
+  else
+    paramsOrCertificateName = null;
+
+  if (arg2 instanceof WireFormat)
+    wireFormat = arg2;
+  else if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else
+    wireFormat = null;
+
+  if (typeof arg2 === "function") {
+    onComplete = arg2;
+    onError = arg3;
+  }
+  else if (typeof arg3 === "function") {
+    onComplete = arg3;
+    onError = arg4;
+  }
+  else if (typeof arg4 === "function") {
+    onComplete = arg4;
+    onError = arg5;
+  }
+  else {
+    onComplete = null;
+    onError = null;
+  }
+
+  return SyncPromise.complete(onComplete, onError,
+    this.signPromise(target, paramsOrCertificateName, wireFormat, !onComplete));
+};
+
+// Import and export
+
+/**
+ * Import a certificate and its corresponding private key encapsulated in a
+ * SafeBag. If the certificate and key are imported properly, the default
+ * setting will be updated as if a new key and certificate is added into this
+ * KeyChain.
+ * @param {SafeBag} safeBag The SafeBag containing the certificate and private
+ * key. This copies the values from the SafeBag.
+ * @param {Buffer} password (optional) The password for decrypting the private
+ * key. If the password is supplied, use it to decrypt the PKCS #8
+ * EncryptedPrivateKeyInfo. If the password is omitted or None, import an
+ * unencrypted PKCS #8 PrivateKeyInfo.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
+ */
+KeyChain.prototype.importSafeBagPromise = function(safeBag, password)
+{
+  var certificate;
+  try {
+    certificate = new CertificateV2(safeBag.getCertificate());
+  } catch (ex) {
+    return SyncPromise.reject(new Error("Error reading CertificateV2: " + ex));
+  }
+  var identity = certificate.getIdentity();
+  var keyName = certificate.getKeyName();
+  var publicKeyBits = certificate.getPublicKey();
+  var content = new Blob([0x01, 0x02, 0x03, 0x04]);
+  var signatureBits;
+  var thisKeyChain = this;
+
+  return SyncPromise.resolve()
+  .then(function() {
+    return thisKeyChain.tpm_.hasKeyPromise(keyName);
+  })
+  .then(function(hasKey) {
+    if (hasKey)
+      return SyncPromise.reject(new KeyChain.Error(new Error
+        ("Private key `" + keyName.toUri() + "` already exists")));
+
+    return thisKeyChain.pib_.getIdentityPromise(identity)
+    .then(function(existingId) {
+      return existingId.getKeyPromise(keyName);
+    })
+    .then(function() {
+      return SyncPromise.reject(new KeyChain.Error(new Error
+        ("Public key `" + keyName.toUri() + "` already exists")));
+    }, function(err) {
+      // Either the identity or the key doesn't exist, so OK to import.
+      return SyncPromise.resolve();
+    });
+  })
+  .then(function() {
+    return thisKeyChain.tpm_.importPrivateKeyPromise_
+      (keyName, safeBag.getPrivateKeyBag().buf(), password)
+    .catch(function(err) {
+      return SyncPromise.reject(new KeyChain.Error(new Error
+        ("Failed to import private key `" + keyName.toUri() + "`")));
+    });
+  })
+  .then(function() {
+    // Check the consistency of the private key and certificate.
+    return thisKeyChain.tpm_.signPromise
+      (content.buf(), keyName, DigestAlgorithm.SHA256)
+    .then(function(localSignatureBits) {
+      signatureBits = localSignatureBits;
+      return SyncPromise.resolve();
+    }, function(err) {
+      return thisKeyChain.tpm_.deleteKeyPromise_(keyName)
+      .then(function() {
+        return SyncPromise.reject(new KeyChain.Error(new Error
+          ("Invalid private key `" + keyName.toUri() + "`")));
+      });
+    });
+  })
+  .then(function() {
+    var publicKey;
+    try {
+      publicKey = new PublicKey(publicKeyBits);
+    } catch (ex) {
+      // Promote to Pib.Error.
+      return thisKeyChain.tpm_.deleteKeyPromise_(keyName)
+      .then(function() {
+        return SyncPromise.reject(new KeyChain.Error(new Error
+          ("Error decoding public key " + ex)));
+      });
+    }
+
+    return VerificationHelpers.verifySignaturePromise
+      (content, signatureBits, publicKey);
+  })
+  .then(function(isVerified) {
+    if (!isVerified) {
+      return thisKeyChain.tpm_.deleteKeyPromise_(keyName)
+      .then(function() {
+        return SyncPromise.reject(new KeyChain.Error(new Error
+          ("Certificate `" + certificate.getName().toUri() +
+           "` and private key `" + keyName.toUri() + "` do not match")));
+      });
+    }
+
+    // The consistency is verified. Add to the PIB.
+    return thisKeyChain.pib_.addIdentityPromise_(identity);
+  })
+  .then(function(id) {
+    return id.addKeyPromise_(certificate.getPublicKey().buf(), keyName);
+  })
+  .then(function(key) {
+    return key.addCertificatePromise_(certificate);
+  });
+};
+
+/**
+ * Import a certificate and its corresponding private key encapsulated in a
+ * SafeBag. If the certificate and key are imported properly, the default
+ * setting will be updated as if a new key and certificate is added into this
+ * KeyChain.
+ * @param {SafeBag} safeBag The SafeBag containing the certificate and private
+ * key. This copies the values from the SafeBag.
+ * @param {Buffer} password (optional) The password for decrypting the private
+ * key. If the password is supplied, use it to decrypt the PKCS #8
+ * EncryptedPrivateKeyInfo. If the password is omitted or None, import an
+ * unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {function} onComplete (optional) This calls onComplete() when finished.
+ * If omitted, just return when finished. (Some crypto libraries only use a
+ * callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some crypto libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ */
+KeyChain.prototype.importSafeBag = function
+  (safeBag, password, onComplete, onError)
+{
+  onError = (typeof password === "function") ? onComplete : onError;
+  onComplete = (typeof password === "function") ? password : onComplete;
+  password = (typeof password === "function") ? null : password;
+
+  return SyncPromise.complete(onComplete, onError,
+    this.importSafeBagPromise(safeBag, password, !onComplete));
+};
+
+// PIB & TPM backend registry
+
+// Security v1 methods
 
 /*****************************************
  *          Identity Management          *
@@ -101,7 +689,7 @@ KeyChain.prototype.createIdentityAndCertificate = function
   params = (typeof params === "function" || !params) ?
     KeyChain.DEFAULT_KEY_PARAMS : params;
 
-  return this.identityManager.createIdentityAndCertificate
+  return this.identityManager_.createIdentityAndCertificate
     (identityName, params, onComplete, onError);
 };
 
@@ -147,7 +735,7 @@ KeyChain.prototype.createIdentity = function(identityName, params)
 KeyChain.prototype.deleteIdentity = function
   (identityName, onComplete, onError)
 {
-  this.identityManager.deleteIdentity(identityName, onComplete, onError);
+  this.identityManager_.deleteIdentity(identityName, onComplete, onError);
 };
 
 /**
@@ -176,7 +764,7 @@ KeyChain.prototype.deleteIdentity = function
  */
 KeyChain.prototype.getDefaultIdentity = function(onComplete, onError)
 {
-  return this.identityManager.getDefaultIdentity(onComplete, onError);
+  return this.identityManager_.getDefaultIdentity(onComplete, onError);
 };
 
 /**
@@ -207,7 +795,21 @@ KeyChain.prototype.getDefaultIdentity = function(onComplete, onError)
  */
 KeyChain.prototype.getDefaultCertificateName = function(onComplete, onError)
 {
-  return this.identityManager.getDefaultCertificateName(onComplete, onError);
+  if (!this.isSecurityV1_) {
+    return SyncPromise.complete(onComplete, onError,
+      this.pib_.getDefaultIdentityPromise(!onComplete)
+      .then(function(identity) {
+        return identity.getDefaultKeyPromise();
+      })
+      .then(function(key) {
+        return key.getDefaultCertificatePromise();
+      })
+      .then(function(certificate) {
+        return SyncPromise.resolve(certificate.getName());
+      }));
+  }
+
+  return this.identityManager_.getDefaultCertificateName(onComplete, onError);
 };
 
 /**
@@ -227,7 +829,7 @@ KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
   if (!keySize)
     keySize = 2048;
 
-  return this.identityManager.generateRSAKeyPair(identityName, isKsk, keySize);
+  return this.identityManager_.generateRSAKeyPair(identityName, isKsk, keySize);
 };
 
 /**
@@ -254,7 +856,7 @@ KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
 KeyChain.prototype.setDefaultKeyForIdentity = function
   (keyName, identityNameCheck, onComplete, onError)
 {
-  return this.identityManager.setDefaultKeyForIdentity
+  return this.identityManager_.setDefaultKeyForIdentity
     (keyName, identityNameCheck, onComplete, onError);
 };
 
@@ -271,7 +873,7 @@ KeyChain.prototype.setDefaultKeyForIdentity = function
 KeyChain.prototype.generateRSAKeyPairAsDefault = function
   (identityName, isKsk, keySize)
 {
-  return this.identityManager.generateRSAKeyPairAsDefault
+  return this.identityManager_.generateRSAKeyPairAsDefault
     (identityName, isKsk, keySize);
 };
 
@@ -282,7 +884,7 @@ KeyChain.prototype.generateRSAKeyPairAsDefault = function
  */
 KeyChain.prototype.createSigningRequest = function(keyName)
 {
-  return this.identityManager.getPublicKey(keyName).getKeyDer();
+  return this.identityManager_.getPublicKey(keyName).getKeyDer();
 };
 
 /**
@@ -306,7 +908,7 @@ KeyChain.prototype.createSigningRequest = function(keyName)
 KeyChain.prototype.installIdentityCertificate = function
   (certificate, onComplete, onError)
 {
-  this.identityManager.addCertificate(certificate, onComplete, onError);
+  this.identityManager_.addCertificate(certificate, onComplete, onError);
 };
 
 /**
@@ -330,7 +932,7 @@ KeyChain.prototype.installIdentityCertificate = function
 KeyChain.prototype.setDefaultCertificateForKey = function
   (certificate, onComplete, onError)
 {
-  this.identityManager.setDefaultCertificateForKey
+  this.identityManager_.setDefaultCertificateForKey
     (certificate, onComplete, onError);
 };
 
@@ -359,7 +961,7 @@ KeyChain.prototype.setDefaultCertificateForKey = function
 KeyChain.prototype.getCertificate = function
   (certificateName, onComplete, onError)
 {
-  return this.identityManager.getCertificate
+  return this.identityManager_.getCertificate
     (certificateName, onComplete, onError);
 };
 
@@ -369,7 +971,7 @@ KeyChain.prototype.getCertificate = function
 KeyChain.prototype.getIdentityCertificate = function
   (certificateName, onComplete, onError)
 {
-  return this.identityManager.getCertificate
+  return this.identityManager_.getCertificate
     (certificateName, onComplete, onError);
 };
 
@@ -398,7 +1000,7 @@ KeyChain.prototype.revokeCertificate = function(certificateName)
  */
 KeyChain.prototype.getIdentityManager = function()
 {
-  return this.identityManager;
+  return this.identityManager_;
 };
 
 /*****************************************
@@ -411,193 +1013,12 @@ KeyChain.prototype.getIdentityManager = function()
  */
 KeyChain.prototype.getPolicyManager = function()
 {
-  return this.policyManager;
+  return this.policyManager_;
 };
 
 /*****************************************
  *              Sign/Verify              *
  *****************************************/
-
-/**
- * Sign the target. If it is a Data or Interest object, set its signature. If it
- * is an array, produce a Signature object. There are two forms of sign:
- * sign(target, certificateName [, wireFormat] [, onComplete] [, onError]).
- * sign(target [, wireFormat] [, onComplete] [, onError]).
- * @param {Data|Interest|Buffer} target If this is a Data object, wire encode for
- * signing, update its signature and key locator field and wireEncoding. If this
- * is an Interest object, wire encode for signing, append a SignatureInfo to the
- * Interest name, sign the name components and append a final name component
- * with the signature bits. If it is an array, sign it and produce a Signature
- * object.
- * @param {Name} certificateName (optional) The certificate name of the key to
- * use for signing. If omitted, use the default identity in the identity storage.
- * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
- * the input. If omitted, use WireFormat getDefaultWireFormat().
- * @param {function} onComplete (optional) If target is a Data object, this calls
- * onComplete(data) with the supplied Data object which has been modified to set
- * its signature. If target is an Interest object, this calls
- * onComplete(interest) with the supplied Interest object which has been
- * modified to set its signature. If target is a Buffer, this calls
- * onComplete(signature) where signature is the produced Signature object. If
- * omitted, the return value is described below. (Some crypto libraries only use
- * a callback, so onComplete is required to use these.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @return {Signature} If onComplete is omitted, return the generated Signature
- * object (if target is a Buffer) or the target (if target is Data or Interest).
- * Otherwise, if onComplete is supplied then return undefined and use onComplete as
- * described above.
- */
-KeyChain.prototype.sign = function
-  (target, certificateName, wireFormat, onComplete, onError)
-{
-  var arg2 = certificateName;
-  var arg3 = wireFormat;
-  var arg4 = onComplete;
-  var arg5 = onError;
-  // arg2,            arg3,       arg4,       arg5
-  // certificateName, wireFormat, onComplete, onError
-  // certificateName, wireFormat, null,       null
-  // certificateName, onComplete, onError,    null
-  // certificateName, null,       null,       null
-  // wireFormat,      onComplete, onError,    null
-  // wireFormat,      null,       null,       null
-  // onComplete,      onError,    null,       null
-  // null,            null,       null,       null
-  if (arg2 instanceof Name)
-    certificateName = arg2;
-  else
-    certificateName = null;
-
-  if (arg2 instanceof WireFormat)
-    wireFormat = arg2;
-  else if (arg3 instanceof WireFormat)
-    wireFormat = arg3;
-  else
-    wireFormat = null;
-
-  if (typeof arg2 === "function") {
-    onComplete = arg2;
-    onError = arg3;
-  }
-  else if (typeof arg3 === "function") {
-    onComplete = arg3;
-    onError = arg4;
-  }
-  else if (typeof arg4 === "function") {
-    onComplete = arg4;
-    onError = arg5;
-  }
-  else {
-    onComplete = null;
-    onError = null;
-  }
-
-  return SyncPromise.complete(onComplete, onError,
-    this.signPromise(target, certificateName, wireFormat, !onComplete));
-};
-
-/**
- * Sign the target. If it is a Data or Interest object, set its signature. If it
- * is an array, produce a Signature object. There are two forms of signPromise:
- * signPromise(target, certificateName [, wireFormat] [, useSync]).
- * sign(target [, wireFormat] [, useSync]).
- * @param {Data|Interest|Buffer} target If this is a Data object, wire encode for
- * signing, update its signature and key locator field and wireEncoding. If this
- * is an Interest object, wire encode for signing, append a SignatureInfo to the
- * Interest name, sign the name components and append a final name component
- * with the signature bits. If it is an array, sign it and produce a Signature
- * object.
- * @param {Name} certificateName (optional) The certificate name of the key to
- * use for signing. If omitted, use the default identity in the identity storage.
- * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
- * the input. If omitted, use WireFormat getDefaultWireFormat().
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
- * @return {Promise|SyncPromise} A promise that returns the generated Signature
- * object (if target is a Buffer) or the target (if target is Data or Interest).
- */
-KeyChain.prototype.signPromise = function
-  (target, certificateName, wireFormat, useSync)
-{
-  var arg2 = certificateName;
-  var arg3 = wireFormat;
-  var arg4 = useSync;
-  // arg2,            arg3,       arg4
-  // certificateName, wireFormat, useSync
-  // certificateName, wireFormat, null
-  // certificateName, useSync,    null
-  // certificateName, null,       null
-  // wireFormat,      useSync,    null
-  // wireFormat,      null,       null
-  // useSync,         null,       null
-  // null,            null,       null
-  if (arg2 instanceof Name)
-    certificateName = arg2;
-  else
-    certificateName = null;
-
-  if (arg2 instanceof WireFormat)
-    wireFormat = arg2;
-  else if (arg3 instanceof WireFormat)
-    wireFormat = arg3;
-  else
-    wireFormat = null;
-
-  if (typeof arg2 === 'boolean')
-    useSync = arg2;
-  else if (typeof arg3 === 'boolean')
-    useSync = arg3;
-  else if (typeof arg4 === 'boolean')
-    useSync = arg4;
-  else
-    useSync = false;
-
-  var thisKeyChain = this;
-  return SyncPromise.resolve()
-  .then(function() {
-    if (certificateName != null)
-      return SyncPromise.resolve();
-
-    // Get the default certificate name.
-    return thisKeyChain.identityManager.getDefaultCertificatePromise(useSync)
-    .then(function(signingCertificate) {
-      if (signingCertificate != null) {
-        certificateName = signingCertificate.getName();
-        return SyncPromise.resolve();
-      }
-
-      // Set the default certificate and default certificate name again.
-      return thisKeyChain.prepareDefaultCertificateNamePromise_(useSync)
-      .then(function(localCertificateName) {
-        certificateName =localCertificateName;
-        return SyncPromise.resolve();
-      });
-    });
-  })
-  .then(function() {
-    // certificateName is now set. Do the actual signing.
-    if (target instanceof Interest)
-      return thisKeyChain.identityManager.signInterestByCertificatePromise
-        (target, certificateName, wireFormat, useSync);
-    else if (target instanceof Data)
-      return thisKeyChain.identityManager.signByCertificatePromise
-        (target, certificateName, wireFormat, useSync);
-    else
-      return thisKeyChain.identityManager.signByCertificatePromise
-        (target, certificateName, useSync);
-  });
-};
 
 /**
  * Sign the target. If it is a Data object, set its signature. If it is an
@@ -650,17 +1071,17 @@ KeyChain.prototype.signByIdentity = function
     var mainPromise = SyncPromise.resolve()
     .then(function() {
       if (identityName.size() == 0) {
-        var inferredIdentity = thisKeyChain.policyManager.inferSigningIdentity
+        var inferredIdentity = thisKeyChain.policyManager_.inferSigningIdentity
           (data.getName());
         if (inferredIdentity.size() == 0)
-          return thisKeyChain.identityManager.getDefaultCertificateNamePromise
+          return thisKeyChain.identityManager_.getDefaultCertificateNamePromise
             (useSync);
         else
-          return thisKeyChain.identityManager.getDefaultCertificateNameForIdentityPromise
+          return thisKeyChain.identityManager_.getDefaultCertificateNameForIdentityPromise
               (inferredIdentity, useSync);
       }
       else
-        return thisKeyChain.identityManager.getDefaultCertificateNameForIdentityPromise
+        return thisKeyChain.identityManager_.getDefaultCertificateNameForIdentityPromise
           (identityName, useSync);
     })
     .then(function(signingCertificateName) {
@@ -668,12 +1089,12 @@ KeyChain.prototype.signByIdentity = function
         throw new SecurityException(new Error
           ("No qualified certificate name found!"));
 
-      if (!thisKeyChain.policyManager.checkSigningPolicy
+      if (!thisKeyChain.policyManager_.checkSigningPolicy
            (data.getName(), signingCertificateName))
         throw new SecurityException(new Error
           ("Signing Cert name does not comply with signing policy"));
 
-      return thisKeyChain.identityManager.signByCertificatePromise
+      return thisKeyChain.identityManager_.signByCertificatePromise
         (data, signingCertificateName, wireFormat, useSync);
     });
 
@@ -683,14 +1104,14 @@ KeyChain.prototype.signByIdentity = function
     var array = target;
 
     return SyncPromise.complete(onComplete, onError,
-      this.identityManager.getDefaultCertificateNameForIdentityPromise
+      this.identityManager_.getDefaultCertificateNameForIdentityPromise
         (identityName, useSync)
       .then(function(signingCertificateName) {
         if (signingCertificateName.size() == 0)
           throw new SecurityException(new Error
             ("No qualified certificate name found!"));
 
-        return thisKeyChain.identityManager.signByCertificatePromise
+        return thisKeyChain.identityManager_.signByCertificatePromise
           (array, signingCertificateName, wireFormat, useSync);
       }));
   }
@@ -709,9 +1130,9 @@ KeyChain.prototype.signByIdentity = function
 KeyChain.prototype.signWithSha256 = function(target, wireFormat)
 {
   if (target instanceof Interest)
-    this.identityManager.signInterestWithSha256(target, wireFormat);
+    this.identityManager_.signInterestWithSha256(target, wireFormat);
   else
-    this.identityManager.signWithSha256(target, wireFormat);
+    this.identityManager_.signWithSha256(target, wireFormat);
 };
 
 /**
@@ -737,12 +1158,12 @@ KeyChain.prototype.verifyData = function
   if (stepCount == null)
     stepCount = 0;
 
-  if (this.policyManager.requireVerify(data)) {
-    var nextStep = this.policyManager.checkVerificationPolicy
+  if (this.policyManager_.requireVerify(data)) {
+    var nextStep = this.policyManager_.checkVerificationPolicy
       (data, stepCount, onVerified, onValidationFailed);
     if (nextStep != null) {
       var thisKeyChain = this;
-      this.face.expressInterest
+      this.face_.expressInterest
         (nextStep.interest,
          function(callbackInterest, callbackData) {
            thisKeyChain.onCertificateData(callbackInterest, callbackData, nextStep);
@@ -753,7 +1174,7 @@ KeyChain.prototype.verifyData = function
          });
     }
   }
-  else if (this.policyManager.skipVerifyAndTrust(data)) {
+  else if (this.policyManager_.skipVerifyAndTrust(data)) {
     try {
       onVerified(data);
     } catch (ex) {
@@ -794,12 +1215,12 @@ KeyChain.prototype.verifyInterest = function
     stepCount = 0;
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
-  if (this.policyManager.requireVerify(interest)) {
-    var nextStep = this.policyManager.checkVerificationPolicy
+  if (this.policyManager_.requireVerify(interest)) {
+    var nextStep = this.policyManager_.checkVerificationPolicy
       (interest, stepCount, onVerified, onValidationFailed, wireFormat);
     if (nextStep != null) {
       var thisKeyChain = this;
-      this.face.expressInterest
+      this.face_.expressInterest
         (nextStep.interest,
          function(callbackInterest, callbackData) {
            thisKeyChain.onCertificateData(callbackInterest, callbackData, nextStep);
@@ -811,7 +1232,7 @@ KeyChain.prototype.verifyInterest = function
          });
     }
   }
-  else if (this.policyManager.skipVerifyAndTrust(interest)) {
+  else if (this.policyManager_.skipVerifyAndTrust(interest)) {
     try {
       onVerified(interest);
     } catch (ex) {
@@ -835,7 +1256,7 @@ KeyChain.prototype.verifyInterest = function
  */
 KeyChain.prototype.setFace = function(face)
 {
-  this.face = face;
+  this.face_ = face;
 };
 
 /**
@@ -894,6 +1315,182 @@ KeyChain.verifyDataWithHmacWithSha256 = function(data, key, wireFormat)
 
 KeyChain.DEFAULT_KEY_PARAMS = new RsaKeyParams();
 
+// Private security v2 methods
+
+
+/**
+ * Prepare a Signature object according to signingInfo and get the signing key
+ * name.
+ * @param {SigningInfo} params The signing parameters.
+ * @param {Array<Name>} keyName Set keyName[0] to the signing key name.
+ * @return {Promise|SyncPromise} A promise which returns a new Signature object
+ * with the SignatureInfo, or a promise rejected with InvalidSigningInfoError
+ * when the requested signing method cannot be satisfied.
+ */
+KeyChain.prototype.prepareSignatureInfoPromise_ = function(params, keyName)
+{
+  var identity = null;
+  var key = null;
+  var thisKeyChain = this;
+
+  return SyncPromise.resolve()
+  .then(function() {
+    if (params.getSignerType() == SigningInfo.SignerType.NULL) {
+      return thisKeyChain.pib_.getDefaultIdentityPromise()
+      .then(function(localIdentity) {
+        identity = localIdentity;
+        return SyncPromise.resolve(null);
+      }, function(err) {
+        // There is no default identity, so use sha256 for signing.
+        keyName[0] = SigningInfo.getDigestSha256Identity();
+        return SyncPromise.resolve(new DigestSha256Signature());
+      });
+    }
+    else if (params.getSignerType() == SigningInfo.SignerType.ID) {
+      identity = params.getPibIdentityPromise();
+      if (identity == null) {
+        return thisKeyChain.pib_.getIdentityPromise(params.getSignerName())
+        .then(function(localIdentity) {
+          identity = localIdentity;
+          return SyncPromise.resolve(null);
+        }, function(err) {
+          return SyncPromise.reject(new InvalidSigningInfoError(new Error
+            ("Signing identity `" + params.getSignerName().toUri() +
+             "` does not exist")));
+        });
+      }
+      else
+        return SyncPromise.resolve(null);
+    }
+    else if (params.getSignerType() == SigningInfo.SignerType.KEY) {
+      key = params.getPibKey();
+      if (key == null) {
+        identityName = PibKey.extractIdentityFromKeyName(
+          params.getSignerName());
+
+        return thisKeyChain.pib_.getIdentityPromise(identityName)
+        .then(function(localIdentity) {
+          return localIdentity.getKeyPromise(params.getSignerName())
+          .then(function(localKey) {
+            key = localKey;
+            // We will use the PIB key instance, so reset the identity.
+            identity = null;
+            return SyncPromise.resolve(null);
+          });
+        }, function(err) {
+          return SyncPromise.reject(new InvalidSigningInfoError(new Error
+            ("Signing key `" + params.getSignerName().toUri() +
+             "` does not exist")));
+        });
+      }
+      else
+        return SyncPromise.resolve(null);
+    }
+    else if (params.getSignerType() == SigningInfo.SignerType.CERT) {
+      var identityName = CertificateV2.extractIdentityFromCertName
+        (params.getSignerName());
+
+      return thisKeyChain.pib_.getIdentityPromise(identityName)
+      .then(function(localIdentity) {
+        identity = localIdentity;
+        return identity.getKeyPromise
+          (CertificateV2.extractKeyNameFromCertName(params.getSignerName()))
+        .then(function(localKey) {
+          key = localKey;
+          return SyncPromise.resolve(null);
+        });
+      }, function(err) {
+        return SyncPromise.reject(new InvalidSigningInfoError(new Error
+          ("Signing certificate `" + params.getSignerName().toUri() +
+           "` does not exist")));
+      });
+    }
+    else if (params.getSignerType() == SigningInfo.SignerType.SHA256) {
+      keyName[0] = SigningInfo.getDigestSha256Identity();
+      return SyncPromise.resolve(new DigestSha256Signature());
+    }
+    else
+      // We don't expect this to happen.
+      return SyncPromise.reject(new InvalidSigningInfoError(new Error
+        ("Unrecognized signer type")));
+  })
+  .then(function(signingInfo) {
+    if (signingInfo != null)
+      // We already have the result (a DigestSha256Signature).
+      return SyncPromise.resolve(signingInfo);
+    else {
+      if (identity == null && key == null)
+        return SyncPromise.reject(new InvalidSigningInfoError(new Error
+          ("Cannot determine signing parameters")));
+
+      return SyncPromise.resolve()
+      .then(function() {
+        if (identity != null && key == null) {
+          return identity.getDefaultKeyPromise()
+          .then(function(localKey) {
+            key = localKey;
+            return SyncPromise.resolve(null);
+          }, function(err) {
+            return SyncPromise.reject(new InvalidSigningInfoError(new Error
+              ("Signing identity `" + identity.getName().toUri() +
+               "` does not have default certificate")));
+          });
+        }
+        else
+          return SyncPromise.resolve();
+      })
+      .then(function() {
+        if (key.getKeyType() == KeyType.RSA &&
+            params.getDigestAlgorithm() == DigestAlgorithm.SHA256)
+          signatureInfo = new Sha256WithRsaSignature();
+        else if (key.getKeyType() == KeyType.ECDSA &&
+                 params.getDigestAlgorithm() == DigestAlgorithm.SHA256)
+          signatureInfo = new Sha256WithEcdsaSignature()
+        else
+          return SyncPromise.reject(new KeyChain.Error(new Error
+            ("Unsupported key type")));
+
+        if (params.getValidityPeriod().hasPeriod() &&
+            ValidityPeriod.canGetFromSignature(signatureInfo))
+          // Set the ValidityPeriod from the SigningInfo params.
+          ValidityPeriod.getFromSignature(signatureInfo).setPeriod
+            (params.getValidityPeriod().getNotBefore(),
+             params.getValidityPeriod().getNotAfter());
+
+        var keyLocator = KeyLocator.getFromSignature(signatureInfo);
+        keyLocator.setType(KeyLocatorType.KEYNAME);
+        keyLocator.setKeyName(key.getName());
+
+        keyName[0] = key.getName();
+        return SyncPromise.resolve(signatureInfo);
+      });
+    }
+  });
+};
+
+/**
+ * Sign the byte buffer using the key with name keyName.
+ * @param {Buffer} buffer The input byte buffer.
+ * @param {Name} keyName The name of the key.
+ * @param {number} digestAlgorithm The digest algorithm as an int from the
+ * DigestAlgorithm enum.
+ * @return {Promise|SyncPromise} A promise which returns the signature Blob (or
+ * an isNull Blob if the key does not exist), or a promise rejected
+ * with TpmBackEnd.Error for an error in signing.
+ */
+KeyChain.prototype.signBufferPromise_ = function(buffer, keyName, digestAlgorithm)
+{
+  if (keyName.equals(SigningInfo.getDigestSha256Identity())) {
+    var hash = Crypto.createHash('sha256');
+    hash.update(buffer);
+    return SyncPromise.resolve(new Blob(hash.digest(), false));
+  }
+
+  return this.tpm_.signPromise(buffer, keyName, digestAlgorithm);
+};
+
+// Private security v1 methods
+
 KeyChain.prototype.onCertificateData = function(interest, data, nextStep)
 {
   // Try to verify the certificate (data) according to the parameters in nextStep.
@@ -907,7 +1504,7 @@ KeyChain.prototype.onCertificateInterestTimeout = function
   if (retry > 0) {
     // Issue the same expressInterest as in verifyData except decrement retry.
     var thisKeyChain = this;
-    this.face.expressInterest
+    this.face_.expressInterest
       (interest,
        function(callbackInterest, callbackData) {
          thisKeyChain.onCertificateData(callbackInterest, callbackData, nextStep);
@@ -942,7 +1539,7 @@ KeyChain.prototype.prepareDefaultCertificateNamePromise_ = function(useSync)
 {
   var signingCertificate;
   var thisKeyChain = this;
-  return this.identityManager.getDefaultCertificatePromise(useSync)
+  return this.identityManager_.getDefaultCertificatePromise(useSync)
   .then(function(localCertificate) {
     signingCertificate = localCertificate;
     if (signingCertificate != null)
@@ -951,7 +1548,7 @@ KeyChain.prototype.prepareDefaultCertificateNamePromise_ = function(useSync)
     // Set the default certificate and get the certificate again.
     return thisKeyChain.setDefaultCertificatePromise_(useSync)
     .then(function() {
-      return thisKeyChain.identityManager.getDefaultCertificatePromise(useSync);
+      return thisKeyChain.identityManager_.getDefaultCertificatePromise(useSync);
     })
     .then(function(localCertificate) {
       signingCertificate = localCertificate;
@@ -976,14 +1573,14 @@ KeyChain.prototype.setDefaultCertificatePromise_ = function(useSync)
 {
   var thisKeyChain = this;
 
-  return this.identityManager.getDefaultCertificatePromise(useSync)
+  return this.identityManager_.getDefaultCertificatePromise(useSync)
   .then(function(certificate) {
     if (certificate != null)
       // We already have a default certificate.
       return SyncPromise.resolve();
 
     var defaultIdentity;
-    return thisKeyChain.identityManager.getDefaultIdentityPromise(useSync)
+    return thisKeyChain.identityManager_.getDefaultIdentityPromise(useSync)
     .then(function(localDefaultIdentity) {
       defaultIdentity = localDefaultIdentity;
       return SyncPromise.resolve();
@@ -996,12 +1593,55 @@ KeyChain.prototype.setDefaultCertificatePromise_ = function(useSync)
       return SyncPromise.resolve();
     })
     .then(function() {
-      return thisKeyChain.identityManager.createIdentityAndCertificatePromise
+      return thisKeyChain.identityManager_.createIdentityAndCertificatePromise
         (defaultIdentity, KeyChain.DEFAULT_KEY_PARAMS, useSync);
     })
     .then(function() {
-      return thisKeyChain.identityManager.setDefaultIdentityPromise
+      return thisKeyChain.identityManager_.setDefaultIdentityPromise
         (defaultIdentity, useSync);
     });
   });
 };
+
+KeyChain.defaultSigningInfo_ = new SigningInfo();
+
+
+/**
+ * Create an InvalidSigningInfoError which extends KeyChain.Error to indicate
+ * that the supplied SigningInfo is invalid.
+ * Call with: throw new InvalidSigningInfoError(new Error("message")).
+ * @param {Error} error The exception created with new Error.
+ * @constructor
+ */
+function InvalidSigningInfoError(error)
+{
+  if (error) {
+    error.__proto__ = InvalidSigningInfoError.prototype;
+    return error;
+  }
+}
+
+InvalidSigningInfoError.prototype = new Error();
+InvalidSigningInfoError.prototype.name = "InvalidSigningInfoError";
+
+exports.InvalidSigningInfoError = InvalidSigningInfoError;
+
+/**
+ * Create a LocatorMismatchError which extends KeyChain.Error to indicate that
+ * the supplied TPM locator does not match the locator stored in the PIB.
+ * Call with: throw new LocatorMismatchError(new Error("message")).
+ * @param {Error} error The exception created with new Error.
+ * @constructor
+ */
+function LocatorMismatchError(error)
+{
+  if (error) {
+    error.__proto__ = LocatorMismatchError.prototype;
+    return error;
+  }
+}
+
+LocatorMismatchError.prototype = new Error();
+LocatorMismatchError.prototype.name = "LocatorMismatchError";
+
+exports.LocatorMismatchError = LocatorMismatchError;
