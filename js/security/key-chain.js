@@ -548,7 +548,7 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password, useSync)
   if (typeof password === 'boolean') {
     // password is omitted, so shift.
     useSync = password;
-    password = null;
+    password = undefined;
   }
 
   var certificate;
@@ -622,7 +622,7 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password, useSync)
     }
 
     return VerificationHelpers.verifySignaturePromise
-      (content, signatureBits, publicKey);
+      (content, signatureBits, publicKey, useSync);
   })
   .then(function(isVerified) {
     if (!isVerified) {
