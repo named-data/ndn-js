@@ -24,7 +24,8 @@ var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var Blob = require('../util/blob.js').Blob; /** @ignore */
 var KeyType = require('./security-types.js').KeyType; /** @ignore */
 var UseSubtleCrypto = require("../use-subtle-crypto-node.js").UseSubtleCrypto; /** @ignore */
-var DigestAlgorithm = require('./security-types.js').DigestAlgorithm;
+var DigestAlgorithm = require('./security-types.js').DigestAlgorithm; /** @ignore */
+var PublicKey = require('./certificate/public-key.js').PublicKey;
 
 /**
  * The VerificationHelpers class has static methods to verify signatures and
@@ -38,7 +39,8 @@ exports.VerificationHelpers = VerificationHelpers;
  * Verify the buffer against the signature using the public key.
  * @param {Buffer|Blob} buffer The input buffer to verify.
  * @param {Buffer|Blob} signature The signature bytes.
- * @param {PublicKey} publicKey The object containing the public key.
+ * @param {PublicKey|Buffer:Blob} publicKey The object containing the public key,
+ * or the public key DER which is used to make the PublicKey object.
  * @param {number} digestAlgorithm (optional) The digest algorithm as an int
  * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
@@ -61,6 +63,17 @@ VerificationHelpers.verifySignaturePromise = function
     buffer = buffer.buf();
   if (signature instanceof Blob)
     signature = signature.buf();
+  if (!(publicKey instanceof PublicKey)) {
+    // Turn publicKey into a PublicKey object.
+    try {
+      if (!(publicKey instanceof Blob))
+        publicKey = new Blob(publicKey);
+      publicKey = new PublicKey(publicKey);
+    } catch (ex) {
+      return SyncPromise.reject(new Error
+        ("verifySignature: Error decoding public key DER: " + ex));
+    }
+  }
   if (digestAlgorithm == undefined)
     digestAlgorithm = DigestAlgorithm.SHA256;
 
