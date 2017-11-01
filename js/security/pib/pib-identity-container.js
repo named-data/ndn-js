@@ -132,7 +132,8 @@ PibIdentityContainer.prototype.removePromise = function(identityName)
 /**
  * Get the identity with name identityName from the container.
  * @param {Name} identityName The name of the identity.
- * @return {SyncPromise} A promise which returns the PibIdentity object.
+ * @return {SyncPromise} A promise which returns the PibIdentity object, or a
+ * promise rejected with Pib.Error if the identity does not exist.
  */
 PibIdentityContainer.prototype.getPromise = function(identityName)
 {
