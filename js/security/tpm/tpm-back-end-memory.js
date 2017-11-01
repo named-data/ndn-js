@@ -123,7 +123,7 @@ TpmBackEndMemory.prototype.doDeleteKeyPromise_ = function(keyName)
  * an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {Buffer} password The password for decrypting the private key. If the
  * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is None, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
  * promise rejected with TpmBackEnd.Error for an error importing the key.
  */

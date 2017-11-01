@@ -251,7 +251,7 @@ SigningInfo.prototype.getPibIdentity = function()
 
 /**
  * Get the PibKey of the signer.
- * @return {PibKey} The PibKey handler of the signer, or None if
+ * @return {PibKey} The PibKey handler of the signer, or null if
  * getSignerName() should be used to find the key.
  * @throws Error if the signer type is not SignerType.KEY.
  */
