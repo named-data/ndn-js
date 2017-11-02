@@ -23,8 +23,8 @@ var Crypto = require('../crypto.js'); /** @ignore */
 var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var Blob = require('../util/blob.js').Blob; /** @ignore */
 var KeyType = require('./security-types.js').KeyType; /** @ignore */
-var UseSubtleCrypto = require("../use-subtle-crypto-node.js").UseSubtleCrypto; /** @ignore */
 var DigestAlgorithm = require('./security-types.js').DigestAlgorithm; /** @ignore */
+var UseSubtleCrypto = require("../use-subtle-crypto-node.js").UseSubtleCrypto; /** @ignore */
 var PublicKey = require('./certificate/public-key.js').PublicKey;
 
 /**
@@ -140,6 +140,40 @@ VerificationHelpers.verifySignaturePromise = function
   else
     return SyncPromise.reject(new Error
       ("verifySignature: Invalid digest algorithm"));
+};
+
+/**
+ * Verify the buffer against the digest using the digest algorithm.
+ * @param {Buffer|Blob} buffer The input buffer to verify.
+ * @param {Buffer|Blob} digest The digest bytes.
+ * @param {number} digestAlgorithm The digest algorithm as an int from the
+ * DigestAlgorithm enum, such as DigestAlgorithm.SHA256.
+ * @return {boolean} true if verification succeeds, false if verification fails.
+ * @throws Error for an invalid digestAlgorithm.
+ */
+VerificationHelpers.verifyDigest = function(buffer, digest, digestAlgorithm)
+{
+  if (buffer instanceof Blob)
+    buffer = buffer.buf();
+  if (digest instanceof Blob)
+    digest = digest.buf();
+
+  if (digestAlgorithm == DigestAlgorithm.SHA256) {
+    var hash = Crypto.createHash('sha256');
+    hash.update(buffer);
+    var computedDigest = hash.digest();
+
+    // Use a loop to compare since it handles different array types.
+    if (digest.length != computedDigest.length)
+      return false;
+    for (var i = 0; i < digest.length; ++i) {
+      if (digest[i] != computedDigest[i])
+        return false;
+    }
+    return true;
+  }
+  else
+    throw new Error("verifyDigest: Invalid digest algorithm");
 };
 
 // The first time verify is called, it sets this to determine if a signature
