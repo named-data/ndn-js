@@ -82,6 +82,8 @@ PibImpl.prototype.getTpmLocatorPromise = function(useSync)
     ("PibImpl.getTpmLocatorPromise is not implemented"));
 };
 
+// Identity management.
+
 /**
  * Check for the existence of an identity.
  * @param {Name} identityName The name of the identity.

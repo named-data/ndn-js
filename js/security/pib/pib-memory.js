@@ -92,6 +92,8 @@ PibMemory.prototype.getTpmLocatorPromise = function()
   return SyncPromise.resolve(this.tpmLocator_);
 };
 
+// Identity management.
+
 /**
  * Check for the existence of an identity.
  * @param {Name} identityName The name of the identity.
