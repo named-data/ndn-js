@@ -65,6 +65,7 @@ exports.Pib = require('./js/security/pib/pib.js').Pib;
 exports.PibKey = require('./js/security/pib/pib-key.js').PibKey;
 exports.PibImpl = require('./js/security/pib/pib-impl.js').PibImpl;
 exports.PibMemory = require('./js/security/pib/pib-memory.js').PibMemory;
+exports.PibSqlite3 = require('./js/security/pib/pib-sqlite3.js').PibSqlite3;
 exports.ValidationRequest = require('./js/security/policy/validation-request.js').ValidationRequest;
 exports.PolicyManager = require('./js/security/policy/policy-manager.js').PolicyManager;
 exports.ConfigPolicyManager = require('./js/security/policy/config-policy-manager.js').ConfigPolicyManager;
