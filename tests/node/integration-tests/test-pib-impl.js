@@ -21,9 +21,12 @@
  */
 
 var assert = require("assert");
+var fs = require("fs");
+var path = require('path');
 var Name = require('../../..').Name;
 var Pib = require('../../..').Pib;
 var PibMemory = require('../../..').PibMemory;
+var PibSqlite3 = require('../../..').PibSqlite3;
 var PibDataFixture = require('../unit-tests//pib-data-fixture.js').PibDataFixture;
 
 var PibMemoryFixture = function PibMemoryFixture()
@@ -31,8 +34,18 @@ var PibMemoryFixture = function PibMemoryFixture()
   // Call the base constructor.
   PibDataFixture.call(this);
 
-  this._myPib = new PibMemory();
-  this.pib = this._myPib;
+  this.myPib_ = new PibMemory();
+  this.pib = this.myPib_;
+};
+
+var PibSqlite3Fixture = function PibSqlite3Fixture
+  (databaseDirectoryPath, databaseFilename)
+{
+  // Call the base constructor.
+  PibDataFixture.call(this);
+
+  this.myPib_ = new PibSqlite3(databaseDirectoryPath, databaseFilename);
+  this.pib = this.myPib_;
 };
 
 PibMemoryFixture.prototype = new PibDataFixture();
@@ -42,16 +55,27 @@ describe ("TestPibImpl", function() {
   beforeEach(function(done) {
     this.pibMemoryFixture = new PibMemoryFixture();
 
-    // TODO: PibSqlite3Fixture
+    var databaseDirectoryPath = "policy_config";
+    var databaseFilename = "test-pib.db";
+    this.databaseFilePath =  path.join(databaseDirectoryPath, databaseFilename);
+    try {
+      fs.unlinkSync(this.databaseFilePath);
+    } catch (e) {}
+    this.pibSqlite3Fixture = new PibSqlite3Fixture
+      (databaseDirectoryPath, databaseFilename);
 
-    this.pibImpls = [null];
+    this.pibImpls = [null, null];
     this.pibImpls[0] = this.pibMemoryFixture;
-    // TODO this.pibImpls[1] = this.pibSqlite3Fixture;
+    this.pibImpls[1] = this.pibSqlite3Fixture;
 
     done();
   });
 
   afterEach(function(done) {
+    try {
+      fs.unlinkSync(this.databaseFilePath);
+    } catch (e) {}
+
     done();
   });
 
