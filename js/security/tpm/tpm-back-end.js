@@ -41,8 +41,8 @@ var TpmBackEnd = function TpmBackEnd()
 exports.TpmBackEnd = TpmBackEnd;
 
 /**
- * Create a TpmBackEnd.Error represents a non-semantic error in backend TPM
- * processing.
+ * Create a TpmBackEnd.Error which represents a non-semantic error in backend
+ * TPM processing.
  * Call with: throw new TpmBackEnd.Error(new Error("message")).
  * @constructor
  * @param {Error} error The exception created with new Error.
