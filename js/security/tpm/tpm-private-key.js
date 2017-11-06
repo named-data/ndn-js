@@ -300,6 +300,10 @@ TpmPrivateKey.prototype.decryptPromise = function
  */
 TpmPrivateKey.prototype.signPromise = function(data, digestAlgorithm, useSync)
 {
+  if (this.keyType_ == null)
+    return SyncPromise.reject(new TpmPrivateKey.Error(new Error
+      ("sign: The private key is not loaded")));
+
   if (digestAlgorithm != DigestAlgorithm.SHA256)
     return SyncPromise.reject(new TpmPrivateKey.Error(new Error
       ("TpmPrivateKey.sign: Unsupported digest algorithm")));
@@ -356,7 +360,24 @@ TpmPrivateKey.prototype.signPromise = function(data, digestAlgorithm, useSync)
   }
 };
 
-// TODO: toPkcs1
+/**
+ * Get the encoded unencrypted private key in PKCS #1.
+ * @return {Blob} The private key encoding Blob.
+ * @throws {TpmPrivateKey.Error} If no private key is loaded, or error encoding.
+ */
+TpmPrivateKey.prototype.toPkcs1 = function()
+{
+  if (this.keyType_ == null)
+    throw new TpmPrivateKey.Error(new Error
+      ("toPkcs1: The private key is not loaded"));
+
+  // this.privateKey_ is already the base64-encoded PKCS #1 key.
+  var privateKeyBase64 = this.privateKey_.replace
+    ("-----BEGIN RSA PRIVATE KEY-----", "").replace
+    ("-----END RSA PRIVATE KEY-----", "");
+  return new Blob(new Buffer(privateKeyBase64, 'base64'));
+};
+
 // TODO: toPkcs8
 
 /**
