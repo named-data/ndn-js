@@ -21,6 +21,8 @@
  */
 
 var assert = require("assert");
+var fs = require('fs');
+var path = require('path');
 var Blob = require('../../..').Blob;
 var SignedBlob = require('../../..').SignedBlob;
 var DigestAlgorithm = require('../../..').DigestAlgorithm;
@@ -33,16 +35,27 @@ var PibKey = require('../../..').PibKey;
 var Tpm = require('../../..').Tpm;
 var VerificationHelpers = require('../../..').VerificationHelpers;
 var TpmBackEndMemory = require('../../..').TpmBackEndMemory;
+var TpmBackEndFile = require('../../..').TpmBackEndFile;
 
 describe ("TestTpmBackEnds", function() {
   beforeEach(function(done) {
     this.backEndMemory = new TpmBackEndMemory();
 
-    // TODO: TpmBackEndFile
+    var locationPath = "policy_config/ndnsec-key-file";
+    if (!fs.existsSync(locationPath))
+      fs.mkdirSync(locationPath);
+    // Delete files from a previous test.
+    var allFiles = fs.readdirSync(locationPath);
+    for (var i = 0; i < allFiles.length; ++i) {
+      try {
+        fs.unlinkSync(path.join(locationPath, allFiles[i]));
+      } catch (e) {}
+    }
+    this.backEndFile = new TpmBackEndFile(locationPath);
 
-    this.backEndList = [null];
+    this.backEndList = [null, null];
     this.backEndList[0] = this.backEndMemory;
-    // TODO this.backEndList[1] = this.backEndFile;
+    this.backEndList[1] = this.backEndFile;
 
     done();
   });
@@ -219,7 +232,6 @@ describe ("TestTpmBackEnds", function() {
   });
 
   // TODO: EcdsaSigning
-
 
   it("RandomKeyId", function(done) {
     var tpm = this.backEndMemory;
