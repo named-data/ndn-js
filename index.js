@@ -73,6 +73,7 @@ exports.NoVerifyPolicyManager = require('./js/security/policy/no-verify-policy-m
 exports.SelfVerifyPolicyManager = require('./js/security/policy/self-verify-policy-manager.js').SelfVerifyPolicyManager;
 exports.Tpm = require('./js/security/tpm/tpm.js').Tpm;
 exports.TpmBackEnd = require('./js/security/tpm/tpm-back-end.js').TpmBackEnd;
+exports.TpmBackEndFile = require('./js/security/tpm/tpm-back-end-file.js').TpmBackEndFile;
 exports.TpmBackEndMemory = require('./js/security/tpm/tpm-back-end-memory.js').TpmBackEndMemory;
 exports.CertificateV2 = require('./js/security/v2/certificate-v2.js').CertificateV2;
 exports.KeyChain = require('./js/security/key-chain.js').KeyChain;
