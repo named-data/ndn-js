@@ -702,7 +702,7 @@ KeyChain.prototype.importSafeBag = function
  * certificate for the identity already exists, use it.
  * @param {Name} identityName The name of the identity.
  * @param {KeyParams} params (optional) The key parameters if a key needs to be
- * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
+ * generated for the identity. If omitted, use KeyChain.getDefaultKeyParams().
  * @param {function} onComplete (optional) This calls onComplete(certificateName)
  * with name of the default certificate of the identity. If omitted, the return
  * value is described below. (Some crypto libraries only use a callback, so
@@ -728,7 +728,7 @@ KeyChain.prototype.createIdentityAndCertificate = function
   onError = (typeof params === "function") ? onComplete : onError;
   onComplete = (typeof params === "function") ? params : onComplete;
   params = (typeof params === "function" || !params) ?
-    KeyChain.DEFAULT_KEY_PARAMS : params;
+    KeyChain.getDefaultKeyParams() : params;
 
   return this.identityManager_.createIdentityAndCertificate
     (identityName, params, onComplete, onError);
@@ -744,7 +744,7 @@ KeyChain.prototype.createIdentityAndCertificate = function
  * certificate name to the key name.
  * @param {Name} identityName The name of the identity.
  * @param {KeyParams} params (optional) The key parameters if a key needs to be
- * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
+ * generated for the identity. If omitted, use KeyChain.getDefaultKeyParams().
  * @return {Name} The key name of the auto-generated KSK of the identity.
  */
 KeyChain.prototype.createIdentity = function(identityName, params)
@@ -1354,6 +1354,11 @@ KeyChain.verifyDataWithHmacWithSha256 = function(data, key, wireFormat)
   return newSignatureBits.equals(data.getSignature().getSignature());
 };
 
+KeyChain.getDefaultKeyParams = function() { return KeyChain.defaultKeyParams_; };
+
+/**
+ * @deprecated Use getDefaultKeyParams().
+ */
 KeyChain.DEFAULT_KEY_PARAMS = new RsaKeyParams();
 
 // Private security v2 methods
@@ -1643,7 +1648,7 @@ KeyChain.prototype.setDefaultCertificatePromise_ = function(useSync)
     })
     .then(function() {
       return thisKeyChain.identityManager_.createIdentityAndCertificatePromise
-        (defaultIdentity, KeyChain.DEFAULT_KEY_PARAMS, useSync);
+        (defaultIdentity, KeyChain.getDefaultKeyParams(), useSync);
     })
     .then(function() {
       return thisKeyChain.identityManager_.setDefaultIdentityPromise
@@ -1653,6 +1658,7 @@ KeyChain.prototype.setDefaultCertificatePromise_ = function(useSync)
 };
 
 KeyChain.defaultSigningInfo_ = new SigningInfo();
+KeyChain.defaultKeyParams_ = new RsaKeyParams();
 
 
 /**
