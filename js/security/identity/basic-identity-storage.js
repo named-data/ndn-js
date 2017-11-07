@@ -67,8 +67,8 @@ var BasicIdentityStorage = function BasicIdentityStorage
   else
     initialCheckPromise = null;
 
-  databaseFilePath = databaseFilePath || path.join
-    (BasicIdentityStorage.getUserHomePath(), ".ndn", "ndnsec-public-info.db");
+  if (databaseFilePath == undefined || databaseFilePath == "")
+    databaseFilePath = BasicIdentityStorage.getDefaultDatabaseFilePath();
 
   var initializeDatabasePromise;
   if (initialCheckPromise) {
@@ -739,6 +739,28 @@ BasicIdentityStorage.prototype.deleteIdentityInfoPromise = function
   .then(function() {
     return thisStorage.runPromise_("DELETE FROM Identity WHERE identity_name=?", identity);
   });
+};
+
+/**
+ * Get the default directory that the constructor uses if databaseFilePath is
+ * omitted. This does not try to create the directory.
+ * @return {string} The default database directory path.
+ */
+BasicIdentityStorage.getDefaultDatabaseDirectoryPath = function()
+{
+  return path.join(BasicIdentityStorage.getUserHomePath(), ".ndn");
+};
+
+/**
+ * Get the default database file path that the constructor uses if
+ * databaseFilePath is omitted.
+ * @return {string} The default database file path.
+ */
+BasicIdentityStorage.getDefaultDatabaseFilePath = function()
+{
+  return path.join
+    (BasicIdentityStorage.getDefaultDatabaseDirectoryPath(),
+     "ndnsec-public-info.db");
 };
 
 /**
