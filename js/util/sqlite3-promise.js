@@ -42,7 +42,7 @@ var Sqlite3Promise = function Sqlite3Promise
     initializeDatabasePromise = function() { return Promise.resolve(); }
 
   if (!sqlite3)
-    throw new new Error("Need to install sqlite3: sudo npm install sqlite3");
+    throw new Error("Need to install sqlite3: sudo npm install sqlite3");
 
   this.databaseFilePath_ = databaseFilePath;
   this.initializeDatabasePromise_ = initializeDatabasePromise;
