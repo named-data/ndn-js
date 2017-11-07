@@ -19,6 +19,8 @@
  */
 
 /** @ignore */
+var path = require('path'); /** @ignore */
+var fs = require('fs'); /** @ignore */
 var Crypto = require('../crypto.js'); /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
@@ -28,10 +30,12 @@ var ConfigFile = require('../util/config-file.js').ConfigFile; /** @ignore */
 var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
 var SecurityException = require('./security-exception.js').SecurityException; /** @ignore */
 var RsaKeyParams = require('./key-params.js').RsaKeyParams; /** @ignore */
+var BasicIdentityStorage = require('./identity/basic-identity-storage.js').BasicIdentityStorage; /** @ignore */
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
 var Pib = require('./pib/pib.js').Pib; /** @ignore */
 var PibImpl = require('./pib/pib-impl.js').PibImpl; /** @ignore */
 var PibKey = require('./pib/pib-key.js').PibKey; /** @ignore */
+var PibSqlite3 = require('./pib/pib-sqlite3.js').PibSqlite3; /** @ignore */
 var Tpm = require('./tpm/tpm.js').Tpm; /** @ignore */
 var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
@@ -103,11 +107,13 @@ var KeyChain = function KeyChain(arg1, arg2, arg3)
 
   if (arg1 == undefined) {
     // The default constructor.
-/* debug
-    if (os.path.isfile(BasicIdentityStorage.getDefaultDatabaseFilePath()) and
-        not os.path.isfile(PibSqlite3.getDefaultDatabaseFilePath())):
-*/
-    if (true) {
+    if (!ConfigFile)
+      // Assume we are in the browser.
+      throw new SecurityException(new Error
+        ("KeyChain: The default KeyChain constructor is not supported in the browser"));
+
+    if (fs.existsSync(BasicIdentityStorage.getDefaultDatabaseFilePath()) &&
+       !fs.existsSync(PibSqlite3.getDefaultDatabaseFilePath())) {
       // The security v1 SQLite file still exists and the security v2
       //   does not yet.
       arg1 = new IdentityManager();
