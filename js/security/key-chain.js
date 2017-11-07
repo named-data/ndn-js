@@ -36,7 +36,10 @@ var Pib = require('./pib/pib.js').Pib; /** @ignore */
 var PibImpl = require('./pib/pib-impl.js').PibImpl; /** @ignore */
 var PibKey = require('./pib/pib-key.js').PibKey; /** @ignore */
 var PibSqlite3 = require('./pib/pib-sqlite3.js').PibSqlite3; /** @ignore */
+var PibMemory = require('./pib/pib-memory.js').PibMemory; /** @ignore */
 var Tpm = require('./tpm/tpm.js').Tpm; /** @ignore */
+var TpmBackEndFile = require('./tpm/tpm-back-end-file.js').TpmBackEndFile; /** @ignore */
+var TpmBackEndMemory = require('./tpm/tpm-back-end-memory.js').TpmBackEndMemory; /** @ignore */
 var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
 var IdentityManager = require('./identity/identity-manager.js').IdentityManager; /** @ignore */
@@ -142,7 +145,7 @@ var KeyChain = function KeyChain(arg1, arg2, arg3)
     var canonicalPibLocator = pibScheme[0] + ":" + pibLocation[0];
 
     // Create the PIB.
-    this.pib_ = KeyChain._createPib(canonicalPibLocator);
+    this.pib_ = KeyChain.createPib_(canonicalPibLocator);
     var oldTpmLocator = "";
     try {
       oldTpmLocator = this.pib_.getTpmLocator();
@@ -182,7 +185,9 @@ var KeyChain = function KeyChain(arg1, arg2, arg3)
     // one TPM before. This is due to the old PIB not having TPM info.
     // The new PIB should not have this problem.
     this.tpm_ = KeyChain.createTpm_(canonicalTpmLocator);
+/* debug
     this.pib_.setTpmLocator(canonicalTpmLocator);
+*/
   }
   else if (arg1 instanceof PibImpl) {
     var pibImpl = arg1;
@@ -1363,6 +1368,188 @@ KeyChain.DEFAULT_KEY_PARAMS = new RsaKeyParams();
 
 // Private security v2 methods
 
+/**
+ * Get the PIB factories map. On the first call, this initializes the map with
+ * factories for standard PibImpl implementations.
+ * @return {object} A map where the key is the scheme string and the value is a
+ * function makePibImpl(location) which takes a string location and returns a
+ * new PibImpl object.
+ */
+KeyChain.getPibFactories_ = function()
+{
+  if (KeyChain.pibFactories_ == null) {
+    KeyChain.pibFactories_ = {};
+
+    // Add the standard factories.
+    KeyChain.pibFactories_[PibSqlite3.getScheme()] =
+      function(location) { return new PibSqlite3(location); };
+    KeyChain.pibFactories_[PibMemory.getScheme()] =
+      function(location) { return new PibMemory(); };
+  }
+
+  return KeyChain.pibFactories_;
+};
+
+/**
+ * Get the TPM factories map. On the first call, this initializes the map with
+ * factories for standard TpmBackEnd implementations.
+ * @return {object} A map where the key is the scheme string and the value is a
+ * function makeTpmBackEnd(location) which takes a string location and returns a
+ * new TpmBackEnd object.
+ */
+KeyChain.getTpmFactories_ = function()
+{
+  if (KeyChain.tpmFactories_ == null) {
+    KeyChain.tpmFactories_ = {};
+
+    // Add the standard factories.
+    KeyChain.tpmFactories_[TpmBackEndFile.getScheme()] =
+      function(location) { return new TpmBackEndFile(location); };
+    KeyChain.tpmFactories_[TpmBackEndMemory.getScheme()] =
+      function(location) { return new TpmBackEndMemory(); };
+  }
+
+  return KeyChain.tpmFactories_;
+};
+
+/**
+ * Parse the uri and set the scheme and location.
+ * @param {string} uri The URI to parse.
+ * @param {Array<string>} scheme Set scheme[0] to the scheme.
+ * @param {Array<string>} location Set location[0] to the location.
+ */
+KeyChain.parseLocatorUri_ = function(uri, scheme, location)
+{
+  iColon = uri.indexOf(':');
+  if (iColon >= 0) {
+    scheme[0] = uri.substring(0, iColon);
+    location[0] = uri.substring(iColon + 1);
+  }
+  else {
+    scheme[0] = uri;
+    location[0] = "";
+  }
+};
+
+/**
+ * Parse the pibLocator and set the pibScheme and pibLocation.
+ * @param {string} pibLocator The PIB locator to parse.
+ * @param {Array<string>} pibScheme Set pibScheme[0] to the PIB scheme.
+ * @param {Array<string>} pibLocation Set pibLocation[0] to the PIB location.
+ */
+KeyChain.parseAndCheckPibLocator_ = function(pibLocator, pibScheme, pibLocation)
+{
+  KeyChain.parseLocatorUri_(pibLocator, pibScheme, pibLocation);
+
+  if (pibScheme[0] == "")
+    pibScheme[0] = KeyChain.getDefaultPibScheme_();
+
+  if (KeyChain.getPibFactories_()[pibScheme[0]] == undefined)
+    throw new KeyChain.Error(new Error
+      ("PIB scheme `" + pibScheme[0] + "` is not supported"));
+};
+
+/**
+ * Parse the tpmLocator and set the tpmScheme and tpmLocation.
+ * @param {string} tpmLocator The TPM locator to parse.
+ * @param {Array<string>} tpmScheme Set tpmScheme[0] to the TPM scheme.
+ * @param {Array<string>} tpmLocation Set tpmLocation[0] to the TPM location.
+ */
+KeyChain.parseAndCheckTpmLocator_ = function(tpmLocator, tpmScheme, tpmLocation)
+{
+  KeyChain.parseLocatorUri_(tpmLocator, tpmScheme, tpmLocation);
+
+  if (tpmScheme[0] == "")
+    tpmScheme[0] = KeyChain.getDefaultTpmScheme_();
+
+  if (KeyChain.getTpmFactories_()[tpmScheme[0]] == undefined)
+    throw new KeyChain.Error(new Error
+      ("TPM scheme `" + tpmScheme[0] + "` is not supported"));
+};
+
+/**
+ * @return {string}
+ */
+KeyChain.getDefaultPibScheme_ = function() { return PibSqlite3.getScheme(); };
+
+/**
+ * @return {string}
+ */
+KeyChain.getDefaultTpmScheme_ = function()
+{
+  // Assume we are in Node.js, so check the system.
+  if (process.platform === "darwin")
+    throw new KeyChain.Error(new Error
+      ("TpmBackEndOsx is not implemented. You must use tpm-file."));
+
+  return TpmBackEndFile.getScheme();
+};
+
+/**
+ * Create a Pib according to the pibLocator.
+ * @param {string} pibLocator The PIB locator, e.g., "pib-sqlite3:/example/dir".
+ * @return {Pib} A new Pib object.
+ */
+KeyChain.createPib_ = function(pibLocator)
+{
+  var pibScheme = [null];
+  var pibLocation = [null];
+  KeyChain.parseAndCheckPibLocator_(pibLocator, pibScheme, pibLocation);
+  var pibFactory = KeyChain.getPibFactories_()[pibScheme[0]];
+  return new Pib(pibScheme[0], pibLocation[0], pibFactory(pibLocation[0]));
+};
+
+/**
+ * Create a Tpm according to the tpmLocator.
+ * @param {string} tpmLocator The TPM locator, e.g., "tpm-memory:".
+ * @returns {Tpm} A new Tpm object.
+ */
+KeyChain.createTpm_ = function(tpmLocator)
+{
+  var tpmScheme = [null];
+  var tpmLocation = [null];
+  KeyChain.parseAndCheckTpmLocator_(tpmLocator, tpmScheme, tpmLocation);
+  var tpmFactory = KeyChain.getTpmFactories_()[tpmScheme[0]];
+  return new Tpm(tpmScheme[0], tpmLocation[0], tpmFactory(tpmLocation[0]));
+};
+
+/**
+ * @param {ConfigFile} config
+ * @return {string}
+ */
+KeyChain.getDefaultPibLocator_ = function(config)
+{
+  if (KeyChain.defaultPibLocator_ != null)
+    return KeyChain.defaultPibLocator_;
+
+  var clientPib = process.env.NDN_CLIENT_PIB;
+  if (clientPib != undefined && clientPib != "")
+    KeyChain.defaultPibLocator_ = clientPib;
+  else
+    KeyChain.defaultPibLocator_ = config.get
+      ("pib", KeyChain.getDefaultPibScheme_() + ":");
+
+  return KeyChain.defaultPibLocator_;
+};
+
+/**
+ * @param {ConfigFile} config
+ * @return {string}
+ */
+KeyChain.getDefaultTpmLocator_ = function(config)
+{
+  if (KeyChain.defaultTpmLocator_ != null)
+    return KeyChain.defaultTpmLocator_;
+
+  var clientTpm = process.env.NDN_CLIENT_TPM;
+  if (clientTpm != undefined && clientTpm != "")
+    KeyChain.defaultTpmLocator_ = clientTpm;
+  else
+    KeyChain.defaultTpmLocator_ = config.get
+      ("tpm", KeyChain.getDefaultTpmScheme_() + ":");
+
+  return KeyChain.defaultTpmLocator_;
+};
 
 /**
  * Prepare a Signature object according to signingInfo and get the signing key
@@ -1657,9 +1844,12 @@ KeyChain.prototype.setDefaultCertificatePromise_ = function(useSync)
   });
 };
 
+KeyChain.defaultPibLocator_ = null // string
+KeyChain.defaultTpmLocator_ = null // string
+KeyChain.pibFactories_ = null // string => MakePibImpl
+KeyChain.tpmFactories_ = null // string => MakeTpmBackEnd
 KeyChain.defaultSigningInfo_ = new SigningInfo();
 KeyChain.defaultKeyParams_ = new RsaKeyParams();
-
 
 /**
  * Create an InvalidSigningInfoError which extends KeyChain.Error to indicate
