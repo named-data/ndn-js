@@ -19,6 +19,7 @@
  */
 
 /** @ignore */
+var KeyType = require('../security-types').KeyType; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
@@ -193,7 +194,7 @@ Tpm.prototype.createKeyPromise_ = function(identityName, params, useSync)
       params.getKeyType() == KeyType.ECDSA) {
     var thisTpm = this;
 
-    this.backEnd_.createKeyPromise(identityName, params, useSync)
+    return this.backEnd_.createKeyPromise(identityName, params, useSync)
     .then(function(keyHandle) {
       var keyName = keyHandle.getKeyName()
       thisTpm.keys_[keyName.toUri()] = keyHandle;
