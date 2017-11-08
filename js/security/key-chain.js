@@ -260,6 +260,104 @@ KeyChain.prototype.getTpm = function()
 
 // Identity management
 
+/**
+ * This method has two forms:
+ * deleteIdentity(identity, useSync) - Delete the PibIdentity identity. After this
+ * operation, the identity is invalid.
+ * deleteIdentity(identityName, useSync) - Delete the identity from the public and
+ * private key storage. If the identity to be deleted is the current default s
+ * system default, the method will not delete the identity and will return
+ * immediately.
+ * @param {PibIdentity} identity The identity to delete.
+ * @param {Name} identityName The name of the identity to delete.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete.
+ */
+KeyChain.prototype.deleteIdentityPromise = function(identity, useSync)
+{
+  var thisKeyChain = this;
+
+  if (identity instanceof Name) {
+    if (!this.isSecurityV1_) {
+      return this.pib_.getIdentityPromise(identity, useSync)
+      .then(function(pibIdentity) {
+        return thisKeyChain.deleteIdentityPromise(pibIdentity, useSync);
+      })
+      .catch(function(err) {
+        // Ignore errors.
+        return SyncPromise.resolve();
+      });
+
+      return;
+    }
+    else
+      return SyncPromise.reject(new KeyChain.Error(new Error
+        ("deleteIdentityPromise is not supported for security v1. Use deleteIdentity.")));
+  }
+
+  var identityName = identity.getName();
+  var keyNames = identity.getKeys_().getKeyNames();
+
+  // Make a recursive function to do the loop.
+  function deleteKeys(i) {
+    if (i >= keyNames.length)
+      // Done.
+      return SyncPromise.resolve();
+
+    return thisKeyChain.tpm_.deleteKeyPromise_(keyNames[i], useSync)
+    .then(function() {
+      // Recurse to the next iteration.
+      return deleteKeys(i + 1);
+    });
+  }
+
+  return deleteKeys(0)
+  .then(function() {
+    return thisKeyChain.pib_.removeIdentityPromise(identityName, useSync);
+    // TODO: Mark identity as invalid.
+  });
+};
+
+/**
+ * This method has two forms:
+ * deleteIdentity(identity, onComplete, onError) - Delete the PibIdentity
+ * identity (optionally using onComplete and onError callbacks). After this
+ * operation, the identity is invalid.
+ * deleteIdentity(identityName, onComplete, onError) - Delete the identity from
+ * the public and private key storage (optionally using onComplete and onError
+ * callbacks). If the identity to be deleted is the current default system
+ * default, the method will not delete the identity and will return immediately.
+ * @param {PibIdentity} identity The identity to delete.
+ * @param {Name} identityName The name of the identity to delete.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ */
+KeyChain.prototype.deleteIdentity = function(identity, onComplete, onError)
+{
+  if (identity instanceof Name && this.isSecurityV1_) {
+    this.identityManager_.deleteIdentity(identity, onComplete, onError);
+    return;
+  }
+
+  return SyncPromise.complete(onComplete, onError,
+    this.deleteIdentityPromise(identity, !onComplete));
+};
+
 // Key management
 
 // Certificate management
@@ -756,32 +854,6 @@ KeyChain.prototype.createIdentity = function(identityName, params)
 {
   return IdentityCertificate.certificateNameToPublicKeyName
     (this.createIdentityAndCertificate(identityName, params));
-};
-
-/**
- * Delete the identity from the public and private key storage. If the
- * identity to be deleted is the current default system default, this will not
- * delete the identity and will return immediately.
- * @param {Name} identityName The name of the identity.
- * @param {function} onComplete (optional) This calls onComplete() when the
- * operation is complete. If omitted, do not use it. (Some database libraries
- * only use a callback, so onComplete is required to use these.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- */
-KeyChain.prototype.deleteIdentity = function
-  (identityName, onComplete, onError)
-{
-  this.identityManager_.deleteIdentity(identityName, onComplete, onError);
 };
 
 /**
