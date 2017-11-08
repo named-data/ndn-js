@@ -358,6 +358,30 @@ KeyChain.prototype.deleteIdentity = function(identity, onComplete, onError)
     this.deleteIdentityPromise(identity, !onComplete));
 };
 
+/**
+ * Set the identity as the default identity.
+ * @param {PibIdentity} identity The identity to make the default.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ */
+KeyChain.prototype.setDefaultIdentity = function(identity, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.pib_.setDefaultIdentityPromise_(identity.getName(), !onComplete));
+};
+
 // Key management
 
 // Certificate management
@@ -882,6 +906,14 @@ KeyChain.prototype.createIdentity = function(identityName, params)
  */
 KeyChain.prototype.getDefaultIdentity = function(onComplete, onError)
 {
+  if (!this.isSecurityV1_) {
+    return SyncPromise.complete(onComplete, onError,
+      this.pib_.getDefaultIdentityPromise()
+      .then(function(pibIdentity) {
+        return SyncPromise.resolve(pibIdentity.getName());
+      }));
+  }
+
   return this.identityManager_.getDefaultIdentity(onComplete, onError);
 };
 
@@ -941,6 +973,10 @@ KeyChain.prototype.getDefaultCertificateName = function(onComplete, onError)
  */
 KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
 {
+  if (!this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("generateRSAKeyPair is not supported for security v2. Use createIdentityV2."));
+
   keySize = (typeof isKsk === "boolean") ? isKsk : keySize;
   isKsk = (typeof isKsk === "boolean") ? isKsk : false;
 
@@ -974,6 +1010,11 @@ KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
 KeyChain.prototype.setDefaultKeyForIdentity = function
   (keyName, identityNameCheck, onComplete, onError)
 {
+  if (!this.isSecurityV1_)
+    return SyncPromise.complete(onComplete, onError,
+      SyncPromise.reject(new SecurityException(new Error
+        ("setDefaultKeyForIdentity is not supported for security v2. Use getPib() methods."))));
+
   return this.identityManager_.setDefaultKeyForIdentity
     (keyName, identityNameCheck, onComplete, onError);
 };
@@ -991,6 +1032,10 @@ KeyChain.prototype.setDefaultKeyForIdentity = function
 KeyChain.prototype.generateRSAKeyPairAsDefault = function
   (identityName, isKsk, keySize)
 {
+  if (!this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("generateRSAKeyPairAsDefault is not supported for security v2. Use createIdentityV2."));
+
   return this.identityManager_.generateRSAKeyPairAsDefault
     (identityName, isKsk, keySize);
 };
@@ -1002,6 +1047,19 @@ KeyChain.prototype.generateRSAKeyPairAsDefault = function
  */
 KeyChain.prototype.createSigningRequest = function(keyName)
 {
+  if (!this.isSecurityV1_) {
+    var useSync = true;
+    return SyncPromise.complete(null, null,
+      this.pib_.getIdentityPromise
+        (PibKey.extractIdentityFromKeyName(keyName, useSync))
+      .then(function(identity) {
+        return identity.getKeyPromise(keyName, useSync);
+      })
+      .then(function(key) {
+        return SyncPromise.resolve(key.getPublicKey());
+      }));
+  }
+
   return this.identityManager_.getPublicKey(keyName).getKeyDer();
 };
 
@@ -1026,6 +1084,11 @@ KeyChain.prototype.createSigningRequest = function(keyName)
 KeyChain.prototype.installIdentityCertificate = function
   (certificate, onComplete, onError)
 {
+  if (!this.isSecurityV1_)
+    return SyncPromise.complete(onComplete, onError,
+      SyncPromise.reject(new SecurityException(new Error
+        ("installIdentityCertificate is not supported for security v2. Use getPib() methods."))));
+
   this.identityManager_.addCertificate(certificate, onComplete, onError);
 };
 
@@ -1050,6 +1113,11 @@ KeyChain.prototype.installIdentityCertificate = function
 KeyChain.prototype.setDefaultCertificateForKey = function
   (certificate, onComplete, onError)
 {
+  if (!this.isSecurityV1_)
+    return SyncPromise.complete(onComplete, onError,
+      SyncPromise.reject(new SecurityException(new Error
+        ("setDefaultCertificateForKey is not supported for security v2. Use getPib() methods."))));
+
   this.identityManager_.setDefaultCertificateForKey
     (certificate, onComplete, onError);
 };
@@ -1079,6 +1147,11 @@ KeyChain.prototype.setDefaultCertificateForKey = function
 KeyChain.prototype.getCertificate = function
   (certificateName, onComplete, onError)
 {
+  if (!this.isSecurityV1_)
+    return SyncPromise.complete(onComplete, onError,
+      SyncPromise.reject(new SecurityException(new Error
+        ("getCertificate is not supported for security v2. Use getPib() methods."))));
+
   return this.identityManager_.getCertificate
     (certificateName, onComplete, onError);
 };
@@ -1089,6 +1162,11 @@ KeyChain.prototype.getCertificate = function
 KeyChain.prototype.getIdentityCertificate = function
   (certificateName, onComplete, onError)
 {
+  if (!this.isSecurityV1_)
+    return SyncPromise.complete(onComplete, onError,
+      SyncPromise.reject(new SecurityException(new Error
+        ("getIdentityCertificate is not supported for security v2. Use getPib() methods."))));
+
   return this.identityManager_.getCertificate
     (certificateName, onComplete, onError);
 };
@@ -1118,6 +1196,10 @@ KeyChain.prototype.revokeCertificate = function(certificateName)
  */
 KeyChain.prototype.getIdentityManager = function()
 {
+  if (!this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("getIdentityManager is not supported for security v2"));
+
   return this.identityManager_;
 };
 
@@ -1176,6 +1258,11 @@ KeyChain.prototype.signByIdentity = function
   onError = (typeof wireFormat === "function") ? onComplete : onError;
   onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   wireFormat = (typeof wireFormat === "function" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
+
+  if (!this.isSecurityV1_)
+    return SyncPromise.complete(onComplete, onError,
+      SyncPromise.reject(new SecurityException(new Error
+        ("signByIdentity(buffer, identityName) is not supported for security v2. Use sign with SigningInfo."))));
 
   var useSync = !onComplete;
   var thisKeyChain = this;
@@ -1247,6 +1334,14 @@ KeyChain.prototype.signByIdentity = function
  */
 KeyChain.prototype.signWithSha256 = function(target, wireFormat)
 {
+  if (!this.isSecurityV1_) {
+    var signingInfo = SigningInfo();
+    signingInfo.setSha256Signing();
+    this.sign(target, signingInfo, wireFormat);
+
+    return;
+  }
+
   if (target instanceof Interest)
     this.identityManager_.signInterestWithSha256(target, wireFormat);
   else
