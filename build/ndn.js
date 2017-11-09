@@ -14240,7 +14240,7 @@ NdnRegexMatcherBase.Error = function NdnRegexMatcherBaseError(error)
     error.__proto__ = NdnRegexMatcherBase.Error.prototype;
     return error;
   }
-}
+};
 
 NdnRegexMatcherBase.Error.prototype = new Error();
 NdnRegexMatcherBase.Error.prototype.name = "NdnRegexMatcherBaseError";
@@ -17483,7 +17483,7 @@ Object.defineProperty(KeyLocator.prototype, "keyData",
   { get: function() { return this.getKeyDataAsBuffer(); },
     set: function(val) { this.setKeyData(val); } });
 
-// Put this last to avoid a require loop.
+// Put these last to avoid a require loop.
 /** @ignore */
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var Sha256WithEcdsaSignature = require('./sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
@@ -17752,7 +17752,7 @@ Object.defineProperty(MetaInfo.prototype, "finalBlockID",
 /** @ignore */
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
-var KeyLocator = require('./key-locator.js').KeyLocator;
+var KeyLocator = require('./key-locator.js').KeyLocator; /** @ignore */
 var ValidityPeriod = require('./security/validity-period.js').ValidityPeriod;
 
 /**
@@ -17897,7 +17897,7 @@ Sha256WithEcdsaSignature.prototype.getChangeCount = function()
 /** @ignore */
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
-var KeyLocator = require('./key-locator.js').KeyLocator;
+var KeyLocator = require('./key-locator.js').KeyLocator; /** @ignore */
 var ValidityPeriod = require('./security/validity-period.js').ValidityPeriod;
 
 /**
@@ -18855,6 +18855,26 @@ UnrecognizedDigestAlgorithmException.prototype = new SecurityException();
 UnrecognizedDigestAlgorithmException.prototype.name = "UnrecognizedDigestAlgorithmException";
 
 exports.UnrecognizedDigestAlgorithmException = UnrecognizedDigestAlgorithmException;
+
+/**
+ * Create a new InvalidArgumentException to report invalid or inconsistent
+ * arguments.
+ * Call with: throw new InvalidArgumentException(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+function InvalidArgumentException(error)
+{
+  if (error) {
+    error.__proto__ = InvalidArgumentException.prototype;
+    return error;
+  }
+}
+
+InvalidArgumentException.prototype = new Error();
+InvalidArgumentException.prototype.name = "InvalidArgumentException";
+
+exports.InvalidArgumentException = InvalidArgumentException;
 /**
  * Copyright (C) 2014-2017 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -18931,35 +18951,139 @@ DigestAlgorithm.SHA256 = 1;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/**
+ * The KeyIdType enum represents the type of a KeyId component in a key name.
+ * @constructor
+ */
+var KeyIdType = function KeyIdType()
+{
+};
+
+exports.KeyIdType = KeyIdType;
+
+// USER_SPECIFIED: A user-specified key ID. It is the user's responsibility
+// to ensure the uniqueness of key names.
+KeyIdType.USER_SPECIFIED = 0;
+
+// SHA256: The SHA256 hash of the public key as the key id. This KeyId type
+// guarantees the uniqueness of key names.
+KeyIdType.SHA256 = 1;
+
+// RANDOM: A 64-bit random number as the key id. This KeyId provides rough
+// uniqueness of key names.
+KeyIdType.RANDOM = 2;
+/**
+ * Copyright (C) 2014-2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
 /** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var KeyIdType = require('./key-id-type.js').KeyIdType; /** @ignore */
 var KeyType = require('./security-types.js').KeyType;
 
 /**
- * KeyParams is a base class for key parameters. Its subclasses are used to
- * store parameters for key generation. You should create one of the subclasses,
- * for example RsaKeyParams.
+ * KeyParams is a base class for key parameters. This also defines the
+ * subclasses which are used to store parameters for key generation.
+ * 
+ * Create a key generation parameter. This constructor is protected and used by
+ * subclasses.
+ * @param {number} keyType: The type for the created key, as an int from the
+ * KeyType enum.
+ * @param (number|Name.Component) keyIdTypeOrKeyId: If this is an int from the
+ * KeyIdType enum, it is the method for how the key id should be generated,
+ * which must not be KeyIdType.USER_SPECIFIED. If this is a Name.Component, it
+ * is the user-specified key ID, in which case this sets the keyIdType to
+ * KeyIdType.USER_SPECIFIED. (The keyId must not be empty.)
+ * @throws Error if keyIdTypeOrKeyId is a KeyIdType and it is
+ * KeyIdType.USER_SPECIFIED, or if keyIdTypeOrKeyId is a Name.Component and it
+ * is empty.
  * @constructor
  */
-var KeyParams = function KeyParams(keyType)
+var KeyParams = function KeyParams(keyType, keyIdTypeOrKeyId)
 {
-  this.keyType = keyType;
+  this.keyType_ = keyType;
+
+  if (keyIdTypeOrKeyId instanceof Name.Component) {
+    var keyId = keyIdTypeOrKeyId;
+
+    if (keyId.getValue().size() == 0)
+      throw new Error("KeyParams: keyId is empty");
+
+    this.keyIdType_ = KeyIdType.USER_SPECIFIED;
+    this.keyId_ = keyId;
+  }
+  else {
+    var keyIdType = keyIdTypeOrKeyId;
+
+    if (keyIdType == KeyIdType.USER_SPECIFIED)
+      throw new Error("KeyParams: KeyIdType is USER_SPECIFIED");
+
+    this.keyIdType_ = keyIdType;
+    this.keyId_ = new Name.Component();
+  }
 };
 
 exports.KeyParams = KeyParams;
 
-KeyParams.prototype.getKeyType = function()
-{
-  return this.keyType;
-};
+KeyParams.prototype.getKeyType = function() { return this.keyType_; };
 
-var RsaKeyParams = function RsaKeyParams(size)
-{
-  // Call the base constructor.
-  KeyParams.call(this, RsaKeyParams.getType());
+KeyParams.prototype.getKeyIdType = function() { return this.keyIdType_; };
 
-  if (size == null)
-    size = RsaKeyParams.getDefaultSize();
-  this.size = size;
+KeyParams.prototype.getKeyId = function() { return this.keyId_; };
+
+KeyParams.prototype.setKeyId = function(keyId) { this.keyId_ = keyId; };
+
+/**
+ * Possible forms of the constructor are:
+ * RsaKeyParams(keyId, size)
+ * RsaKeyParams(keyId)
+ * RsaKeyParams(size, keyIdType)
+ * RsaKeyParams(size)
+ * RsaKeyParams()
+ * @constructor
+ */
+var RsaKeyParams = function RsaKeyParams(keyIdOrSize, arg2)
+{
+  if (keyIdOrSize instanceof Name.Component) {
+    var keyId = keyIdOrSize;
+    // Call the base constructor.
+    KeyParams.call(this, RsaKeyParams.getType(), keyId);
+
+    if (arg2 == undefined)
+      this.size_ = RsaKeyParams.getDefaultSize();
+    else
+      this.size_ = arg2;
+  }
+  else {
+    var size = keyIdOrSize;
+    if (size != undefined) {
+      var keyIdType = (arg2 != undefined ? arg2 : KeyIdType.RANDOM);
+      // Call the base constructor.
+      KeyParams.call(this, RsaKeyParams.getType(), keyIdType);
+      this.size_ = size;
+    }
+    else {
+      // Call the base constructor.
+      KeyParams.call(this, RsaKeyParams.getType(), KeyIdType.RANDOM);
+      this.size_ = RsaKeyParams.getDefaultSize();
+    }
+  }
 };
 
 RsaKeyParams.prototype = new KeyParams();
@@ -18967,23 +19091,47 @@ RsaKeyParams.prototype.name = "RsaKeyParams";
 
 exports.RsaKeyParams = RsaKeyParams;
 
-RsaKeyParams.prototype.getKeySize = function()
-{
-  return this.size;
-};
+RsaKeyParams.prototype.getKeySize = function() { return this.size_; };
 
 RsaKeyParams.getDefaultSize = function() { return 2048; };
 
 RsaKeyParams.getType = function() { return KeyType.RSA; };
 
-var EcdsaKeyParams = function EcdsaKeyParams(size)
+/**
+ * Possible forms of the constructor are:
+ * EcdsaKeyParams(keyId, size)
+ * EcdsaKeyParams(keyId)
+ * EcdsaKeyParams(size, keyIdType)
+ * EcdsaKeyParams(size)
+ * EcdsaKeyParams()
+ * @constructor
+ */
+var EcdsaKeyParams = function EcdsaKeyParams(keyIdOrSize, arg2)
 {
-  // Call the base constructor.
-  KeyParams.call(this, EcdsaKeyParams.getType());
+  if (keyIdOrSize instanceof Name.Component) {
+    var keyId = keyIdOrSize;
+    // Call the base constructor.
+    KeyParams.call(this, EcdsaKeyParams.getType(), keyId);
 
-  if (size == null)
-    size = EcdsaKeyParams.getDefaultSize();
-  this.size = size;
+    if (arg2 == undefined)
+      this.size_ = EcdsaKeyParams.getDefaultSize();
+    else
+      this.size_ = arg2;
+  }
+  else {
+    var size = keyIdOrSize;
+    if (size != undefined) {
+      var keyIdType = (arg2 != undefined ? arg2 : KeyIdType.RANDOM);
+      // Call the base constructor.
+      KeyParams.call(this, EcdsaKeyParams.getType(), keyIdType);
+      this.size_ = size;
+    }
+    else {
+      // Call the base constructor.
+      KeyParams.call(this, EcdsaKeyParams.getType(), KeyIdType.RANDOM);
+      this.size_ = EcdsaKeyParams.getDefaultSize();
+    }
+  }
 };
 
 EcdsaKeyParams.prototype = new KeyParams();
@@ -18991,23 +19139,47 @@ EcdsaKeyParams.prototype.name = "EcdsaKeyParams";
 
 exports.EcdsaKeyParams = EcdsaKeyParams;
 
-EcdsaKeyParams.prototype.getKeySize = function()
-{
-  return this.size;
-};
+EcdsaKeyParams.prototype.getKeySize = function() { return this.size_; };
 
 EcdsaKeyParams.getDefaultSize = function() { return 256; };
 
 EcdsaKeyParams.getType = function() { return KeyType.ECDSA; };
 
-var AesKeyParams = function AesKeyParams(size)
+/**
+ * Possible forms of the constructor are:
+ * AesKeyParams(keyId, size)
+ * AesKeyParams(keyId)
+ * AesKeyParams(size, keyIdType)
+ * AesKeyParams(size)
+ * AesKeyParams()
+ * @constructor
+ */
+var AesKeyParams = function AesKeyParams(keyIdOrSize, arg2)
 {
-  // Call the base constructor.
-  KeyParams.call(this, AesKeyParams.getType());
+  if (keyIdOrSize instanceof Name.Component) {
+    var keyId = keyIdOrSize;
+    // Call the base constructor.
+    KeyParams.call(this, AesKeyParams.getType(), keyId);
 
-  if (size == null)
-    size = AesKeyParams.getDefaultSize();
-  this.size = size;
+    if (arg2 == undefined)
+      this.size_ = AesKeyParams.getDefaultSize();
+    else
+      this.size_ = arg2;
+  }
+  else {
+    var size = keyIdOrSize;
+    if (size != undefined) {
+      var keyIdType = (arg2 != undefined ? arg2 : KeyIdType.RANDOM);
+      // Call the base constructor.
+      KeyParams.call(this, AesKeyParams.getType(), keyIdType);
+      this.size_ = size;
+    }
+    else {
+      // Call the base constructor.
+      KeyParams.call(this, AesKeyParams.getType(), KeyIdType.RANDOM);
+      this.size_ = AesKeyParams.getDefaultSize();
+    }
+  }
 };
 
 AesKeyParams.prototype = new KeyParams();
@@ -19015,16 +19187,531 @@ AesKeyParams.prototype.name = "AesKeyParams";
 
 exports.AesKeyParams = AesKeyParams;
 
-AesKeyParams.prototype.getKeySize = function()
-{
-  return this.size;
-};
+AesKeyParams.prototype.getKeySize = function() { return this.size_; };
 
 AesKeyParams.getDefaultSize = function() { return 64; };
 
 AesKeyParams.getType = function() { return KeyType.AES; };
 /**
- * This class represents an NDN Data MetaInfo object.
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/safe-bag.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var Data = require('../data.js').Data; /** @ignore */
+var ContentType = require('../meta-info.js').ContentType; /** @ignore */
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
+var KeyLocator = require('../key-locator.js').KeyLocator; /** @ignore */
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
+var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
+var DigestAlgorithm = require('./security-types.js').DigestAlgorithm; /** @ignore */
+var KeyType = require('./security-types.js').KeyType; /** @ignore */
+var ValidityPeriod = require('./validity-period.js').ValidityPeriod; /** @ignore */
+var CertificateV2 = require('./v2/certificate-v2.js').CertificateV2; /** @ignore */
+var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
+var Tpm = require('./tpm/tpm.js').Tpm; /** @ignore */
+var TpmBackEndMemory = require('./tpm/tpm-back-end-memory.js').TpmBackEndMemory; /** @ignore */
+var PublicKey = require('./certificate/public-key.js').PublicKey;
+
+/**
+ * A SafeBag represents a container for sensitive related information such as a
+ * certificate and private key.
+ *
+ * There are two forms of the SafeBag constructor:
+ * SafeBag(certificate, privateKeyBag) - Create a SafeBag with the given
+ * certificate and private key.
+ * SafeBag(keyName, privateKeyBag, publicKeyEncoding [, password,
+ *         digestAlgorithm, wireFormat]) - Create a SafeBag with given private
+ * key and a new self-signed certificate for the given public key.
+ * @param {Data} certificate The certificate data packet (used only for
+ * SafeBag(certificate, privateKeyBag)). This copies the object.
+ * @param {Blob) privateKeyBag The encoded private key. If encrypted, this is a
+ * PKCS #8 EncryptedPrivateKeyInfo. If not encrypted, this is an unencrypted
+ * PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password (optional) The password for decrypting the private
+ * key in order to sign the self-signed certificate. If the password is supplied,
+ * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
+ * omitted or null, privateKeyBag is an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {number} digestAlgorithm: (optional) The digest algorithm for signing
+ * the self-signed certificate (as an int from the DigestAlgorithm enum). If
+ * omitted, use DigestAlgorithm.SHA256 .
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the self-signed certificate in order to sign it. If omitted, use
+ * WireFormat.getDefaultWireFormat().
+ * @constructor
+ */
+var SafeBag = function SafeBag
+  (keyNameOrCertificate, privateKeyBag, publicKeyEncoding, password,
+   digestAlgorithm, wireFormat)
+{
+  if (keyNameOrCertificate instanceof Name) {
+    var keyName = keyNameOrCertificate;
+    if (digestAlgorithm == undefined)
+      digestAlgorithm = DigestAlgorithm.SHA256;
+    if (wireFormat == undefined)
+      wireFormat = WireFormat.getDefaultWireFormat();
+
+    this.certificate_ = SafeBag.makeSelfSignedCertificate_
+      (keyName, privateKeyBag, publicKeyEncoding, password,
+       digestAlgorithm, wireFormat);
+    this.privateKeyBag_ = privateKeyBag;
+  }
+  else {
+    // The certificate is supplied.
+    this.certificate_ = new Data(keyNameOrCertificate);
+    this.privateKeyBag_ = privateKeyBag;
+  }
+};
+
+exports.SafeBag = SafeBag;
+
+/**
+ * Get the certificate data packet.
+ * @return {Data} The certificate as a Data packet. If you need to process it 
+ * as a certificate object then you must create a new CertificateV2(data).
+ */
+SafeBag.prototype.getCertificate = function() { return this.certificate_; };
+
+/**
+ * Get the encoded private key.
+ * @return {Blob} The encoded private key. If encrypted, this is a PKCS #8
+ * EncryptedPrivateKeyInfo. If not encrypted, this is an unencrypted PKCS #8
+ * PrivateKeyInfo.
+ */
+SafeBag.prototype.getPrivateKeyBag = function() { return this.privateKeyBag_; };
+
+SafeBag.makeSelfSignedCertificate_ = function
+  (keyName, privateKeyBag, publicKeyEncoding, password, digestAlgorithm,
+   wireFormat)
+{
+  var certificate = new CertificateV2();
+
+  // Set the name.
+  var now = new Date().getTime();
+  var certificateName = new Name(keyName);
+  certificateName.append("self").appendVersion(now);
+  certificate.setName(certificateName);
+
+  // Set the MetaInfo.
+  certificate.getMetaInfo().setType(ContentType.KEY);
+  // Set a one-hour freshness period.
+  certificate.getMetaInfo().setFreshnessPeriod(3600 * 1000.0);
+
+  // Set the content.
+  var publicKey = new PublicKey(publicKeyEncoding);
+  certificate.setContent(publicKey.getKeyDer());
+
+  // Create a temporary in-memory Tpm and import the private key.
+  var tpm = new Tpm("", "", new TpmBackEndMemory());
+  SyncPromise.complete(null,
+    tpm.importPrivateKeyPromise_(keyName, privateKeyBag.buf(), password, true));
+
+  // Set the signature info.
+  if (publicKey.getKeyType() == KeyType.RSA)
+    certificate.setSignature(new Sha256WithRsaSignature());
+  else if (publicKey.getKeyType() == KeyType.ECDSA)
+    certificate.setSignature(new Sha256WithEcdsaSignature());
+  else
+    throw new Error("Unsupported key type");
+  var signatureInfo = certificate.getSignature();
+  KeyLocator.getFromSignature(signatureInfo).setType(KeyLocatorType.KEYNAME);
+  KeyLocator.getFromSignature(signatureInfo).setKeyName(keyName);
+
+  // Set a 20-year validity period.
+  ValidityPeriod.getFromSignature(signatureInfo).setPeriod
+    (now, now + 20 * 365 * 24 * 3600 * 1000.0);
+
+  // Encode once to get the signed portion.
+  var encoding = certificate.wireEncode(wireFormat);
+  var signatureBytes = SyncPromise.complete(null,
+    tpm.signPromise(encoding.signedBuf(), keyName, digestAlgorithm, true));
+  signatureInfo.setSignature(signatureBytes);
+
+  // Encode again to include the signature.
+  certificate.wireEncode(wireFormat);
+
+  return certificate;
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/signing-info.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var PibIdentity = require('./pib/pib-identity.js').PibIdentity; /** @ignore */
+var PibKey = require('./pib/pib-key.js').PibKey; /** @ignore */
+var DigestAlgorithm = require('./security-types.js').DigestAlgorithm; /** @ignore */
+var ValidityPeriod = require('./validity-period.js').ValidityPeriod;
+
+/**
+ * SigningInfo holds the signing parameters passed to the KeyChain. A
+ * SigningInfo is invalid if the specified identity/key/certificate does not
+ * exist, or the PibIdentity or PibKey instance is not valid.
+ *
+ * The SigningInfo constructor has multiple forms:
+ * SigningInfo() - Create a default SigningInfo with
+ * SigningInfo.SignerType.NULL and an empty Name.
+ * SigningInfo(signerType, signerName) - Create a SigningInfo with the
+ * signerType and optional signer Name.
+ * Signinginfo(identity) - Create a SigningInfo of type
+ * SigningInfo.SignerType.ID according to the given PibIdentity, where the
+ * digest algorithm is set to DigestAlgorithm.SHA256.
+ * SigningInfo(key) - Create a SigningInfo of type SigningInfo.SignerType.KEY
+ * according to the given PibKey, where the digest algorithm is set to
+ * DigestAlgorithm.SHA256.
+ * SigningInfo(signingString) - Create a SigningInfo from its string
+ * representation, where the digest algorithm is set to DigestAlgorithm.SHA256.
+
+ * @param {number} signerType The type of signer as an int from the
+ * SigningInfo.SignerType enum.
+ * @param {Name} signerName The name of signer. The interpretation of the
+ * signerName differs based on the signerType. This copies the Name.
+ * @param {PibIdentity} identity An existing PibIdentity which is not copied.
+ * @param {PibKey} key An existing PibKey which is not copied.
+ * @param {string} signingString The representative signing string for the
+ * signing method, as follows:
+ * Default signing: "" (the empty string).
+ * Signing with the default certificate of the default key for the identity
+ * with the specified name:
+ * `id:/my-identity`.
+ * Signing with the default certificate of the key with the specified name:
+ * `key:/my-identity/ksk-1`.
+ * Signing with the certificate with the specified name:
+ * `cert:/my-identity/KEY/ksk-1/ID-CERT/%FD%01`.
+ * Signing with sha256 digest: `id:/localhost/identity/digest-sha256` (the
+ * value returned by getDigestSha256Identity()).
+ * @throws Error If the signingString format is invalid.
+ * @constructor
+ */
+var SigningInfo = function SigningInfo(arg1, arg2)
+{
+  this.validityPeriod_ = new ValidityPeriod();
+  if (arg1 == undefined) {
+    this.reset(SigningInfo.SignerType.NULL);
+    this.digestAlgorithm_ = DigestAlgorithm.SHA256;
+  }
+  else if (typeof arg1 === 'number') {
+    var signerType = arg1;
+
+    this.reset(signerType);
+    if (arg2 != undefined)
+      this.name_ = new Name(arg2);
+    this.digestAlgorithm_ = DigestAlgorithm.SHA256;
+  }
+  else if (arg1 instanceof PibIdentity) {
+    this.digestAlgorithm_ = DigestAlgorithm.SHA256;
+    this.setPibIdentity(arg1);
+  }
+  else if (arg1 instanceof PibKey) {
+    this.digestAlgorithm_ = DigestAlgorithm.SHA256;
+    this.setPibKey(arg1);
+  }
+  else if (typeof arg1 === 'string') {
+    signingString = arg1;
+
+    this.reset(SigningInfo.SignerType.NULL);
+    this.digestAlgorithm_ = DigestAlgorithm.SHA256;
+
+    if (signingString == "")
+      return;
+
+    var iColon = signingString.indexOf(':');
+    if (iColon < 0)
+      throw new Error("Invalid signing string cannot represent SigningInfo");
+
+    var scheme = signingString.substring(0, iColon);
+    var nameArg = signingString.substring(iColon + 1);
+
+    if (scheme == "id") {
+      if (nameArg == SigningInfo.getDigestSha256Identity().toUri())
+        this.setSha256Signing();
+      else
+        this.setSigningIdentity(new Name(nameArg));
+    }
+    else if (scheme == "key")
+      this.setSigningKeyName(new Name(nameArg));
+    else if (scheme == "cert")
+      this.setSigningCertificateName(new Name(nameArg));
+    else
+      throw new Error("Invalid signing string scheme");
+  }
+  else
+    throw new Error("SigningInfo: Unrecognized type");
+};
+
+exports.SigningInfo = SigningInfo;
+
+SigningInfo.SignerType = function SigningInfoSignerType() {};
+
+/** No signer is specified. Use default settings or follow the trust schema. */
+SigningInfo.SignerType.NULL = 0;
+/** The signer is an identity. Use its default key and default certificate. */
+SigningInfo.SignerType.ID = 1;
+/** The signer is a key. Use its default certificate. */
+SigningInfo.SignerType.KEY = 2;
+/** The signer is a certificate. Use it directly. */
+SigningInfo.SignerType.CERT = 3;
+/** Use a SHA-256 digest. No signer needs to be specified. */
+SigningInfo.SignerType.SHA256 = 4;
+
+/**
+ * Set this to type SignerType.ID and an identity with name identityName. This
+ * does not change the digest algorithm.
+ * @param {Name} identityName The name of the identity. This copies the Name.
+ * @return {SigningInfo} This SigningInfo.
+ */
+SigningInfo.prototype.setSigningIdentity = function(identityName)
+{
+  this.reset(SigningInfo.SignerType.ID);
+  this.name_ = new Name(identityName);
+  return this;
+};
+
+/**
+ * Set this to type SignerType.KEY and a key with name keyName. This does not
+ * change the digest algorithm.
+ * @param {Name} keyName The name of the key. This copies the Name.
+ * @return {SigningInfo} This SigningInfo.
+ */
+SigningInfo.prototype.setSigningKeyName = function(keyName)
+{
+  this.reset(SigningInfo.SignerType.KEY);
+  this.name_ = new Name(keyName);
+  return this;
+};
+
+/**
+ * Set this to type SignerType.CERT and a certificate with name certificateName.
+ * This does not change the digest algorithm.
+ * @param {Name} certificateName The name of the certificate. This copies the
+ * Name.
+ * @return {SigningInfo} This SigningInfo.
+ */
+SigningInfo.prototype.setSigningCertificateName = function(certificateName)
+{
+  this.reset(SigningInfo.SignerType.CERT);
+  this.name_ = new Name(certificateName);
+  return this;
+};
+
+/**
+ * Set this to type SignerType.SHA256, and set the digest algorithm to
+ * DigestAlgorithm.SHA256.
+ * @return {SigningInfo} This SigningInfo.
+ */
+SigningInfo.prototype.setSha256Signing = function()
+{
+  this.reset(SigningInfo.SignerType.SHA256);
+  this.digestAlgorithm_ = DigestAlgorithm.SHA256;
+  return this;
+};
+
+/**
+ * Set this to type SignerType.ID according to the given PibIdentity. This does
+ * not change the digest algorithm.
+ * @param {PibIdentity} identity An existing PibIdentity which is not copied, or
+ * null. If this is null then use the default identity, otherwise use
+ * identity.getName().
+ * @return {SigningInfo} This SigningInfo.
+ */
+SigningInfo.prototype.setPibIdentity = function(identity)
+{
+  this.reset(SigningInfo.SignerType.ID);
+  if (identity != null)
+    this.name_ = identity.getName();
+  this.identity_ = identity;
+  return this;
+};
+
+/**
+ * Set this to type SignerType.KEY according to the given PibKey. This does not
+ * change the digest algorithm.
+ * @param {PibKey} key An existing PibKey which is not copied, or null. If this
+ * is null then use the default key for the identity, otherwise use
+ * key.getName().
+ * @return {SigningInfo} This SigningInfo.
+ */
+SigningInfo.prototype.setPibKey = function(key)
+{
+  this.reset(SigningInfo.SignerType.KEY);
+  if (key != null)
+    this.name_ = key.getName();
+  this.key_ = key;
+  return this;
+};
+
+/**
+ * Get the type of the signer.
+ * @return {number} The type of the signer, as an int from the
+ * SigningInfo.SignerType enum.
+ */
+SigningInfo.prototype.getSignerType = function() { return this.type_; };
+
+/**
+ * Get the name of signer.
+ * @return {Name} The name of signer. The interpretation differs based on the
+ * signerType.
+ */
+SigningInfo.prototype.getSignerName = function() { return this.name_; };
+
+/**
+ * Get the PibIdentity of the signer.
+ * @return {PibIdentity} The PibIdentity handler of the signer, or null if
+ * getSignerName() should be used to find the identity.
+ * @throws Error if the signer type is not SignerType.ID.
+ */
+SigningInfo.prototype.getPibIdentity = function()
+{
+  if (this.type_ != SigningInfo.SignerType.ID)
+    throw new Error("getPibIdentity: The signer type is not SignerType.ID");
+  return this.identity_;
+};
+
+/**
+ * Get the PibKey of the signer.
+ * @return {PibKey} The PibKey handler of the signer, or null if
+ * getSignerName() should be used to find the key.
+ * @throws Error if the signer type is not SignerType.KEY.
+ */
+SigningInfo.prototype.getPibKey = function()
+{
+  if (this.type_ != SigningInfo.SignerType.KEY)
+    throw new Error("getPibKey: The signer type is not SignerType.KEY");
+  return this.key_;
+};
+
+/**
+ * Set the digest algorithm for public key operations.
+ * @param {number} digestAlgorithm The digest algorithm, as an int from the 
+ * DigestAlgorithm enum.
+ * @return {SigningInfo} This SigningInfo.
+ */
+SigningInfo.prototype.setDigestAlgorithm = function(digestAlgorithm)
+{
+  this.digestAlgorithm_ = digestAlgorithm;
+  return this;
+};
+
+/**
+ * Get the digest algorithm for public key operations.
+ * @return {number} The digest algorithm, as an int from the DigestAlgorithm
+ * enum.
+ */
+SigningInfo.prototype.getDigestAlgorithm = function()
+{
+  return this.digestAlgorithm_;
+};
+
+/**
+ * Set the validity period for the signature info.
+ * Note that the equivalent ndn-cxx method uses a semi-prepared SignatureInfo,
+ * but this method only uses the ValidityPeriod from the SignatureInfo.
+ * @param {ValidityPeriod} validityPeriod The validity period, which is copied.
+ * @return {SigningInfo} This SigningInfo.
+ */
+SigningInfo.prototype.setValidityPeriod = function(validityPeriod)
+{
+  this.validityPeriod_ = new ValidityPeriod(validityPeriod);
+  return this;
+};
+
+/**
+ * Get the validity period for the signature info.
+ * Note that the equivalent ndn-cxx method uses a semi-prepared SignatureInfo,
+ * but this method only uses the ValidityPeriod from the SignatureInfo.
+ * @returns {ValidityPeriod} The validity period.
+ */
+SigningInfo.prototype.getValidityPeriod = function()
+{
+  return this.validityPeriod_;
+};
+
+/**
+ * Get the string representation of this SigningInfo.
+ * @return {string} The string representation.
+ */
+SigningInfo.prototype.toString = function()
+{
+  if (this.type_ == SigningInfo.SignerType.NULL)
+    return "";
+  else if (this.type_ == SigningInfo.SignerType.ID)
+    return "id:" + this.getSignerName().toUri();
+  else if (this.type_ == SigningInfo.SignerType.KEY)
+    return "key:" + this.getSignerName().toUri();
+  else if (this.type_ == SigningInfo.SignerType.CERT)
+    return "cert:" + this.getSignerName().toUri();
+  else if (this.type_ == SigningInfo.SignerType.SHA256)
+    return "id:" + SigningInfo.getDigestSha256Identity().toUri();
+  else
+    // We don't expect this to happen.
+    throw new Error("Unknown signer type");
+};
+
+/**
+ * Get the localhost identity which indicates that the signature is generated 
+ * using SHA-256.
+ * @return {Name} A new Name of the SHA-256 identity.
+ */
+SigningInfo.getDigestSha256Identity = function()
+{
+  return new Name("/localhost/identity/digest-sha256");
+};
+
+/**
+ * Check and set the signerType, and set others to default values. This does NOT
+ * reset the digest algorithm.
+ * @param {number} signerType The type of signer as an int from the
+ * SigningInfo.SignerType enum.
+ */
+SigningInfo.prototype.reset = function(signerType)
+{
+  if (!(signerType == SigningInfo.SignerType.NULL ||
+        signerType == SigningInfo.SignerType.ID ||
+        signerType == SigningInfo.SignerType.KEY ||
+        signerType == SigningInfo.SignerType.CERT ||
+        signerType == SigningInfo.SignerType.SHA256))
+    throw new Error("SigningInfo: The signerType is not valid");
+
+  this.type_ = signerType;
+  this.name_ = new Name();
+  this.identity_ = null;
+  this.key_ = null;
+  this.validityPeriod_ = new ValidityPeriod();
+};
+/**
  * Copyright (C) 2016-2017 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx src/security https://github.com/named-data/ndn-cxx
@@ -19048,24 +19735,39 @@ AesKeyParams.getType = function() { return KeyType.AES; };
  * A ValidityPeriod is used in a Data packet's SignatureInfo and represents the
  * begin and end times of a certificate's validity period.
  *
- * Create a new ValidityPeriod object, possibly copying values from another
- * object.
- * @param {ValidityPeriod} value (optional) If value is a ValidityPeriod, copy
- * its values. If value is omitted, reate a default ValidityPeriodLite where the
- * period is not specified.
+ * There are three forms of the ValidityPeriod constructor:
+ * ValidityPeriod() - Create a default ValidityPeriod where the period is not
+ * specified.
+ * ValidityPeriod(validityPeriod) - Create a new ValidityPeriod with a copy of
+ * the fields in the given validityPeriod object.
+ * ValidityPeriod(notBefore, notAfter) - Create a ValidityPeriod with the given
+ * period.
+ * @param {ValidityPeriod} validityPeriod The ValidityPeriod to copy.
+ * @param {number} notBefore The beginning of the validity period range as
+ * milliseconds since Jan 1, 1970 UTC. Note that this is rounded up to the
+ * nearest whole second.
+ * @param {number} notAfter The end of the validity period range as milliseconds
+ * since Jan 1, 1970 UTC. Note that this is rounded down to the nearest whole
+ * second.
  * @constructor
  */
-var ValidityPeriod = function ValidityPeriod(value)
+var ValidityPeriod = function ValidityPeriod(validityPeriodOrNotBefore, notAfter)
 {
-  if (typeof value === 'object' && value instanceof ValidityPeriod) {
+  this.changeCount_ = 0;
+
+  if (typeof validityPeriodOrNotBefore === 'object' &&
+      validityPeriodOrNotBefore instanceof ValidityPeriod) {
     // Copy values.
-    this.notBefore_ = value.notBefore_;
-    this.notAfter_ = value.notAfter_;
+    validityPeriod = validityPeriodOrNotBefore;
+    this.notBefore_ = validityPeriod.notBefore_;
+    this.notAfter_ = validityPeriod.notAfter_;
+  }
+  else if (notAfter != undefined) {
+    notBefore = validityPeriodOrNotBefore;
+    this.setPeriod(notBefore, notAfter)
   }
   else
     this.clear();
-
-  this.changeCount_ = 0;
 };
 
 exports.ValidityPeriod = ValidityPeriod;
@@ -19126,14 +19828,55 @@ ValidityPeriod.prototype.setPeriod = function(notBefore, notAfter)
 
 /**
  * Check if the time falls within the validity period.
- * @param {number} time The time to check as milliseconds since Jan 1, 1970 UTC.
+ * @param {number} time (optional) The time to check as milliseconds since
+ * Jan 1, 1970 UTC. If omitted, use the current time.
  * @return {boolean} True if the beginning of the validity period is less than
  * or equal to time and time is less than or equal to the end of the validity
  * period.
  */
 ValidityPeriod.prototype.isValid = function(time)
 {
+  if (time == undefined)
+      // Round up to the nearest second like in setPeriod.
+      time = Math.round(Math.ceil
+        (Math.round(new Date().getTime()) / 1000.0) * 1000.0);
+
   return this.notBefore_ <= time && time <= this.notAfter_;
+};
+
+/**
+ * If the signature is a type that has a ValidityPeriod (so that
+ * getFromSignature will succeed), return true. Note: This is a static method of
+ * ValidityPeriod instead of a method of Signature so that the Signature base
+ * class does not need to be overloaded with all the different kinds of
+ * information that various signature algorithms may use.
+ * @param {Signature} An object of a subclass of Signature.
+ * @return {boolean} True if the signature is a type that has a ValidityPeriod,
+ * otherwise false.
+ */
+ValidityPeriod.canGetFromSignature = function(signature)
+{
+  return signature.constructor != undefined &&
+    (signature.constructor.name === "Sha256WithRsaSignature" ||
+     signature.constructor.name === "Sha256WithEcdsaSignature");
+};
+
+/**
+ * If the signature is a type that has a ValidityPeriod, then return it.
+ * Otherwise throw an error.
+ * @param {Signature} An object of a subclass of Signature.
+ * @return {ValidityPeriod} The signature's ValidityPeriod. It is an error if
+ * signature doesn't have a ValidityPeriod.
+ */
+ValidityPeriod.getFromSignature = function(signature)
+{
+  if (signature.constructor != undefined &&
+      (signature.constructor.name === "Sha256WithRsaSignature" ||
+       signature.constructor.name === "Sha256WithEcdsaSignature"))
+    return signature.getValidityPeriod();
+  else
+    throw new Error
+      ("ValidityPeriod.getFromSignature: Signature type does not have a ValidityPeriod");
 };
 
 /**
@@ -19143,6 +19886,239 @@ ValidityPeriod.prototype.isValid = function(time)
 ValidityPeriod.prototype.getChangeCount = function()
 {
   return this.changeCount_;
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/verification-helpers.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Crypto = require('../crypto.js'); /** @ignore */
+var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var KeyType = require('./security-types.js').KeyType; /** @ignore */
+var DigestAlgorithm = require('./security-types.js').DigestAlgorithm; /** @ignore */
+var UseSubtleCrypto = require("../use-subtle-crypto-node.js").UseSubtleCrypto; /** @ignore */
+var PublicKey = require('./certificate/public-key.js').PublicKey;
+
+/**
+ * The VerificationHelpers class has static methods to verify signatures and
+ * digests.
+ */
+var VerificationHelpers = function VerificationHelpers() {};
+
+exports.VerificationHelpers = VerificationHelpers;
+
+/**
+ * Verify the buffer against the signature using the public key.
+ * @param {Buffer|Blob} buffer The input buffer to verify.
+ * @param {Buffer|Blob} signature The signature bytes.
+ * @param {PublicKey|Buffer:Blob} publicKey The object containing the public key,
+ * or the public key DER which is used to make the PublicKey object.
+ * @param {number} digestAlgorithm (optional) The digest algorithm as an int
+ * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if verification
+ * succeeds, false if verification fails, or a promise rejected with Error for
+ * an invalid public key type or digestAlgorithm.
+ */
+VerificationHelpers.verifySignaturePromise = function
+  (buffer, signature, publicKey, digestAlgorithm, useSync)
+{
+  if (typeof digestAlgorithm === 'boolean') {
+    // digestAlgorithm is omitted, so shift.
+    useSync = digestAlgorithm;
+    digestAlgorithm = undefined;
+  }
+
+  if (buffer instanceof Blob)
+    buffer = buffer.buf();
+  if (signature instanceof Blob)
+    signature = signature.buf();
+  if (!(publicKey instanceof PublicKey)) {
+    // Turn publicKey into a PublicKey object.
+    try {
+      if (!(publicKey instanceof Blob))
+        publicKey = new Blob(publicKey);
+      publicKey = new PublicKey(publicKey);
+    } catch (ex) {
+      return SyncPromise.reject(new Error
+        ("verifySignature: Error decoding public key DER: " + ex));
+    }
+  }
+  if (digestAlgorithm == undefined)
+    digestAlgorithm = DigestAlgorithm.SHA256;
+
+  if (digestAlgorithm == DigestAlgorithm.SHA256) {
+    if (publicKey.getKeyType() == KeyType.RSA) {
+      if (UseSubtleCrypto() && !useSync) {
+        var algo = {name:"RSASSA-PKCS1-v1_5", hash:{name:"SHA-256"}};
+
+        return crypto.subtle.importKey
+          ("spki", publicKey.getKeyDer().buf().buffer, algo, true, ["verify"])
+        .then(function(key) {
+          return crypto.subtle.verify(algo, key, signature, buffer)
+        });
+      }
+      else {
+        try {
+          if (VerificationHelpers.verifyUsesString_ === null)
+            VerificationHelpers.setVerifyUsesString_();
+
+          // The crypto verifier requires a PEM-encoded public key.
+          var keyBase64 = publicKey.getKeyDer().buf().toString('base64');
+          var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+          for (var i = 0; i < keyBase64.length; i += 64)
+            keyPem += (keyBase64.substr(i, 64) + "\n");
+          keyPem += "-----END PUBLIC KEY-----";
+
+          var verifier = Crypto.createVerify('RSA-SHA256');
+          verifier.update(buffer);
+          var signatureBytes = VerificationHelpers.verifyUsesString_ ?
+            signature.toString('binary') : signature;
+          return SyncPromise.resolve(verifier.verify(keyPem, signatureBytes));
+        } catch (ex) {
+          return SyncPromise.reject(new Error
+            ("verifySignature: Error is RSA verify: " + ex));
+        }
+      }
+    }
+    else if (publicKey.getKeyType() == KeyType.ECDSA) {
+      try {
+        if (VerificationHelpers.verifyUsesString_ === null)
+          VerificationHelpers.setVerifyUsesString_();
+
+        // The crypto verifier requires a PEM-encoded public key.
+        var keyBase64 =  publicKey.getKeyDer().buf().toString("base64");
+        var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+        for (var i = 0; i < keyBase64.length; i += 64)
+          keyPem += (keyBase64.substr(i, 64) + "\n");
+        keyPem += "-----END PUBLIC KEY-----";
+
+        // Just create a "sha256". The Crypto library will infer ECDSA from the key.
+        var verifier = Crypto.createVerify("sha256");
+        verifier.update(buffer);
+        var signatureBytes = VerificationHelpers.verifyUsesString_ ?
+          signature.toString('binary') : signature;
+        return SyncPromise.resolve(verifier.verify(keyPem, signatureBytes));
+      } catch (ex) {
+        return SyncPromise.reject(new Error
+          ("verifySignature: Error is ECDSA verify: " + ex));
+      }
+    }
+    else
+      return SyncPromise.reject(new Error("verifySignature: Invalid key type"));
+  }
+  else
+    return SyncPromise.reject(new Error
+      ("verifySignature: Invalid digest algorithm"));
+};
+
+/**
+ * Verify the buffer against the signature using the public key.
+ * @param {Buffer|Blob} buffer The input buffer to verify.
+ * @param {Buffer|Blob} signature The signature bytes.
+ * @param {PublicKey|Buffer:Blob} publicKey The object containing the public key,
+ * or the public key DER which is used to make the PublicKey object.
+ * @param {number} digestAlgorithm (optional) The digest algorithm as an int
+ * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
+ * @param {function} onComplete (optional) This calls
+ * onComplete(result) with true if verification succeeds, false if verification
+ * fails. If omitted, the return value is described below. (Some crypto
+ * libraries only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some crypto libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {boolean} If onComplete is omitted, return true if verification
+ * succeeds, false if verification fails. Otherwise, if onComplete is supplied
+ * then return undefined and use onComplete as described above.
+ * @throws Error for an invalid public key type or digestAlgorithm. However, if
+ * onComplete and onError are defined, then if there is an exception return
+ * undefined and call onError(exception).
+ */
+VerificationHelpers.verifySignature = function
+  (buffer, signature, publicKey, digestAlgorithm, onComplete, onError)
+{
+  if (typeof digestAlgorithm === 'boolean') {
+    // digestAlgorithm is omitted, so shift.
+    onError = onComplete;
+    onComplete = digestAlgorithm;
+    digestAlgorithm = undefined;
+  }
+
+  return SyncPromise.complete(onComplete, onError,
+    this.verifySignaturePromise
+      (buffer, signature, publicKey, digestAlgorithm, !onComplete));
+};
+
+/**
+ * Verify the buffer against the digest using the digest algorithm.
+ * @param {Buffer|Blob} buffer The input buffer to verify.
+ * @param {Buffer|Blob} digest The digest bytes.
+ * @param {number} digestAlgorithm The digest algorithm as an int from the
+ * DigestAlgorithm enum, such as DigestAlgorithm.SHA256.
+ * @return {boolean} true if verification succeeds, false if verification fails.
+ * @throws Error for an invalid digestAlgorithm.
+ */
+VerificationHelpers.verifyDigest = function(buffer, digest, digestAlgorithm)
+{
+  if (buffer instanceof Blob)
+    buffer = buffer.buf();
+  if (digest instanceof Blob)
+    digest = digest.buf();
+
+  if (digestAlgorithm == DigestAlgorithm.SHA256) {
+    var hash = Crypto.createHash('sha256');
+    hash.update(buffer);
+    var computedDigest = hash.digest();
+
+    // Use a loop to compare since it handles different array types.
+    if (digest.length != computedDigest.length)
+      return false;
+    for (var i = 0; i < digest.length; ++i) {
+      if (digest[i] != computedDigest[i])
+        return false;
+    }
+    return true;
+  }
+  else
+    throw new Error("verifyDigest: Invalid digest algorithm");
+};
+
+// The first time verify is called, it sets this to determine if a signature
+// buffer needs to be converted to a string for the crypto verifier.
+VerificationHelpers.verifyUsesString_ = null;
+VerificationHelpers.setVerifyUsesString_ = function()
+{
+  var hashResult = Crypto.createHash('sha256').digest();
+  // If the hash result is a string, we assume that this is a version of
+  //   crypto where verify also uses a string signature.
+  VerificationHelpers.verifyUsesString_ = (typeof hashResult === 'string');
 };
 /**
  * Copyright (C) 2014-2017 Regents of the University of California.
@@ -24301,6 +25277,3020 @@ IdentityManager.prototype.checkTpmPromise_ = function(canonicalTpmLocator)
   });
 };
 /**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/certificate-container.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var CertificateV2 = require('../v2/certificate-v2.js').CertificateV2;
+
+/**
+ * A PibCertificateContainer is used to search/enumerate the certificates of a
+ * key. (A PibCertificateContainer object can only be created by PibKey.)
+ *
+ * You should not call this private constructor. Instead, use
+ * PibCertificateContainer.makePromise().
+ *
+ * @param {Name} keyName The name of the key, which is copied.
+ * @param {PibImpl} pibImpl The PIB backend implementation.
+ * @param {Array<Name>} certificateNames The set of certificate
+ * names as an array of Name, as returned by getCertificatesOfKeyPromise.
+ * @constructor
+ */
+var PibCertificateContainer = function PibCertificateContainer
+  (keyName, pibImpl, certificateNames)
+{
+  // The cache of loaded certificates. certificateName URI string => CertificateV2.
+  // (Use a string because we can't use the Name object as the key in JavaScript.)
+  this.certificates_ = {};
+  this.keyName_ = new Name(keyName);
+  this.pibImpl_ = pibImpl;
+
+  if (pibImpl == null)
+    throw new Error("The pibImpl is null");
+
+  // A set of Name URI string.
+  // (Use a string because we can't use indexOf with a Name object.)
+  this.certificateNameUris_ = [];
+  for (var i in certificateNames)
+    this.certificateNameUris_.push(certificateNames[i].toUri());
+};
+
+exports.PibCertificateContainer = PibCertificateContainer;
+
+/**
+ * Create a PibCertificateContainer for a key with keyName.
+ * This method that returns a Promise is needed instead of a normal constructor
+ * since it uses asynchronous PibImpl methods to initialize the object.
+ * This method should only be called by PibKeyImpl.
+ *
+ * @param {Name} keyName The name of the key, which is copied.
+ * @param {PibImpl} pibImpl The PIB backend implementation.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @param {Promise|SyncPromise} A promise which returns the new
+ * PibCertificateContainer.
+ */
+PibCertificateContainer.makePromise = function(keyName, pibImpl, useSync)
+{
+  if (pibImpl == null)
+    return SyncPromise.reject(new Error("The pibImpl is null"));
+
+  return pibImpl.getCertificatesOfKeyPromise(keyName, useSync)
+  .then(function(certificateNames) {
+    return SyncPromise.resolve(new PibCertificateContainer
+      (keyName, pibImpl, certificateNames));
+  });
+};
+
+/**
+ * Get the number of certificates in the container.
+ * @return {number} The number of certificates.
+ */
+PibCertificateContainer.prototype.size = function()
+{
+  return this.certificateNameUris_.length;
+};
+
+/**
+ * Add certificate into the container. If the certificate already exists, this
+ * replaces it.
+ * @param {CertificateV2} certificate The certificate to add. This copies the
+ * object.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with Error if the name of the certificate does not match the
+ * key name.
+ */
+PibCertificateContainer.prototype.addPromise = function(certificate, useSync)
+{
+  if (!this.keyName_.equals(certificate.getKeyName()))
+    return SyncPromise.reject(new Error("The certificate name `" +
+      certificate.getKeyName().toUri() + "` does not match the key name"));
+
+  var certificateNameUri = certificate.getName().toUri();
+  if (this.certificateNameUris_.indexOf(certificateNameUri) < 0)
+    // Not already in the set.
+    this.certificateNameUris_.push(certificateNameUri);
+
+  // Copy the certificate.
+  this.certificates_[certificateNameUri] =
+    new CertificateV2(certificate);
+  return this.pibImpl_.addCertificatePromise(certificate, useSync);
+};
+
+/**
+ * Remove the certificate with name certificateName from the container. If the
+ * certificate does not exist, do nothing.
+ * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with Error if certificateName does not match the key name.
+ */
+PibCertificateContainer.prototype.removePromise = function
+  (certificateName, useSync)
+{
+  if (!CertificateV2.isValidName(certificateName) ||
+      !CertificateV2.extractKeyNameFromCertName(certificateName).equals
+        (this.keyName_))
+    return SyncPromise.reject(new Error("Certificate name `" +
+      certificateName.toUri() + "` is invalid or does not match key name"));
+
+  var certificateNameUri = certificateName.toUri();
+  var index = this.certificateNameUris_.indexOf(certificateNameUri);
+  // Do nothing if it doesn't exist.
+  if (index >= 0)
+    this.certificateNameUris_.splice(index, 1);
+
+  delete this.certificates_[certificateNameUri];
+
+  return this.pibImpl_.removeCertificatePromise(certificateName, useSync);
+};
+
+/**
+ * Get the certificate with certificateName from the container.
+ * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {SyncPromise} A promise which returns a copy of the CertificateV2, or
+ * a promise rejected with Error if certificateName does not match the key name,
+ * or a promise rejected with Pib.Error if the certificate does not exist.
+ */
+PibCertificateContainer.prototype.getPromise = function(certificateName, useSync)
+{
+  var certificateNameUri = certificateName.toUri();
+  var cachedCertificate = this.certificates_[certificateNameUri];
+  if (cachedCertificate != undefined)
+    // Make a copy.
+    // TODO: Copy is expensive. Can we just tell the caller not to modify it?
+    return SyncPromise.resolve(new CertificateV2(cachedCertificate));
+
+  // Get from the PIB and cache.
+  if (!CertificateV2.isValidName(certificateName) ||
+      !CertificateV2.extractKeyNameFromCertName(certificateName).equals
+        (this.keyName_))
+    return SyncPromise.reject(new Error("Certificate name `" +
+      certificateName.toUri() + "` is invalid or does not match key name"));
+
+  var thisContainer = this;
+
+  return this.pibImpl_.getCertificatePromise(certificateName, useSync)
+  .then(function(certificate) {
+    thisContainer.certificates_[certificateNameUri] = certificate;
+    // Make a copy.
+    // TODO: Copy is expensive. Can we just tell the caller not to modify it?
+    return SyncPromise.resolve(new CertificateV2(certificate));
+  });
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/key-container.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var PibIdentity = require('./pib-identity.js').PibIdentity; /** @ignore */
+var PibIdentityImpl = require('./detail/pib-identity-impl.js').PibIdentityImpl; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+
+/**
+ * A PibIdentityContainer is used to search/enumerate the identities in a PIB.
+ * (A PibIdentityContainer object can only be created by the Pib class.)
+ *
+ * You should not call this private constructor. Instead, use
+ * PibIdentityContainer.makePromise().
+ *
+ * @param {PibImpl} pibImpl The PIB backend implementation.
+ * @param {Array<Name>} identityNames The set of identity names as an array of
+ * Name, as returned by getIdentitiesPromise.
+ * @constructor
+ */
+var PibIdentityContainer = function PibIdentityContainer(pibImpl, identityNames)
+{
+  // Cache of loaded PibIdentityImpl objects. Name URI string => PibIdentityImpl.
+  // (Use a string because we can't use the Name object as the key in JavaScript.)
+  this.identities_ = {};
+
+  this.pibImpl_ = pibImpl;
+
+  if (pibImpl == null)
+    throw new Error("The pibImpl is null");
+
+  // A set of Name URI string.
+  // (Use a string because we can't use indexOf with a Name object.)
+  this.identityNameUris_ = [];
+  for (var i in identityNames)
+    this.identityNameUris_.push(identityNames[i].toUri());
+};
+
+exports.PibIdentityContainer = PibIdentityContainer;
+
+/**
+ * Create a PibIdentityContainer using to use the pibImpl backend implementation.
+ * This method that returns a Promise is needed instead of a normal constructor
+ * since it uses asynchronous PibImpl methods to initialize the object.
+ * This method should only be called by Pib.
+ *
+ * @param {PibImpl} pibImpl The PIB backend implementation.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @param {Promise|SyncPromise} A promise which returns the new
+ * PibIdentityContainer.
+ */
+PibIdentityContainer.makePromise = function(pibImpl, useSync)
+{
+  if (pibImpl == null)
+    return SyncPromise.reject(new Error("The pibImpl is null"));
+
+  return pibImpl.getIdentitiesPromise(useSync)
+  .then(function(identityNames) {
+    return SyncPromise.resolve(new PibIdentityContainer(pibImpl, identityNames));
+  });
+};
+
+/**
+ * Get the number of identities in the container.
+ * @return {number} The number of identities.
+ */
+PibIdentityContainer.prototype.size = function()
+{
+  return this.identityNameUris_.length;
+};
+
+/**
+ * Add an identity with name identityName into the container. Create the
+ * identity if it does not exist.
+ * @param {Name} identityName The name of the identity, which is copied.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibIdentity object.
+ */
+PibIdentityContainer.prototype.addPromise = function(identityName, useSync)
+{
+  var identityNameUri = identityName.toUri();
+  if (this.identityNameUris_.indexOf(identityNameUri) < 0) {
+    var thisContainer = this;
+
+    this.identityNameUris_.push(identityNameUri);
+    return PibIdentityImpl.makePromise(identityName, this.pibImpl_, true, useSync)
+    .then(function(pibIdentityImpl) {
+      thisContainer.identities_[identityNameUri] = pibIdentityImpl;
+      return thisContainer.getPromise(identityName, useSync);
+    });
+  }
+  else
+    return this.getPromise(identityName, useSync);
+};
+
+/**
+ * Remove the identity with name identityName from the container, and its
+ * related keys and certificates. If the default identity is being removed, no
+ * default identity will be selected. If the identity does not exist, do nothing.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
+ */
+PibIdentityContainer.prototype.removePromise = function(identityName, useSync)
+{
+  var identityNameUri = identityName.toUri();
+  var index = this.identityNameUris_.indexOf(identityNameUri);
+  // Do nothing if it doesn't exist.
+  if (index >= 0)
+    this.identityNameUris_.splice(index, 1);
+
+  delete this.identities_[identityNameUri];
+
+  return this.pibImpl_.removeIdentityPromise(identityName, useSync);
+};
+
+/**
+ * Get the identity with name identityName from the container.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {SyncPromise} A promise which returns the PibIdentity object, or a
+ * promise rejected with Pib.Error if the identity does not exist.
+ */
+PibIdentityContainer.prototype.getPromise = function(identityName, useSync)
+{
+  var identityNameUri = identityName.toUri();
+  var pibIdentityImpl = this.identities_[identityNameUri];
+
+  if (pibIdentityImpl == undefined) {
+    var thisContainer = this;
+
+    return PibIdentityImpl.makePromise(identityName, this.pibImpl_, false, useSync)
+    .then(function(pibIdentityImpl) {
+      thisContainer.identities_[identityNameUri] = pibIdentityImpl;
+
+      return SyncPromise.resolve(new PibIdentity(pibIdentityImpl));
+    });
+  }
+  else
+    return SyncPromise.resolve(new PibIdentity(pibIdentityImpl));
+};
+
+/**
+ * Reset the state of the container. This method removes all loaded identities
+ * and retrieves identity names from the PIB implementation.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {SyncPromise} A promise which fulfills when finished.
+ */
+PibIdentityContainer.prototype.resetPromise = function(useSync)
+{
+  var thisContainer = this;
+
+  this.identities_ = {};
+  return this.pibImpl_.getIdentitiesPromise(useSync)
+  .then(function(identityNames) {
+    thisContainer.identityNameUris_ = [];
+    for (var i in identityNames)
+      thisContainer.identityNameUris_.push(identityNames[i].toUri());
+
+    return SyncPromise.resolve();
+  });
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/identity.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+
+/**
+ * A PibIdentity is at the top level in PIB's Identity-Key-Certificate hierarchy.
+ * An identity has a Name, and contains zero or more keys, at most one of which
+ * is set as the default key of this identity. Properties of a key can be
+ * accessed after obtaining a Key object.
+ *
+ * Create a PibIdentity which uses the impl backend implementation. This
+ * constructor should only be called by PibIdentityContainer.
+ *
+ * @param {PibIdentityImpl} impl The PibIdentityImpl.
+ * @constructor
+ */
+var PibIdentity = function PibIdentity(impl)
+{
+  this.impl_ = impl;
+};
+
+exports.PibIdentity = PibIdentity;
+
+/**
+ * Get the name of the identity.
+ * @return {Name} The name of the identity. You must not change the Name object.
+ * If you need to change it then make a copy.
+ * @throws Error if the backend implementation instance is invalid.
+ */
+PibIdentity.prototype.getName = function()
+{
+  return this.lock_().getName();
+};
+
+/**
+ * Get the key with name keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibKey object, or a
+ * promise rejected with Pib.Error if the key does not exist, or a promise
+ * rejected with Error if the backend implementation instance is invalid.
+ */
+PibIdentity.prototype.getKeyPromise = function(keyName, useSync)
+{
+  try {
+    return this.lock_().getKeyPromise(keyName, useSync);
+  } catch (ex) {
+    return SyncPromise.reject(ex);
+  }
+};
+
+/**
+ * Get the key with name keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {function} onComplete (optional) This calls onComplete(key) with the
+ * PibKey object. If omitted, the return value is described below. (Some
+ * database libraries only use a callback, so onComplete is required to use
+ * these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {PibKey} If onComplete is omitted, return the PibKey object.
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete
+ * as described above.
+ * @throws Pib.Error if the key does not exist, or Error if the backend
+ * implementation instance is invalid. However, if onComplete and onError are
+ * defined, then if there is an exception return undefined and call
+ * onError(exception).
+ */
+PibIdentity.prototype.getKey = function(keyName, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.getKeyPromise(keyName, !onComplete));
+};
+
+/**
+ * Get the default key of this Identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibKey object of
+ * the default key, or a promise rejected with Pib.Error if the default key has
+ * not been set, or a promise rejected with Error if the backend implementation
+ * instance is invalid.
+ */
+PibIdentity.prototype.getDefaultKeyPromise = function(useSync)
+{
+  try {
+    return this.lock_().getDefaultKeyPromise(useSync);
+  } catch (ex) {
+    return SyncPromise.reject(ex);
+  }
+};
+
+/**
+ * Get the default key of this Identity.
+ * @param {function} onComplete (optional) This calls onComplete(key) with the
+ * PibKey object of the default key. If omitted, the return value is described
+ * below. (Some database libraries only use a callback, so onComplete is
+ * required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {PibKey} If onComplete is omitted, return the PibKey object of the 
+ * default key. Otherwise, if onComplete is supplied then return undefined and
+ * use onComplete as described above.
+ * @throws Pib.Error if the default key has not been set, or Error if the
+ * backend implementation instance is invalid. However, if onComplete and
+ * onError are defined, then if there is an exception return undefined and call
+ * onError(exception).
+ */
+PibIdentity.prototype.getDefaultKey = function(onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.getDefaultKeyPromise(!onComplete));
+};
+
+/**
+ * Add the key. If a key with the same name already exists, overwrite the key. 
+ * If no default key for the identity has been set, then set the added key as 
+ * default for the identity. This should only be called by KeyChain.
+ * @param {Buffer} key The public key bits. This copies the buffer.
+ * @param {Name} keyName The name of the key. This copies the name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibKey object, or a
+ * promise rejected with Error if the backend implementation instance is invalid.
+ */
+PibIdentity.prototype.addKeyPromise_ = function(key, keyName, useSync)
+{
+  try {
+    return this.lock_().addKeyPromise(key, keyName, useSync);
+  } catch (ex) {
+    return SyncPromise.reject(ex);
+  }
+};
+
+/**
+ * Remove the key with keyName and its related certificates. If the key does not
+ * exist, do nothing. This should only be called by KeyChain.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with Error if the backend implementation instance is invalid.
+ */
+PibIdentity.prototype.removeKeyPromise_ = function(keyName, useSync)
+{
+  try {
+    return this.lock_().removeKeyPromise(keyName, useSync);
+  } catch (ex) {
+    return SyncPromise.reject(ex);
+  }
+};
+
+/**
+ * setDefaultKey has two forms:
+ * setDefaultKey(keyName, useSync) - Set the key with name keyName as the
+ * default key of the identity.
+ * setDefaultKey(key, keyName, useSync) - Add a key with name keyName and set it
+ * as the default key of the identity.
+ * This should only be called by KeyChain.
+ * @param {Buffer} key The buffer of encoded key bytes. (This is only used when
+ * calling setDefaultKey(key, keyName). )
+ * @param {Name} keyName The name of the key. This copies the name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {SyncPromise} A promise which returns the PibKey object of the
+ * default key, or a promise rejected with Error the name of the key does not
+ * match the identity name (or if the backend implementation instance is 
+ * invalid), or a promise rejected with Pib.Error if calling
+ * setDefaultKey(keyName) and the key does not exist, or if calling
+ * setDefaultKey(key, keyName) and a key with the same name already exists.
+ */
+PibIdentity.prototype.setDefaultKeyPromise_ = function(keyOrKeyName, arg2, arg3)
+{
+  try {
+    return this.lock_().setDefaultKeyPromise(keyOrKeyName, arg2, arg3);
+  } catch (ex) {
+    return SyncPromise.reject(ex);
+  }
+};
+
+/**
+ * Get the PibKeyContainer in the PibIdentityImpl. This should only be called by
+ * KeyChain.
+ * @return {PibKeyContainer} The PibKeyContainer.
+ */
+PibIdentity.prototype.getKeys_ = function()
+{
+  return this.lock_().keys_;
+};
+
+/**
+ * Check the validity of the impl_ instance.
+ * @return {PibIdentityImpl} The PibIdentityImpl when the instance is valid.
+ * @throws Error if the backend implementation instance is invalid.
+ */
+PibIdentity.prototype.lock_ = function()
+{
+  if (this.impl_ == null)
+    throw new Error("Invalid key instance");
+
+  return this.impl_;
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/pib-impl.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+
+/**
+ * PibImpl is an abstract base class for the PIB implementation used by the Pib
+ * class. This class defines the interface that an actual PIB implementation
+ * should provide, for example PibMemory.
+ * @constructor
+ */
+var PibImpl = function PibImpl()
+{
+};
+
+exports.PibImpl = PibImpl;
+
+/**
+ * Create a PibImpl.Error which represents a non-semantic error in PIB
+ * implementation processing. A subclass of PibImpl may throw a subclass of this
+ * class when there's a non-semantic error, such as a storage problem.
+ * Call with: throw new PibImpl.Error(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+PibImpl.Error = function PibImplError(error)
+{
+  if (error) {
+    error.__proto__ = PibImpl.Error.prototype;
+    return error;
+  }
+};
+
+PibImpl.Error.prototype = new Error();
+PibImpl.Error.prototype.name = "PibImplError";
+
+// TpmLocator management.
+
+/**
+ * Set the corresponding TPM information to tpmLocator. This method does not
+ * reset the contents of the PIB.
+ * @param {string} tpmLocator The TPM locator string.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the TPM locator is set.
+ */
+PibImpl.prototype.setTpmLocatorPromise = function(tpmLocator, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.setTpmLocatorPromise is not implemented"));
+};
+
+/**
+ * Get the TPM Locator.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the TPM locator string.
+ */
+PibImpl.prototype.getTpmLocatorPromise = function(useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.getTpmLocatorPromise is not implemented"));
+};
+
+// Identity management.
+
+/**
+ * Check for the existence of an identity.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if the identity exists,
+ * otherwise false.
+ */
+PibImpl.prototype.hasIdentityPromise = function(identityName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.hasIdentityPromise is not implemented"));
+};
+
+/**
+ * Add the identity. If the identity already exists, do nothing. If no default
+ * identity has been set, set the added identity as the default.
+ * @param {Name} identityName The name of the identity to add. This copies the
+ * name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the identity is added.
+ */
+PibImpl.prototype.addIdentityPromise = function(identityName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.addIdentityPromise is not implemented"));
+};
+
+/**
+ * Remove the identity and its related keys and certificates. If the default
+ * identity is being removed, no default identity will be selected. If the
+ * identity does not exist, do nothing.
+ * @param {Name} identityName The name of the identity to remove.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the identity is removed.
+ */
+PibImpl.prototype.removeIdentityPromise = function(identityName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.removeIdentityPromise is not implemented"));
+};
+
+/**
+ * Erase all certificates, keys, and identities.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the identities are cleared.
+ */
+PibImpl.prototype.clearIdentitiesPromise = function(useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.clearIdentitiesPromise is not implemented"));
+};
+
+/**
+ * Get the names of all the identities.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a fresh set of identity names
+ * as an array of Name. The Name objects are fresh copies.
+ */
+PibImpl.prototype.getIdentitiesPromise = function(useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.getIdentitiesPromise is not implemented"));
+};
+
+/**
+ * Set the identity with the identityName as the default identity. If the
+ * identity with identityName does not exist, then it will be created.
+ * @param {Name} identityName The name for the default identity. This copies the
+ * name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the default identity is
+ * set.
+ */
+PibImpl.prototype.setDefaultIdentityPromise = function(identityName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.setDefaultIdentityPromise is not implemented"));
+};
+
+/**
+ * Get the default identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the Name of the default
+ * identity as a fresh copy, or a promise rejected with Pib.Error for no default
+ * identity.
+ */
+PibImpl.prototype.getDefaultIdentityPromise = function(useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.getDefaultIdentityPromise is not implemented"));
+};
+
+// Key management.
+
+/**
+ * Check for the existence of a key with keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if the key exists,
+ * otherwise false. Return false if the identity does not exist.
+ */
+PibImpl.prototype.hasKeyPromise = function(keyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.hasKeyPromise is not implemented"));
+};
+
+/**
+ * Add the key. If a key with the same name already exists, overwrite the key.
+ * If the identity does not exist, it will be created. If no default key for the
+ * identity has been set, then set the added key as the default for the
+ * identity. If no default identity has been set, identity becomes the default.
+ * @param {Name} identityName The name of the identity that the key belongs to.
+ * This copies the name.
+ * @param {Name} keyName The name of the key. This copies the name.
+ * @param {Buffer} key The public key bits. This copies the array.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the key is added.
+ */
+PibImpl.prototype.addKeyPromise = function(identityName, keyName, key, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.addKeyPromise is not implemented"));
+};
+
+/**
+ * Remove the key with keyName and its related certificates. If the key does not
+ * exist, do nothing.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the key is removed.
+ */
+PibImpl.prototype.removeKeyPromise = function(keyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.removeKeyPromise is not implemented"));
+};
+
+/**
+ * Get the key bits of a key with name keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the key bits as a Blob, or a
+ * promise rejected with Pib.Error if the key does not exist.
+ */
+PibImpl.prototype.getKeyBitsPromise = function(keyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.getKeyBitsPromise is not implemented"));
+};
+
+/**
+ * Get all the key names of the identity with the name identityName. The
+ * returned key names can be used to create a KeyContainer. With a key name and
+ * a backend implementation, one can create a Key front end instance.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return SyncPromise} A promise which returns the set of key names as an array
+ * of Name. The Name objects are fresh copies. If the identity does not exist,
+ * return an empty array.
+ */
+PibImpl.prototype.getKeysOfIdentityPromise = function(identityName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.getKeysOfIdentityPromise is not implemented"));
+};
+
+/**
+ * Set the key with keyName as the default key for the identity with name
+ * identityName.
+ * @param {Name} identityName The name of the identity. This copies the name.
+ * @param {Name} keyName The name of the key. This copies the name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the default key is set,
+ * or a promise rejected with Pib.Error if the key does not exist.
+ */
+PibImpl.prototype.setDefaultKeyOfIdentityPromise = function
+  (identityName, keyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.setDefaultKeyOfIdentityPromise is not implemented"));
+};
+
+/**
+ * Get the name of the default key for the identity with name identityName.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the name of the default key as
+ * a fresh copy, or a promise rejected with Pib.Error if the identity does not
+ * exist.
+ */
+PibImpl.prototype.getDefaultKeyOfIdentityPromise = function(identityName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.getDefaultKeyOfIdentityPromise is not implemented"));
+};
+
+// Certificate management.
+
+/**
+ * Check for the existence of a certificate with name certificateName.
+ * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if the certificate exists,
+ * otherwise false.
+ */
+PibImpl.prototype.hasCertificatePromise = function(certificateName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.hasCertificatePromise is not implemented"));
+};
+
+/**
+ * Add the certificate. If a certificate with the same name (without implicit
+ * digest) already exists, then overwrite the certificate. If the key or
+ * identity does not exist, they will be created. If no default certificate for
+ * the key has been set, then set the added certificate as the default for the
+ * key. If no default key was set for the identity, it will be set as the
+ * default key for the identity. If no default identity was selected, the
+ * certificate's identity becomes the default.
+ * @param {CertificateV2} certificate The certificate to add. This copies the
+ * object.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the certificate is added.
+ */
+PibImpl.prototype.addCertificatePromise = function(certificate, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.addCertificatePromise is not implemented"));
+};
+
+/**
+ * Remove the certificate with name certificateName. If the certificate does not
+ * exist, do nothing.
+ * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the certificate is
+ * removed.
+ */
+PibImpl.prototype.removeCertificatePromise = function(certificateName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.removeCertificatePromise is not implemented"));
+};
+
+/**
+ * Get the certificate with name certificateName.
+ * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the CertificateV2, or a promise
+ * rejected with Pib.Error if the certificate does not exist.
+ */
+PibImpl.prototype.getCertificatePromise = function(certificateName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.getCertificatePromise is not implemented"));
+};
+
+/**
+ * Get a list of certificate names of the key with id keyName. The returned
+ * certificate names can be used to create a PibCertificateContainer. With a
+ * certificate name and a backend implementation, one can obtain the certificate.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the set of certificate names as
+ * an array of Name. The Name objects are fresh copies. If the key does not
+ * exist, return an empty array.
+ */
+PibImpl.prototype.getCertificatesOfKeyPromise = function(keyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.getCertificatesOfKeyPromise is not implemented"));
+};
+
+/**
+ * Set the cert with name certificateName as the default for the key with
+ * keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {Name} certificateName The name of the certificate. This copies the
+ * name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the default certificate
+ * is set, or a promise rejected with Pib.Error if the certificate with name
+ * certificateName does not exist.
+ */
+PibImpl.prototype.setDefaultCertificateOfKeyPromise = function
+  (keyName, certificateName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.setDefaultCertificateOfKeyPromise is not implemented"));
+};
+
+/**
+ * Get the default certificate for the key with eyName.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a copy of the default
+ * CertificateV2, or a promise rejected with Pib.Error if the default
+ * certificate does not exist.
+ */
+PibImpl.prototype.getDefaultCertificateOfKeyPromise = function(keyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("PibImpl.getDefaultCertificateOfKeyPromise is not implemented"));
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/key-container.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var PibKey = require('./pib-key.js').PibKey; /** @ignore */
+var PibKeyImpl = require('./detail/pib-key-impl.js').PibKeyImpl; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+
+/**
+ * A PibKeyContainer is used to search/enumerate the keys of an identity. (A
+ * PibKeyContainer object can only be created by PibIdentity.)
+ *
+ * You should not call this private constructor. Instead, use
+ * PibKeyContainer.makePromise().
+ *
+ * @param {Name} identityName The name of the identity, which is copied.
+ * @param {PibImpl} pibImpl The PIB backend implementation.
+ * @param {Array<Name>} keyNames The set of key names as an array of Name, as
+ * returned by getKeysOfIdentityPromise.
+ * @constructor
+ */
+var PibKeyContainer = function PibKeyContainer(identityName, pibImpl, keyNames)
+{
+  // Cache of loaded PibKeyImpl objects. Name URI string => PibKeyImpl.
+  // (Use a string because we can't use the Name object as the key in JavaScript.)
+  this.keys_ = {};
+
+  // Copy the Name.
+  this.identityName_ = new Name(identityName);
+  this.pibImpl_ = pibImpl;
+
+  if (pibImpl == null)
+    throw new Error("The pibImpl is null");
+
+  // A set of Name URI string.
+  // (Use a string because we can't use indexOf with a Name object.)
+  this.keyNameUris_ = [];
+  for (var i in keyNames)
+    this.keyNameUris_.push(keyNames[i].toUri());
+};
+
+exports.PibKeyContainer = PibKeyContainer;
+
+/**
+ * Create a PibKeyContainer for an identity with identityName.
+ * This method that returns a Promise is needed instead of a normal constructor
+ * since it uses asynchronous PibImpl methods to initialize the object.
+ * This method should only be called by PibIdentityImpl.
+ *
+ * @param {Name} identityName The name of the identity, which is copied.
+ * @param {PibImpl} pibImpl The PIB backend implementation.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @param {Promise|SyncPromise} A promise which returns the new
+ * PibKeyContainer.
+ */
+PibKeyContainer.makePromise = function(identityName, pibImpl, useSync)
+{
+  if (pibImpl == null)
+    return SyncPromise.reject(new Error("The pibImpl is null"));
+
+  return pibImpl.getKeysOfIdentityPromise(identityName, useSync)
+  .then(function(keyNames) {
+    return SyncPromise.resolve(new PibKeyContainer
+      (identityName, pibImpl, keyNames));
+  });
+};
+
+/**
+ * Get the number of keys in the container.
+ * @return {number} The number of keys.
+ */
+PibKeyContainer.prototype.size = function()
+{
+  return this.keyNameUris_.length;
+};
+
+/**
+ * Add a key with name keyName into the container. If a key with the same name
+ * already exists, this replaces it.
+ * @param {Buffer} key The buffer of encoded key bytes.
+ * @param {Name} keyName The name of the key, which is copied.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibKey object, or a
+ * promise rejected with Error if the name of the key does not match the
+ * identity name.
+ */
+PibKeyContainer.prototype.addPromise = function(key, keyName, useSync)
+{
+  if (!this.identityName_.equals(PibKey.extractIdentityFromKeyName(keyName)))
+    return SyncPromise.reject(new Error("The key name `" + keyName.toUri() +
+      "` does not match the identity name `" +
+      this.identityName_.toUri() + "`"));
+
+  var keyNameUri = keyName.toUri();
+  if (this.keyNameUris_.indexOf(keyNameUri) < 0)
+    // Not already in the set.
+    this.keyNameUris_.push(keyNameUri);
+
+  var thisContainer = this;
+
+  return PibKeyImpl.makePromise(keyName, key, this.pibImpl_, useSync)
+  .then(function(pibKeyImpl) {
+    thisContainer.keys_[keyNameUri] = pibKeyImpl;
+
+    return thisContainer.getPromise(keyName, useSync);
+  });
+};
+
+/**
+ * Remove the key with name keyName from the container, and its related
+ * certificates. If the key does not exist, do nothing.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with Error if keyName does not match the identity name.
+ */
+PibKeyContainer.prototype.removePromise = function(keyName, useSync)
+{
+  if (!this.identityName_.equals(PibKey.extractIdentityFromKeyName(keyName)))
+    return SyncPromise.reject(new Error("Key name `" + keyName.toUri() +
+      "` does not match identity `" + this.identityName_.toUri() + "`"));
+
+  var keyNameUri = keyName.toUri();
+  var index = this.keyNameUris_.indexOf(keyNameUri);
+  // Do nothing if it doesn't exist.
+  if (index >= 0)
+    this.keyNameUris_.splice(index, 1);
+
+  delete this.keys_[keyNameUri];
+
+  return this.pibImpl_.removeKeyPromise(keyName, useSync);
+};
+
+/**
+ * Get the key with name keyName from the container.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibKey object, or a
+ * promise rejected with Error if keyName does not match the identity name, or a
+ * promise rejected with Pib.Error if the key does not exist.
+ */
+PibKeyContainer.prototype.getPromise = function(keyName, useSync)
+{
+  if (!this.identityName_.equals(PibKey.extractIdentityFromKeyName(keyName)))
+    return SyncPromise.reject(new Error("Key name `" + keyName.toUri() +
+      "` does not match identity `" + this.identityName_.toUri() + "`"));
+
+  var keyNameUri = keyName.toUri();
+  var pibKeyImpl = this.keys_[keyNameUri];
+
+  if (pibKeyImpl == undefined) {
+    var thisContainer = this;
+
+    return PibKeyImpl.makePromise(keyName, this.pibImpl_, useSync)
+    .then(function(pibKeyImpl) {
+      thisContainer.keys_[keyNameUri] = pibKeyImpl;
+
+      return SyncPromise.resolve(new PibKey(pibKeyImpl));
+    });
+  }
+  else
+    return SyncPromise.resolve(new PibKey(pibKeyImpl));
+};
+
+/**
+ * Get the names of all the keys in the container.
+ * @return {Array<Name>} A new list of Name.
+ */
+PibKeyContainer.prototype.getKeyNames = function()
+{
+  var result = [];
+
+  for (var nameUri in this.keys_)
+    result.push(new Name(nameUri));
+
+  return result;
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/key.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var CertificateV2 = require('../v2/certificate-v2.js').CertificateV2; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+
+/**
+ * A PibKey provides access to a key at the second level in the PIB's 
+ * Identity-Key-Certificate hierarchy. A PibKey object has a Name (identity +
+ * "KEY" + keyId), and contains one or more CertificateV2 objects, one of which
+ * is set as the default certificate of this key. A certificate can be directly
+ * accessed by getting a CertificateV2 object.
+ *
+ * Create a PibKey which uses the impl backend implementation. This constructor
+ * should only be called by PibKeyContainer.
+ *
+ * @param {PibKeyImpl} impl An object of a subclass of PibKeyImpl.
+ * @constructor
+ */
+var PibKey = function PibKey(impl)
+{
+  this.impl_ = impl;
+};
+
+exports.PibKey = PibKey;
+
+/**
+ * Get the key name.
+ * @return {Name} The key name. You must not modify the Key object. If you need
+ * to modify it, make a copy.
+ * @throws Error if the backend implementation instance is invalid.
+ */
+PibKey.prototype.getName = function() { return this.lock_().getName(); };
+
+/**
+ * Get the name of the identity this key belongs to.
+ * @return {Name} The name of the identity. You must not modify the Key object.
+ * If you need to modify it, make a copy.
+ * @throws Error if the backend implementation instance is invalid.
+ */
+PibKey.prototype.getIdentityName = function()
+{
+  return this.lock_().getIdentityName();
+};
+
+/**
+ * Get the key type.
+ * @return {number} The key type as an int from the KeyType enum.
+ * @throws Error if the backend implementation instance is invalid.
+ */
+PibKey.prototype.getKeyType = function() { return this.lock_().getKeyType(); };
+
+/**
+ * Get the public key encoding.
+ * @return {Blob} The public key encoding.
+ * @throws Error if the backend implementation instance is invalid.
+ */
+PibKey.prototype.getPublicKey = function() { return this.lock_().getPublicKey(); };
+
+/**
+ * Get the certificate with name certificateName.
+ * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a copy of the
+ * CertificateV2, or a promise rejected with Error if certificateName does not
+ * match the key name (or if the backend implementation instance is invalid), or
+ * a promise rejected with Pib.Error if the certificate does not exist.
+ */
+PibKey.prototype.getCertificatePromise = function(certificateName, useSync)
+{
+  try {
+    return this.lock_().getCertificatePromise(certificateName, useSync);
+  } catch (ex) {
+    return SyncPromise.reject(ex);
+  }
+};
+
+/**
+ * Get the certificate with name certificateName.
+ * @param {Name} certificateName The name of the certificate.
+ * @param {function} onComplete (optional) This calls
+ * onComplete(certificate) with a copy of the CertificateV2. If omitted, the
+ * return value is described below. (Some database libraries only use a callback,
+ * so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {CertificateV2} If onComplete is omitted, return a copy of the
+ * CertificateV2. Otherwise, if onComplete is supplied then return undefined and
+ * use onComplete as described above.
+ * @throws Error if certificateName does not match the key name (or if the 
+ * backend implementation instance is invalid), or Pib.Error if the certificate 
+ * does not exist. However, if onComplete and onError are defined, then if there
+ * is an exception return undefined and call onError(exception).
+ */
+PibKey.prototype.getCertificate = function(certificateName, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.getCertificatePromise(certificateName, !onComplete));
+};
+
+/**
+ * Get the default certificate for this Key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the default
+ * CertificateV2, or a promise rejected with Error if the backend implementation
+ * instance is invalid, or a promise rejected with Pib.Error if the default
+ * certificate does not exist.
+ */
+PibKey.prototype.getDefaultCertificatePromise = function(useSync)
+{
+  try {
+    return this.lock_().getDefaultCertificatePromise(useSync);
+  } catch (ex) {
+    return SyncPromise.reject(ex);
+  }
+};
+
+/**
+ * Get the default certificate for this Key.
+ * @param {function} onComplete (optional) This calls
+ * onComplete(certificate) with the default CertificateV2. If omitted, the
+ * return value is described below. (Some database libraries only use a callback,
+ * so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {CertificateV2} If onComplete is omitted, return the default
+ * CertificateV2. Otherwise, if onComplete is supplied then return undefined and
+ * use onComplete as described above.
+ * @throws Error if the backend implementation instance is invalid, Pib.Error if
+ * the default certificate does not exist. However, if onComplete and onError
+ * are defined, then if there is an exception return undefined and call
+ * onError(exception).
+ */
+PibKey.prototype.getDefaultCertificate = function(onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.getDefaultCertificatePromise(!onComplete));
+};
+
+/**
+ * Construct a key name based on the appropriate naming conventions.
+ * @param {Name} identityName The name of the identity.
+ * @param {Name.Component} keyId The key ID name component.
+ * @return {Name} The constructed name as a new Name.
+ */
+PibKey.constructKeyName = function(identityName, keyId)
+{
+  var keyName = new Name(identityName);
+  keyName.append(CertificateV2.KEY_COMPONENT).append(keyId);
+
+  return keyName;
+};
+
+/**
+ * Check if keyName follows the naming conventions for a key name.
+ * @param {Name} keyName The name of the key.
+ * @return {boolean} True if keyName follows the naming conventions, otherwise
+ * false.
+ */
+PibKey.isValidKeyName = function(keyName)
+{
+  return keyName.size() > CertificateV2.MIN_KEY_NAME_LENGTH &&
+         keyName.get(-CertificateV2.MIN_KEY_NAME_LENGTH).equals
+           (CertificateV2.KEY_COMPONENT);
+};
+
+/**
+ * Extract the identity namespace from keyName.
+ * @param {Name} keyName The name of the key.
+ * @return {Name} The identity name as a new Name.
+ */
+PibKey.extractIdentityFromKeyName = function(keyName)
+{
+  if (!PibKey.isValidKeyName(keyName))
+    throw new Error("Key name `" + keyName.toUri() +
+      "` does not follow the naming conventions");
+
+  // Trim everything after and including "KEY".
+  return keyName.getPrefix(-CertificateV2.MIN_KEY_NAME_LENGTH);
+};
+
+/**
+ * Add the certificate. If a certificate with the same name (without implicit
+ * digest) already exists, then overwrite the certificate. If no default
+ * certificate for the key has been set, then set the added certificate as
+ * default for the key. This should only be called by KeyChain.
+ * @param {CertificateV2} certificate The certificate to add. This copies the
+ * object.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with Error if the name of the certificate does not match the
+ * key name.
+ */
+PibKey.prototype.addCertificatePromise_ = function(certificate, useSync)
+{
+  return this.lock_().addCertificatePromise(certificate, useSync);
+};
+
+/**
+ * Remove the certificate with name certificateName. If the certificate does not
+ * exist, do nothing. This should only be called by KeyChain.
+ * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with Error if certificateName does not match the key name.
+ */
+PibKey.prototype.removeCertificatePromise_ = function(certificateName, useSync)
+{
+  return this.lock_().removeCertificatePromise(certificateName, useSync);
+};
+
+/**
+ * Set the existing certificate with name certificateName as the default
+ * certificate. This should only be called by KeyChain.
+ * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the default
+ * CertificateV2, or a promise rejected with Error if certificateName does not
+ * match the key name, or a promise rejected with Pib.Error if
+ * certificateOrCertificateName is the certificate Name and the certificate does
+ * not exist.
+ */
+PibKey.prototype.setDefaultCertificatePromise_ = function(certificateName, useSync)
+{
+  return this.lock_().setDefaultCertificatePromise(certificateName, useSync);
+};
+
+/**
+ * Get the PibCertificateContainer in the PibKeyImpl. This should only be called
+ * by KeyChain.
+ * @return {PibCertificateContainer} The PibCertificateContainer.
+ */
+PibKey.prototype.getCertificates_ = function()
+{
+  return this.lock_().certificates_;
+};
+
+/**
+ * Check the validity of the impl_ instance.
+ * @return {PibKeyImpl} The PibKeyImpl when the instance is valid.
+ * @throws Error if the backend implementation instance is invalid.
+ */
+PibKey.prototype.lock_ = function()
+{
+  if (this.impl_ == null)
+    throw new Error("Invalid key instance");
+
+  return this.impl_;
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/pib-memory.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var CertificateV2 = require('../v2/certificate-v2.js').CertificateV2; /** @ignore */
+var Pib = require('./pib.js').Pib; /** @ignore */
+var PibKey = require('./pib-key.js').PibKey; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var PibImpl = require('./pib-impl.js').PibImpl;
+
+/**
+ * PibMemory extends PibImpl and is used by the Pib class as an in-memory
+ * implementation of a PIB. All the contents in the PIB are stored in memory and
+ * have the same lifetime as the PibMemory instance.
+ * @constructor
+ */
+var PibMemory = function PibMemory()
+{
+  // Call the base constructor.
+  PibImpl.call(this);
+
+  this.tpmLocator_ = "";
+
+  this.defaultIdentityName_ = null;
+
+  // Set of Name.
+  this.identityNames_ = [];
+
+  // identityName URI string => default key Name.
+  // (Use a string because we can't use the Name object as the key in JavaScript.)
+  this.defaultKeyNames_ = {};
+
+  // keyName URI string => keyBits Blob.
+  // (Use a string because we can't use the Name object as the key in JavaScript.)
+  this.keys_ = {};
+
+  // keyName URI string => default certificate Name.
+  // (Use a string because we can't use the Name object as the key in JavaScript.)
+  this.defaultCertificateNames_ = {};
+
+  // certificateName URI string => CertificateV2.
+  // (Use a string because we can't use the Name object as the key in JavaScript.)
+  this.certificates_ = {};
+};
+
+PibMemory.prototype = new PibImpl();
+PibMemory.prototype.name = "PibMemory";
+
+exports.PibMemory = PibMemory;
+
+PibMemory.getScheme = function() { return "pib-memory"; }
+
+// TpmLocator management.
+
+/**
+ * Set the corresponding TPM information to tpmLocator. This method does not
+ * reset the contents of the PIB.
+ * @param {string} tpmLocator The TPM locator string.
+ * @return {SyncPromise} A promise which fulfills when the TPM locator is set.
+ */
+PibMemory.prototype.setTpmLocatorPromise = function(tpmLocator)
+{
+  this.tpmLocator_ = tpmLocator;
+  return SyncPromise.resolve();
+};
+
+/**
+ * Get the TPM Locator.
+ * @return {SyncPromise} A promise which returns the TPM locator string.
+ */
+PibMemory.prototype.getTpmLocatorPromise = function()
+{
+  return SyncPromise.resolve(this.tpmLocator_);
+};
+
+// Identity management.
+
+/**
+ * Check for the existence of an identity.
+ * @param {Name} identityName The name of the identity.
+ * @return {SyncPromise} A promise which returns true if the identity exists,
+ * otherwise false.
+ */
+PibMemory.prototype.hasIdentityPromise = function(identityName)
+{
+  return SyncPromise.resolve(this.hasIdentity_(identityName));
+};
+
+/**
+ * Do the work of hasIdentityPromise.
+ */
+PibMemory.prototype.hasIdentity_ = function(identityName)
+{
+  for (var i in this.identityNames_) {
+    var name = this.identityNames_[i];
+    if (name.equals(identityName))
+      return true;
+  }
+
+  return false;
+};
+
+/**
+ * Add the identity. If the identity already exists, do nothing. If no default
+ * identity has been set, set the added identity as the default.
+ * @param {Name} identityName The name of the identity to add. This copies the
+ * name.
+ * @return {SyncPromise} A promise which fulfills when the identity is added.
+ */
+PibMemory.prototype.addIdentityPromise = function(identityName)
+{
+  this.addIdentity_(identityName);
+  return SyncPromise.resolve();
+};
+
+/**
+ * Do the work of addIdentityPromise.
+ */
+PibMemory.prototype.addIdentity_ = function(identityName)
+{
+  var identityNameCopy = new Name(identityName);
+  if (!this.hasIdentity_(identityNameCopy))
+    this.identityNames_.push(identityNameCopy);
+
+  if (this.defaultIdentityName_ === null)
+    this.defaultIdentityName_ = identityNameCopy;
+};
+
+/**
+ * Remove the identity and its related keys and certificates. If the default
+ * identity is being removed, no default identity will be selected. If the
+ * identity does not exist, do nothing.
+ * @param {Name} identityName The name of the identity to remove.
+ * @return {SyncPromise} A promise which fulfills when the identity is removed.
+ */
+PibMemory.prototype.removeIdentityPromise = function(identityName)
+{
+  // Go backwards through the list so we can remove entries.
+  for (var i = this.identityNames_.length - 1; i >= 0; --i) {
+    if (this.identityNames_[i].equals(identityName))
+      this.identityNames_.splice(i, 1);
+  }
+
+  if (this.defaultIdentityName_ !== null &&
+      identityName.equals(this.defaultIdentityName_))
+    this.defaultIdentityName_ = null;
+
+  var keyNames = this.getKeysOfIdentity_(identityName);
+  for (var i in keyNames)
+    this.removeKey_(keyNames[i]);
+
+  return SyncPromise.resolve();
+};
+
+/**
+ * Erase all certificates, keys, and identities.
+ * @return {SyncPromise} A promise which fulfills when the identities are cleared.
+ */
+PibMemory.prototype.clearIdentitiesPromise = function()
+{
+  this.defaultIdentityName_ = null;
+  this.identityNames_ = [];
+  this.defaultKeyNames_ = {};
+  this.keys_ = {};
+  this.defaultCertificateNames_ = {};
+  this.certificates_ = {};
+
+  return SyncPromise.resolve();
+};
+
+/**
+ * Get the names of all the identities.
+ * @return {SyncPromise} A promise which returns a fresh set of identity names
+ * as an array of Name. The Name objects are fresh copies.
+ */
+PibMemory.prototype.getIdentitiesPromise = function()
+{
+  // Copy the Name objects.
+  var result = [];
+  for (var i in this.identityNames_) {
+    var name = this.identityNames_[i];
+    result.push(new Name(name));
+  }
+
+  return SyncPromise.resolve(result);
+};
+
+/**
+ * Set the identity with the identityName as the default identity. If the
+ * identity with identityName does not exist, then it will be created.
+ * @param {Name} identityName The name for the default identity. This copies the
+ * name.
+ * @return {SyncPromise} A promise which fulfills when the default identity is
+ * set.
+ */
+PibMemory.prototype.setDefaultIdentityPromise = function(identityName)
+{
+  this.addIdentity_(identityName);
+  // Copy the name.
+  this.defaultIdentityName_ = new Name(identityName);
+
+  return SyncPromise.resolve();
+};
+
+/**
+ * Get the default identity.
+ * @return {SyncPromise} A promise which returns the Name of the default
+ * identity as a fresh copy, or a promise rejected with Pib.Error for no default
+ * identity.
+ */
+PibMemory.prototype.getDefaultIdentityPromise = function()
+{
+  if (this.defaultIdentityName_ !== null)
+    // Copy the name.
+    return SyncPromise.resolve(new Name(this.defaultIdentityName_));
+
+  return SyncPromise.reject(new Pib.Error(new Error("No default identity")));
+};
+
+// Key management.
+
+/**
+ * Check for the existence of a key with keyName.
+ * @param {Name} keyName The name of the key.
+ * @return {SyncPromise} A promise which returns true if the key exists,
+ * otherwise false. Return false if the identity does not exist.
+ */
+PibMemory.prototype.hasKeyPromise = function(keyName)
+{
+  return SyncPromise.resolve(this.hasKey_(keyName));
+};
+
+/**
+ * Do the work of hasKeyPromise.
+ */
+PibMemory.prototype.hasKey_ = function(keyName)
+{
+  return keyName.toUri() in this.keys_;
+};
+
+/**
+ * Add the key. If a key with the same name already exists, overwrite the key.
+ * If the identity does not exist, it will be created. If no default key for the
+ * identity has been set, then set the added key as the default for the
+ * identity. If no default identity has been set, identity becomes the default.
+ * @param {Name} identityName The name of the identity that the key belongs to.
+ * This copies the name.
+ * @param {Name} keyName The name of the key. This copies the name.
+ * @param {Buffer} key The public key bits. This copies the array.
+ * @return {SyncPromise} A promise which fulfills when the key is added.
+ */
+PibMemory.prototype.addKeyPromise = function(identityName, keyName, key)
+{
+  this.addKey_(identityName, keyName, key);
+  return SyncPromise.resolve();
+};
+
+/**
+ * Do the work of addKeyPromise,
+ */
+PibMemory.prototype.addKey_ = function(identityName, keyName, key)
+{
+  this.addIdentity_(identityName);
+
+  var keyNameCopy = new Name(keyName);
+  this.keys_[keyNameCopy.toUri()] = new Blob(key, true);
+
+  var identityNameUri = identityName.toUri();
+  if (!(identityNameUri in this.defaultKeyNames_))
+    this.defaultKeyNames_[identityNameUri] = keyNameCopy;
+};
+
+/**
+ * Remove the key with keyName and its related certificates. If the key does not
+ * exist, do nothing.
+ * @param {Name} keyName The name of the key.
+ * @return {SyncPromise} A promise which fulfills when the key is removed.
+ */
+PibMemory.prototype.removeKeyPromise = function(keyName)
+{
+  this.removeKey_(keyName);
+  return SyncPromise.resolve();
+};
+
+/**
+ * Do the work of removeKeyPromise.
+ */
+PibMemory.prototype.removeKey_ = function(keyName)
+{
+  var identityName = PibKey.extractIdentityFromKeyName(keyName);
+
+  delete this.keys_[keyName.toUri()];
+  delete this.defaultKeyNames_[identityName.toUri()];
+
+  var certificateNames = this.getCertificatesOfKey_(keyName);
+  for (var i in certificateNames)
+    this.removeCertificate_(certificateNames[i]);
+};
+
+/**
+ * Get the key bits of a key with name keyName.
+ * @param {Name} keyName The name of the key.
+ * @return {SyncPromise} A promise which returns the key bits as a Blob, or a
+ * promise rejected with Pib.Error if the key does not exist.
+ */
+PibMemory.prototype.getKeyBitsPromise = function(keyName)
+{
+  if (!this.hasKey_(keyName))
+    return SyncPromise.reject(new Pib.Error(new Error
+      ("Key `" + keyName.toUri() + "` not found")));
+
+  var key = this.keys_[keyName.toUri()];
+  return SyncPromise.resolve(key);
+};
+
+/**
+ * Get all the key names of the identity with the name identityName. The
+ * returned key names can be used to create a KeyContainer. With a key name and
+ * a backend implementation, one can create a Key front end instance.
+ * @param {Name} identityName The name of the identity.
+ * @return SyncPromise} A promise which returns the set of key names as an array
+ * of Name. The Name objects are fresh copies. If the identity does not exist,
+ * return an empty array.
+ */
+PibMemory.prototype.getKeysOfIdentityPromise = function(identityName)
+{
+  return SyncPromise.resolve(this.getKeysOfIdentity_(identityName));
+};
+
+/**
+ * Do the work of getKeysOfIdentityPromise
+ */
+PibMemory.prototype.getKeysOfIdentity_ = function(identityName)
+{
+  var ids = [];
+  for (var keyNameUri in this.keys_) {
+    var keyName = new Name(keyNameUri);
+    if (identityName.equals(PibKey.extractIdentityFromKeyName(keyName)))
+      // keyName is already a copy created from the URI.
+      ids.push(keyName);
+  }
+
+  return ids;
+};
+
+/**
+ * Set the key with keyName as the default key for the identity with name
+ * identityName.
+ * @param {Name} identityName The name of the identity. This copies the name.
+ * @param {Name} keyName The name of the key. This copies the name.
+ * @return {SyncPromise} A promise which fulfills when the default key is set,
+ * or a promise rejected with Pib.Error if the key does not exist.
+ */
+PibMemory.prototype.setDefaultKeyOfIdentityPromise = function
+  (identityName, keyName)
+{
+  if (!this.hasKey_(keyName))
+    return SyncPromise.reject(new Pib.Error(new Error
+      ("Key `" + keyName.toUri() + "` not found")));
+
+  // Copy the Name.
+  this.defaultKeyNames_[identityName.toUri()] = new Name(keyName);
+  return SyncPromise.resolve();
+};
+
+/**
+ * Get the name of the default key for the identity with name identityName.
+ * @param {Name} identityName The name of the identity.
+ * @return {SyncPromise} A promise which returns the name of the default key as
+ * a fresh copy, or a promise rejected with Pib.Error if the identity does not
+ * exist.
+ */
+PibMemory.prototype.getDefaultKeyOfIdentityPromise = function(identityName)
+{
+  var defaultKey = this.defaultKeyNames_[identityName.toUri()];
+  if (defaultKey == undefined)
+    return SyncPromise.reject(new Pib.Error(new Error
+      ("No default key for identity `" + identityName.toUri() + "`")));
+
+  // Copy the name.
+  return SyncPromise.resolve(new Name(defaultKey));
+};
+
+// Certificate management.
+
+/**
+ * Check for the existence of a certificate with name certificateName.
+ * @param {Name} certificateName The name of the certificate.
+ * @return {SyncPromise} A promise which returns true if the certificate exists,
+ * otherwise false.
+ */
+PibMemory.prototype.hasCertificatePromise = function(certificateName)
+{
+  return SyncPromise.resolve(this.hasCertificate_(certificateName));
+};
+
+/**
+ * Do the work of hasCertificatePromise.
+ */
+PibMemory.prototype.hasCertificate_ = function(certificateName)
+{
+  return certificateName.toUri() in this.certificates_;
+};
+
+/**
+ * Add the certificate. If a certificate with the same name (without implicit
+ * digest) already exists, then overwrite the certificate. If the key or
+ * identity does not exist, they will be created. If no default certificate for
+ * the key has been set, then set the added certificate as the default for the
+ * key. If no default key was set for the identity, it will be set as the
+ * default key for the identity. If no default identity was selected, the
+ * certificate's identity becomes the default.
+ * @param {CertificateV2} certificate The certificate to add. This copies the
+ * object.
+ * @return {SyncPromise} A promise which fulfills when the certificate is added.
+ */
+PibMemory.prototype.addCertificatePromise = function(certificate)
+{
+  var certificateNameCopy = new Name(certificate.getName());
+  // getKeyName already makes a new Name.
+  var keyNameCopy = certificate.getKeyName();
+  var identity = certificate.getIdentity();
+
+  this.addKey_(identity, keyNameCopy, certificate.getContent().buf());
+
+  this.certificates_[certificateNameCopy.toUri()] =
+    new CertificateV2(certificate);
+  var keyNameUri = keyNameCopy.toUri();
+  if (!(keyNameUri in this.defaultCertificateNames_))
+    this.defaultCertificateNames_[keyNameUri] = certificateNameCopy;
+
+  return SyncPromise.resolve();
+};
+
+/**
+ * Remove the certificate with name certificateName. If the certificate does not
+ * exist, do nothing.
+ * @param {Name} certificateName The name of the certificate.
+ * @return {SyncPromise} A promise which fulfills when the certificate is
+ * removed.
+ */
+PibMemory.prototype.removeCertificatePromise = function(certificateName)
+{
+  this.removeCertificate_(certificateName);
+  return SyncPromise.resolve();
+};
+
+/**
+ * Do the work of removeCertificatePromise.
+ */
+PibMemory.prototype.removeCertificate_ = function(certificateName)
+{
+  delete this.certificates_[certificateName.toUri()];
+
+  var keyName = CertificateV2.extractKeyNameFromCertName(certificateName);
+  var keyNameUri = keyName.toUri();
+  var defaultCertificateName = this.defaultCertificateNames_[keyNameUri];
+
+  if (defaultCertificateName != undefined &&
+      defaultCertificateName.equals(certificateName))
+    delete this.defaultCertificateNames_[keyNameUri];
+};
+
+/**
+ * Get the certificate with name certificateName.
+ * @param {Name} certificateName The name of the certificate.
+ * @return {SyncPromise} A promise which returns the CertificateV2, or a promise
+ * rejected with Pib.Error if the certificate does not exist.
+ */
+PibMemory.prototype.getCertificatePromise = function(certificateName)
+{
+  if (!this.hasCertificate_(certificateName))
+    return SyncPromise.reject(new Pib.Error(new Error
+      ("Certificate `" + certificateName.toUri() +  "` does not exist")));
+
+  return SyncPromise.resolve(new CertificateV2
+    (this.certificates_[certificateName.toUri()]));
+};
+
+/**
+ * Get a list of certificate names of the key with id keyName. The returned
+ * certificate names can be used to create a PibCertificateContainer. With a
+ * certificate name and a backend implementation, one can obtain the certificate.
+ * @param {Name} keyName The name of the key.
+ * @return {SyncPromise} A promise which returns the set of certificate names as
+ * an array of Name. The Name objects are fresh copies. If the key does not
+ * exist, return an empty array.
+ */
+PibMemory.prototype.getCertificatesOfKeyPromise = function(keyName)
+{
+  return SyncPromise.resolve(this.getCertificatesOfKey_(keyName));
+};
+
+/**
+ * Do the work of getCertificatesOfKeyPromise.
+ */
+PibMemory.prototype.getCertificatesOfKey_ = function(keyName)
+{
+  var certificateNames = [];
+  for (var certificateNameUri in this.certificates_) {
+    if (CertificateV2.extractKeyNameFromCertName
+        (this.certificates_[certificateNameUri].getName()).equals(keyName))
+      certificateNames.push(new Name(certificateNameUri));
+  }
+
+  return certificateNames;
+};
+
+/**
+ * Set the cert with name certificateName as the default for the key with
+ * keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {Name} certificateName The name of the certificate. This copies the
+ * name.
+ * @return {SyncPromise} A promise which fulfills when the default certificate 
+ * is set, or a promise rejected with Pib.Error if the certificate with name
+ * certificateName does not exist.
+ */
+PibMemory.prototype.setDefaultCertificateOfKeyPromise = function
+  (keyName, certificateName)
+{
+  if (!this.hasCertificate_(certificateName))
+    return SyncPromise.reject(new Pib.Error(new Error
+      ("Certificate `" + certificateName.toUri() +  "` does not exist")));
+
+  // Copy the Name.
+  this.defaultCertificateNames_[keyName.toUri()] = new Name(certificateName);
+  return SyncPromise.resolve();
+};
+
+/**
+ * Get the default certificate for the key with eyName.
+ * @param {Name} keyName The name of the key.
+ * @return {SyncPromise} A promise which returns a copy of the default 
+ * CertificateV2, or a promise rejected with Pib.Error if the default
+ * certificate does not exist.
+ */
+PibMemory.prototype.getDefaultCertificateOfKeyPromise = function(keyName)
+{
+  var certificateName = this.defaultCertificateNames_[keyName.toUri()];
+  if (certificateName == undefined)
+    return SyncPromise.reject(new Pib.Error(new Error
+      ("No default certificate for key `" + keyName.toUri() + "`")));
+
+  var certificate = this.certificates_[certificateName.toUri()];
+  return SyncPromise.resolve(new CertificateV2(certificate));
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/pib.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+
+/**
+ * In general, a PIB (Public Information Base) stores the public portion of a
+ * user's cryptography keys. The format and location of stored information is
+ * indicated by the PIB locator. A PIB is designed to work with a TPM (Trusted
+ * Platform Module) which stores private keys. There is a one-to-one association
+ * between a PIB and a TPM, and therefore the TPM locator is recorded by the PIB
+ * to enforce this association and prevent one from operating on mismatched PIB
+ * and TPM.
+ *
+ * Information in the PIB is organized in a hierarchy of
+ * Identity-Key-Certificate. At the top level, this Pib class provides access to
+ * identities, and allows setting a default identity. Properties of an identity
+ * (such as PibKey objects) can be accessed after obtaining a PibIdentity object.
+ * (Likewise, CertificateV2 objects can be obtained from a PibKey object.)
+ *
+ * Note: A Pib instance is created and managed only by the KeyChain, and is
+ * returned by the KeyChain getPib() method.
+ *
+ * Create a Pib instance. This constructor should only be called by KeyChain.
+ *
+ * @param {string} scheme The scheme for the PIB.
+ * @param {string} location The location for the PIB.
+ * @param {PibImpl} pibImpl The PIB backend implementation.
+ * @constructor
+ */
+var Pib = function Pib(scheme, location, pibImpl)
+{
+  this.defaultIdentity_ = null;
+  this.scheme_ = scheme;
+  this.location_ = location;
+  // Must access this through getIdentitiesPromise_.
+  this.identities_ = null;
+  this.pibImpl_ = pibImpl;
+
+  if (pibImpl == null)
+    throw new Error("The pibImpl is null");
+};
+
+exports.Pib = Pib;
+
+/**
+ * Create a Pib.Error which represents a semantic error in PIB processing.
+ * Call with: throw new Pib.Error(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+Pib.Error = function PibError(error)
+{
+  if (error) {
+    error.__proto__ = Pib.Error.prototype;
+    return error;
+  }
+};
+
+Pib.Error.prototype = new Error();
+Pib.Error.prototype.name = "PibError";
+
+/**
+ * Get the scheme of the PIB locator.
+ * @return {string} The scheme string.
+ */
+Pib.prototype.getScheme = function() { return this.scheme_; };
+
+/**
+ * Get the PIB locator.
+ * @return {string} The PIB locator.
+ */
+Pib.prototype.getPibLocator = function()
+{
+  return this.scheme_ + ":" + this.location_;
+};
+
+/**
+ * Set the corresponding TPM information to tpmLocator. If the tpmLocator is
+ * different from the existing one, the PIB will be reset. Otherwise, nothing
+ * will be changed.
+ * @param {string} tpmLocator The TPM locator.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @returns {Promise|SyncPromise} A promise which fulfills when finished.
+ */
+Pib.prototype.setTpmLocatorPromise = function(tpmLocator, useSync)
+{
+  var thisPib = this;
+
+  return this.pibImpl_.getTpmLocatorPromise(useSync)
+  .then(function(pibTpmLocator) {
+    if (tpmLocator == pibTpmLocator)
+      return SyncPromise.resolve();
+
+    return thisPib.resetPromise_(useSync);
+  })
+  .then(function() {
+    return thisPib.pibImpl_.setTpmLocatorPromise(tpmLocator, useSync);
+  });
+};
+
+/**
+ * Get the TPM Locator.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the TPM locator string,
+ * or a promise rejected with Pib.Error if the TPM locator is empty.
+ */
+Pib.prototype.getTpmLocatorPromise = function(useSync)
+{
+  return this.pibImpl_.getTpmLocatorPromise(useSync)
+  .then(function(tpmLocator) {
+    if (tpmLocator == "")
+      return SyncPromise.reject(new Pib.Error(new Error
+        ("TPM info does not exist")));
+
+    return SyncPromise.resolve(tpmLocator);
+  });
+};
+
+/**
+ * Get the identity with name identityName.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibIdentity object,
+ * or a promise rejected with Pib.Error if the identity does not exist.
+ */
+Pib.prototype.getIdentityPromise = function(identityName, useSync)
+{
+  return this.getIdentitiesPromise_(useSync)
+  .then(function(identities) {
+    return identities.getPromise(identityName, useSync);
+  });
+};
+
+/**
+ * Get the identity with name identityName.
+ * @param {Name} identityName The name of the identity.
+ * @param {function} onComplete (optional) This calls
+ * onComplete(identity) with the PibIdentity object. If omitted, the return
+ * value is described below. (Some database libraries only use a callback, so
+ * onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {PibIdentity} If onComplete is omitted, return the PibIdentity object.
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete
+ * as described above.
+ * @throws Pib.Error if the identity does not exist. However, if onComplete and
+ * onError are defined, then if there is an exception return undefined and call
+ * onError(exception).
+ */
+Pib.prototype.getIdentity = function(identityName, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.getIdentityPromise(identityName, !onComplete));
+};
+
+/**
+ * Get the default identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibIdentity object
+ * of the default identity, or a promise rejected with Pib.Error for no default
+ * identity.
+ */
+Pib.prototype.getDefaultIdentityPromise = function(useSync)
+{
+  if (this.defaultIdentity_ == null) {
+    var thisPib = this;
+    var identities;
+
+    return this.getIdentitiesPromise_(useSync)
+    .then(function(localIdentities) {
+      identities = localIdentities;
+      return thisPib.pibImpl_.getDefaultIdentityPromise(useSync);
+    })
+    .then(function(defaultIdentity) {
+      return identities.getPromise(defaultIdentity, useSync);
+    })
+    .then(function(identity) {
+      thisPib.defaultIdentity_ = identity;
+      return SyncPromise.resolve(thisPib.defaultIdentity_);
+    });
+  }
+  else
+    return SyncPromise.resolve(this.defaultIdentity_);
+};
+
+/**
+ * Get the default identity.
+ * @param {function} onComplete (optional) This calls
+ * onComplete(identity) with the PibIdentity object. If omitted, the return
+ * value is described below. (Some database libraries only use a callback, so
+ * onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {PibIdentity} If onComplete is omitted, return the PibIdentity object.
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete
+ * as described above.
+ * @throws Pib.Error for no default identity. However, if onComplete and onError
+ * are defined, then if there is an exception return undefined and call
+ * onError(exception).
+ */
+Pib.prototype.getDefaultIdentity = function(onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.getDefaultIdentityPromise(!onComplete));
+};
+
+/**
+ * Reset the content in the PIB, including a reset of the TPM locator. This
+ * should only be called by KeyChain.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
+ */
+Pib.prototype.resetPromise_ = function(useSync)
+{
+  var thisPib = this;
+
+  return this.pibImpl_.clearIdentitiesPromise(useSync)
+  .then(function() {
+    return thisPib.pibImpl_.setTpmLocatorPromise("", useSync);
+  })
+  .then(function() {
+    thisPib.defaultIdentity_ = null;
+    return thisPib.getIdentitiesPromise_(useSync)
+  })
+  .then(function(identities) {
+    return identities.resetPromise(useSync);
+  });
+};
+
+/**
+ * Add an identity with name identityName. Create the identity if it does not
+ * exist. This should only be called by KeyChain.
+ * @param {Name} identityName The name of the identity, which is copied.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibIdentity object
+ * of the added identity.
+ */
+Pib.prototype.addIdentityPromise_ = function(identityName, useSync)
+{
+  return this.getIdentitiesPromise_(useSync)
+  .then(function(identities) {
+    return identities.addPromise(identityName, useSync);
+  });
+};
+
+/**
+ * Remove the identity with name identityName, and its related keys and
+ * certificates. If the default identity is being removed, no default identity
+ * will be selected.  If the identity does not exist, do nothing. This should
+ * only be called by KeyChain.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
+ */
+Pib.prototype.removeIdentityPromise_ = function(identityName, useSync)
+{
+  if (this.defaultIdentity_ != null &&
+      this.defaultIdentity_.getName().equals(identityName))
+    this.defaultIdentity_ = null;
+
+  return this.getIdentitiesPromise_(useSync)
+  .then(function(identities) {
+    return identities.removePromise(identityName, useSync);
+  });
+};
+
+/**
+ * Set the identity with name identityName as the default identity. Create the
+ * identity if it does not exist. This should only be called by KeyChain.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibIdentity object
+ * of the default identity.
+ */
+Pib.prototype.setDefaultIdentityPromise_ = function(identityName, useSync)
+{
+  var thisPib = this;
+
+  return this.getIdentitiesPromise_(useSync)
+  .then(function(identities) {
+    return identities.addPromise(identityName, useSync);
+  })
+  .then(function(identity) {
+    thisPib.defaultIdentity_ = identity;
+
+    return thisPib.pibImpl_.setDefaultIdentityPromise(identityName);
+  })
+  .then(function() {
+    return SyncPromise.resolve(thisPib.defaultIdentity_);
+  });
+};
+
+/**
+ * If this.identities_ is not null, return it. Otherwise, set it using
+ * PibIdentityContainer.makePromise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibIdentityContainer.
+ */
+Pib.prototype.getIdentitiesPromise_ = function(useSync)
+{
+  if (this.identities_ != null)
+    return SyncPromise.resolve(this.identities_);
+
+  var thisPib = this;
+  return PibIdentityContainer.makePromise(this.pibImpl_, useSync)
+  .then(function(container) {
+    thisPib.identities_ = container;
+    return SyncPromise.resolve(container);
+  });
+};
+
+// Put this last to avoid a require loop.
+ /** @ignore */
+var PibIdentityContainer = require('./pib-identity-container.js').PibIdentityContainer;
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/detail/identity-impl.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../../name.js').Name; /** @ignore */
+var Pib = require('../pib.js').Pib; /** @ignore */
+var PibKeyContainer = require('../pib-key-container.js').PibKeyContainer; /** @ignore */
+var SyncPromise = require('../../../util/sync-promise.js').SyncPromise;
+
+/**
+ * A PibIdentityImpl provides the backend implementation for PibIdentity. A
+ * PibIdentity has only one backend instance, but may have multiple frontend
+ * handles. Each frontend handle is associated with the only one backend
+ * PibIdentityImpl.
+ *
+ * You should not call this private constructor. Instead, use
+ * PibIdentityImpl.makePromise().
+ *
+ * @constructor
+ */
+var PibIdentityImpl = function PibIdentityImpl()
+{
+  // makePromise will set the fields.
+};
+
+exports.PibIdentityImpl = PibIdentityImpl;
+
+/**
+ * Create a PibIdentityImpl with identityName.
+ * This method that returns a Promise is needed instead of a normal constructor
+ * since it uses asynchronous PibImpl methods to initialize the object.
+ *
+ * @param {Name} identityName The name of the identity, which is copied.
+ * @param {PibImpl) pibImpl: The Pib backend implementation.
+ * @param {boolean} needInit If true and the identity does not exist in the
+ * pibImpl back end, then create it (and If no default identity has been set,
+ * identityName becomes the default). If false, then throw Pib.Error if the
+ * identity does not exist in the pibImpl back end.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @param {Promise|SyncPromise} A promise which returns the new PibIdentityImpl, 
+ * or a promise which is rejected with Pib.Error if the identity does not exist
+ * in the pibImpl back end and needInit is false.
+ */
+PibIdentityImpl.makePromise = function(identityName, pibImpl, needInit, useSync)
+{
+  var pibIdentityImpl = new PibIdentityImpl();
+
+  return PibKeyContainer.makePromise(identityName, pibImpl, useSync)
+  .then(function(container) {
+    pibIdentityImpl.defaultKey_ = null;
+
+    // Copy the Name.
+    pibIdentityImpl.identityName_ = new Name(identityName);
+    pibIdentityImpl.keys_ = container;
+    pibIdentityImpl.pibImpl_ = pibImpl;
+
+    if (pibImpl == null)
+      return SyncPromise.reject(new Error("The pibImpl is null"));
+
+    if (needInit) {
+      return pibImpl.addIdentityPromise(pibIdentityImpl.identityName_, useSync)
+      .then(function() {
+        return SyncPromise.resolve(pibIdentityImpl);
+      });
+    }
+    else {
+      return pibImpl.hasIdentityPromise(pibIdentityImpl.identityName_, useSync)
+      .then(function(hasIdentity) {
+        if (!hasIdentity)
+          return SyncPromise.reject(new Pib.Error(new Error
+            ("Identity " + pibIdentityImpl.identityName_.toUri() +
+            " does not exist")));
+        else
+          return SyncPromise.resolve(pibIdentityImpl);
+      });
+    }
+  });
+};
+
+/**
+ * Get the name of the identity.
+ * @return {Name} The name of the identity. You must not change the Name object.
+ * If you need to change it then make a copy.
+ */
+PibIdentityImpl.prototype.getName = function() { return this.identityName_; };
+
+/**
+ * Add the key. If a key with the same name already exists, overwrite the key.
+ * If no default key for the identity has been set, then set the added key as
+ * default for the identity.
+ * @param {Buffer} key The public key bits. This copies the buffer.
+ * @param {Name} keyName The name of the key. This copies the name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibKey object.
+ */
+PibIdentityImpl.prototype.addKeyPromise = function(key, keyName, useSync)
+{
+  return this.keys_.addPromise(key, keyName, useSync);
+};
+
+/**
+ * Remove the key with keyName and its related certificates. If the key does not
+ * exist, do nothing.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
+ */
+PibIdentityImpl.prototype.removeKeyPromise = function(keyName, useSync)
+{
+  if (this.defaultKey_ !== null && this.defaultKey_.getName().equals(keyName))
+    this.defaultKey_ = null;
+
+  return this.keys_.removePromise(keyName, useSync);
+};
+
+/**
+ * Get the key with name keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the PibKey object, or a
+ * promise rejected with Pib.Error if the key does not exist.
+ */
+PibIdentityImpl.prototype.getKeyPromise = function(keyName, useSync)
+{
+  return this.keys_.getPromise(keyName, useSync);
+};
+
+/**
+ * setDefaultKey has two forms:
+ * setDefaultKey(keyName, useSync) - Set the key with name keyName as the
+ * default key of the identity.
+ * setDefaultKey(key, keyName, useSync) - Add a key with name keyName and set it
+ * as the default key of the identity.
+ * @param {Buffer} key The buffer of encoded key bytes. (This is only used when
+ * calling setDefaultKey(key, keyName). )
+ * @param {Name} keyName The name of the key. This copies the name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {SyncPromise} A promise which returns the PibKey object of the 
+ * default key, or a promise rejected with Error the name of the key does not
+ * match the identity name, or a promise rejected with Pib.Error if calling
+ * setDefaultKey(keyName) and the key does not exist, or if calling
+ * setDefaultKey(key, keyName) and a key with the same name already exists.
+ */
+PibIdentityImpl.prototype.setDefaultKeyPromise = function(keyOrKeyName, arg2, arg3)
+{
+  var thisImpl = this;
+
+  if (keyOrKeyName instanceof Name) {
+    // setDefaultKey(keyName, useSync)
+    var keyName = keyOrKeyName;
+    var useSync = arg2;
+
+    return this.keys_.getPromise(keyName, useSync)
+    .then(function(key) {
+      thisImpl.defaultKey_ = key;
+      return thisImpl.pibImpl_.setDefaultKeyOfIdentityPromise
+        (thisImpl.identityName_, keyName, useSync);
+    })
+    .then(function() {
+      return SyncPromise.resolve(thisImpl.defaultKey_);
+    });
+  }
+  else {
+    // setDefaultKey(key, keyName, useSync)
+    var key = keyOrKeyName;
+    var keyName = arg2;
+    var useSync = arg3;
+
+    return this.addKeyPromise(key, keyName, useSync)
+    .then(function() {
+      return thisImpl.setDefaultKeyPromise(keyName, useSync);
+    });
+  }
+};
+
+/**
+ * Get the default key of this Identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {SyncPromise} A promise which returns the default PibKey, or a
+ * promise rejected with Pib.Error if the default key has not been set.
+ */
+PibIdentityImpl.prototype.getDefaultKeyPromise = function(useSync)
+{
+  var thisImpl = this;
+
+  if (this.defaultKey_ === null) {
+    return this.pibImpl_.getDefaultKeyOfIdentityPromise(this.identityName_, useSync)
+    .then(function(keyName) {
+      return thisImpl.keys_.getPromise(keyName, useSync);
+    })
+    .then(function(key) {
+      thisImpl.defaultKey_ = key;
+      return SyncPromise.resolve(thisImpl.defaultKey_);
+    });
+  }
+  else
+    return SyncPromise.resolve(this.defaultKey_);
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/detail/key-impl.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../../name.js').Name; /** @ignore */
+var PublicKey = require('../../certificate/public-key.js').PublicKey; /** @ignore */
+var Blob = require('../../../util/blob.js').Blob; /** @ignore */
+var Pib = require('../pib.js').Pib; /** @ignore */
+var PibKey = require('../pib-key.js').PibKey; /** @ignore */
+var PibImpl = require('../pib-impl.js').PibImpl; /** @ignore */
+var PibCertificateContainer = require('../pib-certificate-container.js').PibCertificateContainer; /** @ignore */
+var SyncPromise = require('../../../util/sync-promise.js').SyncPromise;
+
+/**
+ * A PibKeyImpl provides the backend implementation for PibKey. A PibKey has
+ * only one backend instance, but may have multiple frontend handles. Each
+ * frontend handle is associated with the only one backend PibKeyImpl.
+ *
+ * You should not call this private constructor. Instead, use
+ * PibKeyImpl.makePromise().
+ *
+ * @constructor
+ */
+var PibKeyImpl = function PibKeyImpl()
+{
+  // makePromise will set the fields.
+};
+
+exports.PibKeyImpl = PibKeyImpl;
+
+/**
+ * Create a PibKeyImpl. This method has two forms:
+ * PibKeyImpl(keyName, keyEncoding, pibImpl, useSync) - Create a PibKeyImpl with
+ * keyName. If the key does not exist in the backend implementation, add it by
+ * creating it from the keyEncoding. If a key with keyName already exists,
+ * overwrite it.
+ * PibKeyImpl(keyName, pibImpl, useSync) - Create a PibKeyImpl with keyName.
+ * Initialize the cached key encoding with pibImpl.getKeyBits().
+ * This method that returns a Promise is needed instead of a normal constructor
+ * since it uses asynchronous PibImpl methods to initialize the object.
+ *
+ * @param {Name} keyName The name of the key, which is copied.
+ * @param {Buffer} keyEncoding The buffer of encoded key bytes, which is copied.
+ * (This is only used in the constructor form
+ * PibKeyImpl(keyName, keyEncoding, pibImpl) .)
+ * @param {PibImpl) pibImpl: The Pib backend implementation.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @param {Promise|SyncPromise} A promise which returns the new PibKeyImpl, or a
+ * promise which is rejected with Pib.Error if the constructor is the form
+ * PibKeyImpl(keyName, pibImpl) (without the keyEncoding) and the key with
+ * keyName does not exist.
+ */
+PibKeyImpl.makePromise = function(keyName, arg2, arg3, arg4)
+{
+  var pibKeyImpl = new PibKeyImpl();
+
+  pibKeyImpl.defaultCertificate_ = null;
+
+  if (arg2 instanceof PibImpl) {
+    // PibKeyImpl(keyName, pibImpl, useSync)
+    var pibImpl = arg2;
+    var useSync = arg3;
+
+    if (pibImpl == null)
+      return SyncPromise.reject(new Error("The pibImpl is null"));
+
+    return PibCertificateContainer.makePromise(keyName, pibImpl, useSync)
+    .then(function(container) {
+      pibKeyImpl.identityName_ = PibKey.extractIdentityFromKeyName(keyName);
+      pibKeyImpl.keyName_ = new Name(keyName);
+      pibKeyImpl.pibImpl_ = pibImpl;
+      pibKeyImpl.certificates_ = container;
+
+      return pibKeyImpl.pibImpl_.getKeyBitsPromise(pibKeyImpl.keyName_, useSync);
+    })
+    .then(function(keyBits) {
+      pibKeyImpl.keyEncoding_ = keyBits;
+
+      try {
+        publicKey = new PublicKey(pibKeyImpl.keyEncoding_);
+      }
+      catch (ex) {
+        // We don't expect this since we just fetched the encoding.
+        return SyncPromise.reject(new Pib.Error(new Error
+          ("Error decoding public key")));
+      }
+
+      pibKeyImpl.keyType_ = publicKey.getKeyType();
+
+      return SyncPromise.resolve(pibKeyImpl);
+    });
+  }
+  else {
+    // PibKeyImpl(keyName, keyEncoding, pibImpl)
+    var keyEncoding = arg2;
+    var pibImpl = arg3;
+    var useSync = arg4;
+
+    if (pibImpl == null)
+      return SyncPromise.reject(new Error("The pibImpl is null"));
+
+    return PibCertificateContainer.makePromise(keyName, pibImpl, useSync)
+    .then(function(container) {
+      pibKeyImpl.identityName_ = PibKey.extractIdentityFromKeyName(keyName);
+      pibKeyImpl.keyName_ = new Name(keyName);
+      pibKeyImpl.keyEncoding_ = new Blob(keyEncoding, true);
+      pibKeyImpl.pibImpl_ = pibImpl;
+      pibKeyImpl.certificates_ = container;
+
+      try {
+        publicKey = new PublicKey(pibKeyImpl.keyEncoding_);
+        pibKeyImpl.keyType_ = publicKey.getKeyType();
+      }
+      catch (ex) {
+        return SyncPromise.reject(new Error("Invalid key encoding"));
+      }
+
+      return pibKeyImpl.pibImpl_.addKeyPromise
+        (pibKeyImpl.identityName_, pibKeyImpl.keyName_, keyEncoding, useSync);
+    })
+    .then(function() {
+      return SyncPromise.resolve(pibKeyImpl);
+    });
+  }
+};
+
+/**
+ * Get the key name.
+ * @return {Name} The key name. You must not change the object. If you need to
+ * change it, make a copy.
+ */
+PibKeyImpl.prototype.getName = function() { return this.keyName_; };
+
+/**
+ * Get the name of the identity this key belongs to.
+ * @return {Name} The name of the identity. You must not change the object. If
+ * you need to change it, make a copy.
+ */
+PibKeyImpl.prototype.getIdentityName = function() { return this.identityName_; };
+
+/**
+ * Get the key type.
+ * @return {number} The key type as an int from the KeyType enum.
+ */
+PibKeyImpl.prototype.getKeyType = function() { return this.keyType_; };
+
+/**
+ * Get the public key encoding.
+ * @return {Blob} The public key encoding.
+ */
+PibKeyImpl.prototype.getPublicKey = function() { return this.keyEncoding_; };
+
+/**
+ * Add the certificate. If a certificate with the same name (without implicit
+ * digest) already exists, then overwrite the certificate. If no default
+ * certificate for the key has been set, then set the added certificate as
+ * default for the key.
+ * @param {CertificateV2} certificate The certificate to add. This copies
+ * the object.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with Error if the name of the certificate does not match the
+ * key name.
+ */
+PibKeyImpl.prototype.addCertificatePromise = function(certificate, useSync)
+{
+  return this.certificates_.addPromise(certificate, useSync);
+};
+
+/**
+ * Remove the certificate with name certificateName. If the certificate does not
+ * exist, do nothing.
+ * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with Error if certificateName does not match the key name.
+ */
+PibKeyImpl.prototype.removeCertificatePromise = function(certificateName, useSync)
+{
+  if (this.defaultCertificate_ !== null &&
+      this.defaultCertificate_.getName().equals(certificateName))
+    this.defaultCertificate_ = null;
+
+  return this.certificates_.removePromise(certificateName, useSync);
+};
+
+/**
+ * Get the certificate with name certificateName.
+ * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a copy of the
+ * CertificateV2, or a promise rejected with Error if certificateName does not
+ * match the key name, or a promise rejected with Pib.Error if the certificate
+ * does not exist.
+ */
+PibKeyImpl.prototype.getCertificatePromise = function(certificateName, useSync)
+{
+  return this.certificates_.getPromise(certificateName, useSync);
+};
+
+/**
+ * Set the existing certificate as the default certificate.
+ * @param {Name|CertificateV2} certificateOrCertificateName If
+ * certificateOrCertificateName is a Name, it is the name of the certificate,
+ * which must exist. Otherwise certificateOrCertificateName is the CertificateV2
+ * to add (if necessary) and set as the default.
+ * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the default
+ * CertificateV2, or a promise rejected with Error if certificateName does not
+ * match the key name, or a promise rejected with Pib.Error if
+ * certificateOrCertificateName is the certificate Name and the certificate does
+ * not exist.
+ */
+PibKeyImpl.prototype.setDefaultCertificatePromise = function
+  (certificateOrCertificateName, useSync)
+{
+  var thisImpl = this;
+  var certificateName;
+
+  return SyncPromise.resolve()
+  .then(function() {
+    if (certificateOrCertificateName instanceof Name)
+      return SyncPromise.resolve(certificateOrCertificateName);
+    else {
+      var certificate = certificateOrCertificateName;
+      return thisImpl.addCertificatePromise(certificate)
+      .then(function() {
+        return SyncPromise.resolve(certificate.getName());
+      });
+    }
+  })
+  .then(function(localCertificateName) {
+    certificateName = localCertificateName;
+    return thisImpl.certificates_.getPromise(certificateName, useSync);
+  })
+  .then(function(certificate) {
+    thisImpl.defaultCertificate_ = certificate;
+    return thisImpl.pibImpl_.setDefaultCertificateOfKeyPromise
+      (thisImpl.keyName_, certificateName, useSync);
+  })
+  .then(function() {
+    return SyncPromise.resolve(thisImpl.defaultCertificate_);
+  });
+};
+
+/**
+ * Get the default certificate for this Key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the default
+ * CertificateV2, or a promise rejected with Pib.Error if the default
+ * certificate does not exist.
+ */
+PibKeyImpl.prototype.getDefaultCertificatePromise = function(useSync)
+{
+  var thisImpl = this;
+
+  if (this.defaultCertificate_ === null) {
+    return this.pibImpl_.getDefaultCertificateOfKeyPromise(this.keyName_, useSync)
+    .then(function(certificate) {
+      thisImpl.defaultCertificate_ = certificate;
+      return SyncPromise.resolve(thisImpl.defaultCertificate_);
+    });
+  }
+  else
+    return SyncPromise.resolve(thisImpl.defaultCertificate_);
+};
+/**
  * Copyright (C) 2014-2017 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -24375,7 +28365,10 @@ var SecurityException = require('../security-exception.js').SecurityException; /
 var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var Sha256WithEcdsaSignature = require('../../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
-var UseSubtleCrypto = require("../../use-subtle-crypto-node.js").UseSubtleCrypto;
+var VerificationHelpers = require('../verification-helpers.js').VerificationHelpers; /** @ignore */
+var DigestAlgorithm = require('../security-types.js').DigestAlgorithm; /** @ignore */
+var PublicKey = require('../certificate/public-key.js').PublicKey; /** @ignore */
+var SyncPromise = require("../../util/sync-promise").SyncPromise;
 
 /**
  * A PolicyManager is an abstract base class to represent the policy for
@@ -24501,132 +28494,34 @@ PolicyManager.setVerifyUsesString_ = function()
 PolicyManager.verifySignature = function
   (signature, signedBlob, publicKeyDer, onComplete)
 {
-  if (signature instanceof Sha256WithRsaSignature) {
+  if (signature instanceof Sha256WithRsaSignature ||
+      signature instanceof Sha256WithEcdsaSignature) {
     if (publicKeyDer.isNull()) {
       onComplete(false);
       return;
     }
-    PolicyManager.verifySha256WithRsaSignature
-      (signature.getSignature(), signedBlob, publicKeyDer, onComplete);
-  }
-  else if (signature instanceof Sha256WithEcdsaSignature) {
-    if (publicKeyDer.isNull()) {
-      onComplete(false);
-      return;
+
+    var publicKey;
+    try {
+      publicKey = new PublicKey(publicKeyDer);
+    } catch (ex) {
+      throw new SecurityException(new Error
+        ("PolicyManager.verify: Error decoding public key: " + ex));
     }
-    PolicyManager.verifySha256WithEcdsaSignature
-      (signature.getSignature(), signedBlob, publicKeyDer, onComplete);
+
+    SyncPromise.complete(onComplete,
+      VerificationHelpers.verifySignaturePromise
+        (signedBlob.signedBuf(), signature.getSignature(), publicKey,
+         DigestAlgorithm.SHA256, !onComplete));
   }
   else if (signature instanceof DigestSha256Signature)
-    PolicyManager.verifyDigestSha256Signature
-      (signature.getSignature(), signedBlob, onComplete);
+    onComplete(VerificationHelpers.verifyDigest
+      (signedBlob.signedBuf(), signature.getSignature(),
+       DigestAlgorithm.SHA256));
   else
     // We don't expect this to happen.
     throw new SecurityException(new Error
       ("PolicyManager.verify: Signature type is unknown"));
-};
-
-/**
- * Verify the RSA signature on the SignedBlob using the given public key.
- * @param {Blob} signature The signature bits.
- * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
- * verify.
- * @param {Blob} publicKeyDer The DER-encoded public key used to verify the
- * signature.
- * @param {function} onComplete This calls onComplete(true) if the signature
- * verifies, otherwise onComplete(false).
- */
-PolicyManager.verifySha256WithRsaSignature = function
-  (signature, signedBlob, publicKeyDer, onComplete)
-{
-  if (UseSubtleCrypto()){
-    var algo = {name:"RSASSA-PKCS1-v1_5",hash:{name:"SHA-256"}};
-
-    crypto.subtle.importKey("spki", publicKeyDer.buf().buffer, algo, true, ["verify"]).then(function(publicKey){
-      return crypto.subtle.verify(algo, publicKey, signature.buf(), signedBlob.signedBuf())
-    }).then(function(verified){
-      onComplete(verified);
-    });
-  } else {
-    if (PolicyManager.verifyUsesString_ === null)
-      PolicyManager.setVerifyUsesString_();
-
-    // The crypto verifier requires a PEM-encoded public key.
-    var keyBase64 = publicKeyDer.buf().toString('base64');
-    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
-    for (var i = 0; i < keyBase64.length; i += 64)
-      keyPem += (keyBase64.substr(i, 64) + "\n");
-    keyPem += "-----END PUBLIC KEY-----";
-
-    var verifier = Crypto.createVerify('RSA-SHA256');
-    verifier.update(signedBlob.signedBuf());
-    var signatureBytes = PolicyManager.verifyUsesString_ ?
-      DataUtils.toString(signature.buf()) : signature.buf();
-    onComplete(verifier.verify(keyPem, signatureBytes));
-  }
-};
-
-/**
- * Verify the ECDSA signature on the SignedBlob using the given public key.
- * @param {Blob} signature The signature bits.
- * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
- * verify.
- * @param {Blob} publicKeyDer The DER-encoded public key used to verify the
- * signature.
- * @param {function} onComplete This calls onComplete(true) if the signature
- * verifies, otherwise onComplete(false).
- */
-PolicyManager.verifySha256WithEcdsaSignature = function
-  (signature, signedBlob, publicKeyDer, onComplete)
-{
-  if (UseSubtleCrypto()) {
-/*
-    var algo = {name:"RSASSA-PKCS1-v1_5",hash:{name:"SHA-256"}};
-
-    crypto.subtle.importKey("spki", publicKeyDer.buf().buffer, algo, true, ["verify"]).then(function(publicKey){
-      return crypto.subtle.verify(algo, publicKey, signature.buf(), signedBlob.signedBuf())
-    }).then(function(verified){
-      onComplete(verified);
-    });
-*/  onComplete(false);
-  } else {
-    if (PolicyManager.verifyUsesString_ === null)
-      PolicyManager.setVerifyUsesString_();
-
-    // The crypto verifier requires a PEM-encoded public key.
-    var keyBase64 = publicKeyDer.buf().toString("base64");
-    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
-    for (var i = 0; i < keyBase64.length; i += 64)
-      keyPem += (keyBase64.substr(i, 64) + "\n");
-    keyPem += "-----END PUBLIC KEY-----";
-
-    // Just create a "sha256". The Crypto library will infer ECDSA from the key.
-    var verifier = Crypto.createVerify("sha256");
-    verifier.update(signedBlob.signedBuf());
-    var signatureBytes = PolicyManager.verifyUsesString_ ?
-      DataUtils.toString(signature.buf()) : signature.buf();
-    onComplete(verifier.verify(keyPem, signatureBytes));
-  }
-};
-
-/**
- * Verify the DigestSha256 signature on the SignedBlob by verifying that the
- * digest of SignedBlob equals the signature.
- * @param {Blob} signature The signature bits.
- * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
- * verify.
- * @param {function} onComplete This calls onComplete(true) if the signature
- * verifies, otherwise onComplete(false).
- */
-PolicyManager.verifyDigestSha256Signature = function
-  (signature, signedBlob, onComplete)
-{
-  // Set signedPortionDigest to the digest of the signed portion of the signedBlob.
-  var hash = Crypto.createHash('sha256');
-  hash.update(signedBlob.signedBuf());
-  var signedPortionDigest = new Blob(hash.digest(), false);
-
-  onComplete(signedPortionDigest.equals(signature));
 };
 /**
  * Copyright (C) 2014-2017 Regents of the University of California.
@@ -24742,6 +28637,8 @@ var KeyLocator = require('../../key-locator.js').KeyLocator; /** @ignore */
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var CertificateV2 = require('../v2/certificate-v2.js').CertificateV2; /** @ignore */
+var CertificateCacheV2 = require('../v2/certificate-cache-v2.js').CertificateCacheV2; /** @ignore */
 var BoostInfoParser = require('../../util/boost-info-parser.js').BoostInfoParser; /** @ignore */
 var NdnRegexTopMatcher = require('../../util/regex/ndn-regex-top-matcher.js').NdnRegexTopMatcher; /** @ignore */
 var CertificateCache = require('./certificate-cache.js').CertificateCache; /** @ignore */
@@ -24757,7 +28654,7 @@ var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
  * (http://redmine.named-data.net/projects/ndn-cxx/wiki/CommandValidatorConf)
  *
  * Once a rule is matched, the ConfigPolicyManager looks in the
- * CertificateCache for the IdentityCertificate matching the name in the KeyLocator
+ * certificate cache for the certificate matching the name in the KeyLocator
  * and uses its public key to verify the data packet or signed interest. If the
  * certificate can't be found, it is downloaded, verified and installed. A chain
  * of certificates will be followed to a maximum depth.
@@ -24767,15 +28664,21 @@ var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
  * verification to succeed.
  *
  * Create a new ConfigPolicyManager which will act on the rules specified in the
- * configuration and download unknown certificates when necessary.
+ * configuration and download unknown certificates when necessary. If
+ * certificateCache is a CertificateCache (or omitted) this creates a security
+ * v1 PolicyManager to verify certificates in format v1. To verify certificates
+ * in format v2, use a CertificateCacheV2 for the certificateCache.
  *
  * @param {string} configFileName (optional) If not null or empty, the path to
  * the configuration file containing verification rules. (This only works in
  * Node.js since it reads files using the "fs" module.) Otherwise, you should
  * separately call load().
- * @param {CertificateCache} certificateCache (optional) A CertificateCache to
- * hold known certificates. If this is null or omitted, then create an internal
- * CertificateCache.
+ * @param {CertificateCache|CertificateCacheV2} certificateCache (optional) A
+ * CertificateCache to hold known certificates. If certificateCache is a
+ * CertificateCache (or omitted or null) this creates a security v1
+ * PolicyManager to verify certificates in format v1. If this is a
+ * CertificateCacheV2, verify certificates in format v1. If omitted or null,
+ * create an internal v1 CertificateCache.
  * @param {number} searchDepth (optional) The maximum number of links to follow
  * when verifying a certificate chain. If omitted, use a default.
  * @param {number} graceInterval (optional) The window of time difference
@@ -24806,9 +28709,18 @@ var ConfigPolicyManager = function ConfigPolicyManager
     maxTrackedKeys = 1000;
 
   if (certificateCache == null)
-    this.certificateCache = new CertificateCache();
-  else
-    this.certificateCache = certificateCache;
+    certificateCache = new CertificateCache();
+  if (certificateCache instanceof CertificateCache) {
+    this.isSecurityV1_ = true;
+    this.certificateCache_ = certificateCache;
+    this.certificateCacheV2_ = null;
+  }
+  else {
+    this.isSecurityV1_ = false;
+    this.certificateCache_ = null;
+    this.certificateCacheV2_ = certificateCache;
+  }
+
   this.maxDepth = searchDepth;
   this.keyGraceInterval = graceInterval;
   this.keyTimestampTtl = keyTimestampTtl;
@@ -24830,7 +28742,10 @@ exports.ConfigPolicyManager = ConfigPolicyManager;
  */
 ConfigPolicyManager.prototype.reset = function()
 {
-  this.certificateCache.reset();
+  if (this.isSecurityV1_)
+    this.certificateCache_.reset();
+  else
+    this.certificateCacheV2_.clear();
 
   // Stores the fixed-signer certificate name associated with validation rules
   // so we don't keep loading from files.
@@ -24844,7 +28759,8 @@ ConfigPolicyManager.prototype.reset = function()
   this.requiresVerification = true;
 
   this.config = new BoostInfoParser();
-  this.refreshManager = new ConfigPolicyManager.TrustAnchorRefreshManager();
+  this.refreshManager = new ConfigPolicyManager.TrustAnchorRefreshManager
+    (this.isSecurityV1_);
 };
 
 /**
@@ -24934,15 +28850,14 @@ ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
 ConfigPolicyManager.prototype.checkVerificationPolicy = function
   (dataOrInterest, stepCount, onVerified, onValidationFailed, wireFormat)
 {
-  if (stepCount > this.maxDepth) {
-    try {
-      onValidationFailed
-        (dataOrInterest, "The verification stepCount " + stepCount +
-           " exceeded the maxDepth " + this.maxDepth);
-    } catch (ex) {
-      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
-    }
-    return null;
+  var objectName = dataOrInterest.getName();
+  var matchType = "data";
+
+  // For command interests, we need to ignore the last 4 components when
+  // matching the name.
+  if (dataOrInterest instanceof Interest) {
+    objectName = objectName.getPrefix(-4);
+    matchType = "interest";
   }
 
   var signature = ConfigPolicyManager.extractSignature(dataOrInterest, wireFormat);
@@ -24958,72 +28873,10 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     return null;
   }
 
-  if (!KeyLocator.canGetFromSignature(signature)) {
-    // We only support signature types with key locators.
-    try {
-      onValidationFailed
-        (dataOrInterest, "The signature type does not support a KeyLocator");
-    } catch (ex) {
-      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
-    }
-    return null;
-  }
-
-  var keyLocator = null;
-  try {
-    keyLocator = KeyLocator.getFromSignature(signature);
-  }
-  catch (ex) {
-    // No key locator -> fail.
-    try {
-      onValidationFailed
-        (dataOrInterest, "Error in KeyLocator.getFromSignature: " + ex);
-    } catch (ex) {
-      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
-    }
-    return null;
-  }
-
-  var signatureName = keyLocator.getKeyName();
-  // No key name in KeyLocator -> fail.
-  if (signatureName.size() == 0) {
-    try {
-      onValidationFailed
-        (dataOrInterest, "The signature KeyLocator doesn't have a key name");
-    } catch (ex) {
-      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
-    }
-    return null;
-  }
-
-  var objectName = dataOrInterest.getName();
-  var matchType = "data";
-
-  // For command interests, we need to ignore the last 4 components when
-  // matching the name.
-  if (dataOrInterest instanceof Interest) {
-    objectName = objectName.getPrefix(-4);
-    matchType = "interest";
-  }
-
-  // First see if we can find a rule to match this packet.
-  var matchedRule = this.findMatchingRule(objectName, matchType);
-
-  // No matching rule -> fail.
-  if (matchedRule == null) {
-    try {
-      onValidationFailed
-        (dataOrInterest, "No matching rule found for " + objectName.toUri());
-    } catch (ex) {
-      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
-    }
-    return null;
-  }
-
   var failureReason = ["unknown"];
-  var signatureMatches = this.checkSignatureMatch
-    (signatureName, objectName, matchedRule, failureReason);
-  if (!signatureMatches) {
+  var certificateInterest = this.getCertificateInterest_
+    (stepCount, matchType, objectName, signature, failureReason);
+  if (certificateInterest == null) {
     try {
       onValidationFailed(dataOrInterest, failureReason[0]);
     } catch (ex) {
@@ -25032,48 +28885,60 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     return null;
   }
 
-  // Before we look up keys, refresh any certificate directories.
-  this.refreshManager.refreshAnchors();
+  if (certificateInterest.getName().size() > 0) {
+    var thisManager = this;
 
-  // Now finally check that the data or interest was signed correctly.
-  // If we don't actually have the certificate yet, create a
-  // ValidationRequest for it.
-  var foundCert = this.refreshManager.getCertificate(signatureName);
-  if (foundCert == null)
-    foundCert = this.certificateCache.getCertificate(signatureName);
-  var thisManager = this;
-  if (foundCert == null) {
-    var certificateInterest = new Interest(signatureName);
     var onCertificateDownloadComplete = function(data) {
       var certificate;
-      try {
-        certificate = new IdentityCertificate(data);
-      } catch (ex) {
+      if (thisManager.isSecurityV1_) {
         try {
-          onValidationFailed
-            (dataOrInterest, "Cannot decode certificate " + data.getName().toUri());
+          certificate = new IdentityCertificate(data);
         } catch (ex) {
-          console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+          try {
+            onValidationFailed
+              (dataOrInterest, "Cannot decode certificate " + data.getName().toUri());
+          } catch (ex) {
+            console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+          }
+          return null;
         }
-        return null;
+        thisManager.certificateCache_.insertCertificate(certificate);
       }
-      thisManager.certificateCache.insertCertificate(certificate);
+      else {
+        try {
+          certificate = new CertificateV2(data);
+        } catch (ex) {
+          try {
+            onValidationFailed
+              (dataOrInterest, "Cannot decode certificate " + data.getName().toUri());
+          } catch (ex) {
+            console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+          }
+          return null;
+        }
+        thisManager.certificateCacheV2_.insert(certificate);
+      }
+
       thisManager.checkVerificationPolicy
         (dataOrInterest, stepCount + 1, onVerified, onValidationFailed);
     };
 
-    var nextStep = new ValidationRequest
+    return new ValidationRequest
       (certificateInterest, onCertificateDownloadComplete, onValidationFailed,
        2, stepCount + 1);
-
-    return nextStep;
   }
 
   // For interests, we must check that the timestamp is fresh enough.
   // We do this after (possibly) downloading the certificate to avoid
   // filling the cache with bad keys.
   if (dataOrInterest instanceof Interest) {
-    var keyName = foundCert.getPublicKeyName();
+    var signatureName = KeyLocator.getFromSignature(signature).getKeyName();
+    var keyName;
+    if (this.isSecurityV1_)
+      keyName = IdentityCertificate.certificateNameToPublicKeyName
+        (signatureName);
+    else
+      keyName = signatureName;
     var timestamp = dataOrInterest.getName().get(-4).toNumber();
 
     if (!this.interestTimestampIsFresh(keyName, timestamp, failureReason)) {
@@ -25087,6 +28952,8 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   }
 
   // Certificate is known, so verify the signature.
+  // wireEncode returns the cached encoding if available.
+  var thisManager = this;
   this.verify(signature, dataOrInterest.wireEncode(), function (verified, reason) {
     if (verified) {
       try {
@@ -25105,6 +28972,88 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
       }
     }
   });
+};
+
+/**
+ * This is a helper for checkVerificationPolicy to verify the rule and return a
+ * certificate interest to fetch the next certificate in the hierarchy if needed.
+ * @param {number} stepCount The number of verification steps that have been
+ * done, used to track the verification progress.
+ * @param {string} matchType Either "data" or "interest".
+ * @param {Name} objectName The name of the data or interest packet.
+ * @param {Signature} signature The Signature object for the data or interest
+ * packet.
+ * @param {Array<string>} failureReason If can't determine the interest, set
+ * failureReason[0] to the failure reason.
+ * @return {Interest} null if can't determine the interest, otherwise the
+ * interest for the ValidationRequest to fetch the next certificate. However, if
+ * the interest has an empty name, the validation succeeded and no need to fetch
+ * a certificate.
+ */
+ConfigPolicyManager.prototype.getCertificateInterest_ = function
+  (stepCount, matchType, objectName, signature, failureReason)
+{
+  if (stepCount > this.maxDepth) {
+    failureReason[0] = "The verification stepCount " + stepCount +
+      " exceeded the maxDepth " + this.maxDepth;
+    return null;
+  }
+
+  // First see if we can find a rule to match this packet.
+  var matchedRule;
+  try {
+    matchedRule = this.findMatchingRule(objectName, matchType);
+  } catch (ex) {
+    return null;
+  }
+
+  // No matching rule -> fail.
+  if (matchedRule == null) {
+    failureReason[0] = "No matching rule found for " + objectName.toUri();
+    return null;
+  }
+
+  if (!KeyLocator.canGetFromSignature(signature)) {
+    // We only support signature types with key locators.
+    failureReason[0] = "The signature type does not support a KeyLocator";
+    return null;
+  }
+
+  var keyLocator = keyLocator = KeyLocator.getFromSignature(signature);
+
+  var signatureName = keyLocator.getKeyName();
+  // No key name in KeyLocator -> fail.
+  if (signatureName.size() == 0) {
+    failureReason[0] = "The signature KeyLocator doesn't have a key name";
+    return null;
+  }
+
+  var signatureMatches = this.checkSignatureMatch
+    (signatureName, objectName, matchedRule, failureReason);
+  if (!signatureMatches)
+    return null;
+
+  // Before we look up keys, refresh any certificate directories.
+  this.refreshManager.refreshAnchors();
+
+  // If we don't actually have the certificate yet, return a certificateInterest
+  // for it.
+  if (this.isSecurityV1_) {
+    var foundCert = this.refreshManager.getCertificate(signatureName);
+    if (foundCert == null)
+      foundCert = this.certificateCache_.getCertificate(signatureName);
+    if (foundCert == null)
+      return new Interest(signatureName);
+  }
+  else {
+    var foundCert = this.refreshManager.getCertificateV2(signatureName);
+    if (foundCert == null)
+      foundCert = this.certificateCacheV2_.find(signatureName);
+    if (foundCert == null)
+      return new Interest(signatureName);
+  }
+
+  return new Interest();
 };
 
 /**
@@ -25162,7 +29111,10 @@ ConfigPolicyManager.prototype.loadTrustAnchorCertificates = function()
       break;
     }
 
-    this.lookupCertificate(certID, isPath);
+    if (this.isSecurityV1_)
+      this.lookupCertificate(certID, isPath);
+    else
+      this.lookupCertificateV2(certID, isPath);
   }
 };
 
@@ -25191,8 +29143,12 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
 
     var cert;
     if (signerType == "file") {
-      cert = this.lookupCertificate
-        (signerInfo.get("file-name")[0].getValue(), true);
+      if (this.isSecurityV1_)
+        cert = this.lookupCertificate
+          (signerInfo.get("file-name")[0].getValue(), true);
+      else
+        cert = this.lookupCertificateV2
+          (signerInfo.get("file-name")[0].getValue(), true);
       if (cert == null) {
         failureReason[0] = "Can't find fixed-signer certificate file: " +
           signerInfo.get("file-name")[0].getValue();
@@ -25200,8 +29156,12 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
       }
     }
     else if (signerType == "base64") {
-      cert = this.lookupCertificate
-        (signerInfo.get("base64-string")[0].getValue(), false);
+      if (this.isSecurityV1_)
+        cert = this.lookupCertificate
+          (signerInfo.get("base64-string")[0].getValue(), false);
+      else
+        cert = this.lookupCertificateV2
+          (signerInfo.get("base64-string")[0].getValue(), false);
       if (cert == null) {
         failureReason[0] = "Can't find fixed-signer certificate base64: " +
           signerInfo.get("base64-string")[0].getValue();
@@ -25332,6 +29292,10 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
  */
 ConfigPolicyManager.prototype.lookupCertificate = function(certID, isPath)
 {
+  if (!this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("lookupCertificate: For security v2, use lookupCertificateV2()"));
+
   var cert;
 
   var cachedCertUri = this.fixedCertificateCache[certID];
@@ -25348,10 +29312,48 @@ ConfigPolicyManager.prototype.lookupCertificate = function(certID, isPath)
 
     var certUri = cert.getName().getPrefix(-1).toUri();
     this.fixedCertificateCache[certID] = certUri;
-    this.certificateCache.insertCertificate(cert);
+    this.certificateCache_.insertCertificate(cert);
   }
   else
-    cert = this.certificateCache.getCertificate(new Name(cachedCertUri));
+    cert = this.certificateCache_.getCertificate(new Name(cachedCertUri));
+
+  return cert;
+};
+
+/**
+ * This looks up certificates specified as base64-encoded data or file names.
+ * These are cached by filename or encoding to avoid repeated reading of files
+ * or decoding.
+ * @param {string} certID
+ * @param {boolean} isPath
+ * @return {CertificateV2} The certificate object, or null if not found.
+ */
+ConfigPolicyManager.prototype.lookupCertificateV2 = function(certID, isPath)
+{
+  if (this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("lookupCertificateV2: For security v1, use lookupCertificate()"));
+
+  var cert;
+
+  var cachedCertUri = this.fixedCertificateCache[certID];
+  if (cachedCertUri === undefined) {
+    if (isPath)
+      // load the certificate data (base64 encoded IdentityCertificate)
+      cert = ConfigPolicyManager.TrustAnchorRefreshManager.loadCertificateV2FromFile
+        (certID);
+    else {
+      var certData = new Buffer(certID, 'base64');
+      cert = new CertificateV2();
+      cert.wireDecode(certData);
+    }
+
+    var certUri = cert.getName().getPrefix(-1).toUri();
+    this.fixedCertificateCache[certID] = certUri;
+    this.certificateCacheV2_.insert(cert);
+  }
+  else
+    cert = this.certificateCacheV2_.find(new Name(cachedCertUri));
 
   return cert;
 };
@@ -25570,21 +29572,44 @@ ConfigPolicyManager.prototype.verify = function
   if (keyLocator.getType() == KeyLocatorType.KEYNAME) {
     // Assume the key name is a certificate name.
     var signatureName = keyLocator.getKeyName();
-    var certificate = this.refreshManager.getCertificate(signatureName);
-    if (certificate == null)
-      certificate = this.certificateCache.getCertificate(signatureName);
-    if (certificate == null) {
-      onComplete(false,  "Cannot find a certificate with name " +
-        signatureName.toUri());
-      return;
-    }
 
-    var publicKeyDer = certificate.getPublicKeyInfo().getKeyDer();
-    if (publicKeyDer.isNull()) {
-      // Can't find the public key with the name.
-      onComplete(false, "There is no public key in the certificate with name " +
-        certificate.getName().toUri());
-      return;
+    var publicKeyDer;
+    if (this.isSecurityV1_) {
+      var certificate = this.refreshManager.getCertificate(signatureName);
+      if (certificate == null)
+        certificate = this.certificateCache_.getCertificate(signatureName);
+      if (certificate == null) {
+        onComplete(false,  "Cannot find a certificate with name " +
+          signatureName.toUri());
+        return;
+      }
+
+      publicKeyDer = certificate.getPublicKeyInfo().getKeyDer();
+      if (publicKeyDer.isNull()) {
+        // Can't find the public key with the name.
+        onComplete(false, "There is no public key in the certificate with name " +
+          certificate.getName().toUri());
+        return;
+      }
+    }
+    else {
+      var certificate = this.refreshManager.getCertificateV2(signatureName);
+      if (certificate == null)
+        certificate = this.certificateCacheV2_.find(signatureName);
+      if (certificate == null) {
+        onComplete(false,  "Cannot find a certificate with name " +
+          signatureName.toUri());
+        return;
+      }
+
+      try {
+        publicKeyDer = certificate.getPublicKey();
+      } catch (ex) {
+        // We don't expect this to happen.
+        onComplete(false, "There is no public key in the certificate with name " +
+          certificate.getName().toUri());
+        return;
+      }
     }
 
     PolicyManager.verifySignature
@@ -25601,10 +29626,17 @@ ConfigPolicyManager.prototype.verify = function
     onComplete(false, "The KeyLocator does not have a key name");
 };
 
+/**
+ * Manages the trust-anchor certificates, including refresh.
+ * @constructor
+ */
 ConfigPolicyManager.TrustAnchorRefreshManager =
-  function ConfigPolicyManagerTrustAnchorRefreshManager()
+  function ConfigPolicyManagerTrustAnchorRefreshManager(isSecurityV1)
 {
-  this.certificateCache = new CertificateCache();
+  this.isSecurityV1_ = isSecurityV1;
+
+  this.certificateCache_ = new CertificateCache();
+  this.certificateCacheV2_ = new CertificateCacheV2();
   // Maps the directory name to certificate names so they can be deleted when
   // necessary. The key is the directory name string. The value is the object
   //  {certificateNames,  // array of string
@@ -25614,6 +29646,10 @@ ConfigPolicyManager.TrustAnchorRefreshManager =
   this.refreshDirectories = {};
 };
 
+/**
+ * @param {string} fileName
+ * @return {IdentityCertificate}
+ */
 ConfigPolicyManager.TrustAnchorRefreshManager.loadIdentityCertificateFromFile =
   function(fileName)
 {
@@ -25624,11 +29660,48 @@ ConfigPolicyManager.TrustAnchorRefreshManager.loadIdentityCertificateFromFile =
   return cert;
 };
 
+/**
+ * @param {string} fileName
+ * @return {CertificateV2}
+ */
+ConfigPolicyManager.TrustAnchorRefreshManager.loadCertificateV2FromFile =
+  function(fileName)
+{
+  var encodedData = fs.readFileSync(fileName).toString();
+  var decodedData = new Buffer(encodedData, 'base64');
+  var cert = new CertificateV2();
+  cert.wireDecode(new Blob(decodedData, false));
+  return cert;
+};
+
+/**
+ * @param {Name} certificateName
+ * @return {IdentityCertificate}
+ */
 ConfigPolicyManager.TrustAnchorRefreshManager.prototype.getCertificate = function
   (certificateName)
 {
+  if (!this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("getCertificate: For security v2, use getCertificateV2()"));
+
   // This assumes the timestamp is already removed.
-  return this.certificateCache.getCertificate(certificateName);
+  return this.certificateCache_.getCertificate(certificateName);
+};
+
+/**
+ * @param {Name} certificateName
+ * @return {CertificateV2}
+ */
+ConfigPolicyManager.TrustAnchorRefreshManager.prototype.getCertificateV2 = function
+  (certificateName)
+{
+  if (this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("getCertificateV2: For security v1, use getCertificate()"));
+
+  // This assumes the timestamp is already removed.
+  return this.certificateCacheV2_.find(certificateName);
 };
 
 // refreshPeriod in milliseconds.
@@ -25646,21 +29719,41 @@ ConfigPolicyManager.TrustAnchorRefreshManager.prototype.addDirectory = function
 
   var certificateNames = [];
   for (var i = 0; i < allFiles.length; ++i) {
-    var cert;
-    try {
-      var fullPath = path.join(directoryName, allFiles[i]);
-      cert = ConfigPolicyManager.TrustAnchorRefreshManager.loadIdentityCertificateFromFile
-        (fullPath);
-    }
-    catch (e) {
-      // Allow files that are not certificates.
-      continue;
-    }
+    if (this.isSecurityV1_) {
+      var cert;
+      try {
+        var fullPath = path.join(directoryName, allFiles[i]);
+        cert = ConfigPolicyManager.TrustAnchorRefreshManager.loadIdentityCertificateFromFile
+          (fullPath);
+      }
+      catch (e) {
+        // Allow files that are not certificates.
+        continue;
+      }
 
-    // Cut off the timestamp so it matches the KeyLocator Name format.
-    var certUri = cert.getName().getPrefix(-1).toUri();
-    this.certificateCache.insertCertificate(cert);
-    certificateNames.push(certUri);
+      // Cut off the timestamp so it matches the KeyLocator Name format.
+      var certUri = cert.getName().getPrefix(-1).toUri();
+      this.certificateCache_.insertCertificate(cert);
+      certificateNames.push(certUri);
+    }
+    else {
+      var cert;
+      try {
+        var fullPath = path.join(directoryName, allFiles[i]);
+        cert = ConfigPolicyManager.TrustAnchorRefreshManager.loadCertificateV2FromFile
+          (fullPath);
+      }
+      catch (e) {
+        // Allow files that are not certificates.
+        continue;
+      }
+
+      // Get the key name since this is in the KeyLocator.
+      var certUri = CertificateV2.extractKeyNameFromCertName
+        (cert.getName()).toUri();
+      this.certificateCacheV2_.insert(cert);
+      certificateNames.push(certUri);
+    }
   }
 
   this.refreshDirectories[directoryName] = {
@@ -25680,8 +29773,24 @@ ConfigPolicyManager.TrustAnchorRefreshManager.prototype.refreshAnchors = functio
       // Delete the certificates associated with this directory if possible
       //   then re-import.
       // IdentityStorage subclasses may not support deletion.
-      for (var c in certificateList)
-        this.certificateCache.deleteCertificate(new Name(c));
+      for (var i = 0; i < certificateList.length; ++i) {
+        try {
+          if (this.isSecurityV1_)
+            this.certificateCache_.deleteCertificate(new Name(certificateList[i]));
+          else {
+            // The name in the CertificateCacheV2 contains the but the name in
+            // the certificateList does not, so find the certificate based on
+            // the prefix first.
+            var foundCertificate = this.certificateCacheV2_.find
+              (new Name(certificateList[i]));
+            if (foundCertificate != null)
+              this.certificateCacheV2_.deleteCertificate
+                (foundCertificate.getName());
+          }
+        } catch (ex) {
+          // Was already removed or not supported?
+        }
+      }
 
       this.addDirectory(directory, info.refreshPeriod);
     }
@@ -25835,27 +29944,34 @@ var SecurityException = require('../security-exception.js').SecurityException; /
 var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var PolicyManager = require('./policy-manager.js').PolicyManager; /** @ignore */
+var IdentityStorage = require('../identity/identity-storage.js').IdentityStorage; /** @ignore */
 var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**
- * A SelfVerifyPolicyManager implements a PolicyManager to look in the
- * IdentityStorage for the public key with the name in the KeyLocator (if
- * available) and use it to verify the data packet, without searching a
- * certificate chain.  If the public key can't be found, the verification fails.
+ * A SelfVerifyPolicyManager implements a PolicyManager to look up the public
+ * key in the given storage. If the public key can't be found, the verification
+ * fails.
  *
- * @param {IdentityStorage} identityStorage (optional) The IdentityStorage for
- * looking up the public key. This object must remain valid during the life of
- * this SelfVerifyPolicyManager. If omitted, then don't look for a public key
- * with the name in the KeyLocator and rely on the KeyLocator having the full
- * public key DER.
+ * @param {IdentityStorage|PibImpl} storage (optional) The IdentityStorage or
+ * PibImpl for looking up the public key. This object must remain valid during
+ * the life of this SelfVerifyPolicyManager. If omitted, then don't look for a
+ * public key with the name in the KeyLocator and rely on the KeyLocator having
+ * the full public key DER.
  * @constructor
  */
-var SelfVerifyPolicyManager = function SelfVerifyPolicyManager(identityStorage)
+var SelfVerifyPolicyManager = function SelfVerifyPolicyManager(storage)
 {
   // Call the base constructor.
   PolicyManager.call(this);
 
-  this.identityStorage = identityStorage;
+  if (storage instanceof IdentityStorage) {
+    this.identityStorage_ = storage;
+    this.pibImpl_ = null;
+  }
+  else {
+    this.identityStorage_ = null;
+    this.pibImpl_ = storage;
+  }
 };
 
 SelfVerifyPolicyManager.prototype = new PolicyManager();
@@ -25886,9 +30002,9 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 };
 
 /**
- * Look in the IdentityStorage for the public key with the name in the
- * KeyLocator (if available) and use it to verify the data packet.  If the
- * public key can't be found, call onValidationFailed.
+ * Look in the storage for the public key with the name in the KeyLocator (if 
+ * available) and use it to verify the data packet.  If the public key can't be
+ * found, call onValidationFailed.
  *
  * @param {Data|Interest} dataOrInterest The Data object or interest with the
  * signature to check.
@@ -26016,11 +30132,11 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 };
 
 /**
- * Check the type of signatureInfo to get the KeyLocator. Look in the
- * IdentityStorage for the public key with the name in the KeyLocator (if
- * available) and use it to verify the signedBlob. If the public key can't be
- * found, return false. (This is a generalized method which can verify both a
- * Data packet and an interest.)
+ * Check the type of signatureInfo to get the KeyLocator. Look in the storage 
+ * for the public key with the name in the KeyLocator (if available) and use it
+ * to verify the signedBlob. If the public key can't be found, return false.
+ * (This is a generalized method which can verify both a Data packet and an
+ * Interest.)
  * @param {Signature} signatureInfo An object of a subclass of Signature, e.g.
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
@@ -26071,9 +30187,8 @@ SelfVerifyPolicyManager.prototype.verify = function
 };
 
 /**
- * Look in the IdentityStorage for the public key with the name in the
- * KeyLocator (if available). If the public key can't be found, return and empty
- * Blob.
+ * Look in the storage for the public key with the name in the KeyLocator (if
+ * available). If the public key can't be found, return and empty Blob.
  * @param {KeyLocator} keyLocator The KeyLocator.
  * @param {function} onComplete This calls 
  * onComplete(publicKeyDer, reason) where publicKeyDer is the public key
@@ -26084,7 +30199,7 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
   (keyLocator, onComplete)
 {
   if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
-      this.identityStorage != null) {
+      this.identityStorage_ != null) {
     var keyName;
     try {
       // Assume the key name is a certificate name.
@@ -26104,12 +30219,2110 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
            (new Blob(), "The identityStorage doesn't have the key named " +
               keyName.toUri());
        },
-       this.identityStorage.getKeyPromise(keyName));
+       this.identityStorage_.getKeyPromise(keyName, !onComplete));
+  }
+  else if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
+           this.pibImpl_ != null) {
+    SyncPromise.complete
+      (onComplete,
+       function(err) {
+         // The storage doesn't have the key.
+         onComplete
+           (new Blob(), "The identityStorage doesn't have the key named " +
+              keyName.toUri());
+       },
+       this.pibImpl_.getKeyBitsPromise(keyLocator.getKeyName(), !onComplete));
   }
   else
     // Can't find a key to verify.
     onComplete(new Blob(), "The signature KeyLocator doesn't have a key name");
 };
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/tpm/back-end.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var KeyIdType = require('../key-id-type.js').KeyIdType; /** @ignore */
+var PibKey = require('../pib/pib-key.js').PibKey; /** @ignore */
+var Tpm = require('./tpm.js').Tpm; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+
+/**
+ * TpmBackEnd is an abstract base class for a TPM backend implementation which
+ * provides a TpmKeyHandle to the TPM front end. This class defines the
+ * interface that an actual TPM backend implementation should provide, for
+ * example TpmBackEndMemory.
+ * @constructor
+ */
+var TpmBackEnd = function TpmBackEnd()
+{
+};
+
+exports.TpmBackEnd = TpmBackEnd;
+
+/**
+ * Create a TpmBackEnd.Error which represents a non-semantic error in backend
+ * TPM processing.
+ * Call with: throw new TpmBackEnd.Error(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+TpmBackEnd.Error = function TpmBackEndError(error)
+{
+  if (error) {
+    error.__proto__ = TpmBackEnd.Error.prototype;
+    return error;
+  }
+};
+
+TpmBackEnd.Error.prototype = new Error();
+TpmBackEnd.Error.prototype.name = "TpmBackEndError";
+
+/**
+ * Check if the key with name keyName exists in the TPM.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {SyncPromise} A promise which returns true if the key exists.
+ */
+TpmBackEnd.prototype.hasKeyPromise = function(keyName, useSync)
+{
+  return this.doHasKeyPromise_(keyName, useSync);
+};
+
+/**
+ * Get the handle of the key with name keyName. Calling getKeyHandle multiple
+ * times with the same keyName will return different TpmKeyHandle objects that
+ * all refer to the same key.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a TpmKeyHandle of the
+ * key, or returns null if the key does not exist.
+ */
+TpmBackEnd.prototype.getKeyHandlePromise = function(keyName, useSync)
+{
+  return this.doGetKeyHandlePromise_(keyName, useSync);
+};
+
+/**
+ * Create a key for the identityName according to params.
+ * @param {Name} identityName The name if the identity.
+ * @param {KeyParams} params The KeyParams for creating the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a TpmKeyHandle of the
+ * created key, or a promise rejected with TpmBackEnd.Error if the key cannot be
+ * created.
+ */
+TpmBackEnd.prototype.createKeyPromise = function(identityName, params, useSync)
+{
+  var thisTpm = this;
+
+  return SyncPromise.resolve()
+  .then(function() {
+    // Do key name checking.
+    if (params.getKeyIdType() == KeyIdType.USER_SPECIFIED) {
+      // The keyId is pre-set.
+      var keyName = PibKey.constructKeyName(identityName, params.getKeyId());
+      return thisTpm.hasKeyPromise(keyName, useSync)
+      .then(function(hasKey) {
+        if (hasKey)
+          return SyncPromise.reject(new Tpm.Error(new Error
+            ("Key `" + keyName.toUri() + "` already exists")));
+        else
+          return SyncPromise.resolve();
+      });
+    }
+    else if (params.getKeyIdType() == KeyIdType.SHA256) {
+      // The key name will be assigned in setKeyName after the key is generated.
+      return SyncPromise.resolve();
+    }
+    else if (params.getKeyIdType() == KeyIdType.RANDOM) {
+      var keyId;
+
+      var loop = function() {
+        var random = Crypto.randomBytes(8);
+        keyId = new Name.Component(new Blob(random, false));
+        var keyName = PibKey.constructKeyName(identityName, keyId);
+
+        return thisTpm.hasKeyPromise(keyName, useSync)
+        .then(function(hasKey) {
+          if (!hasKey)
+            // We got a unique one.
+            return SyncPromise.resolve();
+          else
+            // Loop again.
+            return loop();
+        });
+      }
+
+      return loop()
+      .then(function() {
+        params.setKeyId(keyId);
+        return SyncPromise.resolve();
+      });
+    }
+    else
+      return SyncPromise.reject(new Tpm.Error(new Error
+        ("Unsupported key id type")));
+  })
+  .then(function() {
+    return thisTpm.doCreateKeyPromise_(identityName, params, useSync);
+  });
+};
+
+/**
+ * Delete the key with name keyName. If the key doesn't exist, do nothing.
+ * Note: Continuing to use existing Key handles on a deleted key results in
+ * undefined behavior.
+ * @param {Name} keyName The name of the key to delete.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with TpmBackEnd.Error if the deletion fails.
+ */
+TpmBackEnd.prototype.deleteKeyPromise = function(keyName, useSync)
+{
+  return this.doDeleteKeyPromise_(keyName, useSync);
+};
+
+// TODO: exportKey
+
+/**
+ * Import an encoded private key with name keyName in PKCS #8 format, possibly
+ * passwprd-encrypted.
+ * @param {Name} keyName The name of the key to use in the TPM.
+ * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
+ * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
+ * an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key. If the
+ * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
+ * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with TpmBackEnd.Error for an error importing the key.
+ */
+TpmBackEnd.prototype.importKeyPromise = function(keyName, pkcs8, password, useSync)
+{
+  var thisTpm = this;
+
+  return this.hasKeyPromise(keyName, useSync)
+  .then(function(hasKey) {
+    if (hasKey)
+      return SyncPromise.reject(new TpmBackEnd.Error(new Error
+        ("Key `" + keyName.toUri() + "` already exists")));
+    else
+      return thisTpm.doImportKeyPromise_(keyName, pkcs8, password, useSync);
+  });
+};
+
+// TODO: isTerminalMode
+// TODO: setTerminalMode
+// TODO: isTpmLocked
+// TODO: unlockTpm
+
+/**
+ * Set the key name in keyHandle according to identityName and params.
+ * @param {TpmKeyHandle} keyHandle
+ * @param {Name} identityName
+ * @param {KeyParams} params
+ */
+TpmBackEnd.setKeyName = function(keyHandle, identityName, params)
+{
+  var keyId;
+
+  if (params.getKeyIdType() == KeyIdType.USER_SPECIFIED)
+    keyId = params.getKeyId();
+  else if (params.getKeyIdType() == KeyIdType.SHA256) {
+    var hash = Crypto.createHash('sha256');
+    hash.update(keyHandle.derivePublicKey().buf());
+    keyId = Name.Component(new Blob(hash.digest(), false));
+  }
+  else if (params.getKeyIdType() == KeyIdType.RANDOM) {
+    if (params.getKeyId().getValue().size() == 0)
+      throw new TpmBackEnd.Error(new Error
+        ("setKeyName: The keyId is empty for type RANDOM"));
+    keyId = params.getKeyId();
+  }
+  else
+    throw new TpmBackEnd.Error(new Error
+      ("setKeyName: unrecognized params.getKeyIdType()"));
+
+  keyHandle.setKeyName(PibKey.constructKeyName(identityName, keyId));
+};
+
+/**
+ * A protected method to check if the key with name keyName exists in the TPM.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if the key exists.
+ */
+TpmBackEnd.prototype.doHasKeyPromise_ = function(keyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("TpmBackEnd.doHasKeyPromise_ is not implemented"));
+};
+
+/**
+ * A protected method to get the handle of the key with name keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a TpmKeyHandle of the
+ * key, or returns null if the key does not exist.
+ */
+TpmBackEnd.prototype.doGetKeyHandlePromise_ = function(keyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("TpmBackEnd.doGetKeyHandlePromise_ is not implemented"));
+};
+
+/**
+ * A protected method to create a key for identityName according to params. The
+ * created key is named as: /<identityName>/[keyId]/KEY . The key name is set in
+ * the returned TpmKeyHandle.
+ * @param {Name} identityName The name if the identity.
+ * @param {KeyParams} params The KeyParams for creating the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the TpmKeyHandle of
+ * the created key, or a promise rejected with TpmBackEnd.Error if the key
+ * cannot be created.
+ */
+TpmBackEnd.prototype.doCreateKeyPromise_ = function(identityName, params, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("TpmBackEnd.doCreateKeyPromise_ is not implemented"));
+};
+
+/**
+ * A protected method to delete the key with name keyName. If the key doesn't
+ * exist, do nothing.
+ * @param {Name} keyName The name of the key to delete.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with TpmBackEnd.Error if the deletion fails.
+ */
+TpmBackEnd.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("TpmBackEnd.doDeleteKeyPromise_ is not implemented"));
+};
+
+// TODO: doExportKeyPromise_
+
+/**
+ * A protected method to import an encoded private key with name keyName in
+ * PKCS #8 format, possibly passwprd-encrypted.
+ * @param {Name} keyName The name of the key to use in the TPM.
+ * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
+ * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
+ * an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key. If the
+ * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
+ * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with TpmBackEnd.Error for an error importing the key.
+ */
+TpmBackEnd.prototype.doImportKeyPromise_ = function
+  (keyName, pkcs8, password, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("TpmBackEnd.doImportKeyPromise_ is not implemented"));
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/tpm/back-end-mem.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var TpmPrivateKey = require('./tpm-private-key.js').TpmPrivateKey; /** @ignore */
+var TpmKeyHandleMemory = require('./tpm-key-handle-memory.js').TpmKeyHandleMemory; /** @ignore */
+var TpmBackEnd = require('./tpm-back-end.js').TpmBackEnd;
+
+/**
+ * TpmBackEndMemory extends TpmBackEnd to implement a TPM back-end using
+ * in-memory storage.
+ * @constructor
+ */
+var TpmBackEndMemory = function TpmBackEndMemory()
+{
+  // Call the base constructor.
+  TpmBackEnd.call(this);
+
+  // keyName URI string => TpmPrivateKey.
+  // (Use a string because we can't use the Name object as the key in JavaScript.)
+  this.keys_ = {};
+};
+
+TpmBackEndMemory.prototype = new TpmBackEnd();
+TpmBackEndMemory.prototype.name = "TpmBackEndMemory";
+
+exports.TpmBackEndMemory = TpmBackEndMemory;
+
+TpmBackEndMemory.getScheme = function() { return "tpm-memory"; };
+
+/**
+ * A protected method to check if the key with name keyName exists in the TPM.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if the key exists.
+ */
+TpmBackEndMemory.prototype.doHasKeyPromise_ = function(keyName, useSync)
+{
+  return SyncPromise.resolve(keyName.toUri() in this.keys_);
+};
+
+/**
+ * A protected method to get the handle of the key with name keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a TpmKeyHandle of the
+ * key, or returns null if the key does not exist.
+ */
+TpmBackEndMemory.prototype.doGetKeyHandlePromise_ = function(keyName, useSync)
+{
+  var key = this.keys_[keyName.toUri()];
+  if (key == undefined)
+    return SyncPromise.resolve(null);
+
+  return SyncPromise.resolve(new TpmKeyHandleMemory(key));
+};
+
+/**
+ * A protected method to create a key for identityName according to params. The
+ * created key is named as: /<identityName>/[keyId]/KEY . The key name is set in
+ * the returned TpmKeyHandle.
+ * @param {Name} identityName The name if the identity.
+ * @param {KeyParams} params The KeyParams for creating the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the TpmKeyHandle of
+ * the created key, or a promise rejected with TpmBackEnd.Error if the key
+ * cannot be created.
+ */
+TpmBackEndMemory.prototype.doCreateKeyPromise_ = function
+  (identityName, params, useSync)
+{
+  var thisTpm = this;
+
+  return TpmPrivateKey.generatePrivateKeyPromise(params, useSync)
+  .then(function(key) {
+    var keyHandle = new TpmKeyHandleMemory(key);
+
+    TpmBackEnd.setKeyName(keyHandle, identityName, params);
+
+    thisTpm.keys_[keyHandle.getKeyName().toUri()] = key;
+    return SyncPromise.resolve(keyHandle);
+  }, function(err) {
+    return SyncPromise.reject(new TpmBackEnd.Error(new Error
+      ("Error in TpmPrivateKey.generatePrivateKey: " + err)));
+  });
+};
+
+/**
+ * A protected method to delete the key with name keyName. If the key doesn't
+ * exist, do nothing.
+ * @param {Name} keyName The name of the key to delete.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with TpmBackEnd.Error if the deletion fails.
+ */
+TpmBackEndMemory.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
+{
+  delete this.keys_[keyName.toUri()];
+  return SyncPromise.resolve();
+};
+
+// TODO: doExportKeyPromise_
+
+/**
+ * A protected method to import an encoded private key with name keyName in
+ * PKCS #8 format, possibly passwprd-encrypted.
+ * @param {Name} keyName The name of the key to use in the TPM.
+ * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
+ * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
+ * an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key. If the
+ * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
+ * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with TpmBackEnd.Error for an error importing the key.
+ */
+TpmBackEndMemory.prototype.doImportKeyPromise_ = function
+  (keyName, pkcs8, password, useSync)
+{
+  if (password != null)
+    return SyncPromise.reject(new TpmBackEnd.Error(new Error
+      ("Private key password-encryption is not implemented")));
+
+  try {
+    var key = new TpmPrivateKey();
+    key.loadPkcs8(pkcs8);
+    this.keys_[keyName.toUri()] = key;
+    return SyncPromise.resolve();
+  } catch (ex) {
+    return SyncPromise.reject(new TpmBackEnd.Error(new Error
+      ("Cannot import private key: " + ex)));
+  }
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/tpm/key-handle.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+
+/**
+ * TpmKeyHandle is an abstract base class for a TPM key handle, which provides
+ * an interface to perform cryptographic operations with a key in the TPM.
+ * @constructor
+ */
+var TpmKeyHandle = function TpmKeyHandle()
+{
+  this.keyName_ = new Name();
+};
+
+exports.TpmKeyHandle = TpmKeyHandle;
+
+/**
+ * Compute a digital signature from the byte buffer using this key with
+ * digestAlgorithm.
+ * @param {number} digestAlgorithm The digest algorithm as an int from the
+ * DigestAlgorithm enum.
+ * @param {Buffer} data The input byte buffer.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the signature Blob (or
+ * an isNull Blob for an unrecognized digestAlgorithm), or a promise rejected
+ * with TpmBackEnd.Error for an error in signing.
+ */
+TpmKeyHandle.prototype.signPromise = function(digestAlgorithm, data, useSync)
+{
+  return this.doSignPromise_(digestAlgorithm, data, useSync);
+};
+
+/**
+ * Return the plain text which is decrypted from cipherText using this key.
+ * @param {Buffer} cipherText The cipher text byte buffer.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the decrypted data Blob,
+ * or a promise rejected with TpmPrivateKey.Error for error decrypting.
+ */
+TpmKeyHandle.prototype.decryptPromise = function(cipherText, useSync)
+{
+  return this.doDecryptPromise_(cipherText, useSync);
+};
+
+/**
+ * Get the encoded public key derived from this key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Blob} The public key encoding Blob.
+ */
+TpmKeyHandle.prototype.derivePublicKey = function(useSync)
+{
+  return this.doDerivePublicKey_(useSync);
+};
+
+TpmKeyHandle.prototype.setKeyName = function(keyName)
+{
+  this.keyName_ = new Name(keyName);
+};
+
+TpmKeyHandle.prototype.getKeyName = function() { return this.keyName_; };
+
+/**
+ * A protected method to do the work of sign().
+ * @param {Buffer} data The input byte buffer.
+ * @param {number} digestAlgorithm The digest algorithm as an int from the
+ * DigestAlgorithm enum.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the signature Blob (or
+ * an isNull Blob for an unrecognized digestAlgorithm), or a promise rejected
+ * with TpmBackEnd.Error for an error in signing.
+ */
+TpmKeyHandle.prototype.doSignPromise_ = function(digestAlgorithm, data, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("TpmKeyHandle.doSignPromise_ is not implemented"));
+};
+
+/**
+ * A protected method to do the work of decrypt().
+ * @param {Buffer} cipherText The cipher text byte buffer.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the decrypted data Blob,
+ * or a promise rejected with TpmPrivateKey.Error for error decrypting.
+ */
+TpmKeyHandle.prototype.doDecryptPromise_ = function(cipherText, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("TpmKeyHandle.doDecryptPromise_ is not implemented"));
+};
+
+/**
+ * A protected method to do the work of derivePublicKey().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @returns {Blob} The public key encoding Blob.
+ */
+TpmKeyHandle.prototype.doDerivePublicKey_ = function(useSync)
+{
+  return SyncPromise.reject(new Error
+    ("TpmKeyHandle.doDerivePublicKey_ is not implemented"));
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/tpm/key-handle-mem.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var DigestAlgorithm = require('../security-types.js').DigestAlgorithm; /** @ignore */
+var TpmPrivateKey = require('./tpm-private-key.js').TpmPrivateKey; /** @ignore */
+var TpmBackEnd = require('./tpm-back-end.js').TpmBackEnd; /** @ignore */
+var TpmKeyHandle = require('./tpm-key-handle.js').TpmKeyHandle;
+
+/**
+ * TpmKeyHandleMemory extends TpmKeyHandle to implement a TPM key handle that
+ * keeps the private key in memory.
+ *
+ * Create a TpmKeyHandleMemory to use the given in-memory key.
+ * @param {TpmPrivateKey} key The in-memory key.
+ * @constructor
+ */
+var TpmKeyHandleMemory = function TpmKeyHandleMemory(key)
+{
+  // Call the base constructor.
+  TpmKeyHandle.call(this);
+
+  if (key == null)
+    throw new Error("The key is null");
+
+  this.key_ = key;
+};
+
+TpmKeyHandleMemory.prototype = new TpmKeyHandle();
+TpmKeyHandleMemory.prototype.name = "TpmKeyHandleMemory";
+
+exports.TpmKeyHandleMemory = TpmKeyHandleMemory;
+
+/**
+ * A protected method to do the work of sign().
+ * @param {number} digestAlgorithm The digest algorithm as an int from the
+ * DigestAlgorithm enum.
+ * @param {Buffer} data The input byte buffer.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the signature Blob (or
+ * an isNull Blob for an unrecognized digestAlgorithm), or a promise rejected
+ * with TpmBackEnd.Error for an error in signing.
+ */
+TpmKeyHandleMemory.prototype.doSignPromise_ = function
+  (digestAlgorithm, data, useSync)
+{
+  if (digestAlgorithm == DigestAlgorithm.SHA256) {
+    return this.key_.signPromise(data, digestAlgorithm, useSync)
+    .catch(function(err) {
+      return SyncPromise.reject(new TpmBackEnd.Error(new Error
+        ("Error in TpmPrivateKey.sign: " + err)));
+    });
+  }
+  else
+    return SyncPromise.resolve(new Blob());
+};
+
+/**
+ * A protected method to do the work of decrypt().
+ * @param {Buffer} cipherText The cipher text byte buffer.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the decrypted data Blob,
+ * or a promise rejected with TpmPrivateKey.Error for error decrypting.
+ */
+TpmKeyHandleMemory.prototype.doDecryptPromise_ = function(cipherText, useSync)
+{
+  return this.key_.decryptPromise(cipherText, useSync)
+  .catch(function(err) {
+    return SyncPromise.reject(new TpmBackEnd.Error(new Error
+      ("Error in TpmPrivateKey.decrypt: " + err)));
+  });
+};
+
+/**
+ * A protected method to do the work of derivePublicKey().
+ * @returns {Blob} The public key encoding Blob.
+ */
+TpmKeyHandle.prototype.doDerivePublicKey_ = function()
+{
+  try {
+    return this.key_.derivePublicKey();
+  } catch (ex) {
+    throw new TpmBackEnd.Error(new Error
+      ("Error in TpmPrivateKey.derivePublicKey: " + ex));
+  }
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From https://github.com/named-data/ndn-cxx/blob/master/src/security/transform/private-key.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+/** @ignore */
+var constants = require('constants'); /** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var KeyType = require('../security-types').KeyType; /** @ignore */
+var EncryptAlgorithmType = require('../../encrypt/algo/encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var DigestAlgorithm = require('../security-types.js').DigestAlgorithm; /** @ignore */
+var DataUtils = require('../../encoding/data-utils.js').DataUtils; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
+var DerInteger = require('../../encoding/der/der-node.js').DerNode.DerInteger; /** @ignore */
+var OID = require('../../encoding/oid.js').OID; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
+var rsaKeygen = null;
+try {
+  // This should be installed with: sudo npm install rsa-keygen
+  rsaKeygen = require('rsa-keygen');
+}
+catch (e) {}
+
+/**
+ * A TpmPrivateKey holds an in-memory private key and provides cryptographic
+ * operations such as for signing by the in-memory TPM.
+ *
+ * Create an uninitialized TpmPrivateKey. You must call a load method to
+ * initialize it, such as loadPkcs1.
+ * @constructor
+ */
+var TpmPrivateKey = function TpmPrivateKey()
+{
+  this.keyType_ = null;    // number from KeyType
+  this.privateKey_ = null; // The PEM-encoded private key.
+};
+
+exports.TpmPrivateKey = TpmPrivateKey;
+
+/**
+ * Create a new TpmPrivateKey.Error to report an error in private key processing.
+ * Call with: throw new TpmPrivateKey.Error(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+TpmPrivateKey.Error = function TpmPrivateKeyError(error)
+{
+  if (error) {
+    error.__proto__ = TpmPrivateKey.Error.prototype;
+    return error;
+  }
+};
+
+TpmPrivateKey.Error.prototype = new Error();
+TpmPrivateKey.Error.prototype.name = "TpmPrivateKeyError";
+
+/**
+ * Load the unencrypted private key from a buffer with the PKCS #1 encoding.
+ * This replaces any existing private key in this object.
+ * @param {Buffer} encoding The byte buffer with the private key encoding.
+ * @param {number} keyType (optional) The KeyType, such as KeyType.RSA. If
+ * omitted or null, then partially decode the private key to determine the key
+ * type.
+ * @throws TpmPrivateKey.Error for errors decoding the key.
+ */
+TpmPrivateKey.prototype.loadPkcs1 = function(encoding, keyType)
+{
+  if (encoding instanceof Blob)
+    encoding = encoding.buf();
+
+  if (keyType == undefined) {
+    // Try to determine the key type.
+    try {
+      var parsedNode = DerNode.parse(encoding);
+      var children = parsedNode.getChildren();
+
+      // An RsaPrivateKey has integer version 0 and 8 integers.
+      if (children.length == 9 &&
+          (children[0] instanceof DerInteger) &&
+          children[0].toVal() == 0 &&
+          (children[1] instanceof DerInteger) &&
+          (children[2] instanceof DerInteger) &&
+          (children[3] instanceof DerInteger) &&
+          (children[4] instanceof DerInteger) &&
+          (children[5] instanceof DerInteger) &&
+          (children[6] instanceof DerInteger) &&
+          (children[7] instanceof DerInteger) &&
+          (children[8] instanceof DerInteger))
+        keyType = KeyType.RSA;
+      else
+        // Assume it is an EC key. Try decoding it below.
+        keyType = KeyType.ECDSA;
+    } catch (ex) {
+      // Assume it is an EC key. Try decoding it below.
+      keyType = KeyType.ECDSA;
+    }
+  }
+
+  if (keyType == KeyType.ECDSA) {
+    // Encode the DER as PEM.
+    var keyBase64 = encoding.toString('base64');
+    var keyPem = "-----BEGIN EC PRIVATE KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END EC PRIVATE KEY-----";
+
+    this.privateKey_ = keyPem;
+  }
+  else if (keyType == KeyType.RSA) {
+    // Encode the DER as PEM.
+    var keyBase64 = encoding.toString('base64');
+    var keyPem = "-----BEGIN RSA PRIVATE KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END RSA PRIVATE KEY-----";
+
+    this.privateKey_ = keyPem;
+  }
+  else
+    throw new TpmPrivateKey.Error(new Error
+      ("loadPkcs1: Unrecognized keyType: " + keyType));
+
+  this.keyType_ = keyType;
+};
+
+/**
+ * Load the unencrypted private key from a buffer with the PKCS #8 encoding.
+ * This replaces any existing private key in this object.
+ * @param {Buffer} encoding The byte buffer with the private key encoding.
+ * @param {number} keyType (optional) The KeyType, such as KeyType.RSA. If
+ * omitted or null, then partially decode the private key to determine the key
+ * type.
+ * @throws TpmPrivateKey.Error for errors decoding the key.
+ */
+TpmPrivateKey.prototype.loadPkcs8 = function(encoding, keyType)
+{
+  if (encoding instanceof Blob)
+    encoding = encoding.buf();
+
+  if (keyType == undefined) {
+    // Decode the PKCS #8 private key to find the algorithm OID and the inner
+    // private key DER.
+    var oidString, algorithmParameters, privateKeyDer;
+    try {
+      var parsedNode = DerNode.parse(encoding);
+      var pkcs8Children = parsedNode.getChildren();
+      // Get the algorithm OID and parameters.
+      var algorithmIdChildren = DerNode.getSequence(pkcs8Children, 1).getChildren();
+      oidString = algorithmIdChildren[0].toVal();
+      algorithmParameters = algorithmIdChildren[1];
+      // Get the value of the 3rd child which is the octet string.
+      privateKeyDer = pkcs8Children[2].toVal();
+    } catch (ex) {
+      // Error decoding as PKCS #8. Try PKCS #1 for backwards compatibility.
+      try {
+        this.loadPkcs1(encoding);
+        return;
+      } catch (ex) {
+        throw new TpmPrivateKey.Error(new Error
+          ("loadPkcs8: Error decoding private key: " + ex));
+      }
+    }
+
+    if (oidString == TpmPrivateKey.EC_ENCRYPTION_OID)
+      keyType = KeyType.ECDSA;
+    else if (oidString == TpmPrivateKey.RSA_ENCRYPTION_OID)
+      keyType = KeyType.RSA;
+    else
+      throw new TpmPrivateKey.Error(new Error
+        ("loadPkcs8: Unrecognized private key OID: " + oidString));
+  }
+
+  this.loadPkcs1(privateKeyDer, keyType);
+};
+
+/**
+ * Get the encoded public key for this private key.
+ * @returns {Blob} The public key encoding Blob.
+ * @throws TpmPrivateKey.Error if no private key is loaded, or error converting
+ * to a public key.
+ */
+TpmPrivateKey.prototype.derivePublicKey = function()
+{
+  if (this.keyType_ != KeyType.RSA)
+    throw new TpmPrivateKey.Error(new Error
+      ("derivePublicKey: The private key is not loaded"));
+
+  try {
+    var privateKeyBase64 = this.privateKey_.toString().replace
+      ("-----BEGIN RSA PRIVATE KEY-----", "").replace
+      ("-----END RSA PRIVATE KEY-----", "");
+    var rsaPrivateKeyDer = new Buffer(privateKeyBase64, 'base64');
+
+    // Decode the PKCS #1 RSAPrivateKey.
+    var parsedNode = DerNode.parse(rsaPrivateKeyDer, 0);
+    var rsaPrivateKeyChildren = parsedNode.getChildren();
+    var modulus = rsaPrivateKeyChildren[1];
+    var publicExponent = rsaPrivateKeyChildren[2];
+
+    // Encode the PKCS #1 RSAPublicKey.
+    var rsaPublicKey = new DerNode.DerSequence();
+    rsaPublicKey.addChild(modulus);
+    rsaPublicKey.addChild(publicExponent);
+    var rsaPublicKeyDer = rsaPublicKey.encode();
+
+    // Encode the SubjectPublicKeyInfo.
+    var algorithmIdentifier = new DerNode.DerSequence();
+    algorithmIdentifier.addChild(new DerNode.DerOid(new OID
+      (TpmPrivateKey.RSA_ENCRYPTION_OID)));
+    algorithmIdentifier.addChild(new DerNode.DerNull());
+    var publicKey = new DerNode.DerSequence();
+    publicKey.addChild(algorithmIdentifier);
+    publicKey.addChild(new DerNode.DerBitString(rsaPublicKeyDer.buf(), 0));
+
+    return publicKey.encode();
+  } catch (ex) {
+    // We don't expect this to happen since the key was encoded here.
+    throw new TpmPrivateKey.Error(new Error
+      ("derivePublicKey: Error decoding private key " + ex));
+  }
+};
+
+/**
+ * Decrypt the cipherText using this private key according the encryption
+ * algorithmType. Only RSA encryption is supported for now.
+ * @param {Buffer} cipherText The cipher text byte buffer.
+ * @param {number} algorithmType (optional) This decrypts according to
+ * algorithmType which is an int from the EncryptAlgorithmType enum. If omitted,
+ * use RsaOaep.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the decrypted data Blob,
+ * or a promise rejected with TpmPrivateKey.Error if the private key is not
+ * loaded, if decryption is not supported for this key type, or for error
+ * decrypting.
+ */
+TpmPrivateKey.prototype.decryptPromise = function
+  (cipherText, algorithmType, useSync)
+{
+  if (algorithmType == undefined)
+    algorithmType = EncryptAlgorithmType.RsaOaep;
+
+  if (this.keyType_ == null)
+    return SyncPromise.reject(new TpmPrivateKey.Error(new Error
+      ("decrypt: The private key is not loaded")));
+
+  // TODO: Check for UseSubtleCrypto.
+
+  var padding;
+  if (algorithmType == EncryptAlgorithmType.RsaPkcs)
+    padding = constants.RSA_PKCS1_PADDING;
+  else if (algorithmType == EncryptAlgorithmType.RsaOaep)
+    padding = constants.RSA_PKCS1_OAEP_PADDING;
+  else
+    return SyncPromise.reject(new TpmPrivateKey.Error(new Error
+      ("unsupported padding scheme")));
+
+  try {
+    // In Node.js, privateDecrypt requires version v0.12.
+    return SyncPromise.resolve(new Blob
+      (Crypto.privateDecrypt
+        ({ key: this.privateKey_, padding: padding }, cipherText),
+       false));
+  } catch (err) {
+    return SyncPromise.reject(new TpmPrivateKey.Error(err));
+  }
+};
+
+/**
+ * Sign the data with this private key, returning a signature Blob.
+ * @param {Buffer} data The input byte buffer.
+ * @param {number} digestAlgorithm The digest algorithm as an int from the
+ * DigestAlgorithm enum.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the signature Blob (or
+ * an isNull Blob if this private key is not initialized), or a promise rejected
+ * with TpmPrivateKey.Error for unrecognized digestAlgorithm or an error in
+ * signing.
+ */
+TpmPrivateKey.prototype.signPromise = function(data, digestAlgorithm, useSync)
+{
+  if (this.keyType_ == null)
+    return SyncPromise.reject(new TpmPrivateKey.Error(new Error
+      ("sign: The private key is not loaded")));
+
+  if (digestAlgorithm != DigestAlgorithm.SHA256)
+    return SyncPromise.reject(new TpmPrivateKey.Error(new Error
+      ("TpmPrivateKey.sign: Unsupported digest algorithm")));
+
+  if (UseSubtleCrypto() && !useSync) {
+    var algo = {name:"RSASSA-PKCS1-v1_5", hash:{name:"SHA-256"}};
+
+    var promise;
+    if (!this.privateKey_.subtleKey) {
+      // This is the first time in the session that we're using crypto subtle
+      // with this key so we have to convert to pkcs8 and import it. Assigning
+      // it to this.privateKey_.subtleKey means we only have to do this once per
+      // session, giving us a small but not insignificant, performance boost.
+      var privateDER = DataUtils.privateKeyPemToDer(this.privateKey_);
+      var pkcs8 = TpmPrivateKey.encodePkcs8PrivateKey
+        (privateDER, new OID(TpmPrivateKey.RSA_ENCRYPTION_OID),
+         new DerNode.DerNull()).buf();
+      var thisKey = this;
+
+      promise = crypto.subtle.importKey
+        ("pkcs8", pkcs8.buffer, algo, true, ["sign"])
+      .then(function(subtleKey) {
+        // Cache the crypto.subtle key object.
+        thisKey.privateKey_.subtleKey = subtleKey;
+        return crypto.subtle.sign(algo, subtleKey, data);
+      });
+    }
+    else
+      // The crypto.subtle key has been cached on a previous sign or from keygen.
+      promise = crypto.subtle.sign(algo, this.privateKey_.subtleKey, data);
+
+    return promise
+    .then(function(signature) {
+      var result = new Blob(new Uint8Array(signature), true);
+      return Promise.resolve(result);
+    });
+  }
+  else {
+    var signer;
+    if (this.keyType_ === KeyType.RSA)
+      signer = Crypto.createSign("RSA-SHA256");
+    else if (this.keyType === KeyType.ECDSA)
+      // Just create a "sha256". The Crypto library will infer ECDSA from the key.
+      signer = Crypto.createSign("sha256");
+    else
+      return SyncPromise.resolve(new Blob());
+
+    signer.update(data);
+    var signature = new Buffer
+      (DataUtils.toNumbersIfString(signer.sign(this.privateKey_)));
+    var result = new Blob(signature, false);
+
+    return SyncPromise.resolve(result);
+  }
+};
+
+/**
+ * Get the encoded unencrypted private key in PKCS #1.
+ * @return {Blob} The private key encoding Blob.
+ * @throws {TpmPrivateKey.Error} If no private key is loaded, or error encoding.
+ */
+TpmPrivateKey.prototype.toPkcs1 = function()
+{
+  if (this.keyType_ == null)
+    throw new TpmPrivateKey.Error(new Error
+      ("toPkcs1: The private key is not loaded"));
+
+  // this.privateKey_ is already the base64-encoded PKCS #1 key.
+  var privateKeyBase64 = this.privateKey_.replace
+    ("-----BEGIN RSA PRIVATE KEY-----", "").replace
+    ("-----END RSA PRIVATE KEY-----", "");
+  return new Blob(new Buffer(privateKeyBase64, 'base64'));
+};
+
+/**
+ * Get the encoded unencrypted private key in PKCS #8.
+ * @return {Blob} The private key encoding Blob.
+ * @throws {TpmPrivateKey.Error} If no private key is loaded, or error encoding.
+ */
+TpmPrivateKey.prototype.toPkcs8 = function()
+{
+  if (this.keyType_ == null)
+    throw new TpmPrivateKey.Error(new Error
+      ("toPkcs8: The private key is not loaded"));
+
+  var oid;
+  if (this.keyType_ === KeyType.RSA)
+    oid = new OID(TpmPrivateKey.RSA_ENCRYPTION_OID);
+  else if (this.keyType === KeyType.ECDSA)
+    oid = new OID(TpmPrivateKey.EC_ENCRYPTION_OID);
+  else
+    // We don't expect this to happen.
+    throw new TpmPrivateKey.Error(new Error
+      ("toPkcs8: Unrecognized key type " + this.keyType_));
+
+  return TpmPrivateKey.encodePkcs8PrivateKey
+    (this.toPkcs1().buf(), oid, new DerNode.DerNull());
+};
+
+/**
+ * Generate a key pair according to keyParams and return a new TpmPrivateKey
+ * with the private key. You can get the public key with derivePublicKey.
+ * @param {KeyParams} keyParams The parameters of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the new TpmPrivateKey,
+ * or a promise rejected with Error if the key type is not supported, or a
+ * promise rejected with TpmPrivateKey.Error for an invalid key size, or an
+ * error generating.
+ */
+TpmPrivateKey.generatePrivateKeyPromise = function(keyParams, useSync)
+{
+  // TODO: Check for UseSubtleCrypto.
+  // TODO: Check for RSAKey in the browser.
+
+  // Assume we are in Node.js.
+  var privateKeyPem;
+
+  if (keyParams.getKeyType() === KeyType.RSA) {
+    if (!rsaKeygen)
+      return SyncPromise.reject(new TpmPrivateKey.Error(new Error
+        ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
+
+    var keyPair = rsaKeygen.generate(keyParams.getKeySize());
+    privateKeyPem = keyPair.private_key.toString();
+  }
+  else
+    return SyncPromise.reject(new Error
+      ("Cannot generate a key pair of type " + keyParams.getKeyType()));
+
+  var result = new TpmPrivateKey();
+  result.privateKey_ = privateKeyPem;
+  result.keyType_ = keyParams.getKeyType();
+
+  return SyncPromise.resolve(result);
+};
+
+/**
+ * Encode the private key to a PKCS #8 private key. We do this explicitly here
+ * to avoid linking to extra OpenSSL libraries.
+ * @param {Buffer} privateKeyDer The input private key DER.
+ * @param {OID} oid The OID of the privateKey.
+ * @param {DerNode} parameters The DerNode of the parameters for the OID.
+ * @return {Blob} The PKCS #8 private key DER.
+ */
+TpmPrivateKey.encodePkcs8PrivateKey = function(privateKeyDer, oid, parameters)
+{
+  var algorithmIdentifier = new DerNode.DerSequence();
+  algorithmIdentifier.addChild(new DerNode.DerOid(oid));
+  algorithmIdentifier.addChild(parameters);
+
+  var result = new DerNode.DerSequence();
+  result.addChild(new DerNode.DerInteger(0));
+  result.addChild(algorithmIdentifier);
+  result.addChild(new DerNode.DerOctetString(privateKeyDer));
+
+  return result.encode();
+};
+
+/**
+ * Encode the RSAKey private key as a PKCS #1 private key.
+ * @param {RSAKey} rsaKey The RSAKey private key.
+ * @return {Blob} The PKCS #1 private key DER.
+ */
+TpmPrivateKey.encodePkcs1PrivateKeyFromRSAKey = function(rsaKey)
+{
+  // Imitate KJUR getEncryptedPKCS5PEMFromRSAKey.
+  var result = new DerNode.DerSequence();
+
+  result.addChild(new DerNode.DerInteger(0));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.n)));
+  result.addChild(new DerNode.DerInteger(rsaKey.e));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.d)));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.p)));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.q)));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.dmp1)));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.dmq1)));
+  result.addChild(new DerNode.DerInteger(TpmPrivateKey.bigIntegerToBuffer(rsaKey.coeff)));
+
+  return result.encode();
+};
+
+/**
+ * Encode the public key values in the RSAKey private key as a
+ * SubjectPublicKeyInfo.
+ * @param {RSAKey} rsaKey The RSAKey private key with the public key values.
+ * @return {Blob} The SubjectPublicKeyInfo DER.
+ */
+TpmPrivateKey.encodePublicKeyFromRSAKey = function(rsaKey)
+{
+  var rsaPublicKey = new DerNode.DerSequence();
+
+  rsaPublicKey.addChild(new DerNode.DerInteger
+    (TpmPrivateKey.bigIntegerToBuffer(rsaKey.n)));
+  rsaPublicKey.addChild(new DerNode.DerInteger(rsaKey.e));
+
+  var algorithmIdentifier = new DerNode.DerSequence();
+  algorithmIdentifier.addChild
+    (new DerNode.DerOid(new OID(TpmPrivateKey.RSA_ENCRYPTION_OID)));
+  algorithmIdentifier.addChild(new DerNode.DerNull());
+
+  var result = new DerNode.DerSequence();
+
+  result.addChild(algorithmIdentifier);
+  result.addChild(new DerNode.DerBitString(rsaPublicKey.encode().buf(), 0));
+
+  return result.encode();
+};
+
+/**
+ * Convert a BigInteger to a Buffer.
+ * @param {BigInteger} bigInteger The BigInteger.
+ * @return {Buffer} The Buffer.
+ */
+TpmPrivateKey.bigIntegerToBuffer = function(bigInteger)
+{
+  // Imitate KJUR.asn1.ASN1Util.bigIntToMinTwosComplementsHex.
+  var hex = bigInteger.toString(16);
+  if (hex.substr(0, 1) == "-")
+    throw new Error
+      ("TpmPrivateKey.bigIntegerToBuffer: Negative integers are not currently supported");
+
+  if (hex.length % 2 == 1)
+    // Odd number of characters.
+    hex = "0" + hex;
+  else {
+    if (! hex.match(/^[0-7]/))
+      // The first byte is >= 0x80, so prepend a zero to keep it positive.
+      hex = "00" + hex;
+  }
+
+  return new Buffer(hex, 'hex');
+};
+
+TpmPrivateKey.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
+TpmPrivateKey.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/tpm/tpm.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var KeyType = require('../security-types').KeyType; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+
+/**
+ * The TPM (Trusted Platform Module) stores the private portion of a user's
+ * cryptography keys. The format and location of stored information is indicated
+ * by the TPM locator. The TPM is designed to work with a PIB (Public
+ * Information Base) which stores public keys and related information such as
+ * certificates.
+ *
+ * The TPM also provides functionalities of cryptographic transformation, such
+ * as signing and decryption.
+ *
+ * A TPM consists of a unified front-end interface and a backend implementation.
+ * The front-end caches the handles of private keys which are provided by the
+ * backend implementation.
+ *
+ * Note: A Tpm instance is created and managed only by the KeyChain. It is
+ * returned by the KeyChain getTpm() method, through which it is possible to
+ * check for the existence of private keys, get public keys for the private
+ * keys, sign, and decrypt the supplied buffers using managed private keys.
+ *
+ * Create a new TPM instance with the specified location. This constructor
+ * should only be called by KeyChain.
+ *
+ * @param {string} scheme The scheme for the TPM.
+ * @param {string} location The location for the TPM.
+ * @param {TpmBackEnd} backEnd The TPM back-end implementation.
+ * @constructor
+ */
+var Tpm = function Tpm(scheme, location, backEnd)
+{
+  // Name URI string => TpmKeyHandle
+  // (Use a string because we can't use the Name object as the key in JavaScript.)
+  this.keys_ = {};
+
+  this.scheme_ = scheme;
+  this.location_ = location;
+  this.backEnd_ = backEnd;
+};
+
+exports.Tpm = Tpm;
+
+/**
+ * Create a Tpm.Error which which represents a semantic error in TPM processing.
+ * Call with: throw new Tpm.Error(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+Tpm.Error = function TpmError(error)
+{
+  if (error) {
+    error.__proto__ = Tpm.Error.prototype;
+    return error;
+  }
+};
+
+Tpm.Error.prototype = new Error();
+Tpm.Error.prototype.name = "TpmError";
+
+Tpm.prototype.getTpmLocator = function()
+{
+  return this.scheme_ + ":" + this.location_;
+};
+
+/**
+ * Check if the key with name keyName exists in the TPM.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if the key exists.
+ */
+Tpm.prototype.hasKeyPromise = function(keyName, useSync)
+{
+  return this.backEnd_.hasKeyPromise(keyName, useSync);
+};
+
+/**
+ * Get the public portion of an asymmetric key pair with name keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the encoded public key
+ * Blob (or an isNull Blob if the key does not exist).
+ */
+Tpm.prototype.getPublicKeyPromise = function(keyName, useSync)
+{
+  return this.findKeyPromise_(keyName, useSync)
+  .then(function(key) {
+    if (key == null)
+      return SyncPromise.resolve(new Blob());
+    else
+      return SyncPromise.resolve(key.derivePublicKey());
+  });
+};
+
+/**
+ * Compute a digital signature from the byte buffer using the key with name
+ * keyName.
+ * @param {Buffer} data The input byte buffer.
+ * @param {Name} keyName The name of the key.
+ * @param {number} digestAlgorithm The digest algorithm as an int from the
+ * DigestAlgorithm enum.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the signature Blob (or
+ * an isNull Blob if the key does not exist), or a promise rejected
+ * with TpmBackEnd.Error for an error in signing.
+ */
+Tpm.prototype.signPromise = function(data, keyName, digestAlgorithm, useSync)
+{
+  return this.findKeyPromise_(keyName, useSync)
+  .then(function(key) {
+    if (key == null)
+      return SyncPromise.resolve(new Blob());
+    else
+      return key.signPromise(digestAlgorithm, data, useSync);
+  });
+};
+
+/**
+ * Return the plain text which is decrypted from cipherText using the key with
+ * name keyName.
+ * @param {Buffer} cipherText The cipher text byte buffer.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the decrypted data Blob
+ * (or an isNull Blob if the key does not exist).
+ */
+Tpm.prototype.decryptPromise = function(cipherText, keyName, useSync)
+{
+  return this.findKeyPromise_(keyName, useSync)
+  .then(function(key) {
+    if (key == null)
+      return SyncPromise.resolve(new Blob());
+    else
+      return key.decryptPromise(cipherText, useSync);
+  });
+};
+
+// TODO: isTerminalModePromise
+// TODO: setTerminalModePromise
+// TODO: isTpmLockedPromise
+// TODO: unlockTpmPromise
+
+/**
+ * Get the TpmBackEnd. This should only be called by KeyChain.
+ * @return {TpmBackEnd}
+ */
+Tpm.prototype.getBackEnd_ = function() { return this.backEnd_; };
+
+/**
+ * Create a key for the identityName according to params. The created key is
+ * named /<identityName>/[keyId]/KEY . This should only be called by KeyChain.
+ * @param {Name} identityName The name if the identity.
+ * @param {KeyParams} params The KeyParams for creating the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the Name of the created
+ * key, or a promise rejected with Tpm.Error if params is invalid or if the key
+ * type is unsupported, or a promise rejected with TpmBackEnd.Error if the key
+ * already exists or cannot be created.
+ */
+Tpm.prototype.createKeyPromise_ = function(identityName, params, useSync)
+{
+  if (params.getKeyType() == KeyType.RSA ||
+      params.getKeyType() == KeyType.ECDSA) {
+    var thisTpm = this;
+
+    return this.backEnd_.createKeyPromise(identityName, params, useSync)
+    .then(function(keyHandle) {
+      var keyName = keyHandle.getKeyName()
+      thisTpm.keys_[keyName.toUri()] = keyHandle;
+      return SyncPromise.resolve(keyName);
+    });
+  }
+  else
+    return SyncPromise.resolve(new Tpm.Error(new Error
+      ("createKey: Unsupported key type")));
+};
+
+/**
+ * Delete the key with name keyName. If the key doesn't exist, do nothing.
+ * Note: Continuing to use existing Key handles on a deleted key results in
+ * undefined behavior. This should only be called by KeyChain.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with TpmBackEnd.Error if the deletion fails.
+ */
+Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
+{
+  delete this.keys_[keyName.toUri()];
+
+  return this.backEnd_.deleteKeyPromise(keyName, useSync);
+};
+
+// TODO: exportPrivateKeyPromise_
+
+/**
+ * Import an encoded private key with name keyName in PKCS #8 format, possibly
+ * passwprd-encrypted. This should only be called by KeyChain.
+ * @param {Name} keyName The name of the key to use in the TPM.
+ * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
+ * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
+ * an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key. If the
+ * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
+ * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which return true for success, false 
+ * if importing fails.
+ */
+Tpm.prototype.importPrivateKeyPromise_ = function(keyName, pkcs8, password, useSync)
+{
+  return this.backEnd_.importKeyPromise(keyName, pkcs8, password, useSync)
+  .then(function() {
+    return SyncPromise.resolve(true);
+  }, function() {
+    return SyncPromise.resolve(false);
+  });
+};
+
+/**
+ * Get the TpmKeyHandle with name keyName, using backEnd_.getKeyHandlePromise if
+ * it is not already cached in keys_.
+ * @param {Name} keyName The name of the key, which is copied.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which return the TpmKeyHandle in the
+ * keys_ cache, or null if no key exists with name keyName.
+ */
+Tpm.prototype.findKeyPromise_ = function(keyName, useSync)
+{
+  var keyNameUri = keyName.toUri();
+  var handle = this.keys_[keyNameUri];
+
+  if (handle != undefined)
+    return SyncPromise.resolve(handle);
+
+  var thisTpm = this;
+  return this.backEnd_.getKeyHandlePromise(keyName, useSync)
+  .then(function(handle) {
+    if (handle != null) {
+      thisTpm.keys_[keyNameUri] = handle;
+      return SyncPromise.resolve(handle);
+    }
+
+    return SyncPromise.resolve(null);
+  });
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/certificate-cache.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var CertificateV2 = require('./certificate-v2.js').CertificateV2;
+
+/**
+ * A CertificateCacheV2 holds other user's verified certificates in security v2
+ * format CertificateV2. A certificate is removed no later than its NotAfter
+ * time, or maxLifetime after it has been added to the cache.
+ *
+ * Create a CertificateCacheV2.
+ * @param {number} maxLifetimeMilliseconds (optional) The maximum time that
+ * certificates can live inside the cache, in milliseconds. If omitted, use
+ * getDefaultLifetime().
+ * @constructor
+ */
+var CertificateCacheV2 = function CertificateCacheV2(maxLifetimeMilliseconds)
+{
+  // Array of objects with fields "name" of type Name and "certificate" of type
+  // CertificateV2. We can't use an {} object since the Name key itself is an
+  // object, and also it needs to be sorted by Name.
+  this.certificatesByName_ = [];
+  this.maxLifetimeMilliseconds_ = (maxLifetimeMilliseconds == undefined ?
+    CertificateCacheV2.getDefaultLifetime() : maxLifetimeMilliseconds);
+};
+
+exports.CertificateCacheV2 = CertificateCacheV2;
+
+/**
+ * Insert the certificate into the cache. The inserted certificate will be
+ * removed no later than its NotAfter time, or maxLifetimeMilliseconds given to
+ * the constructor.
+ * @param {CertificateV2} certificate The certificate object, which is copied.
+ */
+CertificateCacheV2.prototype.insert = function(certificate)
+{
+  // TODO: Implement certificatesByTime_ to support refresh(). There can be
+  // multiple certificate for the same removalTime, and adding the same
+  // certificate again should update the removalTime.
+
+  var certificateCopy = new CertificateV2(certificate);
+
+  var name = certificateCopy.getName();
+  var i = this.findFirstByName_(name);
+  if (i < 0)
+    // Not found, so set to insert at the end of the list.
+    i = this.certificatesByName_.length;
+  else {
+    if (this.certificatesByName_[i].name.equals(name)) {
+      // Just replace the existing entry value.
+      this.certificatesByName_[i].certificate = certificateCopy;
+      return;
+    }
+  }
+
+  this.certificatesByName_.splice(i, 0, {name: name, certificate: certificateCopy});
+};
+
+/**
+ * Find the certificate by the given prefix or interest.
+ * @param {Name|Interest} prefixOrInterest If a Name, return the first
+ * certificate (ordered by name) where the Name is a prefix of the certificate
+ * name. If an Interest, return the first certificate (ordered by Name) where
+ * interest.matchesData(certificate) .
+ * @returns {CertificateV2}  The found certificate, or null if not found. You 
+ * must not modify the returned object. If you need to modify it, then make a
+ * copy.
+ * @note ChildSelector is not supported.
+ */
+CertificateCacheV2.prototype.find = function(prefixOrInterest)
+{
+  if (prefixOrInterest instanceof Name) {
+    var certificatePrefix = prefixOrInterest;
+
+    if (certificatePrefix.size() > 0 &&
+        certificatePrefix.get(-1).isImplicitSha256Digest())
+      console.log
+        ("Certificate search using a name with an implicit digest is not yet supported");
+
+    // TODO: refresh();
+
+    var i = this.findFirstByName_(certificatePrefix);
+    if (i < 0)
+      return null;
+
+    var entry = this.certificatesByName_[i];
+    if (!certificatePrefix.isPrefixOf(entry.certificate.getName()))
+      return null;
+    return entry.certificate;
+  }
+  else {
+    var interest = prefixOrInterest;
+
+    if (interest.getChildSelector() >= 0)
+      console.log
+        ("Certificate search using a ChildSelector is not supported. Searching as if this selector not specified");
+
+    if (interest.getName().size() > 0 &&
+        interest.getName().get(-1).isImplicitSha256Digest())
+      console.log
+        ("Certificate search using a name with an implicit digest is not yet supported");
+
+    // TODO: refresh();
+
+    var i = this.findFirstByName_(interest.getName());
+    if (i < 0)
+      return null;
+
+    // Search the remaining entries.
+    for (; i < this.certificatesByName_.length; ++i) {
+      var certificate = this.certificatesByName_[i].certificate;
+      if (!interest.getName().isPrefixOf(certificate.getName()))
+        break;
+
+      if (interest.matchesData(certificate))
+        return certificate;
+    }
+
+    return null;
+  }
+};
+
+/**
+ * Remove the certificate whose name equals the given name. If no such
+ * certificate is in the cache, do nothing.
+ * @param {Name} certificateName The name of the certificate.
+ */
+CertificateCacheV2.prototype.deleteCertificate = function(certificateName)
+{
+  for (var i = 0; i < this.certificatesByName_.length; ++i) {
+    if (this.certificatesByName_[i].name.equals(certificateName)) {
+      this.certificatesByName_.splice(i, 1);
+      return;
+    }
+  }
+
+  // TODO: Delete from certificatesByTime_.
+};
+
+/**
+ * Clear all certificates from the cache.
+ */
+CertificateCacheV2.prototype.clear = function()
+{
+  this.certificatesByName_ = [];
+  // TODO: certificatesByTime_.clear();
+};
+/**
+ * Get the default maximum lifetime (1 hour).
+ * @returns {number} The lifetime in milliseconds.
+ */
+CertificateCacheV2.getDefaultLifetime = function() { return 3600.0 * 1000; };
+
+/**
+ * A private helper method to get the first entry in certificatesByName_ whose
+ * name is greater than or equal to the given name.
+ * @param {Name} name The name to search for.
+ * @return {number} The index of the found certificatesByName_ entry, or -1 if
+ * not found.
+ */
+CertificateCacheV2.prototype.findFirstByName_ = function(name)
+{
+  for (var i = 0; i < this.certificatesByName_.length; ++i) {
+    if (this.certificatesByName_[i].name.compare(name) >= 0)
+      return i;
+  }
+
+  return -1;
+};
+/**
+ * Copyright (C) 2017 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/certificate.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var KeyLocator = require('../../key-locator.js').KeyLocator; /** @ignore */
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
+var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
+var ContentType = require('../../meta-info.js').ContentType; /** @ignore */
+var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
+var Schedule = require('../../encrypt/schedule.js').Schedule; /** @ignore */
+var ValidityPeriod = require('../validity-period.js').ValidityPeriod; /** @ignore */
+var InvalidArgumentException = require('../security-exception.js').InvalidArgumentException;
+
+/**
+ * CertificateV2 represents a certificate following the certificate format
+ * naming convention.
+ *
+ * Overview of the NDN certificate format:
+ *
+ *     CertificateV2 ::= DATA-TLV TLV-LENGTH
+ *                         Name      (= /<NameSpace>/KEY/[KeyId]/[IssuerId]/[Version])
+ *                         MetaInfo  (.ContentType = KEY)
+ *                         Content   (= X509PublicKeyContent)
+ *                         SignatureInfo (= CertificateV2SignatureInfo)
+ *                         SignatureValue
+ *
+ *     X509PublicKeyContent ::= CONTENT-TLV TLV-LENGTH
+ *                                BYTE+ (= public key bits in PKCS#8 format)
+ *
+ *     CertificateV2SignatureInfo ::= SIGNATURE-INFO-TYPE TLV-LENGTH
+ *                                      SignatureType
+ *                                      KeyLocator
+ *                                      ValidityPeriod
+ *                                      ... optional critical or non-critical extension blocks ...
+ *
+ * An example of NDN certificate name:
+ *
+ *     /edu/ucla/cs/yingdi/KEY/%03%CD...%F1/%9F%D3...%B7/%FD%d2...%8E
+ *     \_________________/    \___________/ \___________/\___________/
+ *    Certificate Namespace      Key Id       Issuer Id     Version
+ *         (Identity)
+ *     \__________________________________/
+ *                   Key Name
+ *
+ * Notes:
+ *
+ * - `Key Id` is an opaque name component to identify the instance of the public
+ *   key for the certificate namespace. The value of `Key ID` is controlled by
+ *   the namespace owner. The library includes helpers for generating key IDs
+ *   using an 8-byte random number, SHA-256 digest of the public key, timestamp,
+ *   and the specified numerical identifiers.
+ *
+ * - `Issuer Id` is sn opaque name component to identify the issuer of the
+ *   certificate. The value is controlled by the issuer. The library includes
+ *   helpers to set issuer the ID to an 8-byte random number, SHA-256 digest of
+ *   the issuer's public key, and the specified numerical identifiers.
+ *
+ * - `Key Name` is a logical name of the key used for management purposes. the
+ *    Key Name includes the certificate namespace, keyword `KEY`, and `KeyId`
+ *    components.
+ *
+ * @see https://github.com/named-data/ndn-cxx/blob/master/docs/specs/certificate-format.rst
+ *
+ * Create a CertificateV2 from the content in the Data packet (if not omitted).
+ * @param {Data} data (optional) The data packet with the content to copy.
+ * If omitted, create a CertificateV2 with content type KEY and default or
+ * unspecified values.
+ * @constructor
+ */
+var CertificateV2 = function CertificateV2(data)
+{
+  // Call the base constructor.
+  if (data != undefined) {
+    Data.call(this, data);
+    this.checkFormat_();
+  }
+  else {
+    Data.call(this);
+    this.getMetaInfo().setType(ContentType.KEY);
+  }
+};
+
+CertificateV2.prototype = new Data();
+CertificateV2.prototype.name = "CertificateV2";
+
+exports.CertificateV2 = CertificateV2;
+
+/**
+ * Create a new CertificateV2.Error to report an error for not complying with
+ * the certificate format.
+ * Call with: throw new CertificateV2.Error(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+CertificateV2.Error = function CertificateV2Error(error)
+{
+  if (error) {
+    error.__proto__ = CertificateV2.Error.prototype;
+    return error;
+  }
+};
+
+CertificateV2.Error.prototype = new Error();
+CertificateV2.Error.prototype.name = "CertificateV2Error";
+
+CertificateV2.prototype.checkFormat_ = function()
+{
+  if (!CertificateV2.isValidName(this.getName()))
+    throw new CertificateV2.Error(new Error
+      ("The Data Name does not follow the certificate naming convention"));
+
+  if (this.getMetaInfo().getType() != ContentType.KEY)
+    throw new CertificateV2.Error(new Error("The Data ContentType is not KEY"));
+
+  if (this.getMetaInfo().getFreshnessPeriod() < 0.0)
+    throw new CertificateV2.Error(new Error
+      ("The Data FreshnessPeriod is not set"));
+
+  if (this.getContent().size() == 0)
+    throw new CertificateV2.Error(new Error("The Data Content is empty"));
+};
+
+/**
+ * Get key name from the certificate name.
+ * @return {Name} The key name as a new Name.
+ */
+CertificateV2.prototype.getKeyName = function()
+{
+  return this.getName().getPrefix(CertificateV2.KEY_ID_OFFSET + 1);
+};
+
+/**
+ * Get the identity name from the certificate name.
+ * @return {Name} The identity name as a new Name.
+ */
+CertificateV2.prototype.getIdentity = function()
+{
+  return this.getName().getPrefix(CertificateV2.KEY_COMPONENT_OFFSET);
+};
+
+/**
+ * Get the key ID component from the certificate name.
+ * @return {Name.Component} The key ID name component.
+ */
+CertificateV2.prototype.getKeyId = function()
+{
+  return this.getName().get(CertificateV2.KEY_ID_OFFSET);
+};
+
+/**
+ * Get the issuer ID component from the certificate name.
+ * @return {Name.Component} The issuer ID component.
+ */
+CertificateV2.prototype.getIssuerId = function()
+{
+  return this.getName().get(CertificateV2.ISSUER_ID_OFFSET);
+};
+
+/**
+ * Get public key DER encoding.
+ * @return {Blob} The DER encoding Blob.
+ * @throws CertificateV2.Error If the public key is not set.
+ */
+CertificateV2.prototype.getPublicKey = function()
+{
+  if (this.getContent().size() == 0)
+    throw new CertificateV2.Error(new Error
+      ("The public key is not set (the Data content is empty)"));
+
+  return this.getContent();
+};
+
+/**
+ * Get the certificate validity period from the SignatureInfo.
+ * @return {ValidityPeriod} The ValidityPeriod object.
+ * @throws InvalidArgumentException If the SignatureInfo doesn't have a
+ * ValidityPeriod.
+ */
+CertificateV2.prototype.getValidityPeriod = function()
+{
+  if (!ValidityPeriod.canGetFromSignature(this.getSignature()))
+    throw new InvalidArgumentException(new Error
+      ("The SignatureInfo does not have a ValidityPeriod"));
+
+  return ValidityPeriod.getFromSignature(this.getSignature());
+};
+
+/**
+ * Check if the time falls within the validity period.
+ * @param {number} time (optional) The time to check as milliseconds since
+ * Jan 1, 1970 UTC. If omitted, use the current time.
+ * @return {boolean} True if the beginning of the validity period is less than
+ * or equal to time and time is less than or equal to the end of the validity
+ * period.
+ * @throws InvalidArgumentException If the SignatureInfo doesn't have a
+ * ValidityPeriod.
+ */
+CertificateV2.prototype.isValid = function(time)
+{
+  return this.getValidityPeriod().isValid(time);
+};
+
+// TODO: getExtension
+
+/**
+ * Override to call the base class wireDecode then check the certificate format.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+CertificateV2.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  Data.prototype.wireDecode.call(this, input, wireFormat);
+  this.checkFormat_();
+};
+
+/**
+ * Get a string representation of this certificate.
+ * @return {string} The string representation.
+ */
+CertificateV2.prototype.toString = function()
+{
+  var result = "";
+  result += "Certificate name:\n";
+  result += "  " + this.getName().toUri() + "\n";
+  result += "Validity:\n";
+  result += "  NotBefore: " + Schedule.toIsoString
+    (this.getValidityPeriod().getNotBefore()) + "\n";
+  result += "  NotAfter: " + Schedule.toIsoString
+    (this.getValidityPeriod().getNotAfter()) + "\n";
+
+  // TODO: Print the extension.
+
+  result += "Public key bits:\n";
+  try {
+    var keyBase64 = this.getPublicKey().buf().toString('base64');
+    for (var i = 0; i < keyBase64.length; i += 64)
+      result += (keyBase64.substr(i, 64) + "\n");
+  } catch (ex) {
+    // No public key.
+  }
+
+  result += "Signature Information:\n";
+  result += "  Signature Type: ";
+  if (this.getSignature() instanceof Sha256WithEcdsaSignature)
+    result += "SignatureSha256WithEcdsa\n";
+  else if (this.getSignature() instanceof Sha256WithRsaSignature)
+    result += "SignatureSha256WithRsa\n";
+  else
+    result += "<unknown>\n";
+
+  if (KeyLocator.canGetFromSignature(this.getSignature())) {
+    result += "  Key Locator: ";
+    var keyLocator = KeyLocator.getFromSignature(this.getSignature());
+    if (keyLocator.getType() == KeyLocatorType.KEYNAME) {
+      if (keyLocator.getKeyName().equals(this.getKeyName()))
+        result += "Self-Signed ";
+
+      result += "Name=" + keyLocator.getKeyName().toUri() + "\n";
+    }
+    else
+      result += "<no KeyLocator key name>\n";
+  }
+
+  return result;
+};
+
+/**
+ * Check if certificateName follows the naming convention for a certificate.
+ * @param {Name} certificateName The name of the certificate.
+ * @return {boolean} True if certificateName follows the naming convention.
+ */
+CertificateV2.isValidName = function(certificateName)
+{
+  // /<NameSpace>/KEY/[KeyId]/[IssuerId]/[Version]
+  return (certificateName.size() >= CertificateV2.MIN_CERT_NAME_LENGTH &&
+          certificateName.get(CertificateV2.KEY_COMPONENT_OFFSET).equals
+            (CertificateV2.KEY_COMPONENT));
+};
+
+/**
+ * Extract the identity namespace from certificateName.
+ * @param {Name} certificateName The name of the certificate.
+ * @returns {Name} The identity namespace as a new Name.
+ */
+CertificateV2.extractIdentityFromCertName = function(certificateName)
+{
+  if (!CertificateV2.isValidName(certificateName))
+    throw new InvalidArgumentException(new Error
+      ("Certificate name `" + certificateName.toUri() +
+        "` does not follow the naming conventions"));
+
+  return certificateName.getPrefix(CertificateV2.KEY_COMPONENT_OFFSET);
+};
+
+/**
+ * Extract key name from certificateName.
+ * @param {Name} certificateName The name of the certificate.
+ * @return {Name} The key name as a new Name.
+ */
+CertificateV2.extractKeyNameFromCertName = function(certificateName)
+{
+  if (!CertificateV2.isValidName(certificateName)) {
+    throw new InvalidArgumentException(new Error
+      ("Certificate name `" + certificateName.toUri() +
+        "` does not follow the naming conventions"));
+  }
+
+  // Trim everything after the key ID.
+  return certificateName.getPrefix(CertificateV2.KEY_ID_OFFSET + 1);
+};
+
+CertificateV2.VERSION_OFFSET = -1;
+CertificateV2.ISSUER_ID_OFFSET = -2;
+CertificateV2.KEY_ID_OFFSET = -3;
+CertificateV2.KEY_COMPONENT_OFFSET = -4;
+CertificateV2.MIN_CERT_NAME_LENGTH = 4;
+CertificateV2.MIN_KEY_NAME_LENGTH = 2;
+CertificateV2.KEY_COMPONENT = new Name.Component("KEY");
 /**
  * Copyright (C) 2014-2017 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -26131,18 +32344,44 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
  */
 
 /** @ignore */
+var path = require('path'); /** @ignore */
+var fs = require('fs'); /** @ignore */
 var Crypto = require('../crypto.js'); /** @ignore */
+var LOG = require('../log.js').Log.LOG; /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var Data = require('../data.js').Data; /** @ignore */
+var ContentType = require('../meta-info.js').ContentType; /** @ignore */
 var Blob = require('../util/blob.js').Blob; /** @ignore */
+var ConfigFile = require('../util/config-file.js').ConfigFile; /** @ignore */
 var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
 var SecurityException = require('./security-exception.js').SecurityException; /** @ignore */
 var RsaKeyParams = require('./key-params.js').RsaKeyParams; /** @ignore */
+var BasicIdentityStorage = require('./identity/basic-identity-storage.js').BasicIdentityStorage; /** @ignore */
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var Pib = require('./pib/pib.js').Pib; /** @ignore */
+var PibImpl = require('./pib/pib-impl.js').PibImpl; /** @ignore */
+var PibKey = require('./pib/pib-key.js').PibKey; /** @ignore */
+var PibSqlite3 = require('./pib/pib-sqlite3.js').PibSqlite3; /** @ignore */
+var PibMemory = require('./pib/pib-memory.js').PibMemory; /** @ignore */
+var Tpm = require('./tpm/tpm.js').Tpm; /** @ignore */
+var TpmBackEndFile = require('./tpm/tpm-back-end-file.js').TpmBackEndFile; /** @ignore */
+var TpmBackEndMemory = require('./tpm/tpm-back-end-memory.js').TpmBackEndMemory; /** @ignore */
 var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
 var IdentityManager = require('./identity/identity-manager.js').IdentityManager; /** @ignore */
+var CertificateV2 = require('./v2/certificate-v2.js').CertificateV2; /** @ignore */
+var SigningInfo = require('./signing-info.js').SigningInfo; /** @ignore */
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
+var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
+var KeyLocator = require('../key-locator.js').KeyLocator; /** @ignore */
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
+var DigestAlgorithm = require('./security-types.js').DigestAlgorithm; /** @ignore */
+var KeyType = require('./security-types.js').KeyType; /** @ignore */
+var ValidityPeriod = require('./validity-period.js').ValidityPeriod; /** @ignore */
+var VerificationHelpers = require('./verification-helpers.js').VerificationHelpers; /** @ignore */
+var PublicKey = require('./certificate/public-key.js').PublicKey; /** @ignore */
 var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVerifyPolicyManager;
 
 /**
@@ -26151,29 +32390,1334 @@ var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVe
  * Note: This class is an experimental feature. See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/key-chain.html .
  *
- * Create a new KeyChain with the identityManager and policyManager.
+ * There are four forms to create a KeyChain:
+ * KeyChain(pibLocator, tpmLocator, allowReset = false) - Create a KeyChain to
+ * use the PIB and TPM defined by the given locators, which creates a security
+ * v2 KeyChain that uses CertificateV2, Pib, Tpm and Validator (instead of v1
+ * Certificate, IdentityStorage, PrivateKeyStorage and PolicyManager).
+ * KeyChain(identityManager = null, policyManager = null) - Create a security v1
+ * KeyChain to use the optional identityManager and policyManager.
+ * KeyChain(pibImpl, tpmBackEnd, policyManager) - Create a KeyChain using this
+ * temporary constructor for the transition to security v2, which creates a
+ * security v2 KeyChain but still uses the v1 PolicyManager.
+ * Finally, the default constructor KeyChain() creates a KeyChain with the
+ * default PIB and TPM, which are platform-dependent and can be overridden
+ * system-wide or individually by the user. The default constructor creates a
+ * security v2 KeyChain that uses CertificateV2, Pib, Tpm and Validator.
+ * However, if the default security v1 database file still exists, and the
+ * default security v2 database file does not yet exists, then assume that the
+ * system is running an older NFD and create a security v1 KeyChain with the
+ * default IdentityManager and a NoVerifyPolicyManager.
+ * @param {string} pibLocator The PIB locator, e.g., "pib-sqlite3:/example/dir".
+ * @param {string} tpmLocator The TPM locator, e.g., "tpm-memory:".
+ * @param {boolean} allowReset (optional) If True, the PIB will be reset when
+ * the supplied tpmLocator mismatches the one in the PIB. If omitted, don't
+ * allow reset.
  * @param {IdentityManager} identityManager (optional) The identity manager as a
  * subclass of IdentityManager. If omitted, use the default IdentityManager
  * constructor.
- * @param {PolicyManager} policyManager (optional) The policy manager as a
+ * @param {PolicyManager} policyManager: (optional) The policy manager as a
  * subclass of PolicyManager. If omitted, use NoVerifyPolicyManager.
+ * @param {PibImpl} pibImpl The PibImpl when using the constructor form
+ * KeyChain(pibImpl, tpmBackEnd, policyManager).
+ * @param {TpmBackEnd} tpmBackEnd: The TpmBackEnd when using the constructor
+ * form KeyChain(pibImpl, tpmBackEnd, policyManager).
  * @throws SecurityException if this is not in Node.js and this uses the default
  * IdentityManager constructor. (See IdentityManager for details.)
  * @constructor
  */
-var KeyChain = function KeyChain(identityManager, policyManager)
+var KeyChain = function KeyChain(arg1, arg2, arg3)
 {
-  if (!identityManager)
-    identityManager = new IdentityManager();
-  if (!policyManager)
-    policyManager = new NoVerifyPolicyManager();
+  this.identityManager_ = null;  // for security v1
+  this.policyManager_ = null;    // for security v1
+  this.face_ = null;             // for security v1
 
-  this.identityManager = identityManager;
-  this.policyManager = policyManager;
-  this.face = null;
+  this.pib_ = null;
+  this.tpm_ = null;
+
+  if (arg1 == undefined) {
+    // The default constructor.
+    if (!ConfigFile)
+      // Assume we are in the browser.
+      throw new SecurityException(new Error
+        ("KeyChain: The default KeyChain constructor is not supported in the browser"));
+
+    if (fs.existsSync(BasicIdentityStorage.getDefaultDatabaseFilePath()) &&
+       !fs.existsSync(PibSqlite3.getDefaultDatabaseFilePath())) {
+      // The security v1 SQLite file still exists and the security v2
+      //   does not yet.
+      arg1 = new IdentityManager();
+      arg2 = new NoVerifyPolicyManager();
+    }
+    else {
+      // Set the security v2 locators to default empty strings.
+      arg1 = "";
+      arg2 = "";
+    }
+  }
+
+  if (typeof arg1 === 'string') {
+    var pibLocator = arg1;
+    var tpmLocator = arg2;
+    var allowReset = arg3;
+    if (allowReset == undefined)
+      allowReset = false;
+
+    this.isSecurityV1_ = false;
+
+    // PIB locator.
+    var pibScheme = [null];
+    var pibLocation = [null];
+    KeyChain.parseAndCheckPibLocator_(pibLocator, pibScheme, pibLocation);
+    var canonicalPibLocator = pibScheme[0] + ":" + pibLocation[0];
+
+    // Create the PIB.
+    this.pib_ = KeyChain.createPib_(canonicalPibLocator);
+    var oldTpmLocator = "";
+    try {
+      oldTpmLocator = this.pib_.getTpmLocator();
+    } catch (ex) {
+      // The TPM locator is not set in the PIB yet.
+    }
+
+    // TPM locator.
+    var tpmScheme = [null];
+    var tpmLocation = [null];
+    KeyChain.parseAndCheckTpmLocator_(tpmLocator, tpmScheme, tpmLocation);
+    var canonicalTpmLocator = tpmScheme[0] + ":" + tpmLocation[0];
+
+    var config = new ConfigFile();
+    if (canonicalPibLocator == KeyChain.getDefaultPibLocator_(config)) {
+      // The default PIB must use the default TPM.
+      if (oldTpmLocator != "" &&
+          oldTpmLocator != KeyChain.getDefaultTpmLocator_(config)) {
+        this.pib_.reset_();
+        canonicalTpmLocator = this.getDefaultTpmLocator_(config);
+      }
+    }
+    else {
+      // Check the consistency of the non-default PIB.
+      if (oldTpmLocator != "" && oldTpmLocator != canonicalTpmLocator) {
+        if (allowReset)
+          this.pib_.reset_();
+        else
+          throw new LocatorMismatchError(new Error
+            ("The supplied TPM locator does not match the TPM locator in the PIB: " +
+             oldTpmLocator + " != " + canonicalTpmLocator));
+      }
+    }
+
+    // Note that a key mismatch may still happen if the TPM locator is
+    // initially set to a wrong one or if the PIB was shared by more than
+    // one TPM before. This is due to the old PIB not having TPM info.
+    // The new PIB should not have this problem.
+    this.tpm_ = KeyChain.createTpm_(canonicalTpmLocator);
+/* debug
+    this.pib_.setTpmLocator(canonicalTpmLocator);
+*/
+  }
+  else if (arg1 instanceof PibImpl) {
+    var pibImpl = arg1;
+    var tpmBackEnd = arg2;
+    var policyManager = arg3;
+
+    this.isSecurityV1_ = false;
+    this.policyManager_ = policyManager;
+
+    this.pib_ = new Pib("", "", pibImpl);
+    this.tpm_ = new Tpm("", "", tpmBackEnd);
+  }
+  else {
+    var identityManager = arg1;
+    var policyManager = arg2;
+
+    this.isSecurityV1_ = true;
+    if (identityManager == undefined)
+      identityManager = new IdentityManager();
+    if (policyManager == undefined)
+      policyManager = new NoVerifyPolicyManager();
+
+    this.identityManager_ = identityManager;
+    this.policyManager_ = policyManager;
+  }
 };
 
 exports.KeyChain = KeyChain;
+
+/**
+ * Create a KeyChain.Error which represents an error in KeyChain processing.
+ * Call with: throw new KeyChain.Error(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+KeyChain.Error = function KeyChainError(error)
+{
+  if (error) {
+    error.__proto__ = KeyChain.Error.prototype;
+    return error;
+  }
+};
+
+KeyChain.Error.prototype = new Error();
+KeyChain.Error.prototype.name = "KeyChainError";
+
+/**
+ * @return {Pib}
+ */
+KeyChain.prototype.getPib = function()
+{
+  if (this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("getPib is not supported for security v1"));
+
+  return this.pib_;
+};
+
+/**
+ * @return {Tpm}
+ */
+KeyChain.prototype.getTpm = function()
+{
+  if (this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("getTpm is not supported for security v1"));
+
+  return this.tpm_;
+};
+
+// Identity management
+
+/**
+ * Create a security V2 identity for identityName. This method will check if the
+ * identity exists in PIB and whether the identity has a default key and default
+ * certificate. If the identity does not exist, this method will create the
+ * identity in PIB. If the identity's default key does not exist, this method
+ * will create a key pair and set it as the identity's default key. If the key's
+ * default certificate is missing, this method will create a self-signed
+ * certificate for the key. If identityName did not exist and no default
+ * identity was selected before, the created identity will be set as the default
+ * identity.
+ * @param {Name} identityName The name of the identity.
+ * @param {KeyParams} params (optional) The key parameters if a key needs to be
+ * generated for the identity. If omitted, use getDefaultKeyParams().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the created PibIdentity
+ * instance.
+ */
+KeyChain.prototype.createIdentityV2Promise = function
+  (identityName, params, useSync)
+{
+  useSync = (typeof params === "boolean") ? params : useSync;
+  params = (typeof params === "boolean" || !params) ? undefined : params;
+
+  if (params == undefined)
+    params = KeyChain.getDefaultKeyParams();
+
+  var thisKeyChain = this;
+  var id;
+
+  return this.pib_.addIdentityPromise_(identityName, useSync)
+  .then(function(localId) {
+    id = localId;
+
+    return id.getDefaultKeyPromise(useSync)
+    .catch(function(err) {
+      if (err instanceof Pib.Error)
+        return thisKeyChain.createKeyPromise(id, params, useSync);
+      else
+        return SyncPromise.reject(err);
+    });
+  })
+  .then(function(key) {
+    return key.getDefaultCertificatePromise(useSync)
+    .catch(function(err) {
+      if (err instanceof Pib.Error) {
+        if (LOG > 2)
+          console.log("No default cert for " + key.getName() +
+            ", requesting self-signing")
+        return thisKeyChain.selfSignPromise(key, useSync);
+      }
+      else
+        return SyncPromise.reject(err);
+    });
+  })
+  .then(function() {
+    return SyncPromise.resolve(id);
+  });
+};
+
+/**
+ * Create a security V2 identity for identityName. This method will check if the
+ * identity exists in PIB and whether the identity has a default key and default
+ * certificate. If the identity does not exist, this method will create the
+ * identity in PIB. If the identity's default key does not exist, this method
+ * will create a key pair and set it as the identity's default key. If the key's
+ * default certificate is missing, this method will create a self-signed
+ * certificate for the key. If identityName did not exist and no default
+ * identity was selected before, the created identity will be set as the default
+ * identity.
+ * @param {Name} identityName The name of the identity.
+ * @param {KeyParams} params (optional) The key parameters if a key needs to be
+ * generated for the identity. If omitted, use getDefaultKeyParams().
+ * @param {function} onComplete (optional) This calls
+ * onComplete(identity) with the created PibIdentity instance. If omitted, the
+ * return value is described below. (Some database libraries only use a callback,
+ * so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {PibIdentity} If onComplete is omitted, return the created 
+ * PibIdentity instance. Otherwise, if onComplete is supplied then return
+ * undefined and use onComplete as described above.
+ */
+KeyChain.prototype.createIdentityV2 = function
+  (identityName, params, onComplete, onError)
+{
+  onError = (typeof params === "function") ? onComplete : onError;
+  onComplete = (typeof params === "function") ? params : onComplete;
+  params = (typeof params === "function" || !params) ? undefined : params;
+
+  return SyncPromise.complete(onComplete, onError,
+    this.createIdentityV2Promise(identityName, params, !onComplete));
+};
+
+/**
+ * This method has two forms:
+ * deleteIdentity(identity, useSync) - Delete the PibIdentity identity. After this
+ * operation, the identity is invalid.
+ * deleteIdentity(identityName, useSync) - Delete the identity from the public and
+ * private key storage. If the identity to be deleted is the current default s
+ * system default, the method will not delete the identity and will return
+ * immediately.
+ * @param {PibIdentity} identity The identity to delete.
+ * @param {Name} identityName The name of the identity to delete.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete.
+ */
+KeyChain.prototype.deleteIdentityPromise = function(identity, useSync)
+{
+  var thisKeyChain = this;
+
+  if (identity instanceof Name) {
+    if (!this.isSecurityV1_) {
+      return this.pib_.getIdentityPromise(identity, useSync)
+      .then(function(pibIdentity) {
+        return thisKeyChain.deleteIdentityPromise(pibIdentity, useSync);
+      })
+      .catch(function(err) {
+        // Ignore errors.
+        return SyncPromise.resolve();
+      });
+
+      return;
+    }
+    else
+      return SyncPromise.reject(new KeyChain.Error(new Error
+        ("deleteIdentityPromise is not supported for security v1. Use deleteIdentity.")));
+  }
+
+  var identityName = identity.getName();
+  var keyNames = identity.getKeys_().getKeyNames();
+
+  // Make a recursive function to do the loop.
+  function deleteKeys(i) {
+    if (i >= keyNames.length)
+      // Done.
+      return SyncPromise.resolve();
+
+    return thisKeyChain.tpm_.deleteKeyPromise_(keyNames[i], useSync)
+    .then(function() {
+      // Recurse to the next iteration.
+      return deleteKeys(i + 1);
+    });
+  }
+
+  return deleteKeys(0)
+  .then(function() {
+    return thisKeyChain.pib_.removeIdentityPromise_(identityName, useSync);
+    // TODO: Mark identity as invalid.
+  });
+};
+
+/**
+ * This method has two forms:
+ * deleteIdentity(identity, onComplete, onError) - Delete the PibIdentity
+ * identity (optionally using onComplete and onError callbacks). After this
+ * operation, the identity is invalid.
+ * deleteIdentity(identityName, onComplete, onError) - Delete the identity from
+ * the public and private key storage (optionally using onComplete and onError
+ * callbacks). If the identity to be deleted is the current default system
+ * default, the method will not delete the identity and will return immediately.
+ * @param {PibIdentity} identity The identity to delete.
+ * @param {Name} identityName The name of the identity to delete.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ */
+KeyChain.prototype.deleteIdentity = function(identity, onComplete, onError)
+{
+  if (identity instanceof Name && this.isSecurityV1_) {
+    this.identityManager_.deleteIdentity(identity, onComplete, onError);
+    return;
+  }
+
+  return SyncPromise.complete(onComplete, onError,
+    this.deleteIdentityPromise(identity, !onComplete));
+};
+
+/**
+ * Set the identity as the default identity.
+ * @param {PibIdentity} identity The identity to make the default.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete.
+ */
+KeyChain.prototype.setDefaultIdentityPromise = function(identity, useSync)
+{
+  return this.pib_.setDefaultIdentityPromise_(identity.getName(), useSync);
+};
+
+/**
+ * Set the identity as the default identity.
+ * @param {PibIdentity} identity The identity to make the default.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ */
+KeyChain.prototype.setDefaultIdentity = function(identity, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.setDefaultIdentityPromise(identity, !onComplete));
+};
+
+// Key management
+
+/**
+ * Create a key for the identity according to params. If the identity had no
+ * default key selected, the created key will be set as the default for this
+ * identity. This method will also create a self-signed certificate for the
+ * created key.
+ * @param {PibIdentity} identity A valid PibIdentity object.
+ * @param {KeyParams} params (optional) The key parameters if a key needs to be
+ * generated for the identity. If omitted, use getDefaultKeyParams().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the new PibKey.
+ */
+KeyChain.prototype.createKeyPromise = function(identity, params, useSync)
+{
+  useSync = (typeof params === "boolean") ? params : useSync;
+  params = (typeof params === "boolean" || !params) ? undefined : params;
+
+  if (params == undefined)
+    params = KeyChain.getDefaultKeyParams();
+
+  var thisKeyChain = this;
+  var key, keyName;
+
+  // Create the key in the TPM.
+  return this.tpm_.createKeyPromise_(identity.getName(), params, useSync)
+  .then(function(localKeyName) {
+    keyName = localKeyName;
+
+    // Set up the key info in the PIB.
+    return thisKeyChain.tpm_.getPublicKeyPromise(keyName, useSync);
+  })
+  .then(function(publicKey) {
+    return identity.addKeyPromise_(publicKey.buf(), keyName, useSync);
+  })
+  .then(function(localKey) {
+    key = localKey;
+
+    if (LOG > 2)
+      console.log
+        ("Requesting self-signing for newly created key " + key.getName().toUri());
+    return thisKeyChain.selfSignPromise(key, useSync);
+  })
+  .then(function() {
+    return SyncPromise.resolve(key);
+  });
+};
+
+/**
+ * Create a key for the identity according to params. If the identity had no
+ * default key selected, the created key will be set as the default for this
+ * identity. This method will also create a self-signed certificate for the
+ * created key.
+ * @param {PibIdentity} identity A valid PibIdentity object.
+ * @param {KeyParams} params (optional) The key parameters if a key needs to be
+ * generated for the identity. If omitted, use getDefaultKeyParams().
+ * @param {function} onComplete (optional) This calls onComplete(key) with the
+ * new PibKey. If omitted, the return value is described below. (Some database
+ * libraries only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {PibKey} If onComplete is omitted, return the new PibKey. Otherwise,
+ * if onComplete is supplied then return undefined and use onComplete as
+ * described above.
+ */
+KeyChain.prototype.createKey = function(identity, params, onComplete, onError)
+{
+  onError = (typeof params === "function") ? onComplete : onError;
+  onComplete = (typeof params === "function") ? params : onComplete;
+  params = (typeof params === "function" || !params) ? undefined : params;
+
+  return SyncPromise.complete(onComplete, onError,
+    this.createKeyPromise(identity, params, !onComplete));
+};
+
+/**
+ * Delete the given key of the given identity. The key becomes invalid.
+ * @param {PibIdentity} identity A valid PibIdentity object.
+ * @param {PibKey} key The key to delete.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete, or a promise rejected with Error if the key does not belong to the
+ * identity.
+ */
+KeyChain.prototype.deleteKeyPromise = function(identity, key, useSync)
+{
+  var keyName = key.getName();
+  if (!identity.getName().equals(key.getIdentityName()))
+    return SyncPromise.reject(new Error
+      ("Identity `" + identity.getName().toUri() + "` does not match key `" +
+       keyName.toUri() + "`"));
+
+  var thisKeyChain = this;
+
+  return identity.removeKeyPromise_(keyName, useSync)
+  .then(function() {
+    return thisKeyChain.tpm_.deleteKeyPromise_(keyName, useSync);
+  });
+};
+
+/**
+ * Delete the given key of the given identity. The key becomes invalid.
+ * @param {PibIdentity} identity A valid PibIdentity object.
+ * @param {PibKey} key The key to delete.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @throws Error if the key does not belong to the identity. However, if
+ * onComplete and onError are defined, then if there is an exception return
+ * undefined and call onError(exception).
+ */
+KeyChain.prototype.deleteKey = function(identity, key, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.deleteKeyPromise(identity, key, !onComplete));
+};
+
+/**
+ * Set the key as the default key of identity.
+ * @param {type} identity A valid PibIdentity object.
+ * @param {type} key The key to become the default.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete, or a promise rejected with Error if the key does not belong to the
+ * identity.
+ */
+KeyChain.prototype.setDefaultKeyPromise = function(identity, key, useSync)
+{
+  if (!identity.getName().equals(key.getIdentityName()))
+    return SyncPromise.reject(new Error
+      ("Identity `" + identity.getName().toUri() + "` does not match key `" +
+       key.getName().toUri() + "`"));
+
+  return identity.setDefaultKeyPromise_(key.getName(), useSync);
+};
+
+/**
+ * Set the key as the default key of identity.
+ * @param {type} identity A valid PibIdentity object.
+ * @param {type} key The key to become the default.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @throws Error if the key does not belong to the identity. However, if
+ * onComplete and onError are defined, then if there is an exception return
+ * undefined and call onError(exception).
+ */
+KeyChain.prototype.setDefaultKey = function(identity, key, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.setDefaultKeyPromise(identity, key, !onComplete));
+};
+
+// Certificate management
+
+/**
+ * Add a certificate for the key. If the key had no default certificate
+ * selected, the added certificate will be set as the default certificate for
+ * this key.
+ * @param {PibKey} key A valid PibKey object.
+ * @param {CertificateV2} certificate The certificate to add. This copies the
+ * object.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete, or a promise rejected with Error if the key does not match the
+ * certificate.
+ */
+KeyChain.prototype.addCertificatePromise = function(key, certificate, useSync)
+{
+  if (!key.getName().equals(certificate.getKeyName()) ||
+      !certificate.getContent().equals(key.getPublicKey()))
+    return SyncPromise.reject(new Error
+      ("Key `" + key.getName().toUri() + "` does not match certificate `" +
+       certificate.getKeyName().toUri() + "`"));
+
+  return key.addCertificatePromise_(certificate, useSync);
+};
+
+/**
+ * Add a certificate for the key. If the key had no default certificate
+ * selected, the added certificate will be set as the default certificate for
+ * this key.
+ * @param {PibKey} key A valid PibKey object.
+ * @param {CertificateV2} certificate The certificate to add. This copies the
+ * object.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @throws Error if the key does not match the certificate. However, if
+ * onComplete and onError are defined, then if there is an exception return
+ * undefined and call onError(exception).
+ */
+KeyChain.prototype.addCertificate = function
+  (key, certificate, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.addCertificatePromise(key, certificate, !onComplete));
+};
+
+/**
+ * Delete the certificate with the given name from the given key. If the
+ * certificate does not exist, this does nothing.
+ * @param {PibKey} key A valid PibKey object.
+ * @param {Name} certificateName The name of the certificate to delete.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete, or a promise rejected with Error if certificateName does not follow
+ * certificate naming conventions.
+ */
+KeyChain.prototype.deleteCertificatePromise = function
+  (key, certificateName, useSync)
+{
+  if (!CertificateV2.isValidName(certificateName))
+    return SyncPromise.reject(new Error
+      ("Wrong certificate name `" + certificateName.toUri() + "`"));
+
+  return key.removeCertificatePromise_(certificateName, useSync);
+};
+
+/**
+ * Delete the certificate with the given name from the given key. If the
+ * certificate does not exist, this does nothing.
+ * @param {PibKey} key A valid PibKey object.
+ * @param {Name} certificateName The name of the certificate to delete.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @throws Error if certificateName does not follow certificate naming
+ * conventions. However, if onComplete and onError are defined, then if there is
+ * an exception return undefined and call onError(exception).
+ */
+KeyChain.prototype.deleteCertificate = function
+  (key, certificateName, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.deleteCertificatePromise(key, certificateName, !onComplete));
+};
+
+/**
+ * Set the certificate as the default certificate of the key. The certificate
+ * will be added to the key, potentially overriding an existing certificate if
+ * it has the same name (without considering implicit digest).
+ * @param {PibKey} key A valid PibKey object.
+ * @param {CertificateV2} certificate The certificate to become the default.
+ * This copies the object.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete.
+ */
+KeyChain.prototype.setDefaultCertificatePromise = function
+  (key, certificate, useSync)
+{
+  // This replaces the certificate it it exists.
+  return this.addCertificatePromise(key, certificate, useSync)
+  .then(function() {
+    return key.setDefaultCertificatePromise_(certificate.getName(), useSync);
+  });
+};
+
+/**
+ * Set the certificate as the default certificate of the key. The certificate
+ * will be added to the key, potentially overriding an existing certificate if
+ * it has the same name (without considering implicit digest).
+ * @param {PibKey} key A valid PibKey object.
+ * @param {CertificateV2} certificate The certificate to become the default.
+ * This copies the object.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ */
+KeyChain.prototype.setDefaultCertificate = function
+  (key, certificate, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.setDefaultCertificatePromise(key, certificate, !onComplete));
+};
+
+// Signing
+
+/**
+ * Sign the target. If it is a Data or Interest object, set its signature. If it
+ * is a Buffer, produce a Signature object.
+ * @param {Data|Interest|Buffer} target If this is a Data object, wire encode
+ * for signing, replace its Signature object based on the type of key and other
+ * info in the SigningInfo params or default identity, and update the
+ * wireEncoding. If this is an Interest object, wire encode for signing, append
+ * a SignatureInfo to the Interest name, sign the name components and append a
+ * final name component with the signature bits. If it is a buffer, sign it and
+ * return a Signature object.
+ * @param {SigningInfo|Name} paramsOrCertificateName (optional) If a SigningInfo,
+ * it is the signing parameters. If a Name, it is the certificate name of the
+ * key to use for signing. If omitted and this is a security v1 KeyChain then
+ * use the IdentityManager to get the default identity. Otherwise, use the PIB
+ * to get the default key of the default identity.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the target (if target is
+ * Data or Interest), or returns the generated Signature object (if target is a
+ * Buffer).
+ */
+KeyChain.prototype.signPromise = function
+  (target, paramsOrCertificateName, wireFormat, useSync)
+{
+  var arg2 = paramsOrCertificateName;
+  var arg3 = wireFormat;
+  var arg4 = useSync;
+  // arg2,                    arg3,       arg4
+  // paramsOrCertificateName, wireFormat, useSync
+  // paramsOrCertificateName, wireFormat, null
+  // paramsOrCertificateName, useSync,    null
+  // paramsOrCertificateName, null,       null
+  // wireFormat,              useSync,    null
+  // wireFormat,              null,       null
+  // useSync,                 null,       null
+  // null,                    null,       null
+  if (arg2 instanceof SigningInfo || arg2 instanceof Name)
+    paramsOrCertificateName = arg2;
+  else
+    paramsOrCertificateName = undefined;
+
+  if (arg2 instanceof WireFormat)
+    wireFormat = arg2;
+  else if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else
+    wireFormat = undefined;
+
+  if (typeof arg2 === "boolean")
+    useSync = arg2;
+  else if (typeof arg3 === "boolean")
+    useSync = arg3;
+  else if (typeof arg4 === "boolean")
+    useSync = arg4;
+  else
+    useSync = false;
+
+  if (wireFormat == undefined)
+    wireFormat = WireFormat.getDefaultWireFormat();
+
+  var thisKeyChain = this;
+
+  return SyncPromise.resolve()
+  .then(function() {
+    if (paramsOrCertificateName == undefined) {
+      // Convert sign(target) into sign(target, paramsOrCertificateName)
+      if (thisKeyChain.isSecurityV1_) {
+        return thisKeyChain.prepareDefaultCertificateNamePromise_(useSync)
+        .then(function(name) {
+          paramsOrCertificateName = name;
+          return SyncPromise.resolve();
+        });
+      }
+      else {
+        paramsOrCertificateName = KeyChain.defaultSigningInfo_;
+        return SyncPromise.resolve();
+      }
+    }
+    else
+      return SyncPromise.resolve();
+  })
+  .then(function() {
+    if (paramsOrCertificateName instanceof Name) {
+      var certificateName = paramsOrCertificateName;
+
+      if (!thisKeyChain.isSecurityV1_) {
+        // Make and use a SigningInfo for backwards compatibility.
+        if (!((target instanceof Interest) || (target instanceof Data)))
+          return SyncPromise.reject(new SecurityException(new Error
+("sign(buffer, certificateName) is not supported for security v2. Use sign with SigningInfo.")));
+
+        var signingInfo = new SigningInfo();
+        signingInfo.setSigningCertificateName(certificateName);
+        return thisKeyChain.signPromise(target, signingInfo, wireFormat, useSync)
+        .catch(function(err) {
+          return SyncPromise.reject(new SecurityException(new Error
+            ("Error in sign: " + err)));
+        });
+      }
+      else {
+        if (target instanceof Interest)
+          return thisKeyChain.identityManager_.signInterestByCertificatePromise
+            (target, certificateName, wireFormat, useSync);
+        else if (target instanceof Data)
+          return thisKeyChain.identityManager_.signByCertificatePromise
+            (target, certificateName, wireFormat, useSync);
+        else
+          return thisKeyChain.identityManager_.signByCertificatePromise
+            (target, certificateName, useSync);
+      }
+    }
+
+    var params = paramsOrCertificateName;
+
+    if (target instanceof Data) {
+      var data = target;
+
+      var keyName = [null];
+      return thisKeyChain.prepareSignatureInfoPromise_(params, keyName, useSync)
+      .then(function(signatureInfo) {
+        data.setSignature(signatureInfo);
+
+        // Encode once to get the signed portion.
+        var encoding = data.wireEncode(wireFormat);
+
+        return thisKeyChain.signBufferPromise_
+          (encoding.signedBuf(), keyName[0], params.getDigestAlgorithm(), useSync);
+      })
+      .then(function(signatureBytes) {
+        data.getSignature().setSignature(signatureBytes);
+
+        // Encode again to include the signature.
+        data.wireEncode(wireFormat);
+        return SyncPromise.resolve(data);
+      });
+    }
+    else if (target instanceof Interest) {
+      var interest = target;
+      var signatureInfo;
+
+      var keyName = [null];
+      return thisKeyChain.prepareSignatureInfoPromise_(params, keyName, useSync)
+      .then(function(localSignatureInfo) {
+        signatureInfo = localSignatureInfo;
+
+        // Append the encoded SignatureInfo.
+        interest.getName().append(wireFormat.encodeSignatureInfo(signatureInfo));
+
+        // Append an empty signature so that the "signedPortion" is correct.
+        interest.getName().append(new Name.Component());
+        // Encode once to get the signed portion, and sign.
+        var encoding = interest.wireEncode(wireFormat);
+        return thisKeyChain.signBufferPromise_
+          (encoding.signedBuf(), keyName[0], params.getDigestAlgorithm(), useSync);
+      })
+      .then(function(signatureBytes) {
+        signatureInfo.setSignature(signatureBytes);
+
+        // Remove the empty signature and append the real one.
+        interest.setName(interest.getName().getPrefix(-1).append
+          (wireFormat.encodeSignatureValue(signatureInfo)));
+        return SyncPromise.resolve(interest);
+      });
+    }
+    else {
+      var buffer = target;
+
+      var keyName = [null];
+      return thisKeyChain.prepareSignatureInfoPromise_(params, keyName, useSync)
+      .then(function(signatureInfo) {
+        return thisKeyChain.signBufferPromise_
+          (buffer, keyName[0], params.getDigestAlgorithm(), useSync);
+      });
+    }
+  });
+};
+
+/**
+ * Sign the target. If it is a Data or Interest object, set its signature. If it
+ * is a Buffer, produce a Signature object.
+ * @param {Data|Interest|Buffer} target If this is a Data object, wire encode
+ * for signing, replace its Signature object based on the type of key and other
+ * info in the SigningInfo params or default identity, and update the
+ * wireEncoding. If this is an Interest object, wire encode for signing, append
+ * a SignatureInfo to the Interest name, sign the name components and append a
+ * final name component with the signature bits. If it is a buffer, sign it and
+ * return a Signature object.
+ * @param {SigningInfo|Name} paramsOrCertificateName (optional) If a SigningInfo,
+ * it is the signing parameters. If a Name, it is the certificate name of the
+ * key to use for signing. If omitted and this is a security v1 KeyChain then
+ * use the IdentityManager to get the default identity. Otherwise, use the PIB
+ * to get the default key of the default identity.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {function} onComplete (optional) If target is a Data object, this calls
+ * onComplete(data) with the supplied Data object which has been modified to set
+ * its signature. If target is an Interest object, this calls
+ * onComplete(interest) with the supplied Interest object which has been
+ * modified to set its signature. If target is a Buffer, this calls
+ * onComplete(signature) where signature is the produced Signature object. If
+ * omitted, the return value is described below. (Some crypto libraries only use
+ * a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {Signature} If onComplete is omitted, return the generated Signature
+ * object (if target is a Buffer) or the target (if target is Data or Interest).
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete as
+ * described above.
+ */
+KeyChain.prototype.sign = function
+  (target, paramsOrCertificateName, wireFormat, onComplete, onError)
+{
+  var arg2 = paramsOrCertificateName;
+  var arg3 = wireFormat;
+  var arg4 = onComplete;
+  var arg5 = onError;
+  // arg2,                    arg3,       arg4,       arg5
+  // paramsOrCertificateName, wireFormat, onComplete, onError
+  // paramsOrCertificateName, wireFormat, null,       null
+  // paramsOrCertificateName, onComplete, onError,    null
+  // paramsOrCertificateName, null,       null,       null
+  // wireFormat,              onComplete, onError,    null
+  // wireFormat,              null,       null,       null
+  // onComplete,              onError,    null,       null
+  // null,                    null,       null,       null
+  if (arg2 instanceof SigningInfo || arg2 instanceof Name)
+    paramsOrCertificateName = arg2;
+  else
+    paramsOrCertificateName = null;
+
+  if (arg2 instanceof WireFormat)
+    wireFormat = arg2;
+  else if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else
+    wireFormat = null;
+
+  if (typeof arg2 === "function") {
+    onComplete = arg2;
+    onError = arg3;
+  }
+  else if (typeof arg3 === "function") {
+    onComplete = arg3;
+    onError = arg4;
+  }
+  else if (typeof arg4 === "function") {
+    onComplete = arg4;
+    onError = arg5;
+  }
+  else {
+    onComplete = null;
+    onError = null;
+  }
+
+  return SyncPromise.complete(onComplete, onError,
+    this.signPromise(target, paramsOrCertificateName, wireFormat, !onComplete));
+};
+
+/**
+ * Generate a self-signed certificate for the public key and add it to the PIB.
+ * This creates the certificate name from the key name by appending "self" and a
+ * version based on the current time. If no default certificate for the key has
+ * been set, then set the certificate as the default for the key.
+ * @param {PibKey} key The PibKey with the key name and public key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the new CertificateV2.
+ */
+KeyChain.prototype.selfSignPromise = function(key, useSync)
+{
+  var certificate = new CertificateV2();
+
+  // Set the name.
+  var now = new Date().getTime();
+  var certificateName = new Name(key.getName());
+  certificateName.append("self").appendVersion(now);
+  certificate.setName(certificateName);
+
+  // Set the MetaInfo.
+  certificate.getMetaInfo().setType(ContentType.KEY);
+  // Set a one-hour freshness period.
+  certificate.getMetaInfo().setFreshnessPeriod(3600 * 1000.0);
+
+  // Set the content.
+  certificate.setContent(key.getPublicKey());
+
+  // Set the signature-info.
+  signingInfo = new SigningInfo(key);
+  // Set a 20-year validity period.
+  signingInfo.setValidityPeriod
+    (new ValidityPeriod(now, now + 20 * 365 * 24 * 3600 * 1000.0));
+
+  return this.signPromise(certificate, signingInfo, useSync)
+  .then(function() {
+    return key.addCertificatePromise_(certificate, useSync)
+    .catch(function(ex) {
+      // We don't expect this since we just created the certificate.
+      return SyncPromise.reject(new KeyChain.Error(new Error
+        ("Error encoding certificate: " + ex)));
+    });
+  })
+  .then(function() {
+    return SyncPromise.resolve(certificate);
+  });
+};
+
+/**
+ * Generate a self-signed certificate for the public key and add it to the PIB.
+ * This creates the certificate name from the key name by appending "self" and a
+ * version based on the current time. If no default certificate for the key has
+ * been set, then set the certificate as the default for the key.
+ * @param {PibKey} key The PibKey with the key name and public key.
+ * @param {function} onComplete (optional) This calls
+ * onComplete(certificate) with the new CertificateV2. If omitted, the return
+ * value is described below. (Some crypto libraries only use a callback, so
+ * onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {CertificateV2} If onComplete is omitted, return the new certificate.
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete
+ * as described above.
+ */
+KeyChain.prototype.selfSign = function(key, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.selfSignPromise(key, !onComplete));
+};
+
+// Import and export
+
+/**
+ * Import a certificate and its corresponding private key encapsulated in a
+ * SafeBag. If the certificate and key are imported properly, the default
+ * setting will be updated as if a new key and certificate is added into this
+ * KeyChain.
+ * @param {SafeBag} safeBag The SafeBag containing the certificate and private
+ * key. This copies the values from the SafeBag.
+ * @param {Buffer} password (optional) The password for decrypting the private
+ * key. If the password is supplied, use it to decrypt the PKCS #8
+ * EncryptedPrivateKeyInfo. If the password is omitted or null, import an
+ * unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
+ */
+KeyChain.prototype.importSafeBagPromise = function(safeBag, password, useSync)
+{
+  if (typeof password === 'boolean') {
+    // password is omitted, so shift.
+    useSync = password;
+    password = undefined;
+  }
+
+  var certificate;
+  try {
+    certificate = new CertificateV2(safeBag.getCertificate());
+  } catch (ex) {
+    return SyncPromise.reject(new Error("Error reading CertificateV2: " + ex));
+  }
+  var identity = certificate.getIdentity();
+  var keyName = certificate.getKeyName();
+  var publicKeyBits = certificate.getPublicKey();
+  var content = new Blob([0x01, 0x02, 0x03, 0x04]);
+  var signatureBits;
+  var thisKeyChain = this;
+
+  return SyncPromise.resolve()
+  .then(function() {
+    return thisKeyChain.tpm_.hasKeyPromise(keyName, useSync);
+  })
+  .then(function(hasKey) {
+    if (hasKey)
+      return SyncPromise.reject(new KeyChain.Error(new Error
+        ("Private key `" + keyName.toUri() + "` already exists")));
+
+    return thisKeyChain.pib_.getIdentityPromise(identity, useSync)
+    .then(function(existingId) {
+      return existingId.getKeyPromise(keyName, useSync);
+    })
+    .then(function() {
+      return SyncPromise.reject(new KeyChain.Error(new Error
+        ("Public key `" + keyName.toUri() + "` already exists")));
+    }, function(err) {
+      // Either the identity or the key doesn't exist, so OK to import.
+      return SyncPromise.resolve();
+    });
+  })
+  .then(function() {
+    return thisKeyChain.tpm_.importPrivateKeyPromise_
+      (keyName, safeBag.getPrivateKeyBag().buf(), password, useSync)
+    .catch(function(err) {
+      return SyncPromise.reject(new KeyChain.Error(new Error
+        ("Failed to import private key `" + keyName.toUri() + "`")));
+    });
+  })
+  .then(function() {
+    // Check the consistency of the private key and certificate.
+    return thisKeyChain.tpm_.signPromise
+      (content.buf(), keyName, DigestAlgorithm.SHA256, useSync)
+    .then(function(localSignatureBits) {
+      signatureBits = localSignatureBits;
+      return SyncPromise.resolve();
+    }, function(err) {
+      return thisKeyChain.tpm_.deleteKeyPromise_(keyName, useSync)
+      .then(function() {
+        return SyncPromise.reject(new KeyChain.Error(new Error
+          ("Invalid private key `" + keyName.toUri() + "`")));
+      });
+    });
+  })
+  .then(function() {
+    var publicKey;
+    try {
+      publicKey = new PublicKey(publicKeyBits);
+    } catch (ex) {
+      // Promote to KeyChain.Error.
+      return thisKeyChain.tpm_.deleteKeyPromise_(keyName, useSync)
+      .then(function() {
+        return SyncPromise.reject(new KeyChain.Error(new Error
+          ("Error decoding public key " + ex)));
+      });
+    }
+
+    return VerificationHelpers.verifySignaturePromise
+      (content, signatureBits, publicKey, useSync);
+  })
+  .then(function(isVerified) {
+    if (!isVerified) {
+      return thisKeyChain.tpm_.deleteKeyPromise_(keyName, useSync)
+      .then(function() {
+        return SyncPromise.reject(new KeyChain.Error(new Error
+          ("Certificate `" + certificate.getName().toUri() +
+           "` and private key `" + keyName.toUri() + "` do not match")));
+      });
+    }
+
+    // The consistency is verified. Add to the PIB.
+    return thisKeyChain.pib_.addIdentityPromise_(identity, useSync);
+  })
+  .then(function(id) {
+    return id.addKeyPromise_(certificate.getPublicKey().buf(), keyName, useSync);
+  })
+  .then(function(key) {
+    return key.addCertificatePromise_(certificate, useSync);
+  });
+};
+
+/**
+ * Import a certificate and its corresponding private key encapsulated in a
+ * SafeBag. If the certificate and key are imported properly, the default
+ * setting will be updated as if a new key and certificate is added into this
+ * KeyChain.
+ * @param {SafeBag} safeBag The SafeBag containing the certificate and private
+ * key. This copies the values from the SafeBag.
+ * @param {Buffer} password (optional) The password for decrypting the private
+ * key. If the password is supplied, use it to decrypt the PKCS #8
+ * EncryptedPrivateKeyInfo. If the password is omitted or null, import an
+ * unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {function} onComplete (optional) This calls onComplete() when finished.
+ * If omitted, just return when finished. (Some crypto libraries only use a
+ * callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some crypto libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ */
+KeyChain.prototype.importSafeBag = function
+  (safeBag, password, onComplete, onError)
+{
+  onError = (typeof password === "function") ? onComplete : onError;
+  onComplete = (typeof password === "function") ? password : onComplete;
+  password = (typeof password === "function") ? null : password;
+
+  return SyncPromise.complete(onComplete, onError,
+    this.importSafeBagPromise(safeBag, password, !onComplete));
+};
+
+// PIB & TPM backend registry
+
+/**
+ * Add to the PIB factories map where scheme is the key and makePibImpl is the
+ * value. If your application has its own PIB implementations, this must be
+ * called before creating a KeyChain instance which uses your PIB scheme.
+ * @param {string} scheme The PIB scheme.
+ * @param {function} makePibImpl A callback which takes the PIB location and
+ * returns a new PibImpl instance.
+ */
+KeyChain.registerPibBackend = function(scheme, makePibImpl)
+{
+  KeyChain.getPibFactories_()[scheme] = makePibImpl;
+};
+
+/**
+ * Add to the TPM factories map where scheme is the key and makeTpmBackEnd is
+ * the value. If your application has its own TPM implementations, this must be
+ * called before creating a KeyChain instance which uses your TPM scheme.
+ * @param {string} scheme The TPM scheme.
+ * @param {function} makeTpmBackEnd A callback which takes the TPM location and
+ * returns a new TpmBackEnd instance.
+ */
+KeyChain.registerTpmBackend = function(scheme, makeTpmBackEnd)
+{
+  KeyChain.getTpmFactories_()[scheme] = makeTpmBackEnd;
+};
+
+// Security v1 methods
 
 /*****************************************
  *          Identity Management          *
@@ -26185,7 +33729,7 @@ exports.KeyChain = KeyChain;
  * certificate for the identity already exists, use it.
  * @param {Name} identityName The name of the identity.
  * @param {KeyParams} params (optional) The key parameters if a key needs to be
- * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
+ * generated for the identity. If omitted, use KeyChain.getDefaultKeyParams().
  * @param {function} onComplete (optional) This calls onComplete(certificateName)
  * with name of the default certificate of the identity. If omitted, the return
  * value is described below. (Some crypto libraries only use a callback, so
@@ -26211,9 +33755,9 @@ KeyChain.prototype.createIdentityAndCertificate = function
   onError = (typeof params === "function") ? onComplete : onError;
   onComplete = (typeof params === "function") ? params : onComplete;
   params = (typeof params === "function" || !params) ?
-    KeyChain.DEFAULT_KEY_PARAMS : params;
+    KeyChain.getDefaultKeyParams() : params;
 
-  return this.identityManager.createIdentityAndCertificate
+  return this.identityManager_.createIdentityAndCertificate
     (identityName, params, onComplete, onError);
 };
 
@@ -26227,39 +33771,13 @@ KeyChain.prototype.createIdentityAndCertificate = function
  * certificate name to the key name.
  * @param {Name} identityName The name of the identity.
  * @param {KeyParams} params (optional) The key parameters if a key needs to be
- * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
+ * generated for the identity. If omitted, use KeyChain.getDefaultKeyParams().
  * @return {Name} The key name of the auto-generated KSK of the identity.
  */
 KeyChain.prototype.createIdentity = function(identityName, params)
 {
   return IdentityCertificate.certificateNameToPublicKeyName
     (this.createIdentityAndCertificate(identityName, params));
-};
-
-/**
- * Delete the identity from the public and private key storage. If the
- * identity to be deleted is the current default system default, this will not
- * delete the identity and will return immediately.
- * @param {Name} identityName The name of the identity.
- * @param {function} onComplete (optional) This calls onComplete() when the
- * operation is complete. If omitted, do not use it. (Some database libraries
- * only use a callback, so onComplete is required to use these.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- */
-KeyChain.prototype.deleteIdentity = function
-  (identityName, onComplete, onError)
-{
-  this.identityManager.deleteIdentity(identityName, onComplete, onError);
 };
 
 /**
@@ -26288,7 +33806,15 @@ KeyChain.prototype.deleteIdentity = function
  */
 KeyChain.prototype.getDefaultIdentity = function(onComplete, onError)
 {
-  return this.identityManager.getDefaultIdentity(onComplete, onError);
+  if (!this.isSecurityV1_) {
+    return SyncPromise.complete(onComplete, onError,
+      this.pib_.getDefaultIdentityPromise(!onComplete)
+      .then(function(pibIdentity) {
+        return SyncPromise.resolve(pibIdentity.getName());
+      }));
+  }
+
+  return this.identityManager_.getDefaultIdentity(onComplete, onError);
 };
 
 /**
@@ -26319,7 +33845,21 @@ KeyChain.prototype.getDefaultIdentity = function(onComplete, onError)
  */
 KeyChain.prototype.getDefaultCertificateName = function(onComplete, onError)
 {
-  return this.identityManager.getDefaultCertificateName(onComplete, onError);
+  if (!this.isSecurityV1_) {
+    return SyncPromise.complete(onComplete, onError,
+      this.pib_.getDefaultIdentityPromise(!onComplete)
+      .then(function(identity) {
+        return identity.getDefaultKeyPromise(!onComplete);
+      })
+      .then(function(key) {
+        return key.getDefaultCertificatePromise(!onComplete);
+      })
+      .then(function(certificate) {
+        return SyncPromise.resolve(certificate.getName());
+      }));
+  }
+
+  return this.identityManager_.getDefaultCertificateName(onComplete, onError);
 };
 
 /**
@@ -26333,13 +33873,17 @@ KeyChain.prototype.getDefaultCertificateName = function(onComplete, onError)
  */
 KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
 {
+  if (!this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("generateRSAKeyPair is not supported for security v2. Use createIdentityV2."));
+
   keySize = (typeof isKsk === "boolean") ? isKsk : keySize;
   isKsk = (typeof isKsk === "boolean") ? isKsk : false;
 
   if (!keySize)
     keySize = 2048;
 
-  return this.identityManager.generateRSAKeyPair(identityName, isKsk, keySize);
+  return this.identityManager_.generateRSAKeyPair(identityName, isKsk, keySize);
 };
 
 /**
@@ -26366,13 +33910,18 @@ KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
 KeyChain.prototype.setDefaultKeyForIdentity = function
   (keyName, identityNameCheck, onComplete, onError)
 {
-  return this.identityManager.setDefaultKeyForIdentity
+  if (!this.isSecurityV1_)
+    return SyncPromise.complete(onComplete, onError,
+      SyncPromise.reject(new SecurityException(new Error
+        ("setDefaultKeyForIdentity is not supported for security v2. Use getPib() methods."))));
+
+  return this.identityManager_.setDefaultKeyForIdentity
     (keyName, identityNameCheck, onComplete, onError);
 };
 
 /**
- * Generate a pair of RSA keys for the specified identity and set it as default
- * key for the identity.
+ * Generate a pair of RSA keys for the specified identity and set it as the
+ * default key for the identity.
  * @param {Name} identityName The name of the identity.
  * @param {boolean} isKsk (optional) true for generating a Key-Signing-Key (KSK),
  * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
@@ -26383,7 +33932,11 @@ KeyChain.prototype.setDefaultKeyForIdentity = function
 KeyChain.prototype.generateRSAKeyPairAsDefault = function
   (identityName, isKsk, keySize)
 {
-  return this.identityManager.generateRSAKeyPairAsDefault
+  if (!this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("generateRSAKeyPairAsDefault is not supported for security v2. Use createIdentityV2."));
+
+  return this.identityManager_.generateRSAKeyPairAsDefault
     (identityName, isKsk, keySize);
 };
 
@@ -26394,7 +33947,20 @@ KeyChain.prototype.generateRSAKeyPairAsDefault = function
  */
 KeyChain.prototype.createSigningRequest = function(keyName)
 {
-  return this.identityManager.getPublicKey(keyName).getKeyDer();
+  if (!this.isSecurityV1_) {
+    var useSync = true;
+    return SyncPromise.complete(null, null,
+      this.pib_.getIdentityPromise
+        (PibKey.extractIdentityFromKeyName(keyName, useSync))
+      .then(function(identity) {
+        return identity.getKeyPromise(keyName, useSync);
+      })
+      .then(function(key) {
+        return SyncPromise.resolve(key.getPublicKey());
+      }));
+  }
+
+  return this.identityManager_.getPublicKey(keyName).getKeyDer();
 };
 
 /**
@@ -26418,7 +33984,12 @@ KeyChain.prototype.createSigningRequest = function(keyName)
 KeyChain.prototype.installIdentityCertificate = function
   (certificate, onComplete, onError)
 {
-  this.identityManager.addCertificate(certificate, onComplete, onError);
+  if (!this.isSecurityV1_)
+    return SyncPromise.complete(onComplete, onError,
+      SyncPromise.reject(new SecurityException(new Error
+        ("installIdentityCertificate is not supported for security v2. Use getPib() methods."))));
+
+  this.identityManager_.addCertificate(certificate, onComplete, onError);
 };
 
 /**
@@ -26442,7 +34013,12 @@ KeyChain.prototype.installIdentityCertificate = function
 KeyChain.prototype.setDefaultCertificateForKey = function
   (certificate, onComplete, onError)
 {
-  this.identityManager.setDefaultCertificateForKey
+  if (!this.isSecurityV1_)
+    return SyncPromise.complete(onComplete, onError,
+      SyncPromise.reject(new SecurityException(new Error
+        ("setDefaultCertificateForKey is not supported for security v2. Use getPib() methods."))));
+
+  this.identityManager_.setDefaultCertificateForKey
     (certificate, onComplete, onError);
 };
 
@@ -26471,7 +34047,12 @@ KeyChain.prototype.setDefaultCertificateForKey = function
 KeyChain.prototype.getCertificate = function
   (certificateName, onComplete, onError)
 {
-  return this.identityManager.getCertificate
+  if (!this.isSecurityV1_)
+    return SyncPromise.complete(onComplete, onError,
+      SyncPromise.reject(new SecurityException(new Error
+        ("getCertificate is not supported for security v2. Use getPib() methods."))));
+
+  return this.identityManager_.getCertificate
     (certificateName, onComplete, onError);
 };
 
@@ -26481,7 +34062,12 @@ KeyChain.prototype.getCertificate = function
 KeyChain.prototype.getIdentityCertificate = function
   (certificateName, onComplete, onError)
 {
-  return this.identityManager.getCertificate
+  if (!this.isSecurityV1_)
+    return SyncPromise.complete(onComplete, onError,
+      SyncPromise.reject(new SecurityException(new Error
+        ("getIdentityCertificate is not supported for security v2. Use getPib() methods."))));
+
+  return this.identityManager_.getCertificate
     (certificateName, onComplete, onError);
 };
 
@@ -26510,7 +34096,11 @@ KeyChain.prototype.revokeCertificate = function(certificateName)
  */
 KeyChain.prototype.getIdentityManager = function()
 {
-  return this.identityManager;
+  if (!this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("getIdentityManager is not supported for security v2"));
+
+  return this.identityManager_;
 };
 
 /*****************************************
@@ -26523,193 +34113,12 @@ KeyChain.prototype.getIdentityManager = function()
  */
 KeyChain.prototype.getPolicyManager = function()
 {
-  return this.policyManager;
+  return this.policyManager_;
 };
 
 /*****************************************
  *              Sign/Verify              *
  *****************************************/
-
-/**
- * Sign the target. If it is a Data or Interest object, set its signature. If it
- * is an array, produce a Signature object. There are two forms of sign:
- * sign(target, certificateName [, wireFormat] [, onComplete] [, onError]).
- * sign(target [, wireFormat] [, onComplete] [, onError]).
- * @param {Data|Interest|Buffer} target If this is a Data object, wire encode for
- * signing, update its signature and key locator field and wireEncoding. If this
- * is an Interest object, wire encode for signing, append a SignatureInfo to the
- * Interest name, sign the name components and append a final name component
- * with the signature bits. If it is an array, sign it and produce a Signature
- * object.
- * @param {Name} certificateName (optional) The certificate name of the key to
- * use for signing. If omitted, use the default identity in the identity storage.
- * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
- * the input. If omitted, use WireFormat getDefaultWireFormat().
- * @param {function} onComplete (optional) If target is a Data object, this calls
- * onComplete(data) with the supplied Data object which has been modified to set
- * its signature. If target is an Interest object, this calls
- * onComplete(interest) with the supplied Interest object which has been
- * modified to set its signature. If target is a Buffer, this calls
- * onComplete(signature) where signature is the produced Signature object. If
- * omitted, the return value is described below. (Some crypto libraries only use
- * a callback, so onComplete is required to use these.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @return {Signature} If onComplete is omitted, return the generated Signature
- * object (if target is a Buffer) or the target (if target is Data or Interest).
- * Otherwise, if onComplete is supplied then return undefined and use onComplete as
- * described above.
- */
-KeyChain.prototype.sign = function
-  (target, certificateName, wireFormat, onComplete, onError)
-{
-  var arg2 = certificateName;
-  var arg3 = wireFormat;
-  var arg4 = onComplete;
-  var arg5 = onError;
-  // arg2,            arg3,       arg4,       arg5
-  // certificateName, wireFormat, onComplete, onError
-  // certificateName, wireFormat, null,       null
-  // certificateName, onComplete, onError,    null
-  // certificateName, null,       null,       null
-  // wireFormat,      onComplete, onError,    null
-  // wireFormat,      null,       null,       null
-  // onComplete,      onError,    null,       null
-  // null,            null,       null,       null
-  if (arg2 instanceof Name)
-    certificateName = arg2;
-  else
-    certificateName = null;
-
-  if (arg2 instanceof WireFormat)
-    wireFormat = arg2;
-  else if (arg3 instanceof WireFormat)
-    wireFormat = arg3;
-  else
-    wireFormat = null;
-
-  if (typeof arg2 === "function") {
-    onComplete = arg2;
-    onError = arg3;
-  }
-  else if (typeof arg3 === "function") {
-    onComplete = arg3;
-    onError = arg4;
-  }
-  else if (typeof arg4 === "function") {
-    onComplete = arg4;
-    onError = arg5;
-  }
-  else {
-    onComplete = null;
-    onError = null;
-  }
-
-  return SyncPromise.complete(onComplete, onError,
-    this.signPromise(target, certificateName, wireFormat, !onComplete));
-};
-
-/**
- * Sign the target. If it is a Data or Interest object, set its signature. If it
- * is an array, produce a Signature object. There are two forms of signPromise:
- * signPromise(target, certificateName [, wireFormat] [, useSync]).
- * sign(target [, wireFormat] [, useSync]).
- * @param {Data|Interest|Buffer} target If this is a Data object, wire encode for
- * signing, update its signature and key locator field and wireEncoding. If this
- * is an Interest object, wire encode for signing, append a SignatureInfo to the
- * Interest name, sign the name components and append a final name component
- * with the signature bits. If it is an array, sign it and produce a Signature
- * object.
- * @param {Name} certificateName (optional) The certificate name of the key to
- * use for signing. If omitted, use the default identity in the identity storage.
- * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
- * the input. If omitted, use WireFormat getDefaultWireFormat().
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
- * @return {Promise|SyncPromise} A promise that returns the generated Signature
- * object (if target is a Buffer) or the target (if target is Data or Interest).
- */
-KeyChain.prototype.signPromise = function
-  (target, certificateName, wireFormat, useSync)
-{
-  var arg2 = certificateName;
-  var arg3 = wireFormat;
-  var arg4 = useSync;
-  // arg2,            arg3,       arg4
-  // certificateName, wireFormat, useSync
-  // certificateName, wireFormat, null
-  // certificateName, useSync,    null
-  // certificateName, null,       null
-  // wireFormat,      useSync,    null
-  // wireFormat,      null,       null
-  // useSync,         null,       null
-  // null,            null,       null
-  if (arg2 instanceof Name)
-    certificateName = arg2;
-  else
-    certificateName = null;
-
-  if (arg2 instanceof WireFormat)
-    wireFormat = arg2;
-  else if (arg3 instanceof WireFormat)
-    wireFormat = arg3;
-  else
-    wireFormat = null;
-
-  if (typeof arg2 === 'boolean')
-    useSync = arg2;
-  else if (typeof arg3 === 'boolean')
-    useSync = arg3;
-  else if (typeof arg4 === 'boolean')
-    useSync = arg4;
-  else
-    useSync = false;
-
-  var thisKeyChain = this;
-  return SyncPromise.resolve()
-  .then(function() {
-    if (certificateName != null)
-      return SyncPromise.resolve();
-
-    // Get the default certificate name.
-    return thisKeyChain.identityManager.getDefaultCertificatePromise(useSync)
-    .then(function(signingCertificate) {
-      if (signingCertificate != null) {
-        certificateName = signingCertificate.getName();
-        return SyncPromise.resolve();
-      }
-
-      // Set the default certificate and default certificate name again.
-      return thisKeyChain.prepareDefaultCertificateNamePromise_(useSync)
-      .then(function(localCertificateName) {
-        certificateName =localCertificateName;
-        return SyncPromise.resolve();
-      });
-    });
-  })
-  .then(function() {
-    // certificateName is now set. Do the actual signing.
-    if (target instanceof Interest)
-      return thisKeyChain.identityManager.signInterestByCertificatePromise
-        (target, certificateName, wireFormat, useSync);
-    else if (target instanceof Data)
-      return thisKeyChain.identityManager.signByCertificatePromise
-        (target, certificateName, wireFormat, useSync);
-    else
-      return thisKeyChain.identityManager.signByCertificatePromise
-        (target, certificateName, useSync);
-  });
-};
 
 /**
  * Sign the target. If it is a Data object, set its signature. If it is an
@@ -26750,6 +34159,11 @@ KeyChain.prototype.signByIdentity = function
   onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   wireFormat = (typeof wireFormat === "function" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
 
+  if (!this.isSecurityV1_)
+    return SyncPromise.complete(onComplete, onError,
+      SyncPromise.reject(new SecurityException(new Error
+        ("signByIdentity(buffer, identityName) is not supported for security v2. Use sign with SigningInfo."))));
+
   var useSync = !onComplete;
   var thisKeyChain = this;
 
@@ -26762,17 +34176,17 @@ KeyChain.prototype.signByIdentity = function
     var mainPromise = SyncPromise.resolve()
     .then(function() {
       if (identityName.size() == 0) {
-        var inferredIdentity = thisKeyChain.policyManager.inferSigningIdentity
+        var inferredIdentity = thisKeyChain.policyManager_.inferSigningIdentity
           (data.getName());
         if (inferredIdentity.size() == 0)
-          return thisKeyChain.identityManager.getDefaultCertificateNamePromise
+          return thisKeyChain.identityManager_.getDefaultCertificateNamePromise
             (useSync);
         else
-          return thisKeyChain.identityManager.getDefaultCertificateNameForIdentityPromise
+          return thisKeyChain.identityManager_.getDefaultCertificateNameForIdentityPromise
               (inferredIdentity, useSync);
       }
       else
-        return thisKeyChain.identityManager.getDefaultCertificateNameForIdentityPromise
+        return thisKeyChain.identityManager_.getDefaultCertificateNameForIdentityPromise
           (identityName, useSync);
     })
     .then(function(signingCertificateName) {
@@ -26780,12 +34194,12 @@ KeyChain.prototype.signByIdentity = function
         throw new SecurityException(new Error
           ("No qualified certificate name found!"));
 
-      if (!thisKeyChain.policyManager.checkSigningPolicy
+      if (!thisKeyChain.policyManager_.checkSigningPolicy
            (data.getName(), signingCertificateName))
         throw new SecurityException(new Error
           ("Signing Cert name does not comply with signing policy"));
 
-      return thisKeyChain.identityManager.signByCertificatePromise
+      return thisKeyChain.identityManager_.signByCertificatePromise
         (data, signingCertificateName, wireFormat, useSync);
     });
 
@@ -26795,14 +34209,14 @@ KeyChain.prototype.signByIdentity = function
     var array = target;
 
     return SyncPromise.complete(onComplete, onError,
-      this.identityManager.getDefaultCertificateNameForIdentityPromise
+      this.identityManager_.getDefaultCertificateNameForIdentityPromise
         (identityName, useSync)
       .then(function(signingCertificateName) {
         if (signingCertificateName.size() == 0)
           throw new SecurityException(new Error
             ("No qualified certificate name found!"));
 
-        return thisKeyChain.identityManager.signByCertificatePromise
+        return thisKeyChain.identityManager_.signByCertificatePromise
           (array, signingCertificateName, wireFormat, useSync);
       }));
   }
@@ -26820,10 +34234,18 @@ KeyChain.prototype.signByIdentity = function
  */
 KeyChain.prototype.signWithSha256 = function(target, wireFormat)
 {
+  if (!this.isSecurityV1_) {
+    var signingInfo = SigningInfo();
+    signingInfo.setSha256Signing();
+    this.sign(target, signingInfo, wireFormat);
+
+    return;
+  }
+
   if (target instanceof Interest)
-    this.identityManager.signInterestWithSha256(target, wireFormat);
+    this.identityManager_.signInterestWithSha256(target, wireFormat);
   else
-    this.identityManager.signWithSha256(target, wireFormat);
+    this.identityManager_.signWithSha256(target, wireFormat);
 };
 
 /**
@@ -26849,12 +34271,12 @@ KeyChain.prototype.verifyData = function
   if (stepCount == null)
     stepCount = 0;
 
-  if (this.policyManager.requireVerify(data)) {
-    var nextStep = this.policyManager.checkVerificationPolicy
+  if (this.policyManager_.requireVerify(data)) {
+    var nextStep = this.policyManager_.checkVerificationPolicy
       (data, stepCount, onVerified, onValidationFailed);
     if (nextStep != null) {
       var thisKeyChain = this;
-      this.face.expressInterest
+      this.face_.expressInterest
         (nextStep.interest,
          function(callbackInterest, callbackData) {
            thisKeyChain.onCertificateData(callbackInterest, callbackData, nextStep);
@@ -26865,7 +34287,7 @@ KeyChain.prototype.verifyData = function
          });
     }
   }
-  else if (this.policyManager.skipVerifyAndTrust(data)) {
+  else if (this.policyManager_.skipVerifyAndTrust(data)) {
     try {
       onVerified(data);
     } catch (ex) {
@@ -26906,12 +34328,12 @@ KeyChain.prototype.verifyInterest = function
     stepCount = 0;
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
-  if (this.policyManager.requireVerify(interest)) {
-    var nextStep = this.policyManager.checkVerificationPolicy
+  if (this.policyManager_.requireVerify(interest)) {
+    var nextStep = this.policyManager_.checkVerificationPolicy
       (interest, stepCount, onVerified, onValidationFailed, wireFormat);
     if (nextStep != null) {
       var thisKeyChain = this;
-      this.face.expressInterest
+      this.face_.expressInterest
         (nextStep.interest,
          function(callbackInterest, callbackData) {
            thisKeyChain.onCertificateData(callbackInterest, callbackData, nextStep);
@@ -26923,7 +34345,7 @@ KeyChain.prototype.verifyInterest = function
          });
     }
   }
-  else if (this.policyManager.skipVerifyAndTrust(interest)) {
+  else if (this.policyManager_.skipVerifyAndTrust(interest)) {
     try {
       onVerified(interest);
     } catch (ex) {
@@ -26947,7 +34369,7 @@ KeyChain.prototype.verifyInterest = function
  */
 KeyChain.prototype.setFace = function(face)
 {
-  this.face = face;
+  this.face_ = face;
 };
 
 /**
@@ -27004,7 +34426,378 @@ KeyChain.verifyDataWithHmacWithSha256 = function(data, key, wireFormat)
   return newSignatureBits.equals(data.getSignature().getSignature());
 };
 
+KeyChain.getDefaultKeyParams = function() { return KeyChain.defaultKeyParams_; };
+
+/**
+ * @deprecated Use getDefaultKeyParams().
+ */
 KeyChain.DEFAULT_KEY_PARAMS = new RsaKeyParams();
+
+// Private security v2 methods
+
+/**
+ * Get the PIB factories map. On the first call, this initializes the map with
+ * factories for standard PibImpl implementations.
+ * @return {object} A map where the key is the scheme string and the value is a
+ * function makePibImpl(location) which takes a string location and returns a
+ * new PibImpl object.
+ */
+KeyChain.getPibFactories_ = function()
+{
+  if (KeyChain.pibFactories_ == null) {
+    KeyChain.pibFactories_ = {};
+
+    // Add the standard factories.
+    KeyChain.pibFactories_[PibSqlite3.getScheme()] =
+      function(location) { return new PibSqlite3(location); };
+    KeyChain.pibFactories_[PibMemory.getScheme()] =
+      function(location) { return new PibMemory(); };
+  }
+
+  return KeyChain.pibFactories_;
+};
+
+/**
+ * Get the TPM factories map. On the first call, this initializes the map with
+ * factories for standard TpmBackEnd implementations.
+ * @return {object} A map where the key is the scheme string and the value is a
+ * function makeTpmBackEnd(location) which takes a string location and returns a
+ * new TpmBackEnd object.
+ */
+KeyChain.getTpmFactories_ = function()
+{
+  if (KeyChain.tpmFactories_ == null) {
+    KeyChain.tpmFactories_ = {};
+
+    // Add the standard factories.
+    KeyChain.tpmFactories_[TpmBackEndFile.getScheme()] =
+      function(location) { return new TpmBackEndFile(location); };
+    KeyChain.tpmFactories_[TpmBackEndMemory.getScheme()] =
+      function(location) { return new TpmBackEndMemory(); };
+  }
+
+  return KeyChain.tpmFactories_;
+};
+
+/**
+ * Parse the uri and set the scheme and location.
+ * @param {string} uri The URI to parse.
+ * @param {Array<string>} scheme Set scheme[0] to the scheme.
+ * @param {Array<string>} location Set location[0] to the location.
+ */
+KeyChain.parseLocatorUri_ = function(uri, scheme, location)
+{
+  iColon = uri.indexOf(':');
+  if (iColon >= 0) {
+    scheme[0] = uri.substring(0, iColon);
+    location[0] = uri.substring(iColon + 1);
+  }
+  else {
+    scheme[0] = uri;
+    location[0] = "";
+  }
+};
+
+/**
+ * Parse the pibLocator and set the pibScheme and pibLocation.
+ * @param {string} pibLocator The PIB locator to parse.
+ * @param {Array<string>} pibScheme Set pibScheme[0] to the PIB scheme.
+ * @param {Array<string>} pibLocation Set pibLocation[0] to the PIB location.
+ */
+KeyChain.parseAndCheckPibLocator_ = function(pibLocator, pibScheme, pibLocation)
+{
+  KeyChain.parseLocatorUri_(pibLocator, pibScheme, pibLocation);
+
+  if (pibScheme[0] == "")
+    pibScheme[0] = KeyChain.getDefaultPibScheme_();
+
+  if (KeyChain.getPibFactories_()[pibScheme[0]] == undefined)
+    throw new KeyChain.Error(new Error
+      ("PIB scheme `" + pibScheme[0] + "` is not supported"));
+};
+
+/**
+ * Parse the tpmLocator and set the tpmScheme and tpmLocation.
+ * @param {string} tpmLocator The TPM locator to parse.
+ * @param {Array<string>} tpmScheme Set tpmScheme[0] to the TPM scheme.
+ * @param {Array<string>} tpmLocation Set tpmLocation[0] to the TPM location.
+ */
+KeyChain.parseAndCheckTpmLocator_ = function(tpmLocator, tpmScheme, tpmLocation)
+{
+  KeyChain.parseLocatorUri_(tpmLocator, tpmScheme, tpmLocation);
+
+  if (tpmScheme[0] == "")
+    tpmScheme[0] = KeyChain.getDefaultTpmScheme_();
+
+  if (KeyChain.getTpmFactories_()[tpmScheme[0]] == undefined)
+    throw new KeyChain.Error(new Error
+      ("TPM scheme `" + tpmScheme[0] + "` is not supported"));
+};
+
+/**
+ * @return {string}
+ */
+KeyChain.getDefaultPibScheme_ = function() { return PibSqlite3.getScheme(); };
+
+/**
+ * @return {string}
+ */
+KeyChain.getDefaultTpmScheme_ = function()
+{
+  // Assume we are in Node.js, so check the system.
+  if (process.platform === "darwin")
+    throw new KeyChain.Error(new Error
+      ("TpmBackEndOsx is not implemented. You must use tpm-file."));
+
+  return TpmBackEndFile.getScheme();
+};
+
+/**
+ * Create a Pib according to the pibLocator.
+ * @param {string} pibLocator The PIB locator, e.g., "pib-sqlite3:/example/dir".
+ * @return {Pib} A new Pib object.
+ */
+KeyChain.createPib_ = function(pibLocator)
+{
+  var pibScheme = [null];
+  var pibLocation = [null];
+  KeyChain.parseAndCheckPibLocator_(pibLocator, pibScheme, pibLocation);
+  var pibFactory = KeyChain.getPibFactories_()[pibScheme[0]];
+  return new Pib(pibScheme[0], pibLocation[0], pibFactory(pibLocation[0]));
+};
+
+/**
+ * Create a Tpm according to the tpmLocator.
+ * @param {string} tpmLocator The TPM locator, e.g., "tpm-memory:".
+ * @returns {Tpm} A new Tpm object.
+ */
+KeyChain.createTpm_ = function(tpmLocator)
+{
+  var tpmScheme = [null];
+  var tpmLocation = [null];
+  KeyChain.parseAndCheckTpmLocator_(tpmLocator, tpmScheme, tpmLocation);
+  var tpmFactory = KeyChain.getTpmFactories_()[tpmScheme[0]];
+  return new Tpm(tpmScheme[0], tpmLocation[0], tpmFactory(tpmLocation[0]));
+};
+
+/**
+ * @param {ConfigFile} config
+ * @return {string}
+ */
+KeyChain.getDefaultPibLocator_ = function(config)
+{
+  if (KeyChain.defaultPibLocator_ != null)
+    return KeyChain.defaultPibLocator_;
+
+  var clientPib = process.env.NDN_CLIENT_PIB;
+  if (clientPib != undefined && clientPib != "")
+    KeyChain.defaultPibLocator_ = clientPib;
+  else
+    KeyChain.defaultPibLocator_ = config.get
+      ("pib", KeyChain.getDefaultPibScheme_() + ":");
+
+  return KeyChain.defaultPibLocator_;
+};
+
+/**
+ * @param {ConfigFile} config
+ * @return {string}
+ */
+KeyChain.getDefaultTpmLocator_ = function(config)
+{
+  if (KeyChain.defaultTpmLocator_ != null)
+    return KeyChain.defaultTpmLocator_;
+
+  var clientTpm = process.env.NDN_CLIENT_TPM;
+  if (clientTpm != undefined && clientTpm != "")
+    KeyChain.defaultTpmLocator_ = clientTpm;
+  else
+    KeyChain.defaultTpmLocator_ = config.get
+      ("tpm", KeyChain.getDefaultTpmScheme_() + ":");
+
+  return KeyChain.defaultTpmLocator_;
+};
+
+/**
+ * Prepare a Signature object according to signingInfo and get the signing key
+ * name.
+ * @param {SigningInfo} params The signing parameters.
+ * @param {Array<Name>} keyName Set keyName[0] to the signing key name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a new Signature object
+ * with the SignatureInfo, or a promise rejected with InvalidSigningInfoError
+ * when the requested signing method cannot be satisfied.
+ */
+KeyChain.prototype.prepareSignatureInfoPromise_ = function
+  (params, keyName, useSync)
+{
+  var identity = null;
+  var key = null;
+  var thisKeyChain = this;
+
+  return SyncPromise.resolve()
+  .then(function() {
+    if (params.getSignerType() == SigningInfo.SignerType.NULL) {
+      return thisKeyChain.pib_.getDefaultIdentityPromise(useSync)
+      .then(function(localIdentity) {
+        identity = localIdentity;
+        return SyncPromise.resolve(null);
+      }, function(err) {
+        // There is no default identity, so use sha256 for signing.
+        keyName[0] = SigningInfo.getDigestSha256Identity();
+        return SyncPromise.resolve(new DigestSha256Signature());
+      });
+    }
+    else if (params.getSignerType() == SigningInfo.SignerType.ID) {
+      identity = params.getPibIdentity();
+      if (identity == null) {
+        return thisKeyChain.pib_.getIdentityPromise(params.getSignerName(), useSync)
+        .then(function(localIdentity) {
+          identity = localIdentity;
+          return SyncPromise.resolve(null);
+        }, function(err) {
+          return SyncPromise.reject(new InvalidSigningInfoError(new Error
+            ("Signing identity `" + params.getSignerName().toUri() +
+             "` does not exist")));
+        });
+      }
+      else
+        return SyncPromise.resolve(null);
+    }
+    else if (params.getSignerType() == SigningInfo.SignerType.KEY) {
+      key = params.getPibKey();
+      if (key == null) {
+        identityName = PibKey.extractIdentityFromKeyName(
+          params.getSignerName());
+
+        return thisKeyChain.pib_.getIdentityPromise(identityName, useSync)
+        .then(function(localIdentity) {
+          return localIdentity.getKeyPromise(params.getSignerName(), useSync)
+          .then(function(localKey) {
+            key = localKey;
+            // We will use the PIB key instance, so reset the identity.
+            identity = null;
+            return SyncPromise.resolve(null);
+          });
+        }, function(err) {
+          return SyncPromise.reject(new InvalidSigningInfoError(new Error
+            ("Signing key `" + params.getSignerName().toUri() +
+             "` does not exist")));
+        });
+      }
+      else
+        return SyncPromise.resolve(null);
+    }
+    else if (params.getSignerType() == SigningInfo.SignerType.CERT) {
+      var identityName = CertificateV2.extractIdentityFromCertName
+        (params.getSignerName());
+
+      return thisKeyChain.pib_.getIdentityPromise(identityName, useSync)
+      .then(function(localIdentity) {
+        identity = localIdentity;
+        return identity.getKeyPromise
+          (CertificateV2.extractKeyNameFromCertName(params.getSignerName()), useSync)
+        .then(function(localKey) {
+          key = localKey;
+          return SyncPromise.resolve(null);
+        });
+      }, function(err) {
+        return SyncPromise.reject(new InvalidSigningInfoError(new Error
+          ("Signing certificate `" + params.getSignerName().toUri() +
+           "` does not exist")));
+      });
+    }
+    else if (params.getSignerType() == SigningInfo.SignerType.SHA256) {
+      keyName[0] = SigningInfo.getDigestSha256Identity();
+      return SyncPromise.resolve(new DigestSha256Signature());
+    }
+    else
+      // We don't expect this to happen.
+      return SyncPromise.reject(new InvalidSigningInfoError(new Error
+        ("Unrecognized signer type")));
+  })
+  .then(function(signingInfo) {
+    if (signingInfo != null)
+      // We already have the result (a DigestSha256Signature).
+      return SyncPromise.resolve(signingInfo);
+    else {
+      if (identity == null && key == null)
+        return SyncPromise.reject(new InvalidSigningInfoError(new Error
+          ("Cannot determine signing parameters")));
+
+      return SyncPromise.resolve()
+      .then(function() {
+        if (identity != null && key == null) {
+          return identity.getDefaultKeyPromise(useSync)
+          .then(function(localKey) {
+            key = localKey;
+            return SyncPromise.resolve(null);
+          }, function(err) {
+            return SyncPromise.reject(new InvalidSigningInfoError(new Error
+              ("Signing identity `" + identity.getName().toUri() +
+               "` does not have default certificate")));
+          });
+        }
+        else
+          return SyncPromise.resolve();
+      })
+      .then(function() {
+        if (key.getKeyType() == KeyType.RSA &&
+            params.getDigestAlgorithm() == DigestAlgorithm.SHA256)
+          signatureInfo = new Sha256WithRsaSignature();
+        else if (key.getKeyType() == KeyType.ECDSA &&
+                 params.getDigestAlgorithm() == DigestAlgorithm.SHA256)
+          signatureInfo = new Sha256WithEcdsaSignature()
+        else
+          return SyncPromise.reject(new KeyChain.Error(new Error
+            ("Unsupported key type")));
+
+        if (params.getValidityPeriod().hasPeriod() &&
+            ValidityPeriod.canGetFromSignature(signatureInfo))
+          // Set the ValidityPeriod from the SigningInfo params.
+          ValidityPeriod.getFromSignature(signatureInfo).setPeriod
+            (params.getValidityPeriod().getNotBefore(),
+             params.getValidityPeriod().getNotAfter());
+
+        var keyLocator = KeyLocator.getFromSignature(signatureInfo);
+        keyLocator.setType(KeyLocatorType.KEYNAME);
+        keyLocator.setKeyName(key.getName());
+
+        keyName[0] = key.getName();
+        return SyncPromise.resolve(signatureInfo);
+      });
+    }
+  });
+};
+
+/**
+ * Sign the byte buffer using the key with name keyName.
+ * @param {Buffer} buffer The input byte buffer.
+ * @param {Name} keyName The name of the key.
+ * @param {number} digestAlgorithm The digest algorithm as an int from the
+ * DigestAlgorithm enum.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the signature Blob (or
+ * an isNull Blob if the key does not exist), or a promise rejected
+ * with TpmBackEnd.Error for an error in signing.
+ */
+KeyChain.prototype.signBufferPromise_ = function
+  (buffer, keyName, digestAlgorithm, useSync)
+{
+  if (keyName.equals(SigningInfo.getDigestSha256Identity())) {
+    var hash = Crypto.createHash('sha256');
+    hash.update(buffer);
+    return SyncPromise.resolve(new Blob(hash.digest(), false));
+  }
+
+  return this.tpm_.signPromise(buffer, keyName, digestAlgorithm, useSync);
+};
+
+// Private security v1 methods
 
 KeyChain.prototype.onCertificateData = function(interest, data, nextStep)
 {
@@ -27019,7 +34812,7 @@ KeyChain.prototype.onCertificateInterestTimeout = function
   if (retry > 0) {
     // Issue the same expressInterest as in verifyData except decrement retry.
     var thisKeyChain = this;
-    this.face.expressInterest
+    this.face_.expressInterest
       (interest,
        function(callbackInterest, callbackData) {
          thisKeyChain.onCertificateData(callbackInterest, callbackData, nextStep);
@@ -27054,7 +34847,7 @@ KeyChain.prototype.prepareDefaultCertificateNamePromise_ = function(useSync)
 {
   var signingCertificate;
   var thisKeyChain = this;
-  return this.identityManager.getDefaultCertificatePromise(useSync)
+  return this.identityManager_.getDefaultCertificatePromise(useSync)
   .then(function(localCertificate) {
     signingCertificate = localCertificate;
     if (signingCertificate != null)
@@ -27063,7 +34856,7 @@ KeyChain.prototype.prepareDefaultCertificateNamePromise_ = function(useSync)
     // Set the default certificate and get the certificate again.
     return thisKeyChain.setDefaultCertificatePromise_(useSync)
     .then(function() {
-      return thisKeyChain.identityManager.getDefaultCertificatePromise(useSync);
+      return thisKeyChain.identityManager_.getDefaultCertificatePromise(useSync);
     })
     .then(function(localCertificate) {
       signingCertificate = localCertificate;
@@ -27088,14 +34881,14 @@ KeyChain.prototype.setDefaultCertificatePromise_ = function(useSync)
 {
   var thisKeyChain = this;
 
-  return this.identityManager.getDefaultCertificatePromise(useSync)
+  return this.identityManager_.getDefaultCertificatePromise(useSync)
   .then(function(certificate) {
     if (certificate != null)
       // We already have a default certificate.
       return SyncPromise.resolve();
 
     var defaultIdentity;
-    return thisKeyChain.identityManager.getDefaultIdentityPromise(useSync)
+    return thisKeyChain.identityManager_.getDefaultIdentityPromise(useSync)
     .then(function(localDefaultIdentity) {
       defaultIdentity = localDefaultIdentity;
       return SyncPromise.resolve();
@@ -27108,15 +34901,62 @@ KeyChain.prototype.setDefaultCertificatePromise_ = function(useSync)
       return SyncPromise.resolve();
     })
     .then(function() {
-      return thisKeyChain.identityManager.createIdentityAndCertificatePromise
-        (defaultIdentity, KeyChain.DEFAULT_KEY_PARAMS, useSync);
+      return thisKeyChain.identityManager_.createIdentityAndCertificatePromise
+        (defaultIdentity, KeyChain.getDefaultKeyParams(), useSync);
     })
     .then(function() {
-      return thisKeyChain.identityManager.setDefaultIdentityPromise
+      return thisKeyChain.identityManager_.setDefaultIdentityPromise
         (defaultIdentity, useSync);
     });
   });
 };
+
+KeyChain.defaultPibLocator_ = null // string
+KeyChain.defaultTpmLocator_ = null // string
+KeyChain.pibFactories_ = null // string => MakePibImpl
+KeyChain.tpmFactories_ = null // string => MakeTpmBackEnd
+KeyChain.defaultSigningInfo_ = new SigningInfo();
+KeyChain.defaultKeyParams_ = new RsaKeyParams();
+
+/**
+ * Create an InvalidSigningInfoError which extends KeyChain.Error to indicate
+ * that the supplied SigningInfo is invalid.
+ * Call with: throw new InvalidSigningInfoError(new Error("message")).
+ * @param {Error} error The exception created with new Error.
+ * @constructor
+ */
+function InvalidSigningInfoError(error)
+{
+  if (error) {
+    error.__proto__ = InvalidSigningInfoError.prototype;
+    return error;
+  }
+}
+
+InvalidSigningInfoError.prototype = new Error();
+InvalidSigningInfoError.prototype.name = "InvalidSigningInfoError";
+
+exports.InvalidSigningInfoError = InvalidSigningInfoError;
+
+/**
+ * Create a LocatorMismatchError which extends KeyChain.Error to indicate that
+ * the supplied TPM locator does not match the locator stored in the PIB.
+ * Call with: throw new LocatorMismatchError(new Error("message")).
+ * @param {Error} error The exception created with new Error.
+ * @constructor
+ */
+function LocatorMismatchError(error)
+{
+  if (error) {
+    error.__proto__ = LocatorMismatchError.prototype;
+    return error;
+  }
+}
+
+LocatorMismatchError.prototype = new Error();
+LocatorMismatchError.prototype.name = "LocatorMismatchError";
+
+exports.LocatorMismatchError = LocatorMismatchError;
 /**
  * This class represents an Interest Exclude.
  * Copyright (C) 2014-2017 Regents of the University of California.
@@ -31914,7 +39754,7 @@ ConsumerDb.Error = function ConsumerDbError(error)
     error.__proto__ = ConsumerDb.Error.prototype;
     return error;
   }
-}
+};
 
 ConsumerDb.Error.prototype = new Error();
 ConsumerDb.Error.prototype.name = "ConsumerDbError";
@@ -32847,7 +40687,7 @@ GroupManagerDb.Error = function GroupManagerDbError(error)
     error.__proto__ = GroupManagerDb.Error.prototype;
     return error;
   }
-}
+};
 
 GroupManagerDb.Error.prototype = new Error();
 GroupManagerDb.Error.prototype.name = "GroupManagerDbError";
@@ -33830,7 +41670,7 @@ ProducerDb.Error = function ProducerDbError(error)
     error.__proto__ = ProducerDb.Error.prototype;
     return error;
   }
-}
+};
 
 ProducerDb.Error.prototype = new Error();
 ProducerDb.Error.prototype.name = "ProducerDbError";
