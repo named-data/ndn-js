@@ -97,6 +97,38 @@ PibKey.prototype.getCertificatePromise = function(certificateName, useSync)
 };
 
 /**
+ * Get the certificate with name certificateName.
+ * @param {Name} certificateName The name of the certificate.
+ * @param {function} onComplete (optional) This calls
+ * onComplete(certificate) with a copy of the CertificateV2. If omitted, the
+ * return value is described below. (Some database libraries only use a callback,
+ * so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {CertificateV2} If onComplete is omitted, return a copy of the
+ * CertificateV2. Otherwise, if onComplete is supplied then return undefined and
+ * use onComplete as described above.
+ * @throws Error if certificateName does not match the key name (or if the 
+ * backend implementation instance is invalid), or Pib.Error if the certificate 
+ * does not exist. However, if onComplete and onError are defined, then if there
+ * is an exception return undefined and call onError(exception).
+ */
+PibKey.prototype.getCertificate = function(certificateName, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.getCertificatePromise(certificateName, !onComplete));
+};
+
+/**
  * Get the default certificate for this Key.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
@@ -113,6 +145,37 @@ PibKey.prototype.getDefaultCertificatePromise = function(useSync)
   } catch (ex) {
     return SyncPromise.reject(ex);
   }
+};
+
+/**
+ * Get the default certificate for this Key.
+ * @param {function} onComplete (optional) This calls
+ * onComplete(certificate) with the default CertificateV2. If omitted, the
+ * return value is described below. (Some database libraries only use a callback,
+ * so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {CertificateV2} If onComplete is omitted, return the default
+ * CertificateV2. Otherwise, if onComplete is supplied then return undefined and
+ * use onComplete as described above.
+ * @throws Error if the backend implementation instance is invalid, Pib.Error if
+ * the default certificate does not exist. However, if onComplete and onError
+ * are defined, then if there is an exception return undefined and call
+ * onError(exception).
+ */
+PibKey.prototype.getDefaultCertificate = function(onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.getDefaultCertificatePromise(!onComplete));
 };
 
 /**

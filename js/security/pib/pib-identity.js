@@ -71,6 +71,38 @@ PibIdentity.prototype.getKeyPromise = function(keyName, useSync)
 };
 
 /**
+ * Get the key with name keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {function} onComplete (optional) This calls onComplete(key) with the
+ * PibKey object. If omitted, the return value is described below. (Some
+ * database libraries only use a callback, so onComplete is required to use
+ * these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {PibKey} If onComplete is omitted, return the PibKey object.
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete
+ * as described above.
+ * @throws Pib.Error if the key does not exist, or Error if the backend
+ * implementation instance is invalid. However, if onComplete and onError are
+ * defined, then if there is an exception return undefined and call
+ * onError(exception).
+ */
+PibIdentity.prototype.getKey = function(keyName, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.getKeyPromise(keyName, !onComplete));
+};
+
+/**
  * Get the default key of this Identity.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
@@ -87,6 +119,37 @@ PibIdentity.prototype.getDefaultKeyPromise = function(useSync)
   } catch (ex) {
     return SyncPromise.reject(ex);
   }
+};
+
+/**
+ * Get the default key of this Identity.
+ * @param {function} onComplete (optional) This calls onComplete(key) with the
+ * PibKey object of the default key. If omitted, the return value is described
+ * below. (Some database libraries only use a callback, so onComplete is
+ * required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {PibKey} If onComplete is omitted, return the PibKey object of the 
+ * default key. Otherwise, if onComplete is supplied then return undefined and
+ * use onComplete as described above.
+ * @throws Pib.Error if the default key has not been set, or Error if the
+ * backend implementation instance is invalid. However, if onComplete and
+ * onError are defined, then if there is an exception return undefined and call
+ * onError(exception).
+ */
+PibIdentity.prototype.getDefaultKey = function(onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.getDefaultKeyPromise(!onComplete));
 };
 
 /**
