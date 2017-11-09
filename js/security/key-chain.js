@@ -293,7 +293,7 @@ KeyChain.prototype.createIdentityV2Promise = function
   var thisKeyChain = this;
   var id;
 
-  return this.pib_.addIdentityPromise_(identityName)
+  return this.pib_.addIdentityPromise_(identityName, useSync)
   .then(function(localId) {
     id = localId;
 
@@ -422,7 +422,7 @@ KeyChain.prototype.deleteIdentityPromise = function(identity, useSync)
 
   return deleteKeys(0)
   .then(function() {
-    return thisKeyChain.pib_.removeIdentityPromise(identityName, useSync);
+    return thisKeyChain.pib_.removeIdentityPromise_(identityName, useSync);
     // TODO: Mark identity as invalid.
   });
 };
@@ -467,6 +467,20 @@ KeyChain.prototype.deleteIdentity = function(identity, onComplete, onError)
 /**
  * Set the identity as the default identity.
  * @param {PibIdentity} identity The identity to make the default.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete.
+ */
+KeyChain.prototype.setDefaultIdentityPromise = function(identity, useSync)
+{
+  return this.pib_.setDefaultIdentityPromise_(identity.getName(), useSync);
+};
+
+/**
+ * Set the identity as the default identity.
+ * @param {PibIdentity} identity The identity to make the default.
  * @param {function} onComplete (optional) This calls onComplete() when the
  * operation is complete. If omitted, do not use it. (Some database libraries
  * only use a callback, so onComplete is required to use these.)
@@ -485,7 +499,7 @@ KeyChain.prototype.deleteIdentity = function(identity, onComplete, onError)
 KeyChain.prototype.setDefaultIdentity = function(identity, onComplete, onError)
 {
   return SyncPromise.complete(onComplete, onError,
-    this.pib_.setDefaultIdentityPromise_(identity.getName(), !onComplete));
+    this.setDefaultIdentityPromise(identity, !onComplete));
 };
 
 // Key management
@@ -574,7 +588,272 @@ KeyChain.prototype.createKey = function(identity, params, onComplete, onError)
     this.createKeyPromise(identity, params, !onComplete));
 };
 
+/**
+ * Delete the given key of the given identity. The key becomes invalid.
+ * @param {PibIdentity} identity A valid PibIdentity object.
+ * @param {PibKey} key The key to delete.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete, or a promise rejected with Error if the key does not belong to the
+ * identity.
+ */
+KeyChain.prototype.deleteKeyPromise = function(identity, key, useSync)
+{
+  var keyName = key.getName();
+  if (!identity.getName().equals(key.getIdentityName()))
+    return SyncPromise.reject(new Error
+      ("Identity `" + identity.getName().toUri() + "` does not match key `" +
+       keyName.toUri() + "`"));
+
+  var thisKeyChain = this;
+
+  return identity.removeKeyPromise_(keyName, useSync)
+  .then(function() {
+    return thisKeyChain.tpm_.deleteKeyPromise_(keyName, useSync);
+  });
+};
+
+/**
+ * Delete the given key of the given identity. The key becomes invalid.
+ * @param {PibIdentity} identity A valid PibIdentity object.
+ * @param {PibKey} key The key to delete.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @throws Error if the key does not belong to the identity. However, if
+ * onComplete and onError are defined, then if there is an exception return
+ * undefined and call onError(exception).
+ */
+KeyChain.prototype.deleteKey = function(identity, key, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.deleteKeyPromise(identity, key, !onComplete));
+};
+
+/**
+ * Set the key as the default key of identity.
+ * @param {type} identity A valid PibIdentity object.
+ * @param {type} key The key to become the default.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete, or a promise rejected with Error if the key does not belong to the
+ * identity.
+ */
+KeyChain.prototype.setDefaultKeyPromise = function(identity, key, useSync)
+{
+  if (!identity.getName().equals(key.getIdentityName()))
+    return SyncPromise.reject(new Error
+      ("Identity `" + identity.getName().toUri() + "` does not match key `" +
+       key.getName().toUri() + "`"));
+
+  return identity.setDefaultKeyPromise_(key.getName(), useSync);
+};
+
+/**
+ * Set the key as the default key of identity.
+ * @param {type} identity A valid PibIdentity object.
+ * @param {type} key The key to become the default.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @throws Error if the key does not belong to the identity. However, if
+ * onComplete and onError are defined, then if there is an exception return
+ * undefined and call onError(exception).
+ */
+KeyChain.prototype.setDefaultKey = function(identity, key, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.setDefaultKeyPromise(identity, key, !onComplete));
+};
+
 // Certificate management
+
+/**
+ * Add a certificate for the key. If the key had no default certificate
+ * selected, the added certificate will be set as the default certificate for
+ * this key.
+ * @param {PibKey} key A valid PibKey object.
+ * @param {CertificateV2} certificate The certificate to add. This copies the
+ * object.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete, or a promise rejected with Error if the key does not match the
+ * certificate.
+ */
+KeyChain.prototype.addCertificatePromise = function(key, certificate, useSync)
+{
+  if (!key.getName().equals(certificate.getKeyName()) ||
+      !certificate.getContent().equals(key.getPublicKey()))
+    return SyncPromise.reject(new Error
+      ("Key `" + key.getName().toUri() + "` does not match certificate `" +
+       certificate.getKeyName().toUri() + "`"));
+
+  return key.addCertificatePromise_(certificate, useSync);
+};
+
+/**
+ * Add a certificate for the key. If the key had no default certificate
+ * selected, the added certificate will be set as the default certificate for
+ * this key.
+ * @param {PibKey} key A valid PibKey object.
+ * @param {CertificateV2} certificate The certificate to add. This copies the
+ * object.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @throws Error if the key does not match the certificate. However, if
+ * onComplete and onError are defined, then if there is an exception return
+ * undefined and call onError(exception).
+ */
+KeyChain.prototype.addCertificate = function
+  (key, certificate, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.addCertificatePromise(key, certificate, !onComplete));
+};
+
+/**
+ * Delete the certificate with the given name from the given key. If the
+ * certificate does not exist, this does nothing.
+ * @param {PibKey} key A valid PibKey object.
+ * @param {Name} certificateName The name of the certificate to delete.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete, or a promise rejected with Error if certificateName does not follow
+ * certificate naming conventions.
+ */
+KeyChain.prototype.deleteCertificatePromise = function
+  (key, certificateName, useSync)
+{
+  if (!CertificateV2.isValidName(certificateName))
+    return SyncPromise.reject(new Error
+      ("Wrong certificate name `" + certificateName.toUri() + "`"));
+
+  return key.removeCertificatePromise_(certificateName, useSync);
+};
+
+/**
+ * Delete the certificate with the given name from the given key. If the
+ * certificate does not exist, this does nothing.
+ * @param {PibKey} key A valid PibKey object.
+ * @param {Name} certificateName The name of the certificate to delete.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @throws Error if certificateName does not follow certificate naming
+ * conventions. However, if onComplete and onError are defined, then if there is
+ * an exception return undefined and call onError(exception).
+ */
+KeyChain.prototype.deleteCertificate = function
+  (key, certificateName, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.deleteCertificatePromise(key, certificateName, !onComplete));
+};
+
+/**
+ * Set the certificate as the default certificate of the key. The certificate
+ * will be added to the key, potentially overriding an existing certificate if
+ * it has the same name (without considering implicit digest).
+ * @param {PibKey} key A valid PibKey object.
+ * @param {CertificateV2} certificate The certificate to become the default.
+ * This copies the object.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the operation is
+ * complete.
+ */
+KeyChain.prototype.setDefaultCertificatePromise = function
+  (key, certificate, useSync)
+{
+  // This replaces the certificate it it exists.
+  return this.addCertificatePromise(key, certificate, useSync)
+  .then(function() {
+    return key.setDefaultCertificatePromise_(certificate.getName(), useSync);
+  });
+};
+
+/**
+ * Set the certificate as the default certificate of the key. The certificate
+ * will be added to the key, potentially overriding an existing certificate if
+ * it has the same name (without considering implicit digest).
+ * @param {PibKey} key A valid PibKey object.
+ * @param {CertificateV2} certificate The certificate to become the default.
+ * This copies the object.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ */
+KeyChain.prototype.setDefaultCertificate = function
+  (key, certificate, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.setDefaultCertificatePromise(key, certificate, !onComplete));
+};
 
 // Signing
 
@@ -885,7 +1164,7 @@ KeyChain.prototype.selfSignPromise = function(key, useSync)
 
   return this.signPromise(certificate, signingInfo, useSync)
   .then(function() {
-    return key.addCertificatePromise_(certificate)
+    return key.addCertificatePromise_(certificate, useSync)
     .catch(function(ex) {
       // We don't expect this since we just created the certificate.
       return SyncPromise.reject(new KeyChain.Error(new Error
