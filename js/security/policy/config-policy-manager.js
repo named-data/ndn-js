@@ -29,6 +29,8 @@ var KeyLocator = require('../../key-locator.js').KeyLocator; /** @ignore */
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var CertificateV2 = require('../v2/certificate-v2.js').CertificateV2; /** @ignore */
+var CertificateCacheV2 = require('../v2/certificate-cache-v2.js').CertificateCacheV2; /** @ignore */
 var BoostInfoParser = require('../../util/boost-info-parser.js').BoostInfoParser; /** @ignore */
 var NdnRegexTopMatcher = require('../../util/regex/ndn-regex-top-matcher.js').NdnRegexTopMatcher; /** @ignore */
 var CertificateCache = require('./certificate-cache.js').CertificateCache; /** @ignore */
@@ -44,7 +46,7 @@ var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
  * (http://redmine.named-data.net/projects/ndn-cxx/wiki/CommandValidatorConf)
  *
  * Once a rule is matched, the ConfigPolicyManager looks in the
- * CertificateCache for the IdentityCertificate matching the name in the KeyLocator
+ * certificate cache for the certificate matching the name in the KeyLocator
  * and uses its public key to verify the data packet or signed interest. If the
  * certificate can't be found, it is downloaded, verified and installed. A chain
  * of certificates will be followed to a maximum depth.
@@ -54,15 +56,21 @@ var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
  * verification to succeed.
  *
  * Create a new ConfigPolicyManager which will act on the rules specified in the
- * configuration and download unknown certificates when necessary.
+ * configuration and download unknown certificates when necessary. If
+ * certificateCache is a CertificateCache (or omitted) this creates a security
+ * v1 PolicyManager to verify certificates in format v1. To verify certificates
+ * in format v2, use a CertificateCacheV2 for the certificateCache.
  *
  * @param {string} configFileName (optional) If not null or empty, the path to
  * the configuration file containing verification rules. (This only works in
  * Node.js since it reads files using the "fs" module.) Otherwise, you should
  * separately call load().
- * @param {CertificateCache} certificateCache (optional) A CertificateCache to
- * hold known certificates. If this is null or omitted, then create an internal
- * CertificateCache.
+ * @param {CertificateCache|CertificateCacheV2} certificateCache (optional) A
+ * CertificateCache to hold known certificates. If certificateCache is a
+ * CertificateCache (or omitted or null) this creates a security v1
+ * PolicyManager to verify certificates in format v1. If this is a
+ * CertificateCacheV2, verify certificates in format v1. If omitted or null,
+ * create an internal v1 CertificateCache.
  * @param {number} searchDepth (optional) The maximum number of links to follow
  * when verifying a certificate chain. If omitted, use a default.
  * @param {number} graceInterval (optional) The window of time difference
@@ -93,9 +101,18 @@ var ConfigPolicyManager = function ConfigPolicyManager
     maxTrackedKeys = 1000;
 
   if (certificateCache == null)
-    this.certificateCache = new CertificateCache();
-  else
-    this.certificateCache = certificateCache;
+    certificateCache = new CertificateCache();
+  if (certificateCache instanceof CertificateCache) {
+    this.isSecurityV1_ = true;
+    this.certificateCache_ = certificateCache;
+    this.certificateCacheV2_ = null;
+  }
+  else {
+    this.isSecurityV1_ = false;
+    this.certificateCache_ = null;
+    this.certificateCacheV2_ = certificateCache;
+  }
+
   this.maxDepth = searchDepth;
   this.keyGraceInterval = graceInterval;
   this.keyTimestampTtl = keyTimestampTtl;
@@ -117,7 +134,10 @@ exports.ConfigPolicyManager = ConfigPolicyManager;
  */
 ConfigPolicyManager.prototype.reset = function()
 {
-  this.certificateCache.reset();
+  if (this.isSecurityV1_)
+    this.certificateCache_.reset();
+  else
+    this.certificateCacheV2_.clear();
 
   // Stores the fixed-signer certificate name associated with validation rules
   // so we don't keep loading from files.
@@ -131,7 +151,8 @@ ConfigPolicyManager.prototype.reset = function()
   this.requiresVerification = true;
 
   this.config = new BoostInfoParser();
-  this.refreshManager = new ConfigPolicyManager.TrustAnchorRefreshManager();
+  this.refreshManager = new ConfigPolicyManager.TrustAnchorRefreshManager
+    (this.isSecurityV1_);
 };
 
 /**
@@ -221,15 +242,14 @@ ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
 ConfigPolicyManager.prototype.checkVerificationPolicy = function
   (dataOrInterest, stepCount, onVerified, onValidationFailed, wireFormat)
 {
-  if (stepCount > this.maxDepth) {
-    try {
-      onValidationFailed
-        (dataOrInterest, "The verification stepCount " + stepCount +
-           " exceeded the maxDepth " + this.maxDepth);
-    } catch (ex) {
-      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
-    }
-    return null;
+  var objectName = dataOrInterest.getName();
+  var matchType = "data";
+
+  // For command interests, we need to ignore the last 4 components when
+  // matching the name.
+  if (dataOrInterest instanceof Interest) {
+    objectName = objectName.getPrefix(-4);
+    matchType = "interest";
   }
 
   var signature = ConfigPolicyManager.extractSignature(dataOrInterest, wireFormat);
@@ -245,72 +265,10 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     return null;
   }
 
-  if (!KeyLocator.canGetFromSignature(signature)) {
-    // We only support signature types with key locators.
-    try {
-      onValidationFailed
-        (dataOrInterest, "The signature type does not support a KeyLocator");
-    } catch (ex) {
-      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
-    }
-    return null;
-  }
-
-  var keyLocator = null;
-  try {
-    keyLocator = KeyLocator.getFromSignature(signature);
-  }
-  catch (ex) {
-    // No key locator -> fail.
-    try {
-      onValidationFailed
-        (dataOrInterest, "Error in KeyLocator.getFromSignature: " + ex);
-    } catch (ex) {
-      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
-    }
-    return null;
-  }
-
-  var signatureName = keyLocator.getKeyName();
-  // No key name in KeyLocator -> fail.
-  if (signatureName.size() == 0) {
-    try {
-      onValidationFailed
-        (dataOrInterest, "The signature KeyLocator doesn't have a key name");
-    } catch (ex) {
-      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
-    }
-    return null;
-  }
-
-  var objectName = dataOrInterest.getName();
-  var matchType = "data";
-
-  // For command interests, we need to ignore the last 4 components when
-  // matching the name.
-  if (dataOrInterest instanceof Interest) {
-    objectName = objectName.getPrefix(-4);
-    matchType = "interest";
-  }
-
-  // First see if we can find a rule to match this packet.
-  var matchedRule = this.findMatchingRule(objectName, matchType);
-
-  // No matching rule -> fail.
-  if (matchedRule == null) {
-    try {
-      onValidationFailed
-        (dataOrInterest, "No matching rule found for " + objectName.toUri());
-    } catch (ex) {
-      console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
-    }
-    return null;
-  }
-
   var failureReason = ["unknown"];
-  var signatureMatches = this.checkSignatureMatch
-    (signatureName, objectName, matchedRule, failureReason);
-  if (!signatureMatches) {
+  var certificateInterest = this.getCertificateInterest_
+    (stepCount, matchType, objectName, signature, failureReason);
+  if (certificateInterest == null) {
     try {
       onValidationFailed(dataOrInterest, failureReason[0]);
     } catch (ex) {
@@ -319,48 +277,60 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     return null;
   }
 
-  // Before we look up keys, refresh any certificate directories.
-  this.refreshManager.refreshAnchors();
+  if (certificateInterest.getName().size() > 0) {
+    var thisManager = this;
 
-  // Now finally check that the data or interest was signed correctly.
-  // If we don't actually have the certificate yet, create a
-  // ValidationRequest for it.
-  var foundCert = this.refreshManager.getCertificate(signatureName);
-  if (foundCert == null)
-    foundCert = this.certificateCache.getCertificate(signatureName);
-  var thisManager = this;
-  if (foundCert == null) {
-    var certificateInterest = new Interest(signatureName);
     var onCertificateDownloadComplete = function(data) {
       var certificate;
-      try {
-        certificate = new IdentityCertificate(data);
-      } catch (ex) {
+      if (thisManager.isSecurityV1_) {
         try {
-          onValidationFailed
-            (dataOrInterest, "Cannot decode certificate " + data.getName().toUri());
+          certificate = new IdentityCertificate(data);
         } catch (ex) {
-          console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+          try {
+            onValidationFailed
+              (dataOrInterest, "Cannot decode certificate " + data.getName().toUri());
+          } catch (ex) {
+            console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+          }
+          return null;
         }
-        return null;
+        thisManager.certificateCache_.insertCertificate(certificate);
       }
-      thisManager.certificateCache.insertCertificate(certificate);
+      else {
+        try {
+          certificate = new CertificateV2(data);
+        } catch (ex) {
+          try {
+            onValidationFailed
+              (dataOrInterest, "Cannot decode certificate " + data.getName().toUri());
+          } catch (ex) {
+            console.log("Error in onValidationFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+          }
+          return null;
+        }
+        thisManager.certificateCacheV2_.insert(certificate);
+      }
+
       thisManager.checkVerificationPolicy
         (dataOrInterest, stepCount + 1, onVerified, onValidationFailed);
     };
 
-    var nextStep = new ValidationRequest
+    return new ValidationRequest
       (certificateInterest, onCertificateDownloadComplete, onValidationFailed,
        2, stepCount + 1);
-
-    return nextStep;
   }
 
   // For interests, we must check that the timestamp is fresh enough.
   // We do this after (possibly) downloading the certificate to avoid
   // filling the cache with bad keys.
   if (dataOrInterest instanceof Interest) {
-    var keyName = foundCert.getPublicKeyName();
+    var signatureName = KeyLocator.getFromSignature(signature).getKeyName();
+    var keyName;
+    if (this.isSecurityV1_)
+      keyName = IdentityCertificate.certificateNameToPublicKeyName
+        (signatureName);
+    else
+      keyName = signatureName;
     var timestamp = dataOrInterest.getName().get(-4).toNumber();
 
     if (!this.interestTimestampIsFresh(keyName, timestamp, failureReason)) {
@@ -374,6 +344,8 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   }
 
   // Certificate is known, so verify the signature.
+  // wireEncode returns the cached encoding if available.
+  var thisManager = this;
   this.verify(signature, dataOrInterest.wireEncode(), function (verified, reason) {
     if (verified) {
       try {
@@ -392,6 +364,88 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
       }
     }
   });
+};
+
+/**
+ * This is a helper for checkVerificationPolicy to verify the rule and return a
+ * certificate interest to fetch the next certificate in the hierarchy if needed.
+ * @param {number} stepCount The number of verification steps that have been
+ * done, used to track the verification progress.
+ * @param {string} matchType Either "data" or "interest".
+ * @param {Name} objectName The name of the data or interest packet.
+ * @param {Signature} signature The Signature object for the data or interest
+ * packet.
+ * @param {Array<string>} failureReason If can't determine the interest, set
+ * failureReason[0] to the failure reason.
+ * @return {Interest} null if can't determine the interest, otherwise the
+ * interest for the ValidationRequest to fetch the next certificate. However, if
+ * the interest has an empty name, the validation succeeded and no need to fetch
+ * a certificate.
+ */
+ConfigPolicyManager.prototype.getCertificateInterest_ = function
+  (stepCount, matchType, objectName, signature, failureReason)
+{
+  if (stepCount > this.maxDepth) {
+    failureReason[0] = "The verification stepCount " + stepCount +
+      " exceeded the maxDepth " + this.maxDepth;
+    return null;
+  }
+
+  // First see if we can find a rule to match this packet.
+  var matchedRule;
+  try {
+    matchedRule = this.findMatchingRule(objectName, matchType);
+  } catch (ex) {
+    return null;
+  }
+
+  // No matching rule -> fail.
+  if (matchedRule == null) {
+    failureReason[0] = "No matching rule found for " + objectName.toUri();
+    return null;
+  }
+
+  if (!KeyLocator.canGetFromSignature(signature)) {
+    // We only support signature types with key locators.
+    failureReason[0] = "The signature type does not support a KeyLocator";
+    return null;
+  }
+
+  var keyLocator = keyLocator = KeyLocator.getFromSignature(signature);
+
+  var signatureName = keyLocator.getKeyName();
+  // No key name in KeyLocator -> fail.
+  if (signatureName.size() == 0) {
+    failureReason[0] = "The signature KeyLocator doesn't have a key name";
+    return null;
+  }
+
+  var signatureMatches = this.checkSignatureMatch
+    (signatureName, objectName, matchedRule, failureReason);
+  if (!signatureMatches)
+    return null;
+
+  // Before we look up keys, refresh any certificate directories.
+  this.refreshManager.refreshAnchors();
+
+  // If we don't actually have the certificate yet, return a certificateInterest
+  // for it.
+  if (this.isSecurityV1_) {
+    var foundCert = this.refreshManager.getCertificate(signatureName);
+    if (foundCert == null)
+      foundCert = this.certificateCache_.getCertificate(signatureName);
+    if (foundCert == null)
+      return new Interest(signatureName);
+  }
+  else {
+    var foundCert = this.refreshManager.getCertificateV2(signatureName);
+    if (foundCert == null)
+      foundCert = this.certificateCacheV2_.find(signatureName);
+    if (foundCert == null)
+      return new Interest(signatureName);
+  }
+
+  return new Interest();
 };
 
 /**
@@ -449,7 +503,10 @@ ConfigPolicyManager.prototype.loadTrustAnchorCertificates = function()
       break;
     }
 
-    this.lookupCertificate(certID, isPath);
+    if (this.isSecurityV1_)
+      this.lookupCertificate(certID, isPath);
+    else
+      this.lookupCertificateV2(certID, isPath);
   }
 };
 
@@ -478,8 +535,12 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
 
     var cert;
     if (signerType == "file") {
-      cert = this.lookupCertificate
-        (signerInfo.get("file-name")[0].getValue(), true);
+      if (this.isSecurityV1_)
+        cert = this.lookupCertificate
+          (signerInfo.get("file-name")[0].getValue(), true);
+      else
+        cert = this.lookupCertificateV2
+          (signerInfo.get("file-name")[0].getValue(), true);
       if (cert == null) {
         failureReason[0] = "Can't find fixed-signer certificate file: " +
           signerInfo.get("file-name")[0].getValue();
@@ -487,8 +548,12 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
       }
     }
     else if (signerType == "base64") {
-      cert = this.lookupCertificate
-        (signerInfo.get("base64-string")[0].getValue(), false);
+      if (this.isSecurityV1_)
+        cert = this.lookupCertificate
+          (signerInfo.get("base64-string")[0].getValue(), false);
+      else
+        cert = this.lookupCertificateV2
+          (signerInfo.get("base64-string")[0].getValue(), false);
       if (cert == null) {
         failureReason[0] = "Can't find fixed-signer certificate base64: " +
           signerInfo.get("base64-string")[0].getValue();
@@ -619,6 +684,10 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
  */
 ConfigPolicyManager.prototype.lookupCertificate = function(certID, isPath)
 {
+  if (!this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("lookupCertificate: For security v2, use lookupCertificateV2()"));
+
   var cert;
 
   var cachedCertUri = this.fixedCertificateCache[certID];
@@ -635,10 +704,48 @@ ConfigPolicyManager.prototype.lookupCertificate = function(certID, isPath)
 
     var certUri = cert.getName().getPrefix(-1).toUri();
     this.fixedCertificateCache[certID] = certUri;
-    this.certificateCache.insertCertificate(cert);
+    this.certificateCache_.insertCertificate(cert);
   }
   else
-    cert = this.certificateCache.getCertificate(new Name(cachedCertUri));
+    cert = this.certificateCache_.getCertificate(new Name(cachedCertUri));
+
+  return cert;
+};
+
+/**
+ * This looks up certificates specified as base64-encoded data or file names.
+ * These are cached by filename or encoding to avoid repeated reading of files
+ * or decoding.
+ * @param {string} certID
+ * @param {boolean} isPath
+ * @return {CertificateV2} The certificate object, or null if not found.
+ */
+ConfigPolicyManager.prototype.lookupCertificateV2 = function(certID, isPath)
+{
+  if (this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("lookupCertificateV2: For security v1, use lookupCertificate()"));
+
+  var cert;
+
+  var cachedCertUri = this.fixedCertificateCache[certID];
+  if (cachedCertUri === undefined) {
+    if (isPath)
+      // load the certificate data (base64 encoded IdentityCertificate)
+      cert = ConfigPolicyManager.TrustAnchorRefreshManager.loadCertificateV2FromFile
+        (certID);
+    else {
+      var certData = new Buffer(certID, 'base64');
+      cert = new CertificateV2();
+      cert.wireDecode(certData);
+    }
+
+    var certUri = cert.getName().getPrefix(-1).toUri();
+    this.fixedCertificateCache[certID] = certUri;
+    this.certificateCacheV2_.insert(cert);
+  }
+  else
+    cert = this.certificateCacheV2_.find(new Name(cachedCertUri));
 
   return cert;
 };
@@ -857,21 +964,44 @@ ConfigPolicyManager.prototype.verify = function
   if (keyLocator.getType() == KeyLocatorType.KEYNAME) {
     // Assume the key name is a certificate name.
     var signatureName = keyLocator.getKeyName();
-    var certificate = this.refreshManager.getCertificate(signatureName);
-    if (certificate == null)
-      certificate = this.certificateCache.getCertificate(signatureName);
-    if (certificate == null) {
-      onComplete(false,  "Cannot find a certificate with name " +
-        signatureName.toUri());
-      return;
-    }
 
-    var publicKeyDer = certificate.getPublicKeyInfo().getKeyDer();
-    if (publicKeyDer.isNull()) {
-      // Can't find the public key with the name.
-      onComplete(false, "There is no public key in the certificate with name " +
-        certificate.getName().toUri());
-      return;
+    var publicKeyDer;
+    if (this.isSecurityV1_) {
+      var certificate = this.refreshManager.getCertificate(signatureName);
+      if (certificate == null)
+        certificate = this.certificateCache_.getCertificate(signatureName);
+      if (certificate == null) {
+        onComplete(false,  "Cannot find a certificate with name " +
+          signatureName.toUri());
+        return;
+      }
+
+      publicKeyDer = certificate.getPublicKeyInfo().getKeyDer();
+      if (publicKeyDer.isNull()) {
+        // Can't find the public key with the name.
+        onComplete(false, "There is no public key in the certificate with name " +
+          certificate.getName().toUri());
+        return;
+      }
+    }
+    else {
+      var certificate = this.refreshManager.getCertificateV2(signatureName);
+      if (certificate == null)
+        certificate = this.certificateCacheV2_.find(signatureName);
+      if (certificate == null) {
+        onComplete(false,  "Cannot find a certificate with name " +
+          signatureName.toUri());
+        return;
+      }
+
+      try {
+        publicKeyDer = certificate.getPublicKey();
+      } catch (ex) {
+        // We don't expect this to happen.
+        onComplete(false, "There is no public key in the certificate with name " +
+          certificate.getName().toUri());
+        return;
+      }
     }
 
     PolicyManager.verifySignature
@@ -888,10 +1018,17 @@ ConfigPolicyManager.prototype.verify = function
     onComplete(false, "The KeyLocator does not have a key name");
 };
 
+/**
+ * Manages the trust-anchor certificates, including refresh.
+ * @constructor
+ */
 ConfigPolicyManager.TrustAnchorRefreshManager =
-  function ConfigPolicyManagerTrustAnchorRefreshManager()
+  function ConfigPolicyManagerTrustAnchorRefreshManager(isSecurityV1)
 {
-  this.certificateCache = new CertificateCache();
+  this.isSecurityV1_ = isSecurityV1;
+
+  this.certificateCache_ = new CertificateCache();
+  this.certificateCacheV2_ = new CertificateCacheV2();
   // Maps the directory name to certificate names so they can be deleted when
   // necessary. The key is the directory name string. The value is the object
   //  {certificateNames,  // array of string
@@ -901,6 +1038,10 @@ ConfigPolicyManager.TrustAnchorRefreshManager =
   this.refreshDirectories = {};
 };
 
+/**
+ * @param {string} fileName
+ * @return {IdentityCertificate}
+ */
 ConfigPolicyManager.TrustAnchorRefreshManager.loadIdentityCertificateFromFile =
   function(fileName)
 {
@@ -911,11 +1052,48 @@ ConfigPolicyManager.TrustAnchorRefreshManager.loadIdentityCertificateFromFile =
   return cert;
 };
 
+/**
+ * @param {string} fileName
+ * @return {CertificateV2}
+ */
+ConfigPolicyManager.TrustAnchorRefreshManager.loadCertificateV2FromFile =
+  function(fileName)
+{
+  var encodedData = fs.readFileSync(fileName).toString();
+  var decodedData = new Buffer(encodedData, 'base64');
+  var cert = new CertificateV2();
+  cert.wireDecode(new Blob(decodedData, false));
+  return cert;
+};
+
+/**
+ * @param {Name} certificateName
+ * @return {IdentityCertificate}
+ */
 ConfigPolicyManager.TrustAnchorRefreshManager.prototype.getCertificate = function
   (certificateName)
 {
+  if (!this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("getCertificate: For security v2, use getCertificateV2()"));
+
   // This assumes the timestamp is already removed.
-  return this.certificateCache.getCertificate(certificateName);
+  return this.certificateCache_.getCertificate(certificateName);
+};
+
+/**
+ * @param {Name} certificateName
+ * @return {CertificateV2}
+ */
+ConfigPolicyManager.TrustAnchorRefreshManager.prototype.getCertificateV2 = function
+  (certificateName)
+{
+  if (this.isSecurityV1_)
+    throw new SecurityException(new Error
+      ("getCertificateV2: For security v1, use getCertificate()"));
+
+  // This assumes the timestamp is already removed.
+  return this.certificateCacheV2_.find(certificateName);
 };
 
 // refreshPeriod in milliseconds.
@@ -933,21 +1111,41 @@ ConfigPolicyManager.TrustAnchorRefreshManager.prototype.addDirectory = function
 
   var certificateNames = [];
   for (var i = 0; i < allFiles.length; ++i) {
-    var cert;
-    try {
-      var fullPath = path.join(directoryName, allFiles[i]);
-      cert = ConfigPolicyManager.TrustAnchorRefreshManager.loadIdentityCertificateFromFile
-        (fullPath);
-    }
-    catch (e) {
-      // Allow files that are not certificates.
-      continue;
-    }
+    if (this.isSecurityV1_) {
+      var cert;
+      try {
+        var fullPath = path.join(directoryName, allFiles[i]);
+        cert = ConfigPolicyManager.TrustAnchorRefreshManager.loadIdentityCertificateFromFile
+          (fullPath);
+      }
+      catch (e) {
+        // Allow files that are not certificates.
+        continue;
+      }
 
-    // Cut off the timestamp so it matches the KeyLocator Name format.
-    var certUri = cert.getName().getPrefix(-1).toUri();
-    this.certificateCache.insertCertificate(cert);
-    certificateNames.push(certUri);
+      // Cut off the timestamp so it matches the KeyLocator Name format.
+      var certUri = cert.getName().getPrefix(-1).toUri();
+      this.certificateCache_.insertCertificate(cert);
+      certificateNames.push(certUri);
+    }
+    else {
+      var cert;
+      try {
+        var fullPath = path.join(directoryName, allFiles[i]);
+        cert = ConfigPolicyManager.TrustAnchorRefreshManager.loadCertificateV2FromFile
+          (fullPath);
+      }
+      catch (e) {
+        // Allow files that are not certificates.
+        continue;
+      }
+
+      // Get the key name since this is in the KeyLocator.
+      var certUri = CertificateV2.extractKeyNameFromCertName
+        (cert.getName()).toUri();
+      this.certificateCacheV2_.insert(cert);
+      certificateNames.push(certUri);
+    }
   }
 
   this.refreshDirectories[directoryName] = {
@@ -967,8 +1165,24 @@ ConfigPolicyManager.TrustAnchorRefreshManager.prototype.refreshAnchors = functio
       // Delete the certificates associated with this directory if possible
       //   then re-import.
       // IdentityStorage subclasses may not support deletion.
-      for (var c in certificateList)
-        this.certificateCache.deleteCertificate(new Name(c));
+      for (var i = 0; i < certificateList.length; ++i) {
+        try {
+          if (this.isSecurityV1_)
+            this.certificateCache_.deleteCertificate(new Name(certificateList[i]));
+          else {
+            // The name in the CertificateCacheV2 contains the but the name in
+            // the certificateList does not, so find the certificate based on
+            // the prefix first.
+            var foundCertificate = this.certificateCacheV2_.find
+              (new Name(certificateList[i]));
+            if (foundCertificate != null)
+              this.certificateCacheV2_.deleteCertificate
+                (foundCertificate.getName());
+          }
+        } catch (ex) {
+          // Was already removed or not supported?
+        }
+      }
 
       this.addDirectory(directory, info.refreshPeriod);
     }
