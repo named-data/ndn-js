@@ -30,27 +30,34 @@ var SecurityException = require('../security-exception.js').SecurityException; /
 var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var PolicyManager = require('./policy-manager.js').PolicyManager; /** @ignore */
+var IdentityStorage = require('../identity/identity-storage.js').IdentityStorage; /** @ignore */
 var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**
- * A SelfVerifyPolicyManager implements a PolicyManager to look in the
- * IdentityStorage for the public key with the name in the KeyLocator (if
- * available) and use it to verify the data packet, without searching a
- * certificate chain.  If the public key can't be found, the verification fails.
+ * A SelfVerifyPolicyManager implements a PolicyManager to look up the public
+ * key in the given storage. If the public key can't be found, the verification
+ * fails.
  *
- * @param {IdentityStorage} identityStorage (optional) The IdentityStorage for
- * looking up the public key. This object must remain valid during the life of
- * this SelfVerifyPolicyManager. If omitted, then don't look for a public key
- * with the name in the KeyLocator and rely on the KeyLocator having the full
- * public key DER.
+ * @param {IdentityStorage|PibImpl} storage (optional) The IdentityStorage or
+ * PibImpl for looking up the public key. This object must remain valid during
+ * the life of this SelfVerifyPolicyManager. If omitted, then don't look for a
+ * public key with the name in the KeyLocator and rely on the KeyLocator having
+ * the full public key DER.
  * @constructor
  */
-var SelfVerifyPolicyManager = function SelfVerifyPolicyManager(identityStorage)
+var SelfVerifyPolicyManager = function SelfVerifyPolicyManager(storage)
 {
   // Call the base constructor.
   PolicyManager.call(this);
 
-  this.identityStorage = identityStorage;
+  if (storage instanceof IdentityStorage) {
+    this.identityStorage_ = storage;
+    this.pibImpl_ = null;
+  }
+  else {
+    this.identityStorage_ = null;
+    this.pibImpl_ = storage;
+  }
 };
 
 SelfVerifyPolicyManager.prototype = new PolicyManager();
@@ -81,9 +88,9 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 };
 
 /**
- * Look in the IdentityStorage for the public key with the name in the
- * KeyLocator (if available) and use it to verify the data packet.  If the
- * public key can't be found, call onValidationFailed.
+ * Look in the storage for the public key with the name in the KeyLocator (if 
+ * available) and use it to verify the data packet.  If the public key can't be
+ * found, call onValidationFailed.
  *
  * @param {Data|Interest} dataOrInterest The Data object or interest with the
  * signature to check.
@@ -211,11 +218,11 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 };
 
 /**
- * Check the type of signatureInfo to get the KeyLocator. Look in the
- * IdentityStorage for the public key with the name in the KeyLocator (if
- * available) and use it to verify the signedBlob. If the public key can't be
- * found, return false. (This is a generalized method which can verify both a
- * Data packet and an interest.)
+ * Check the type of signatureInfo to get the KeyLocator. Look in the storage 
+ * for the public key with the name in the KeyLocator (if available) and use it
+ * to verify the signedBlob. If the public key can't be found, return false.
+ * (This is a generalized method which can verify both a Data packet and an
+ * Interest.)
  * @param {Signature} signatureInfo An object of a subclass of Signature, e.g.
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
@@ -266,9 +273,8 @@ SelfVerifyPolicyManager.prototype.verify = function
 };
 
 /**
- * Look in the IdentityStorage for the public key with the name in the
- * KeyLocator (if available). If the public key can't be found, return and empty
- * Blob.
+ * Look in the storage for the public key with the name in the KeyLocator (if
+ * available). If the public key can't be found, return and empty Blob.
  * @param {KeyLocator} keyLocator The KeyLocator.
  * @param {function} onComplete This calls 
  * onComplete(publicKeyDer, reason) where publicKeyDer is the public key
@@ -279,7 +285,7 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
   (keyLocator, onComplete)
 {
   if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
-      this.identityStorage != null) {
+      this.identityStorage_ != null) {
     var keyName;
     try {
       // Assume the key name is a certificate name.
@@ -299,7 +305,19 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
            (new Blob(), "The identityStorage doesn't have the key named " +
               keyName.toUri());
        },
-       this.identityStorage.getKeyPromise(keyName));
+       this.identityStorage_.getKeyPromise(keyName, !onComplete));
+  }
+  else if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
+           this.pibImpl_ != null) {
+    SyncPromise.complete
+      (onComplete,
+       function(err) {
+         // The storage doesn't have the key.
+         onComplete
+           (new Blob(), "The identityStorage doesn't have the key named " +
+              keyName.toUri());
+       },
+       this.pibImpl_.getKeyBitsPromise(keyLocator.getKeyName(), !onComplete));
   }
   else
     // Can't find a key to verify.

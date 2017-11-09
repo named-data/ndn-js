@@ -1,5 +1,4 @@
 /**
- * This class represents an NDN Data MetaInfo object.
  * Copyright (C) 2016-2017 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx src/security https://github.com/named-data/ndn-cxx
@@ -23,24 +22,39 @@
  * A ValidityPeriod is used in a Data packet's SignatureInfo and represents the
  * begin and end times of a certificate's validity period.
  *
- * Create a new ValidityPeriod object, possibly copying values from another
- * object.
- * @param {ValidityPeriod} value (optional) If value is a ValidityPeriod, copy
- * its values. If value is omitted, reate a default ValidityPeriodLite where the
- * period is not specified.
+ * There are three forms of the ValidityPeriod constructor:
+ * ValidityPeriod() - Create a default ValidityPeriod where the period is not
+ * specified.
+ * ValidityPeriod(validityPeriod) - Create a new ValidityPeriod with a copy of
+ * the fields in the given validityPeriod object.
+ * ValidityPeriod(notBefore, notAfter) - Create a ValidityPeriod with the given
+ * period.
+ * @param {ValidityPeriod} validityPeriod The ValidityPeriod to copy.
+ * @param {number} notBefore The beginning of the validity period range as
+ * milliseconds since Jan 1, 1970 UTC. Note that this is rounded up to the
+ * nearest whole second.
+ * @param {number} notAfter The end of the validity period range as milliseconds
+ * since Jan 1, 1970 UTC. Note that this is rounded down to the nearest whole
+ * second.
  * @constructor
  */
-var ValidityPeriod = function ValidityPeriod(value)
+var ValidityPeriod = function ValidityPeriod(validityPeriodOrNotBefore, notAfter)
 {
-  if (typeof value === 'object' && value instanceof ValidityPeriod) {
+  this.changeCount_ = 0;
+
+  if (typeof validityPeriodOrNotBefore === 'object' &&
+      validityPeriodOrNotBefore instanceof ValidityPeriod) {
     // Copy values.
-    this.notBefore_ = value.notBefore_;
-    this.notAfter_ = value.notAfter_;
+    validityPeriod = validityPeriodOrNotBefore;
+    this.notBefore_ = validityPeriod.notBefore_;
+    this.notAfter_ = validityPeriod.notAfter_;
+  }
+  else if (notAfter != undefined) {
+    notBefore = validityPeriodOrNotBefore;
+    this.setPeriod(notBefore, notAfter)
   }
   else
     this.clear();
-
-  this.changeCount_ = 0;
 };
 
 exports.ValidityPeriod = ValidityPeriod;
@@ -101,14 +115,55 @@ ValidityPeriod.prototype.setPeriod = function(notBefore, notAfter)
 
 /**
  * Check if the time falls within the validity period.
- * @param {number} time The time to check as milliseconds since Jan 1, 1970 UTC.
+ * @param {number} time (optional) The time to check as milliseconds since
+ * Jan 1, 1970 UTC. If omitted, use the current time.
  * @return {boolean} True if the beginning of the validity period is less than
  * or equal to time and time is less than or equal to the end of the validity
  * period.
  */
 ValidityPeriod.prototype.isValid = function(time)
 {
+  if (time == undefined)
+      // Round up to the nearest second like in setPeriod.
+      time = Math.round(Math.ceil
+        (Math.round(new Date().getTime()) / 1000.0) * 1000.0);
+
   return this.notBefore_ <= time && time <= this.notAfter_;
+};
+
+/**
+ * If the signature is a type that has a ValidityPeriod (so that
+ * getFromSignature will succeed), return true. Note: This is a static method of
+ * ValidityPeriod instead of a method of Signature so that the Signature base
+ * class does not need to be overloaded with all the different kinds of
+ * information that various signature algorithms may use.
+ * @param {Signature} An object of a subclass of Signature.
+ * @return {boolean} True if the signature is a type that has a ValidityPeriod,
+ * otherwise false.
+ */
+ValidityPeriod.canGetFromSignature = function(signature)
+{
+  return signature.constructor != undefined &&
+    (signature.constructor.name === "Sha256WithRsaSignature" ||
+     signature.constructor.name === "Sha256WithEcdsaSignature");
+};
+
+/**
+ * If the signature is a type that has a ValidityPeriod, then return it.
+ * Otherwise throw an error.
+ * @param {Signature} An object of a subclass of Signature.
+ * @return {ValidityPeriod} The signature's ValidityPeriod. It is an error if
+ * signature doesn't have a ValidityPeriod.
+ */
+ValidityPeriod.getFromSignature = function(signature)
+{
+  if (signature.constructor != undefined &&
+      (signature.constructor.name === "Sha256WithRsaSignature" ||
+       signature.constructor.name === "Sha256WithEcdsaSignature"))
+    return signature.getValidityPeriod();
+  else
+    throw new Error
+      ("ValidityPeriod.getFromSignature: Signature type does not have a ValidityPeriod");
 };
 
 /**

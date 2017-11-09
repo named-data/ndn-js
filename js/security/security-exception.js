@@ -56,3 +56,23 @@ UnrecognizedDigestAlgorithmException.prototype = new SecurityException();
 UnrecognizedDigestAlgorithmException.prototype.name = "UnrecognizedDigestAlgorithmException";
 
 exports.UnrecognizedDigestAlgorithmException = UnrecognizedDigestAlgorithmException;
+
+/**
+ * Create a new InvalidArgumentException to report invalid or inconsistent
+ * arguments.
+ * Call with: throw new InvalidArgumentException(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+function InvalidArgumentException(error)
+{
+  if (error) {
+    error.__proto__ = InvalidArgumentException.prototype;
+    return error;
+  }
+}
+
+InvalidArgumentException.prototype = new Error();
+InvalidArgumentException.prototype.name = "InvalidArgumentException";
+
+exports.InvalidArgumentException = InvalidArgumentException;

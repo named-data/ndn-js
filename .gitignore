@@ -27,6 +27,7 @@ npm-debug.log
 
 # Temporary test files
 js/sync/hash-test.js
+tests/node/integration-tests/policy_config/ndnsec-key-file
 
 # Ignore installed dependencies
 node_modules

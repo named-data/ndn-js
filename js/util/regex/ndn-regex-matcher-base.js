@@ -61,7 +61,7 @@ NdnRegexMatcherBase.Error = function NdnRegexMatcherBaseError(error)
     error.__proto__ = NdnRegexMatcherBase.Error.prototype;
     return error;
   }
-}
+};
 
 NdnRegexMatcherBase.Error.prototype = new Error();
 NdnRegexMatcherBase.Error.prototype.name = "NdnRegexMatcherBaseError";

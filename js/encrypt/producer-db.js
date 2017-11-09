@@ -49,7 +49,7 @@ ProducerDb.Error = function ProducerDbError(error)
     error.__proto__ = ProducerDb.Error.prototype;
     return error;
   }
-}
+};
 
 ProducerDb.Error.prototype = new Error();
 ProducerDb.Error.prototype.name = "ProducerDbError";

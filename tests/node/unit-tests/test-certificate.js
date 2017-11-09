@@ -24,7 +24,7 @@ var assert = require("assert");
 var Name = require('../../..').Name;
 var Data = require('../../..').Data;
 var Blob = require('../../..').Blob;
-var Certificate = require('../../..').Certificate;
+var CertificateV2 = require('../../..').CertificateV2;
 var KeyLocator = require('../../..').KeyLocator;
 var KeyLocatorType = require('../../..').KeyLocatorType;
 var Common = require('./unit-tests-common.js').UnitTestsCommon;
@@ -43,15 +43,6 @@ var PUBLIC_KEY = new Buffer([
 0x62, 0x25, 0xba, 0x5b, 0x4d, 0x8a, 0xc2, 0x7a, 0xbd, 0x43, 0x8a, 0x8f, 0xb8, 0xf2, 0xf1,
 0xc5, 0x6a, 0x30, 0xd3, 0x50, 0x8c, 0xc8, 0x9a, 0xdf, 0xef, 0xed, 0x35, 0xe7, 0x7a, 0x62,
 0xea, 0x76, 0x7c, 0xbb, 0x08, 0x26, 0xc7, 0x02, 0x01, 0x11
-]);
-
-var SIG_INFO = new Buffer([
-0x16, 0x55, 0x1B, 0x01, 0x01, 0x1C, 0x26, 0x07, 0x24, 0x08, 0x03, 0x6E, 0x64, 0x6E, 0x08, 0x05,
-0x73, 0x69, 0x74, 0x65, 0x31, 0x08, 0x11, 0x6B, 0x73, 0x6B, 0x2D, 0x32, 0x35, 0x31, 0x36, 0x34,
-0x32, 0x35, 0x33, 0x37, 0x37, 0x30, 0x39, 0x34, 0x08, 0x03, 0x4B, 0x45, 0x59, 0xFD, 0x00, 0xFD,
-0x26, 0xFD, 0x00, 0xFE, 0x0F, 0x32, 0x30, 0x31, 0x35, 0x30, 0x38, 0x31, 0x34, 0x54, 0x32, 0x32,
-0x33, 0x37, 0x33, 0x39, 0xFD, 0x00, 0xFF, 0x0F, 0x32, 0x30, 0x31, 0x35, 0x30, 0x38, 0x31, 0x38,
-0x54, 0x32, 0x32, 0x33, 0x37, 0x33, 0x38
 ]);
 
 var SIG_VALUE = new Buffer([
@@ -141,29 +132,105 @@ function generateFakeSignature()
 }
 
 describe('TestCertificate', function() {
-  it('Construction', function() {
-    // Debug: This should be a Certificate.
-    var certificate = new Data();
+  it('Constructor', function() {
+    var certificate = new CertificateV2();
     certificate.wireDecode(new Blob(CERT, false));
 
-    // TODO: Finish tests.
+    assert.ok(new Name("/ndn/site1/KEY/ksk-1416425377094/0123/%FD%00%00%01I%C9%8B")
+              .equals(certificate.getName()));
+    assert.ok(new Name("/ndn/site1/KEY/ksk-1416425377094").equals
+              (certificate.getKeyName()));
+    assert.ok(new Name("/ndn/site1").equals(certificate.getIdentity()));
+    assert.ok(new Name.Component("0123").equals(certificate.getIssuerId()));
+    assert.ok(new Name.Component("ksk-1416425377094").equals(certificate.getKeyId()));
+    assert.ok(new Name("/ndn/site1/KEY/ksk-2516425377094").equals
+              (KeyLocator.getFromSignature(certificate.getSignature()).getKeyName()));
+    assert.equal(Common.fromIsoString("20150814T223739"),
+                 certificate.getValidityPeriod().getNotBefore(), 0);
+    assert.equal(Common.fromIsoString("20150818T223738"),
+                 certificate.getValidityPeriod().getNotAfter(), 0);
+
+    try {
+      certificate.getPublicKey();
+    } catch (ex) {
+      fail(ex.toString());
+    }
+
+    var data = new Data();
+    data.wireDecode(new Blob(CERT, false));
+    var certificate2 = new CertificateV2(data);
+    assert.ok(certificate.getName().equals(certificate2.getName()));
+    assert.ok(certificate.getPublicKey().equals(certificate2.getPublicKey()));
   });
 
-  it('ValidityPeriodChecking', function() {
-    var certificate = new Certificate();
+  it('Setters', function() {
+    var certificate = new CertificateV2();
     certificate.setName
       (new Name("/ndn/site1/KEY/ksk-1416425377094/0123/%FD%00%00%01I%C9%8B"));
     certificate.getMetaInfo().setFreshnessPeriod(3600 * 1000.0);
     certificate.setContent(new Blob(PUBLIC_KEY, false));
     certificate.setSignature(generateFakeSignature());
 
-    assert.equal(true,  certificate.isInValidityPeriod
+    assert.ok(new Name("/ndn/site1/KEY/ksk-1416425377094/0123/%FD%00%00%01I%C9%8B")
+              .equals(certificate.getName()));
+    assert.ok(new Name("/ndn/site1/KEY/ksk-1416425377094").equals
+              (certificate.getKeyName()));
+    assert.ok(new Name("/ndn/site1").equals(certificate.getIdentity()));
+    assert.ok(new Name.Component("0123").equals(certificate.getIssuerId()));
+    assert.ok(new Name.Component("ksk-1416425377094").equals
+              (certificate.getKeyId()));
+    assert.ok(new Name("/ndn/site1/KEY/ksk-2516425377094").equals
+              (KeyLocator.getFromSignature(certificate.getSignature()).getKeyName()));
+    assert.equal(Common.fromIsoString("20141111T050000"),
+                 certificate.getValidityPeriod().getNotBefore(), 0);
+    assert.equal(Common.fromIsoString("20141111T060000"),
+                 certificate.getValidityPeriod().getNotAfter(), 0);
+
+    try {
+      certificate.getPublicKey();
+    } catch (ex) {
+      assert.fail(ex.toString());
+    }
+  });
+
+  it('ValidityPeriodChecking', function() {
+    var certificate = new CertificateV2();
+    certificate.setName
+      (new Name("/ndn/site1/KEY/ksk-1416425377094/0123/%FD%00%00%01I%C9%8B"));
+    certificate.getMetaInfo().setFreshnessPeriod(3600 * 1000.0);
+    certificate.setContent(new Blob(PUBLIC_KEY, false));
+    certificate.setSignature(generateFakeSignature());
+
+    assert.equal(true,  certificate.isValid
       (Common.fromIsoString("20141111T050000")));
-    assert.equal(true,  certificate.isInValidityPeriod
+    assert.equal(true,  certificate.isValid
       (Common.fromIsoString("20141111T060000")));
-    assert.equal(false, certificate.isInValidityPeriod
+    assert.equal(false, certificate.isValid
       (Common.fromIsoString("20141111T045959")));
-    assert.equal(false, certificate.isInValidityPeriod
+    assert.equal(false, certificate.isValid
       (Common.fromIsoString("20141111T060001")));
+  });
+
+  it('PrintCertificateInfo', function() {
+    var expectedCertificateInfo =
+"Certificate name:\n" +
+"  /ndn/site1/KEY/ksk-1416425377094/0123/%FD%00%00%01I%C9%8B\n" +
+"Validity:\n" +
+"  NotBefore: 20150814T223739\n" +
+"  NotAfter: 20150818T223738\n" +
+"Public key bits:\n" +
+"MIGdMA0GCSqGSIb3DQEBAQUAA4GLADCBhwKBgQCeBj5HhbI0N6qFR6wDJIO1nKgF\n" +
+"OiQe64kBu+mbssMirGjj8GwCzmimxNCnBpCcqhsIHYtDmjNnRG0hoxuImpdeWcQV\n" +
+"C9ksvVEHYYKtwbjXv5vPfSTCY/OXF+v+YiW6W02Kwnq9Q4qPuPLxxWow01CMyJrf\n" +
+"7+0153pi6nZ8uwgmxwIBEQ==\n" +
+"Signature Information:\n" +
+"  Signature Type: SignatureSha256WithRsa\n" +
+"  Key Locator: Name=/ndn/site1/KEY/ksk-2516425377094\n";
+
+    var certificate = new CertificateV2();
+    certificate.wireDecode(new Blob(CERT, false));
+
+    var actual = certificate.toString();
+    assert.equal(expectedCertificateInfo, actual);
   });
 });
