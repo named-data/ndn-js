@@ -1366,6 +1366,32 @@ KeyChain.prototype.importSafeBag = function
 
 // PIB & TPM backend registry
 
+/**
+ * Add to the PIB factories map where scheme is the key and makePibImpl is the
+ * value. If your application has its own PIB implementations, this must be
+ * called before creating a KeyChain instance which uses your PIB scheme.
+ * @param {string} scheme The PIB scheme.
+ * @param {function} makePibImpl A callback which takes the PIB location and
+ * returns a new PibImpl instance.
+ */
+KeyChain.registerPibBackend = function(scheme, makePibImpl)
+{
+  KeyChain.getPibFactories_()[scheme] = makePibImpl;
+};
+
+/**
+ * Add to the TPM factories map where scheme is the key and makeTpmBackEnd is
+ * the value. If your application has its own TPM implementations, this must be
+ * called before creating a KeyChain instance which uses your TPM scheme.
+ * @param {string} scheme The TPM scheme.
+ * @param {function} makeTpmBackEnd A callback which takes the TPM location and
+ * returns a new TpmBackEnd instance.
+ */
+KeyChain.registerTpmBackend = function(scheme, makeTpmBackEnd)
+{
+  KeyChain.getTpmFactories_()[scheme] = makeTpmBackEnd;
+};
+
 // Security v1 methods
 
 /*****************************************
