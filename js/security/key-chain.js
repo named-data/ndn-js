@@ -25,6 +25,7 @@ var Crypto = require('../crypto.js'); /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var Data = require('../data.js').Data; /** @ignore */
+var ContentType = require('../meta-info.js').ContentType; /** @ignore */
 var Blob = require('../util/blob.js').Blob; /** @ignore */
 var ConfigFile = require('../util/config-file.js').ConfigFile; /** @ignore */
 var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
@@ -656,6 +657,86 @@ KeyChain.prototype.sign = function
 
   return SyncPromise.complete(onComplete, onError,
     this.signPromise(target, paramsOrCertificateName, wireFormat, !onComplete));
+};
+
+/**
+ * Generate a self-signed certificate for the public key and add it to the PIB.
+ * This creates the certificate name from the key name by appending "self" and a
+ * version based on the current time. If no default certificate for the key has
+ * been set, then set the certificate as the default for the key.
+ * @param {PibKey} key The PibKey with the key name and public key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the new CertificateV2.
+ */
+KeyChain.prototype.selfSignPromise = function(key, useSync)
+{
+  var certificate = new CertificateV2();
+
+  // Set the name.
+  var now = new Date().getTime();
+  var certificateName = new Name(key.getName());
+  certificateName.append("self").appendVersion(now);
+  certificate.setName(certificateName);
+
+  // Set the MetaInfo.
+  certificate.getMetaInfo().setType(ContentType.KEY);
+  // Set a one-hour freshness period.
+  certificate.getMetaInfo().setFreshnessPeriod(3600 * 1000.0);
+
+  // Set the content.
+  certificate.setContent(key.getPublicKey());
+
+  // Set the signature-info.
+  signingInfo = new SigningInfo(key);
+  // Set a 20-year validity period.
+  signingInfo.setValidityPeriod
+    (new ValidityPeriod(now, now + 20 * 365 * 24 * 3600 * 1000.0));
+
+  return this.signPromise(certificate, signingInfo, useSync)
+  .then(function() {
+    return key.addCertificatePromise_(certificate)
+    .catch(function(ex) {
+      // We don't expect this since we just created the certificate.
+      return SyncPromise.reject(new KeyChain.Error(new Error
+        ("Error encoding certificate: " + ex)));
+    });
+  })
+  .then(function() {
+    return SyncPromise.resolve(certificate);
+  });
+};
+
+/**
+ * Generate a self-signed certificate for the public key and add it to the PIB.
+ * This creates the certificate name from the key name by appending "self" and a
+ * version based on the current time. If no default certificate for the key has
+ * been set, then set the certificate as the default for the key.
+ * @param {PibKey} key The PibKey with the key name and public key.
+ * @param {function} onComplete (optional) This calls
+ * onComplete(certificate) with the new CertificateV2. If omitted, the return
+ * value is described below. (Some crypto libraries only use a callback, so
+ * onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {CertificateV2} If onComplete is omitted, return the new certificate.
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete
+ * as described above.
+ */
+KeyChain.prototype.selfSign = function(key, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.selfSignPromise(key, !onComplete));
 };
 
 // Import and export
