@@ -22,6 +22,7 @@
 var path = require('path'); /** @ignore */
 var fs = require('fs'); /** @ignore */
 var Crypto = require('../crypto.js'); /** @ignore */
+var LOG = require('../log.js').Log.LOG; /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var Data = require('../data.js').Data; /** @ignore */
@@ -262,6 +263,110 @@ KeyChain.prototype.getTpm = function()
 // Identity management
 
 /**
+ * Create a security V2 identity for identityName. This method will check if the
+ * identity exists in PIB and whether the identity has a default key and default
+ * certificate. If the identity does not exist, this method will create the
+ * identity in PIB. If the identity's default key does not exist, this method
+ * will create a key pair and set it as the identity's default key. If the key's
+ * default certificate is missing, this method will create a self-signed
+ * certificate for the key. If identityName did not exist and no default
+ * identity was selected before, the created identity will be set as the default
+ * identity.
+ * @param {Name} identityName The name of the identity.
+ * @param {KeyParams} params (optional) The key parameters if a key needs to be
+ * generated for the identity. If omitted, use getDefaultKeyParams().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the created PibIdentity
+ * instance.
+ */
+KeyChain.prototype.createIdentityV2Promise = function
+  (identityName, params, useSync)
+{
+  useSync = (typeof params === "boolean") ? params : useSync;
+  params = (typeof params === "boolean" || !params) ? undefined : params;
+
+  if (params == undefined)
+    params = KeyChain.getDefaultKeyParams();
+
+  var thisKeyChain = this;
+  var id;
+
+  return this.pib_.addIdentityPromise_(identityName)
+  .then(function(localId) {
+    id = localId;
+
+    return id.getDefaultKeyPromise(useSync)
+    .catch(function(err) {
+      if (err instanceof Pib.Error)
+        return thisKeyChain.createKeyPromise(id, params, useSync);
+      else
+        return SyncPromise.reject(err);
+    });
+  })
+  .then(function(key) {
+    return key.getDefaultCertificatePromise(useSync)
+    .catch(function(err) {
+      if (err instanceof Pib.Error) {
+        if (LOG > 2)
+          console.log("No default cert for " + key.getName() +
+            ", requesting self-signing")
+        return thisKeyChain.selfSignPromise(key, useSync);
+      }
+      else
+        return SyncPromise.reject(err);
+    });
+  })
+  .then(function() {
+    return SyncPromise.resolve(id);
+  });
+};
+
+/**
+ * Create a security V2 identity for identityName. This method will check if the
+ * identity exists in PIB and whether the identity has a default key and default
+ * certificate. If the identity does not exist, this method will create the
+ * identity in PIB. If the identity's default key does not exist, this method
+ * will create a key pair and set it as the identity's default key. If the key's
+ * default certificate is missing, this method will create a self-signed
+ * certificate for the key. If identityName did not exist and no default
+ * identity was selected before, the created identity will be set as the default
+ * identity.
+ * @param {Name} identityName The name of the identity.
+ * @param {KeyParams} params (optional) The key parameters if a key needs to be
+ * generated for the identity. If omitted, use getDefaultKeyParams().
+ * @param {function} onComplete (optional) This calls
+ * onComplete(identity) with the created PibIdentity instance. If omitted, the
+ * return value is described below. (Some database libraries only use a callback,
+ * so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {PibIdentity} If onComplete is omitted, return the created 
+ * PibIdentity instance. Otherwise, if onComplete is supplied then return
+ * undefined and use onComplete as described above.
+ */
+KeyChain.prototype.createIdentityV2 = function
+  (identityName, params, onComplete, onError)
+{
+  onError = (typeof params === "function") ? onComplete : onError;
+  onComplete = (typeof params === "function") ? params : onComplete;
+  params = (typeof params === "function" || !params) ? undefined : params;
+
+  return SyncPromise.complete(onComplete, onError,
+    this.createIdentityV2Promise(identityName, params, !onComplete));
+};
+
+/**
  * This method has two forms:
  * deleteIdentity(identity, useSync) - Delete the PibIdentity identity. After this
  * operation, the identity is invalid.
@@ -384,6 +489,90 @@ KeyChain.prototype.setDefaultIdentity = function(identity, onComplete, onError)
 };
 
 // Key management
+
+/**
+ * Create a key for the identity according to params. If the identity had no
+ * default key selected, the created key will be set as the default for this
+ * identity. This method will also create a self-signed certificate for the
+ * created key.
+ * @param {PibIdentity} identity A valid PibIdentity object.
+ * @param {KeyParams} params (optional) The key parameters if a key needs to be
+ * generated for the identity. If omitted, use getDefaultKeyParams().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the new PibKey.
+ */
+KeyChain.prototype.createKeyPromise = function(identity, params, useSync)
+{
+  useSync = (typeof params === "boolean") ? params : useSync;
+  params = (typeof params === "boolean" || !params) ? undefined : params;
+
+  if (params == undefined)
+    params = KeyChain.getDefaultKeyParams();
+
+  var thisKeyChain = this;
+  var key, keyName;
+
+  // Create the key in the TPM.
+  return this.tpm_.createKeyPromise_(identity.getName(), params, useSync)
+  .then(function(localKeyName) {
+    keyName = localKeyName;
+
+    // Set up the key info in the PIB.
+    return thisKeyChain.tpm_.getPublicKeyPromise(keyName, useSync);
+  })
+  .then(function(publicKey) {
+    return identity.addKeyPromise_(publicKey.buf(), keyName, useSync);
+  })
+  .then(function(localKey) {
+    key = localKey;
+
+    if (LOG > 2)
+      console.log
+        ("Requesting self-signing for newly created key " + key.getName().toUri());
+    return thisKeyChain.selfSignPromise(key, useSync);
+  })
+  .then(function() {
+    return SyncPromise.resolve(key);
+  });
+};
+
+/**
+ * Create a key for the identity according to params. If the identity had no
+ * default key selected, the created key will be set as the default for this
+ * identity. This method will also create a self-signed certificate for the
+ * created key.
+ * @param {PibIdentity} identity A valid PibIdentity object.
+ * @param {KeyParams} params (optional) The key parameters if a key needs to be
+ * generated for the identity. If omitted, use getDefaultKeyParams().
+ * @param {function} onComplete (optional) This calls onComplete(key) with the
+ * new PibKey. If omitted, the return value is described below. (Some database
+ * libraries only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {PibKey} If onComplete is omitted, return the new PibKey. Otherwise,
+ * if onComplete is supplied then return undefined and use onComplete as
+ * described above.
+ */
+KeyChain.prototype.createKey = function(identity, params, onComplete, onError)
+{
+  onError = (typeof params === "function") ? onComplete : onError;
+  onComplete = (typeof params === "function") ? params : onComplete;
+  params = (typeof params === "function" || !params) ? undefined : params;
+
+  return SyncPromise.complete(onComplete, onError,
+    this.createKeyPromise(identity, params, !onComplete));
+};
 
 // Certificate management
 
@@ -989,7 +1178,7 @@ KeyChain.prototype.getDefaultIdentity = function(onComplete, onError)
 {
   if (!this.isSecurityV1_) {
     return SyncPromise.complete(onComplete, onError,
-      this.pib_.getDefaultIdentityPromise()
+      this.pib_.getDefaultIdentityPromise(!onComplete)
       .then(function(pibIdentity) {
         return SyncPromise.resolve(pibIdentity.getName());
       }));
@@ -1832,7 +2021,7 @@ KeyChain.prototype.prepareSignatureInfoPromise_ = function
       });
     }
     else if (params.getSignerType() == SigningInfo.SignerType.ID) {
-      identity = params.getPibIdentityPromise();
+      identity = params.getPibIdentity();
       if (identity == null) {
         return thisKeyChain.pib_.getIdentityPromise(params.getSignerName(), useSync)
         .then(function(localIdentity) {
