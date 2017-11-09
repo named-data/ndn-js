@@ -179,8 +179,8 @@ CertificateCacheV2.getDefaultLifetime = function() { return 3600.0 * 1000; };
  */
 CertificateCacheV2.prototype.findFirstByName_ = function(name)
 {
-  for (var i; i < this.certificatesByName_.length; ++i) {
-    if (this.certificatesByName_[i].name.compare(certificatePrefix) >= 0)
+  for (var i = 0; i < this.certificatesByName_.length; ++i) {
+    if (this.certificatesByName_[i].name.compare(name) >= 0)
       return i;
   }
 
