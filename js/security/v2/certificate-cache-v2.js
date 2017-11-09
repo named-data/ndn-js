@@ -72,7 +72,7 @@ CertificateCacheV2.prototype.insert = function(certificate)
     }
   }
 
-  this.certificatesByName_.splice(i, 0, {nam: name, certificate: certificateCopy});
+  this.certificatesByName_.splice(i, 0, {name: name, certificate: certificateCopy});
 };
 
 /**
