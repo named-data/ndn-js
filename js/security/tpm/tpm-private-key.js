@@ -378,7 +378,30 @@ TpmPrivateKey.prototype.toPkcs1 = function()
   return new Blob(new Buffer(privateKeyBase64, 'base64'));
 };
 
-// TODO: toPkcs8
+/**
+ * Get the encoded unencrypted private key in PKCS #8.
+ * @return {Blob} The private key encoding Blob.
+ * @throws {TpmPrivateKey.Error} If no private key is loaded, or error encoding.
+ */
+TpmPrivateKey.prototype.toPkcs8 = function()
+{
+  if (this.keyType_ == null)
+    throw new TpmPrivateKey.Error(new Error
+      ("toPkcs8: The private key is not loaded"));
+
+  var oid;
+  if (this.keyType_ === KeyType.RSA)
+    oid = new OID(TpmPrivateKey.RSA_ENCRYPTION_OID);
+  else if (this.keyType === KeyType.ECDSA)
+    oid = new OID(TpmPrivateKey.EC_ENCRYPTION_OID);
+  else
+    // We don't expect this to happen.
+    throw new TpmPrivateKey.Error(new Error
+      ("toPkcs8: Unrecognized key type " + this.keyType_));
+
+  return TpmPrivateKey.encodePkcs8PrivateKey
+    (this.toPkcs1().buf(), oid, new DerNode.DerNull());
+};
 
 /**
  * Generate a key pair according to keyParams and return a new TpmPrivateKey
