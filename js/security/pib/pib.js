@@ -51,9 +51,10 @@ var Pib = function Pib(scheme, location, pibImpl)
   this.defaultIdentity_ = null;
   this.scheme_ = scheme;
   this.location_ = location;
-  // Must access this through getIdentitiesPromise_.
+  // Must call initializePromise_ before accessing this.
   this.identities_ = null;
   this.pibImpl_ = pibImpl;
+  this.isInitialized_ = false;
 
   if (pibImpl == null)
     throw new Error("The pibImpl is null");
@@ -107,15 +108,19 @@ Pib.prototype.setTpmLocatorPromise = function(tpmLocator, useSync)
 {
   var thisPib = this;
 
-  return this.pibImpl_.getTpmLocatorPromise(useSync)
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.pibImpl_.getTpmLocatorPromise(useSync);
+  })
   .then(function(pibTpmLocator) {
     if (tpmLocator == pibTpmLocator)
       return SyncPromise.resolve();
-
-    return thisPib.resetPromise_(useSync);
-  })
-  .then(function() {
-    return thisPib.pibImpl_.setTpmLocatorPromise(tpmLocator, useSync);
+    else {
+      return thisPib.resetPromise_(useSync)
+      .then(function() {
+        return thisPib.pibImpl_.setTpmLocatorPromise(tpmLocator, useSync);
+      });
+    }
   });
 };
 
@@ -129,7 +134,12 @@ Pib.prototype.setTpmLocatorPromise = function(tpmLocator, useSync)
  */
 Pib.prototype.getTpmLocatorPromise = function(useSync)
 {
-  return this.pibImpl_.getTpmLocatorPromise(useSync)
+  var thisPib = this;
+
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.pibImpl_.getTpmLocatorPromise(useSync);
+  })
   .then(function(tpmLocator) {
     if (tpmLocator == "")
       return SyncPromise.reject(new Pib.Error(new Error
@@ -150,9 +160,11 @@ Pib.prototype.getTpmLocatorPromise = function(useSync)
  */
 Pib.prototype.getIdentityPromise = function(identityName, useSync)
 {
-  return this.getIdentitiesPromise_(useSync)
-  .then(function(identities) {
-    return identities.getPromise(identityName, useSync);
+  var thisPib = this;
+
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.identities_.getPromise(identityName, useSync);
   });
 };
 
@@ -200,15 +212,13 @@ Pib.prototype.getDefaultIdentityPromise = function(useSync)
 {
   if (this.defaultIdentity_ == null) {
     var thisPib = this;
-    var identities;
 
-    return this.getIdentitiesPromise_(useSync)
-    .then(function(localIdentities) {
-      identities = localIdentities;
+    return this.initializePromise_(useSync)
+    .then(function() {
       return thisPib.pibImpl_.getDefaultIdentityPromise(useSync);
     })
     .then(function(defaultIdentity) {
-      return identities.getPromise(defaultIdentity, useSync);
+      return thisPib.identities_.getPromise(defaultIdentity, useSync);
     })
     .then(function(identity) {
       thisPib.defaultIdentity_ = identity;
@@ -261,16 +271,19 @@ Pib.prototype.resetPromise_ = function(useSync)
 {
   var thisPib = this;
 
-  return this.pibImpl_.clearIdentitiesPromise(useSync)
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.pibImpl_.clearIdentitiesPromise(useSync);
+  })
   .then(function() {
     return thisPib.pibImpl_.setTpmLocatorPromise("", useSync);
   })
   .then(function() {
     thisPib.defaultIdentity_ = null;
-    return thisPib.getIdentitiesPromise_(useSync)
+    return thisPib.initializePromise_(useSync)
   })
-  .then(function(identities) {
-    return identities.resetPromise(useSync);
+  .then(function() {
+    return thisPib.identities_.resetPromise(useSync);
   });
 };
 
@@ -286,9 +299,10 @@ Pib.prototype.resetPromise_ = function(useSync)
  */
 Pib.prototype.addIdentityPromise_ = function(identityName, useSync)
 {
-  return this.getIdentitiesPromise_(useSync)
-  .then(function(identities) {
-    return identities.addPromise(identityName, useSync);
+  var thisPib = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.identities_.addPromise(identityName, useSync);
   });
 };
 
@@ -309,9 +323,10 @@ Pib.prototype.removeIdentityPromise_ = function(identityName, useSync)
       this.defaultIdentity_.getName().equals(identityName))
     this.defaultIdentity_ = null;
 
-  return this.getIdentitiesPromise_(useSync)
-  .then(function(identities) {
-    return identities.removePromise(identityName, useSync);
+  var thisPib = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.identities_.removePromise(identityName, useSync);
   });
 };
 
@@ -329,9 +344,9 @@ Pib.prototype.setDefaultIdentityPromise_ = function(identityName, useSync)
 {
   var thisPib = this;
 
-  return this.getIdentitiesPromise_(useSync)
-  .then(function(identities) {
-    return identities.addPromise(identityName, useSync);
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.identities_.addPromise(identityName, useSync);
   })
   .then(function(identity) {
     thisPib.defaultIdentity_ = identity;
@@ -344,23 +359,28 @@ Pib.prototype.setDefaultIdentityPromise_ = function(identityName, useSync)
 };
 
 /**
- * If this.identities_ is not null, return it. Otherwise, set it using
- * PibIdentityContainer.makePromise.
+ * If isInitialized_ is false, initialize identities_ using
+ * PibIdentityContainer.makePromise and set isInitialized_. However, if
+ * isInitialized_ is already true, do nothing. This must be called by each
+ * method before using this object. This is necessary because the constructor
+ * cannot perform async operations.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which returns the PibIdentityContainer.
+ * @returns {Promise|SyncPromise} A promise which fulfills when finished.
  */
-Pib.prototype.getIdentitiesPromise_ = function(useSync)
+Pib.prototype.initializePromise_ = function(useSync)
 {
-  if (this.identities_ != null)
-    return SyncPromise.resolve(this.identities_);
+  if (this.isInitialized_)
+    return SyncPromise.resolve();
 
   var thisPib = this;
   return PibIdentityContainer.makePromise(this.pibImpl_, useSync)
   .then(function(container) {
     thisPib.identities_ = container;
-    return SyncPromise.resolve(container);
+
+    thisPib.isInitialized_ = true;
+    return SyncPromise.resolve();
   });
 };
 

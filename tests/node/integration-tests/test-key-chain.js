@@ -36,9 +36,10 @@ describe ("TestKeyChain", function() {
     var identityName = new Name("/test/id");
     var identity2Name = new Name("/test/id2");
 
-    var identities = SyncPromise.getValue
-      (this.fixture_.keyChain_.getPib().getIdentitiesPromise_());
-    assert.equal(0, identities.size());
+    // We must initialize the Pib.
+    SyncPromise.getValue
+      (this.fixture_.keyChain_.getPib().initializePromise_());
+    assert.equal(0, this.fixture_.keyChain_.getPib().identities_.size());
     try {
       this.fixture_.keyChain_.getPib().getDefaultIdentity();
       assert.fail('', '', "Did not throw the expected exception");
