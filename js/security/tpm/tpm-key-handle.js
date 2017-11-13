@@ -123,7 +123,7 @@ TpmKeyHandle.prototype.doDecryptPromise_ = function(cipherText, useSync)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @returns {Blob} The public key encoding Blob.
+ * @return {Blob} The public key encoding Blob.
  */
 TpmKeyHandle.prototype.doDerivePublicKey_ = function(useSync)
 {

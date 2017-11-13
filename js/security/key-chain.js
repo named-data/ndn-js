@@ -2244,7 +2244,7 @@ KeyChain.createPib_ = function(pibLocator)
 /**
  * Create a Tpm according to the tpmLocator.
  * @param {string} tpmLocator The TPM locator, e.g., "tpm-memory:".
- * @returns {Tpm} A new Tpm object.
+ * @return {Tpm} A new Tpm object.
  */
 KeyChain.createTpm_ = function(tpmLocator)
 {

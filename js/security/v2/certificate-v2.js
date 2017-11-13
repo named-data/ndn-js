@@ -303,7 +303,7 @@ CertificateV2.isValidName = function(certificateName)
 /**
  * Extract the identity namespace from certificateName.
  * @param {Name} certificateName The name of the certificate.
- * @returns {Name} The identity namespace as a new Name.
+ * @return {Name} The identity namespace as a new Name.
  */
 CertificateV2.extractIdentityFromCertName = function(certificateName)
 {

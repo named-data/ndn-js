@@ -576,7 +576,7 @@ SortedArray.prototype.sortEntries = function()
 /**
  * Return the index number in this.entries of the object with a matching "key".
  * @param {number} key The value of the object's "key".
- * @returns {number} The index number, or -1 if not found.
+ * @return {number} The index number, or -1 if not found.
  */
 SortedArray.prototype.indexOfKey = function(key)
 {

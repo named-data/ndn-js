@@ -456,7 +456,7 @@ ForwarderFace.lastFaceId = 0;
 
 /**
  * Check if this face is still enabled.
- * @returns {boolean} True if this face is still enabled.
+ * @return {boolean} True if this face is still enabled.
  */
 ForwarderFace.prototype.isEnabled = function()
 {

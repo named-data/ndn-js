@@ -110,7 +110,7 @@ NdnRegexComponentSetMatcher.prototype.compile_ = function()
 
 /**
  * @param {number} index
- * @returns {number}
+ * @return {number}
  */
 NdnRegexComponentSetMatcher.prototype.extractComponent_ = function(index)
 {

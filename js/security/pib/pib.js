@@ -102,7 +102,7 @@ Pib.prototype.getPibLocator = function()
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @returns {Promise|SyncPromise} A promise which fulfills when finished.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
  */
 Pib.prototype.setTpmLocatorPromise = function(tpmLocator, useSync)
 {
@@ -367,7 +367,7 @@ Pib.prototype.setDefaultIdentityPromise_ = function(identityName, useSync)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @returns {Promise|SyncPromise} A promise which fulfills when finished.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
  */
 Pib.prototype.initializePromise_ = function(useSync)
 {

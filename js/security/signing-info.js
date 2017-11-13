@@ -301,7 +301,7 @@ SigningInfo.prototype.setValidityPeriod = function(validityPeriod)
  * Get the validity period for the signature info.
  * Note that the equivalent ndn-cxx method uses a semi-prepared SignatureInfo,
  * but this method only uses the ValidityPeriod from the SignatureInfo.
- * @returns {ValidityPeriod} The validity period.
+ * @return {ValidityPeriod} The validity period.
  */
 SigningInfo.prototype.getValidityPeriod = function()
 {

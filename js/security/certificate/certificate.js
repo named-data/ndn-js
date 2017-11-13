@@ -136,7 +136,7 @@ Certificate.prototype.getPublicKeyInfo = function()
 
 /**
  * Get the public key DER encoding.
- * @returns {Blob} The DER encoding Blob.
+ * @return {Blob} The DER encoding Blob.
  * @throws Error if the public key is not set.
  */
 Certificate.prototype.getPublicKeyDer = function()

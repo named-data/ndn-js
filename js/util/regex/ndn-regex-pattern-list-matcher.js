@@ -60,7 +60,7 @@ NdnRegexPatternListMatcher.prototype.compile_ = function()
 /**
  * @param {number} index
  * @param {Array<number>} Update next[0].
- * @returns {boolean}
+ * @return {boolean}
  */
 NdnRegexPatternListMatcher.prototype.extractPattern_ = function(index, next)
 {
@@ -115,7 +115,7 @@ NdnRegexPatternListMatcher.prototype.extractPattern_ = function(index, next)
  * @param {string} left
  * @param {string} right
  * @param {number} index
- * @returns {number}
+ * @return {number}
  */
 NdnRegexPatternListMatcher.prototype.extractSubPattern_ = function
   (left, right, index)
@@ -141,7 +141,7 @@ NdnRegexPatternListMatcher.prototype.extractSubPattern_ = function
 
 /**
  * @param {number} index
- * @returns {number}
+ * @return {number}
  */
 NdnRegexPatternListMatcher.prototype.extractRepetition_ = function(index)
 {

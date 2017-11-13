@@ -193,7 +193,7 @@ TpmPrivateKey.prototype.loadPkcs8 = function(encoding, keyType)
 
 /**
  * Get the encoded public key for this private key.
- * @returns {Blob} The public key encoding Blob.
+ * @return {Blob} The public key encoding Blob.
  * @throws TpmPrivateKey.Error if no private key is loaded, or error converting
  * to a public key.
  */

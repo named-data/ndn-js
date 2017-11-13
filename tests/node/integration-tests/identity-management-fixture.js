@@ -41,7 +41,7 @@ exports.IdentityManagementFixture = IdentityManagementFixture;
  * @param {Name} identityName The name of the identity.
  * @param {KeyParams} params (optional) The key parameters if a key needs to
  * be generated for the identity. If omitted, use KeyChain.getDefaultKeyParams().
- * @returns {PibIdentity} The created PibIdentity instance.
+ * @return {PibIdentity} The created PibIdentity instance.
  */
 IdentityManagementFixture.prototype.addIdentity = function(identityName, params)
 {

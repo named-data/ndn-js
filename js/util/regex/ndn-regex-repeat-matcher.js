@@ -174,7 +174,7 @@ NdnRegexRepeatMatcher.prototype.parseRepetition_ = function()
  * @param {Name} name
  * @param {number} offset
  * @param {number} len
- * @returns {boolean}
+ * @return {boolean}
  */
 NdnRegexRepeatMatcher.prototype.recursiveMatch2_ = function
   (repeat, name, offset, len)
