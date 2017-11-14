@@ -103,7 +103,7 @@ ConfigFile.prototype.parse_ = function()
 {
   if (this.path_ === "")
     throw new Error
-      ("ConfigFile::parse: Failed to locate the configuration file for parsing");
+      ("ConfigFile.parse: Failed to locate the configuration file for parsing");
 
   // Use readFileSync instead of the asycnronous readline.
   input = fs.readFileSync(this.path_).toString();

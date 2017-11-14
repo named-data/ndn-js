@@ -134,13 +134,13 @@ MemoryIdentityStorage.prototype.getKeyPromise = function(keyName)
 {
   if (keyName.size() === 0)
     return SyncPromise.reject(new SecurityException(new Error
-      ("MemoryIdentityStorage::getKeyPromise: Empty keyName")));
+      ("MemoryIdentityStorage.getKeyPromise: Empty keyName")));
 
   var keyNameUri = keyName.toUri();
   var entry = this.keyStore[keyNameUri];
   if (entry === undefined)
     return SyncPromise.reject(new SecurityException(new Error
-      ("MemoryIdentityStorage::getKeyPromise: The key does not exist")));
+      ("MemoryIdentityStorage.getKeyPromise: The key does not exist")));
 
   return SyncPromise.resolve(entry.keyDer);
 };
@@ -196,14 +196,14 @@ MemoryIdentityStorage.prototype.getCertificatePromise = function
   var certificateNameUri = certificateName.toUri();
   if (this.certificateStore[certificateNameUri] === undefined)
     return SyncPromise.reject(new SecurityException(new Error
-      ("MemoryIdentityStorage::getCertificatePromise: The certificate does not exist")));
+      ("MemoryIdentityStorage.getCertificatePromise: The certificate does not exist")));
 
   var certificate = new IdentityCertificate();
   try {
     certificate.wireDecode(this.certificateStore[certificateNameUri]);
   } catch (ex) {
     return SyncPromise.reject(new SecurityException(new Error
-      ("MemoryIdentityStorage::getCertificatePromise: The certificate cannot be decoded")));
+      ("MemoryIdentityStorage.getCertificatePromise: The certificate cannot be decoded")));
   }
   return SyncPromise.resolve(certificate);
 };

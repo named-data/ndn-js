@@ -243,7 +243,7 @@ FilePrivateKeyStorage.prototype.getPrivateKey = function(keyName, keyType)
   }
   else
     throw new SecurityException(new Error
-      ("FilePrivateKeyStorage::sign: Unrecognized private key OID: " + oidString));
+      ("FilePrivateKeyStorage.sign: Unrecognized private key OID: " + oidString));
 };
 
 /**

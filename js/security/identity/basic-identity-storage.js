@@ -225,7 +225,7 @@ BasicIdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 
   if (keyName.size() === 0)
     return Promise.reject(new SecurityException(new Error
-      ("BasicIdentityStorage::getKeyPromise: Empty keyName")));
+      ("BasicIdentityStorage.getKeyPromise: Empty keyName")));
 
   var identityUri = keyName.getPrefix(-1).toUri();
   var keyId = keyName.get(-1).toEscapedString();
@@ -238,7 +238,7 @@ BasicIdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
       return Promise.resolve(new Blob(row.public_key, false));
     else
       return Promise.reject(new SecurityException(new Error
-        ("BasicIdentityStorage::getKeyPromise: The key does not exist")));
+        ("BasicIdentityStorage.getKeyPromise: The key does not exist")));
   });
 };
 
@@ -372,7 +372,7 @@ BasicIdentityStorage.prototype.getTpmLocatorPromise = function(useSync)
       return Promise.resolve(row.tpm_locator);
     else
       return Promise.reject(new SecurityException(new Error
-        ("BasicIdentityStorage::getTpmLocatorPromise: The TPM info does not exist.")));
+        ("BasicIdentityStorage.getTpmLocatorPromise: The TPM info does not exist.")));
   });
 };
 
@@ -400,7 +400,7 @@ BasicIdentityStorage.prototype.getDefaultIdentityPromise = function(useSync)
       return Promise.resolve(new Name(row.identity_name));
     else
       return Promise.reject(new SecurityException(new Error
-        ("BasicIdentityStorage::getDefaultIdentityPromise: The default identity is not defined")));
+        ("BasicIdentityStorage.getDefaultIdentityPromise: The default identity is not defined")));
   });
 };
 
@@ -428,7 +428,7 @@ BasicIdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = function
       return Promise.resolve(new Name(identityName).append(row.key_identifier));
     else
       return Promise.reject(new SecurityException(new Error
-        ("BasicIdentityStorage::getDefaultKeyNameForIdentityPromise: The default key for the identity is not defined")));
+        ("BasicIdentityStorage.getDefaultKeyNameForIdentityPromise: The default key for the identity is not defined")));
   });
 };
 
@@ -459,7 +459,7 @@ BasicIdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = function
       return Promise.resolve(new Name(row.cert_name));
     else
       return Promise.reject(new SecurityException(new Error
-        ("BasicIdentityStorage::getDefaultCertificateNameForKeyPromise: The default certificate for the key name is not defined")));
+        ("BasicIdentityStorage.getDefaultCertificateNameForKeyPromise: The default certificate for the key name is not defined")));
   });
 };
 

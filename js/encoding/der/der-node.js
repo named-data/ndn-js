@@ -124,7 +124,7 @@ DerNode.prototype.decodeHeader = function(inputBuf, startIdx)
     while (lenCount > 0) {
       if (inputBuf.length <= idx)
         throw new DerDecodingException
-          ("DerNode::decodeHeader: The input length is too small");
+          ("DerNode.decodeHeader: The input length is too small");
       var b = inputBuf[idx];
       idx += 1;
       header.ensureLength(headerPosition + 1);
@@ -195,7 +195,7 @@ DerNode.parse = function(inputBuf, startIdx)
 
   if (inputBuf.length <= startIdx)
     throw new DerDecodingException
-      ("DerNode::parse: The input length is too small");
+      ("DerNode.parse: The input length is too small");
   var nodeType = inputBuf[startIdx] & 0xff;
   // Don't increment idx. We're just peeking.
 

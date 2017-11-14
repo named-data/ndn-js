@@ -56,7 +56,7 @@ var MemoryContentCache = function MemoryContentCache
   this.registeredPrefixIdList = []; /**< elements are number */
   this.noStaleTimeCache = []; /**< elements are MemoryContentCache.Content */
   this.staleTimeCache = [];   /**< elements are MemoryContentCache.StaleTimeContent */
-  //StaleTimeContent::Compare contentCompare_;
+  //StaleTimeContent.Compare contentCompare_;
   this.emptyComponent = new Name.Component();
   this.pendingInterestTable = [];
 

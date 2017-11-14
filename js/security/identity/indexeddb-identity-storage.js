@@ -182,7 +182,7 @@ IndexedDbIdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 
   if (keyName.size() === 0)
     return Promise.reject(new SecurityException(new Error
-      ("IndexedDbIdentityStorage::getKeyPromise: Empty keyName")));
+      ("IndexedDbIdentityStorage.getKeyPromise: Empty keyName")));
 
   return this.database.publicKey.get(keyName.toUri())
   .then(function(publicKeyEntry) {
@@ -190,7 +190,7 @@ IndexedDbIdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
       return Promise.resolve(new Blob(publicKeyEntry.keyDer));
     else
       return Promise.reject(new SecurityException(new Error
-        ("IndexedDbIdentityStorage::getKeyPromise: The key does not exist")));
+        ("IndexedDbIdentityStorage.getKeyPromise: The key does not exist")));
   });
 };
 
@@ -279,13 +279,13 @@ IndexedDbIdentityStorage.prototype.getCertificatePromise = function
         certificate.wireDecode(certificateEntry.encoding);
       } catch (ex) {
         return Promise.reject(new SecurityException(new Error
-          ("IndexedDbIdentityStorage::getCertificatePromise: The certificate cannot be decoded")));
+          ("IndexedDbIdentityStorage.getCertificatePromise: The certificate cannot be decoded")));
       }
       return Promise.resolve(certificate);
     }
     else
       return Promise.reject(new SecurityException(new Error
-        ("IndexedDbIdentityStorage::getCertificatePromise: The certificate does not exist")));
+        ("IndexedDbIdentityStorage.getCertificatePromise: The certificate does not exist")));
   });
 };
 

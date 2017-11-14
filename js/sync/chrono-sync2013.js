@@ -255,7 +255,7 @@ ChronoSync2013.prototype.shutdown = function()
  * A SyncState holds the values of a sync state message which is passed to the
  * onReceivedSyncState callback which was given to the ChronoSyn2013
  * constructor. Note: this has the same info as the Protobuf class
- * Sync::SyncState, but we make a separate class so that we don't need the
+ * Sync.SyncState, but we make a separate class so that we don't need the
  * Protobuf definition in the ChronoSync API.
  */
 ChronoSync2013.SyncState = function ChronoSync2013SyncState

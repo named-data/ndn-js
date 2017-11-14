@@ -138,7 +138,7 @@ ProtobufTlv._encodeMessageValue = function(message, descriptor, encoder)
         encoder.writeNonNegativeIntegerTlv(tlvType, value);
       else if (field.type.name == "enum") {
         if (value < 0)
-          throw new Error("ProtobufTlv::encode: ENUM value may not be negative");
+          throw new Error("ProtobufTlv.encode: ENUM value may not be negative");
         encoder.writeNonNegativeIntegerTlv(tlvType, value);
       }
       else if (field.type.name == "bytes") {
@@ -162,7 +162,7 @@ ProtobufTlv._encodeMessageValue = function(message, descriptor, encoder)
         encoder.writeBlobTlv(tlvType, encoding);
       }
       else
-        throw new Error("ProtobufTlv::encode: Unknown field type");
+        throw new Error("ProtobufTlv.encode: Unknown field type");
     }
   }
 };
