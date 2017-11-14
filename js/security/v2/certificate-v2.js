@@ -177,7 +177,7 @@ CertificateV2.prototype.getIssuerId = function()
 };
 
 /**
- * Get public key DER encoding.
+ * Get the public key DER encoding.
  * @return {Blob} The DER encoding Blob.
  * @throws CertificateV2.Error If the public key is not set.
  */
