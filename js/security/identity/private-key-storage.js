@@ -178,7 +178,7 @@ PrivateKeyStorage.prototype.encrypt = function(keyName, data, isSymmetric)
 };
 
 /**
- * @brief Generate a symmetric key.
+ * Generate a symmetric key.
  * @param {Name} keyName The name of the key.
  * @param {KeyParams} params The parameters of the key.
  */
