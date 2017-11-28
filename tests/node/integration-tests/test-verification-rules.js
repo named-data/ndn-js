@@ -282,7 +282,7 @@ describe('TestRegexMatching', function() {
                (signatureName2, dataName2, matchedRule, failureReason));
   });
 
-  it('Hierarchical', function() {
+  it('HyperRelation', function() {
     var policyManager = new ConfigPolicyManager
       ("policy_config/hyperrelation_ruleset.conf");
 
