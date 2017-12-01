@@ -30,6 +30,7 @@ var Name = require('../../..').Name;
 var Data = require('../../..').Data;
 var Interest = require('../../..').Interest;
 var SigningInfo = require('../../..').SigningInfo;
+var ValidityPeriod = require('../../..').ValidityPeriod;
 var Face = require('../../..').Face;
 var KeyChain = require('../../..').KeyChain;
 var ConfigPolicyManager = require('../../..').ConfigPolicyManager;
@@ -267,8 +268,12 @@ describe ("TestPolicyManagerV2", function() {
     cert.wireDecode(new Blob(certData));
     var signingInfo = new SigningInfo();
     signingInfo.setSigningIdentity(this.identityName);
-    this.keyChain.sign(cert, signingInfo);
+    // Make sure the validity period is current for two years.
+    var now = new Date().getTime();
+    signingInfo.setValidityPeriod(new ValidityPeriod
+      (now, now + 2 * 365 * 24 * 3600 * 1000.0));
 
+    this.keyChain.sign(cert, signingInfo);
     var signedCertBlob = cert.wireEncode();
     var encodedCert = signedCertBlob.buf().toString('base64');
     fs.write
