@@ -10,6 +10,9 @@ The project by the UCLA NDN team - for more information on NDN, see
 
 See the file [INSTALL](https://github.com/named-data/ndn-js/blob/master/INSTALL) for build and install instructions.
 
+If you are new to the NDN community of software generally, read the
+[Contributor's Guide](https://github.com/named-data/NFD/blob/master/CONTRIBUTING.md).
+
 License
 -------
 This program is free software: you can redistribute it and/or modify
