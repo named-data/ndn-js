@@ -42,7 +42,7 @@ describe ("TestPibKeyImpl", function() {
     var pibImpl = new PibMemory();
     var key11, key11FromBackend;
 
-    return PibKeyImpl.makePromise
+    PibKeyImpl.makePromise
       (fixture.id1Key1Name, fixture.id1Key1.buf(), pibImpl)
     .then(function(pibKeyImpl) {
       key11 = pibKeyImpl;
@@ -72,7 +72,7 @@ describe ("TestPibKeyImpl", function() {
     var pibImpl = new PibMemory();
     var key11;
 
-    return PibKeyImpl.makePromise
+    PibKeyImpl.makePromise
       (fixture.id1Key1Name, fixture.id1Key1.buf(), pibImpl)
     .then(function(pibKeyImpl) {
       key11 = pibKeyImpl;
@@ -279,7 +279,7 @@ describe ("TestPibKeyImpl", function() {
     var pibImpl = new PibMemory();
     var key1, key2, otherCert;
 
-    return Promise.resolve()
+    Promise.resolve()
     .then(function() {
       return PibKeyImpl.makePromise(fixture.id1Key1Name, pibImpl)
       .then(function() {
@@ -352,7 +352,7 @@ describe ("TestPibKeyImpl", function() {
     var pibImpl = new PibMemory();
     var key11;
 
-    return Promise.resolve()
+    Promise.resolve()
     .then(function() {
       return PibKeyImpl.makePromise(fixture.id1Key1Name, pibImpl)
       .then(function() {

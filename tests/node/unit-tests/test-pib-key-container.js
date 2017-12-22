@@ -41,7 +41,7 @@ describe ("TestPibKeyContainer", function() {
     var container, container2;
 
     // Start with an empty container.
-    return PibKeyContainer.makePromise(fixture.id1, pibImpl)
+    PibKeyContainer.makePromise(fixture.id1, pibImpl)
     .then(function(localContainer) {
       container = localContainer;
       assert.equal(0, container.size());
@@ -161,7 +161,7 @@ describe ("TestPibKeyContainer", function() {
     var pibImpl = new PibMemory();
     var container;
 
-    return PibKeyContainer.makePromise(fixture.id1, pibImpl)
+    PibKeyContainer.makePromise(fixture.id1, pibImpl)
     .then(function(localContainer) {
       container = localContainer;
 

@@ -41,7 +41,7 @@ describe ("TestPibIdentityContainer", function() {
     var container, container2;
 
     // Start with an empty container.
-    return PibIdentityContainer.makePromise(pibImpl)
+    PibIdentityContainer.makePromise(pibImpl)
     .then(function(localContainer) {
       container = localContainer;
       assert.equal(0, container.size());

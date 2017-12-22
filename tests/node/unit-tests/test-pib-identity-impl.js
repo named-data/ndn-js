@@ -39,7 +39,7 @@ describe ("TestPibIdentityImpl", function() {
     var pibImpl = new PibMemory();
     var identity1;
 
-    return PibIdentityImpl.makePromise(fixture.id1, pibImpl, true)
+    PibIdentityImpl.makePromise(fixture.id1, pibImpl, true)
     .then(function(pibIdentityImpl) {
       identity1 = pibIdentityImpl;
 
@@ -55,7 +55,7 @@ describe ("TestPibIdentityImpl", function() {
     var pibImpl = new PibMemory();
     var identity1;
 
-    return PibIdentityImpl.makePromise(fixture.id1, pibImpl, true)
+    PibIdentityImpl.makePromise(fixture.id1, pibImpl, true)
     .then(function(pibIdentityImpl) {
       identity1 = pibIdentityImpl;
 
@@ -256,7 +256,7 @@ describe ("TestPibIdentityImpl", function() {
     var pibImpl = new PibMemory();
     var identity1;
 
-    return PibIdentityImpl.makePromise(fixture.id1, pibImpl, true)
+    PibIdentityImpl.makePromise(fixture.id1, pibImpl, true)
     .then(function(pibIdentityImpl) {
       identity1 = pibIdentityImpl;
 
@@ -288,7 +288,7 @@ describe ("TestPibIdentityImpl", function() {
     var pibImpl = new PibMemory();
     var identity1;
 
-    return Promise.resolve()
+    Promise.resolve()
     .then(function() {
       return PibIdentityImpl.makePromise(fixture.id1, pibImpl, false)
       .then(function() {
