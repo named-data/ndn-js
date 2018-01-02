@@ -12,6 +12,8 @@ See the file [INSTALL](https://github.com/named-data/ndn-js/blob/master/INSTALL)
 
 If you are new to the NDN community of software generally, read the
 [Contributor's Guide](https://github.com/named-data/NFD/blob/master/CONTRIBUTING.md).
+Proposed code contributions should use a
+[GitHub pull request](https://github.com/named-data/ndn-js/pulls).
 
 License
 -------
