@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx unit tests:
  * https://github.com/named-data/ndn-cxx/blob/master/tests/unit-tests/security/tpm/back-end.t.cpp

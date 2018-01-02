@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Jeff Burke <jburke@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify

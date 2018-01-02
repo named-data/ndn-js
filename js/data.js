@@ -1,6 +1,6 @@
 /**
  * This class represents an NDN Data object.
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *

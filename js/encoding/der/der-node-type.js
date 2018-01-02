@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From PyNDN der.py by Adeola Bannis <thecodemaiden@gmail.com>.
  * @author: Originally from code in ndn-cxx by Yingdi Yu <yingdi@cs.ucla.edu>

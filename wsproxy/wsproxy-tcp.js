@@ -1,6 +1,6 @@
 /*
  * Implement WebSocket proxy between ndnd and javascript stack.
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Wentao Shang
  *
  * This program is free software: you can redistribute it and/or modify

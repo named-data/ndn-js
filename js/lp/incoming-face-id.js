@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx fields.hpp https://github.com/named-data/ndn-cxx/blob/master/src/lp/fields.hpp
  *

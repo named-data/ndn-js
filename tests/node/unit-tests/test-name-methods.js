@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From PyNDN unit-tests by Adeola Bannis.
  * From ndn-cxx unit tests:
