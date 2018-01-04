@@ -260,6 +260,13 @@ KeyChain.prototype.getTpm = function()
   return this.tpm_;
 };
 
+/**                                                                                                                                                
+ * Get the flag set by the constructor if this is a security v1 or v2 KeyChain.
+ * @return (boolean} True if this is a security v1 KeyChain, false if this is a
+ * security v2 KeyChain.
+ */
+KeyChain.prototype.getIsSecurityV1 = function() { return this.isSecurityV1_; };
+
 // Identity management
 
 /**
