@@ -239,17 +239,12 @@ Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which return true for success, false 
- * if importing fails.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with TpmBackEnd.Error for an error importing the key.
  */
 Tpm.prototype.importPrivateKeyPromise_ = function(keyName, pkcs8, password, useSync)
 {
-  return this.backEnd_.importKeyPromise(keyName, pkcs8, password, useSync)
-  .then(function() {
-    return SyncPromise.resolve(true);
-  }, function() {
-    return SyncPromise.resolve(false);
-  });
+  return this.backEnd_.importKeyPromise(keyName, pkcs8, password, useSync);
 };
 
 /**
@@ -259,7 +254,7 @@ Tpm.prototype.importPrivateKeyPromise_ = function(keyName, pkcs8, password, useS
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which return the TpmKeyHandle in the
+ * @return {Promise|SyncPromise} A promise which returns the TpmKeyHandle in the
  * keys_ cache, or null if no key exists with name keyName.
  */
 Tpm.prototype.findKeyPromise_ = function(keyName, useSync)
