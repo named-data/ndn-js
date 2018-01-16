@@ -228,7 +228,7 @@ Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
 
 /**
  * Import an encoded private key with name keyName in PKCS #8 format, possibly
- * passwprd-encrypted. This should only be called by KeyChain.
+ * password-encrypted. This should only be called by KeyChain.
  * @param {Name} keyName The name of the key to use in the TPM.
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
