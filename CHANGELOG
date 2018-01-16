@@ -1,9 +1,11 @@
-Interim changes since NDN-JS v0.13.0 (2017-11-09)
+Interim changes since NDN-JS v0.13.0 (2018-01-16)
 -------------------------------------------------
 
 Bug fixes
 * https://redmine.named-data.net/issues/4023 Ported the latest NDN regex code
   from ndn-cxx which fixes errors for complex expressions.
+* https://redmine.named-data.net/issues/4466 In KeyChain.importSafeBag, handle
+  exceptions from Tpm.importPrivateKey.
 
 Changes
 * https://redmine.named-data.net/issues/4045 Major update to add security v2.
