@@ -1279,7 +1279,7 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password, useSync)
       (keyName, safeBag.getPrivateKeyBag().buf(), password, useSync)
     .catch(function(err) {
       return SyncPromise.reject(new KeyChain.Error(new Error
-        ("Failed to import private key `" + keyName.toUri() + "`")));
+        ("Failed to import private key `" + keyName.toUri() + "`: " + err)));
     });
   })
   .then(function() {
