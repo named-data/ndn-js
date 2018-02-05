@@ -510,7 +510,7 @@
     return printStackTrace;
 }));
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Ryan Bennett
  *
  * This program is free software: you can redistribute it and/or modify
@@ -565,7 +565,7 @@ exports.printStackTrace = printStackTrace;
 /**
  * This module checks for the availability of various crypto.subtle api's at runtime,
  * exporting a function that returns the known availability of necessary NDN crypto apis
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Ryan Bennett <nomad.ry@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -7261,7 +7261,7 @@ BigInteger.prototype.square = bnSquare;
 exports.BigInteger = BigInteger;
 module.exports = exports;
 /**
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Wentao Shang
  *
  * This program is free software: you can redistribute it and/or modify
@@ -8830,7 +8830,7 @@ Buffer.assert = function(test, message) {
   if (!test) throw new Error(message || 'Failed assertion')
 }
 /**
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -8864,7 +8864,7 @@ exports.Log = Log;
 Log.LOG = 0;
 /**
  * Encapsulate a Buffer and support dynamic reallocation.
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -8939,7 +8939,7 @@ NdnCommon.checkIndexedDb = function(onComplete)
   }
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -9311,7 +9311,7 @@ SignedBlob.prototype.getSignedPortionEndOffset = function()
 };
 /**
  * Encapsulate a Buffer and support dynamic reallocation.
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -9441,7 +9441,7 @@ DynamicBuffer.prototype.slice = function(begin, end)
     return this.array.slice(begin, end);
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -9525,7 +9525,7 @@ ChangeCounter.prototype.checkChanged = function()
     return false;
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -9747,7 +9747,7 @@ SyncPromise.complete = function(onComplete, onErrorOrPromise, promise)
 /**
  * This class contains utilities to help parse the data
  *
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -10082,7 +10082,7 @@ DataUtils.privateKeyPemToDer = function(privateKeyPem)
   return new Buffer(privateKey, 'base64');
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -10118,7 +10118,7 @@ DecodingException.prototype.name = "DecodingException";
 
 exports.DecodingException = DecodingException;
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -10267,7 +10267,7 @@ Tlv.getHighBytes = function(x)
   return (x - (x % 0x100000000)) / 0x100000000;
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -10511,7 +10511,7 @@ TlvEncoder.prototype.getOutput = function()
   return this.output.array.slice(this.output.array.length - this.length);
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -10871,7 +10871,7 @@ TlvDecoder.prototype.getSlice = function(beginOffset, endOffset)
   return this.input.slice(beginOffset, endOffset);
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -11096,7 +11096,7 @@ TlvStructureDecoder.prototype.seek = function(offset)
   this.offset_ = offset;
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -11235,7 +11235,7 @@ ProtobufTlv._encodeMessageValue = function(message, descriptor, encoder)
         encoder.writeNonNegativeIntegerTlv(tlvType, value);
       else if (field.type.name == "enum") {
         if (value < 0)
-          throw new Error("ProtobufTlv::encode: ENUM value may not be negative");
+          throw new Error("ProtobufTlv.encode: ENUM value may not be negative");
         encoder.writeNonNegativeIntegerTlv(tlvType, value);
       }
       else if (field.type.name == "bytes") {
@@ -11259,7 +11259,7 @@ ProtobufTlv._encodeMessageValue = function(message, descriptor, encoder)
         encoder.writeBlobTlv(tlvType, encoding);
       }
       else
-        throw new Error("ProtobufTlv::encode: Unknown field type");
+        throw new Error("ProtobufTlv.encode: Unknown field type");
     }
   }
 };
@@ -11349,7 +11349,7 @@ ProtobufTlv.toName = function(componentArray)
   return name;
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From code in ndn-cxx by Yingdi Yu <yingdi@cs.ucla.edu>
  *
@@ -11423,7 +11423,7 @@ OID.prototype.equals = function(other)
   return true;
 };
 /**
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -11766,7 +11766,7 @@ WireFormat.getDefaultWireFormat = function()
 // to avoid problems with cycles of require.
 var TlvWireFormat = require('./tlv-wire-format.js').TlvWireFormat;
 /**
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -11887,7 +11887,7 @@ ElementReader.prototype.onReceivedData = function(data)
   }
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -11923,7 +11923,7 @@ DerDecodingException.prototype.name = "DerDecodingException";
 
 exports.DerDecodingException = DerDecodingException;
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -11959,7 +11959,7 @@ DerEncodingException.prototype.name = "DerEncodingException";
 
 exports.DerEncodingException = DerEncodingException;
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From PyNDN der.py by Adeola Bannis <thecodemaiden@gmail.com>.
  * @author: Originally from code in ndn-cxx by Yingdi Yu <yingdi@cs.ucla.edu>
@@ -12018,7 +12018,7 @@ DerNodeType.UniversalString = 28;
 DerNodeType.CharacterString = 29;
 DerNodeType.BmpString = 30;
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From PyNDN der_node.py by Adeola Bannis <thecodemaiden@gmail.com>.
  * @author: Originally from code in ndn-cxx by Yingdi Yu <yingdi@cs.ucla.edu>
@@ -12143,7 +12143,7 @@ DerNode.prototype.decodeHeader = function(inputBuf, startIdx)
     while (lenCount > 0) {
       if (inputBuf.length <= idx)
         throw new DerDecodingException
-          ("DerNode::decodeHeader: The input length is too small");
+          ("DerNode.decodeHeader: The input length is too small");
       var b = inputBuf[idx];
       idx += 1;
       header.ensureLength(headerPosition + 1);
@@ -12214,7 +12214,7 @@ DerNode.parse = function(inputBuf, startIdx)
 
   if (inputBuf.length <= startIdx)
     throw new DerDecodingException
-      ("DerNode::parse: The input length is too small");
+      ("DerNode.parse: The input length is too small");
   var nodeType = inputBuf[startIdx] & 0xff;
   // Don't increment idx. We're just peeking.
 
@@ -12854,7 +12854,7 @@ DerNode.DerGeneralizedTime.prototype.toVal = function()
      parseInt(timeStr.substr(12, 2)));
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From PyNDN boost_info_parser by Adeola Bannis.
  *
@@ -13220,7 +13220,7 @@ BoostInfoParser.prototype.parseLine = function(line, context)
   throw runtime_error("BoostInfoParser: input line is malformed");
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -13277,7 +13277,7 @@ var MemoryContentCache = function MemoryContentCache
   this.registeredPrefixIdList = []; /**< elements are number */
   this.noStaleTimeCache = []; /**< elements are MemoryContentCache.Content */
   this.staleTimeCache = [];   /**< elements are MemoryContentCache.StaleTimeContent */
-  //StaleTimeContent::Compare contentCompare_;
+  //StaleTimeContent.Compare contentCompare_;
   this.emptyComponent = new Name.Component();
   this.pendingInterestTable = [];
 
@@ -13747,7 +13747,7 @@ MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMillisecon
          nowMilliseconds >= this.timeoutTimeMilliseconds;
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx util/segment-fetcher https://github.com/named-data/ndn-cxx
  *
@@ -14114,7 +14114,7 @@ SegmentFetcher.endsWithSegmentNumber = function(name)
   return name.size() >= 1 && name.get(-1).isSegment();
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -14178,7 +14178,7 @@ NdnRegexBackrefManager.prototype.getBackref = function(i)
   return this.backrefs_[i];
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -14336,7 +14336,7 @@ NdnRegexMatcherBase.prototype.recursiveMatch_ = function
   return false;
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -14403,7 +14403,7 @@ NdnRegexBackrefMatcher.prototype.compile_ = function()
 /** @ignore */
 var NdnRegexPatternListMatcher = require('./ndn-regex-pattern-list-matcher.js').NdnRegexPatternListMatcher;
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -14518,7 +14518,7 @@ NdnRegexComponentMatcher.prototype.compile_ = function()
   }
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -14629,7 +14629,7 @@ NdnRegexComponentSetMatcher.prototype.compile_ = function()
 
 /**
  * @param {number} index
- * @returns {number}
+ * @return {number}
  */
 NdnRegexComponentSetMatcher.prototype.extractComponent_ = function(index)
 {
@@ -14700,7 +14700,7 @@ NdnRegexComponentSetMatcher.prototype.compileMultipleComponents_ = function
 /** @ignore */
 var NdnRegexComponentMatcher = require('./ndn-regex-component-matcher.js').NdnRegexComponentMatcher;
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -14761,7 +14761,7 @@ NdnRegexPatternListMatcher.prototype.compile_ = function()
 /**
  * @param {number} index
  * @param {Array<number>} Update next[0].
- * @returns {boolean}
+ * @return {boolean}
  */
 NdnRegexPatternListMatcher.prototype.extractPattern_ = function(index, next)
 {
@@ -14816,7 +14816,7 @@ NdnRegexPatternListMatcher.prototype.extractPattern_ = function(index, next)
  * @param {string} left
  * @param {string} right
  * @param {number} index
- * @returns {number}
+ * @return {number}
  */
 NdnRegexPatternListMatcher.prototype.extractSubPattern_ = function
   (left, right, index)
@@ -14842,7 +14842,7 @@ NdnRegexPatternListMatcher.prototype.extractSubPattern_ = function
 
 /**
  * @param {number} index
- * @returns {number}
+ * @return {number}
  */
 NdnRegexPatternListMatcher.prototype.extractRepetition_ = function(index)
 {
@@ -14880,7 +14880,7 @@ NdnRegexPatternListMatcher.prototype.extractRepetition_ = function(index)
 var NdnRegexBackrefMatcher = require('./ndn-regex-backref-matcher.js').NdnRegexBackrefMatcher; /** @ignore */
 var NdnRegexRepeatMatcher = require('./ndn-regex-repeat-matcher.js').NdnRegexRepeatMatcher;
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -14936,7 +14936,7 @@ NdnRegexPseudoMatcher.prototype.resetMatchResult = function()
   this.matchResult_ = [];
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -15111,7 +15111,7 @@ NdnRegexRepeatMatcher.prototype.parseRepetition_ = function()
  * @param {Name} name
  * @param {number} offset
  * @param {number} len
- * @returns {boolean}
+ * @return {boolean}
  */
 NdnRegexRepeatMatcher.prototype.recursiveMatch2_ = function
   (repeat, name, offset, len)
@@ -15144,7 +15144,7 @@ NdnRegexRepeatMatcher.prototype.recursiveMatch2_ = function
 var NdnRegexBackrefMatcher = require('./ndn-regex-backref-matcher.js').NdnRegexBackrefMatcher; /** @ignore */
 var NdnRegexComponentSetMatcher = require('./ndn-regex-component-set-matcher.js').NdnRegexComponentSetMatcher;
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -15416,7 +15416,7 @@ NdnRegexTopMatcher.convertSpecialChar_ = function(str)
   return newStr;
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -15471,7 +15471,7 @@ Transport.prototype.isLocal = function(connectionInfo, onResult, onError)
   onError("Transport.isLocal is not implemented");
 };
 /**
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: Wentao Shang
  *
@@ -15631,7 +15631,7 @@ MicroForwarderTransport.prototype.send = function(buffer)
   this.sendObject(buffer.toJSON());
 };
 /**
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: Wentao Shang
  *
@@ -15797,7 +15797,7 @@ RuntimePortTransport.prototype.send = function(buffer)
   this.sendObject(buffer.toJSON());
 };
 /**
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Wentao Shang
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16037,7 +16037,7 @@ WebSocketTransport.prototype.close = function()
 }
 
 /**
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16059,7 +16059,7 @@ WebSocketTransport.prototype.close = function()
 exports.TcpTransport = require("./transport/web-socket-transport").WebSocketTransport;
 /**
  * This class represents a Name as an array of components where each is a byte array.
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Meki Cheraoui, Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17251,7 +17251,7 @@ var TlvEncoder = require('./encoding/tlv/tlv-encoder.js').TlvEncoder;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 /**
  * This class represents an NDN KeyLocator object.
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -17490,7 +17490,7 @@ var Sha256WithEcdsaSignature = require('./sha256-with-ecdsa-signature.js').Sha25
 var HmacWithSha256Signature = require('./hmac-with-sha256-signature.js').HmacWithSha256Signature;
 /**
  * This class represents an NDN Data MetaInfo object.
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -17731,7 +17731,7 @@ Object.defineProperty(MetaInfo.prototype, "finalBlockID",
     set: function(val) { this.setFinalBlockId(val); } });
 /**
  * This class represents an NDN Data Signature object.
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17875,7 +17875,7 @@ Sha256WithEcdsaSignature.prototype.getChangeCount = function()
 };
 /**
  * This class represents an NDN Data Signature object.
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -18038,7 +18038,7 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
     set: function(val) { this.setSignature(val); } });
 /**
  * This class represents an NDN Data Signature object.
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18183,7 +18183,7 @@ Object.defineProperty(GenericSignature.prototype, "signature",
     set: function(val) { this.setSignature(val); } });
 /**
  * This class represents an NDN Data Signature object.
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18321,7 +18321,7 @@ Object.defineProperty(HmacWithSha256Signature.prototype, "signature",
     set: function(val) { this.setSignature(val); } });
 /**
  * This class represents an NDN Data Signature object.
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18415,7 +18415,7 @@ Object.defineProperty(DigestSha256Signature.prototype, "signature",
     set: function(val) { this.setSignature(val); } });
 /**
  * This class represents an NDN Data object.
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -18798,7 +18798,7 @@ Object.defineProperty(Data.prototype, "content",
   { get: function() { return this.getContentAsBuffer(); },
     set: function(val) { this.setContent(val); } });
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18876,7 +18876,7 @@ InvalidArgumentException.prototype.name = "InvalidArgumentException";
 
 exports.InvalidArgumentException = InvalidArgumentException;
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -18932,7 +18932,7 @@ exports.DigestAlgorithm = DigestAlgorithm;
 
 DigestAlgorithm.SHA256 = 1;
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -18973,7 +18973,7 @@ KeyIdType.SHA256 = 1;
 // uniqueness of key names.
 KeyIdType.RANDOM = 2;
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -19193,7 +19193,7 @@ AesKeyParams.getDefaultSize = function() { return 64; };
 
 AesKeyParams.getType = function() { return KeyType.AES; };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/safe-bag.cpp
  *
@@ -19350,7 +19350,7 @@ SafeBag.makeSelfSignedCertificate_ = function
   return certificate;
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/signing-info.cpp
  *
@@ -19652,7 +19652,7 @@ SigningInfo.prototype.setValidityPeriod = function(validityPeriod)
  * Get the validity period for the signature info.
  * Note that the equivalent ndn-cxx method uses a semi-prepared SignatureInfo,
  * but this method only uses the ValidityPeriod from the SignatureInfo.
- * @returns {ValidityPeriod} The validity period.
+ * @return {ValidityPeriod} The validity period.
  */
 SigningInfo.prototype.getValidityPeriod = function()
 {
@@ -19712,7 +19712,7 @@ SigningInfo.prototype.reset = function(signerType)
   this.validityPeriod_ = new ValidityPeriod();
 };
 /**
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx src/security https://github.com/named-data/ndn-cxx
  *
@@ -19888,7 +19888,7 @@ ValidityPeriod.prototype.getChangeCount = function()
   return this.changeCount_;
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/verification-helpers.cpp
  *
@@ -20121,7 +20121,7 @@ VerificationHelpers.setVerifyUsesString_ = function()
   VerificationHelpers.verifyUsesString_ = (typeof hashResult === 'string');
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -20244,7 +20244,7 @@ PublicKey.prototype.getKeyDer = function()
 PublicKey.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
 PublicKey.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -20330,7 +20330,7 @@ CertificateExtension.prototype.getValue = function()
   return this.extensionValue;
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -20404,7 +20404,7 @@ CertificateSubjectDescription.prototype.getValue = function()
   return this.value;
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -20541,7 +20541,7 @@ Certificate.prototype.getPublicKeyInfo = function()
 
 /**
  * Get the public key DER encoding.
- * @returns {Blob} The DER encoding Blob.
+ * @return {Blob} The DER encoding Blob.
  * @throws Error if the public key is not set.
  */
 Certificate.prototype.getPublicKeyDer = function()
@@ -20738,7 +20738,7 @@ Certificate.to2DigitString = function(x)
   return result.length === 1 ? "0" + result : result;
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -20910,7 +20910,7 @@ IdentityCertificate.prototype.setPublicKeyName = function()
 };
 
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -21715,7 +21715,7 @@ IdentityStorage.prototype.deleteIdentityInfo = function(identityName)
 // Track the lastTimestamp so that each timestamp is unique.
 IdentityStorage.lastTimestamp = Math.floor(new Date().getTime() / 1000.0);
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21898,7 +21898,7 @@ IndexedDbIdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 
   if (keyName.size() === 0)
     return Promise.reject(new SecurityException(new Error
-      ("IndexedDbIdentityStorage::getKeyPromise: Empty keyName")));
+      ("IndexedDbIdentityStorage.getKeyPromise: Empty keyName")));
 
   return this.database.publicKey.get(keyName.toUri())
   .then(function(publicKeyEntry) {
@@ -21906,7 +21906,7 @@ IndexedDbIdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
       return Promise.resolve(new Blob(publicKeyEntry.keyDer));
     else
       return Promise.reject(new SecurityException(new Error
-        ("IndexedDbIdentityStorage::getKeyPromise: The key does not exist")));
+        ("IndexedDbIdentityStorage.getKeyPromise: The key does not exist")));
   });
 };
 
@@ -21995,13 +21995,13 @@ IndexedDbIdentityStorage.prototype.getCertificatePromise = function
         certificate.wireDecode(certificateEntry.encoding);
       } catch (ex) {
         return Promise.reject(new SecurityException(new Error
-          ("IndexedDbIdentityStorage::getCertificatePromise: The certificate cannot be decoded")));
+          ("IndexedDbIdentityStorage.getCertificatePromise: The certificate cannot be decoded")));
       }
       return Promise.resolve(certificate);
     }
     else
       return Promise.reject(new SecurityException(new Error
-        ("IndexedDbIdentityStorage::getCertificatePromise: The certificate does not exist")));
+        ("IndexedDbIdentityStorage.getCertificatePromise: The certificate does not exist")));
   });
 };
 
@@ -22410,7 +22410,7 @@ IndexedDbIdentityStorage.prototype.deleteIdentityInfoPromise = function
   });
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -22545,13 +22545,13 @@ MemoryIdentityStorage.prototype.getKeyPromise = function(keyName)
 {
   if (keyName.size() === 0)
     return SyncPromise.reject(new SecurityException(new Error
-      ("MemoryIdentityStorage::getKeyPromise: Empty keyName")));
+      ("MemoryIdentityStorage.getKeyPromise: Empty keyName")));
 
   var keyNameUri = keyName.toUri();
   var entry = this.keyStore[keyNameUri];
   if (entry === undefined)
     return SyncPromise.reject(new SecurityException(new Error
-      ("MemoryIdentityStorage::getKeyPromise: The key does not exist")));
+      ("MemoryIdentityStorage.getKeyPromise: The key does not exist")));
 
   return SyncPromise.resolve(entry.keyDer);
 };
@@ -22607,14 +22607,14 @@ MemoryIdentityStorage.prototype.getCertificatePromise = function
   var certificateNameUri = certificateName.toUri();
   if (this.certificateStore[certificateNameUri] === undefined)
     return SyncPromise.reject(new SecurityException(new Error
-      ("MemoryIdentityStorage::getCertificatePromise: The certificate does not exist")));
+      ("MemoryIdentityStorage.getCertificatePromise: The certificate does not exist")));
 
   var certificate = new IdentityCertificate();
   try {
     certificate.wireDecode(this.certificateStore[certificateNameUri]);
   } catch (ex) {
     return SyncPromise.reject(new SecurityException(new Error
-      ("MemoryIdentityStorage::getCertificatePromise: The certificate cannot be decoded")));
+      ("MemoryIdentityStorage.getCertificatePromise: The certificate cannot be decoded")));
   }
   return SyncPromise.resolve(certificate);
 };
@@ -22799,7 +22799,7 @@ MemoryIdentityStorage.prototype.deleteIdentityInfoPromise = function(identity)
     ("MemoryIdentityStorage.deleteIdentityInfoPromise is not implemented"));
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -22978,7 +22978,7 @@ PrivateKeyStorage.prototype.encrypt = function(keyName, data, isSymmetric)
 };
 
 /**
- * @brief Generate a symmetric key.
+ * Generate a symmetric key.
  * @param {Name} keyName The name of the key.
  * @param {KeyParams} params The parameters of the key.
  */
@@ -23118,7 +23118,7 @@ PrivateKeyStorage.bigIntegerToBuffer = function(bigInteger)
 PrivateKeyStorage.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
 PrivateKeyStorage.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -23489,7 +23489,7 @@ MemoryPrivateKeyStorage.prototype.doesKeyExistPromise = function
   return SyncPromise.resolve(result);
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -23737,7 +23737,7 @@ IndexedDbPrivateKeyStorage.transformName = function(keyName)
   return fileName.replace(/\//g, '%');
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -25277,7 +25277,7 @@ IdentityManager.prototype.checkTpmPromise_ = function(canonicalTpmLocator)
   });
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/certificate-container.cpp
  *
@@ -25466,7 +25466,7 @@ PibCertificateContainer.prototype.getPromise = function(certificateName, useSync
   });
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/key-container.cpp
  *
@@ -25656,7 +25656,7 @@ PibIdentityContainer.prototype.resetPromise = function(useSync)
   });
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/identity.cpp
  *
@@ -25901,7 +25901,7 @@ PibIdentity.prototype.lock_ = function()
   return this.impl_;
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/pib-impl.cpp
  *
@@ -26334,7 +26334,7 @@ PibImpl.prototype.getDefaultCertificateOfKeyPromise = function(keyName, useSync)
     ("PibImpl.getDefaultCertificateOfKeyPromise is not implemented"));
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/key-container.cpp
  *
@@ -26537,7 +26537,7 @@ PibKeyContainer.prototype.getKeyNames = function()
   return result;
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/key.cpp
  *
@@ -26833,7 +26833,7 @@ PibKey.prototype.lock_ = function()
   return this.impl_;
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/pib-memory.cpp
  *
@@ -27399,7 +27399,7 @@ PibMemory.prototype.getDefaultCertificateOfKeyPromise = function(keyName)
   return SyncPromise.resolve(new CertificateV2(certificate));
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/pib.cpp
  *
@@ -27451,9 +27451,10 @@ var Pib = function Pib(scheme, location, pibImpl)
   this.defaultIdentity_ = null;
   this.scheme_ = scheme;
   this.location_ = location;
-  // Must access this through getIdentitiesPromise_.
+  // Must call initializePromise_ before accessing this.
   this.identities_ = null;
   this.pibImpl_ = pibImpl;
+  this.isInitialized_ = false;
 
   if (pibImpl == null)
     throw new Error("The pibImpl is null");
@@ -27501,21 +27502,25 @@ Pib.prototype.getPibLocator = function()
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @returns {Promise|SyncPromise} A promise which fulfills when finished.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
  */
 Pib.prototype.setTpmLocatorPromise = function(tpmLocator, useSync)
 {
   var thisPib = this;
 
-  return this.pibImpl_.getTpmLocatorPromise(useSync)
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.pibImpl_.getTpmLocatorPromise(useSync);
+  })
   .then(function(pibTpmLocator) {
     if (tpmLocator == pibTpmLocator)
       return SyncPromise.resolve();
-
-    return thisPib.resetPromise_(useSync);
-  })
-  .then(function() {
-    return thisPib.pibImpl_.setTpmLocatorPromise(tpmLocator, useSync);
+    else {
+      return thisPib.resetPromise_(useSync)
+      .then(function() {
+        return thisPib.pibImpl_.setTpmLocatorPromise(tpmLocator, useSync);
+      });
+    }
   });
 };
 
@@ -27529,7 +27534,12 @@ Pib.prototype.setTpmLocatorPromise = function(tpmLocator, useSync)
  */
 Pib.prototype.getTpmLocatorPromise = function(useSync)
 {
-  return this.pibImpl_.getTpmLocatorPromise(useSync)
+  var thisPib = this;
+
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.pibImpl_.getTpmLocatorPromise(useSync);
+  })
   .then(function(tpmLocator) {
     if (tpmLocator == "")
       return SyncPromise.reject(new Pib.Error(new Error
@@ -27550,9 +27560,11 @@ Pib.prototype.getTpmLocatorPromise = function(useSync)
  */
 Pib.prototype.getIdentityPromise = function(identityName, useSync)
 {
-  return this.getIdentitiesPromise_(useSync)
-  .then(function(identities) {
-    return identities.getPromise(identityName, useSync);
+  var thisPib = this;
+
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.identities_.getPromise(identityName, useSync);
   });
 };
 
@@ -27600,15 +27612,13 @@ Pib.prototype.getDefaultIdentityPromise = function(useSync)
 {
   if (this.defaultIdentity_ == null) {
     var thisPib = this;
-    var identities;
 
-    return this.getIdentitiesPromise_(useSync)
-    .then(function(localIdentities) {
-      identities = localIdentities;
+    return this.initializePromise_(useSync)
+    .then(function() {
       return thisPib.pibImpl_.getDefaultIdentityPromise(useSync);
     })
     .then(function(defaultIdentity) {
-      return identities.getPromise(defaultIdentity, useSync);
+      return thisPib.identities_.getPromise(defaultIdentity, useSync);
     })
     .then(function(identity) {
       thisPib.defaultIdentity_ = identity;
@@ -27661,16 +27671,19 @@ Pib.prototype.resetPromise_ = function(useSync)
 {
   var thisPib = this;
 
-  return this.pibImpl_.clearIdentitiesPromise(useSync)
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.pibImpl_.clearIdentitiesPromise(useSync);
+  })
   .then(function() {
     return thisPib.pibImpl_.setTpmLocatorPromise("", useSync);
   })
   .then(function() {
     thisPib.defaultIdentity_ = null;
-    return thisPib.getIdentitiesPromise_(useSync)
+    return thisPib.initializePromise_(useSync)
   })
-  .then(function(identities) {
-    return identities.resetPromise(useSync);
+  .then(function() {
+    return thisPib.identities_.resetPromise(useSync);
   });
 };
 
@@ -27686,9 +27699,10 @@ Pib.prototype.resetPromise_ = function(useSync)
  */
 Pib.prototype.addIdentityPromise_ = function(identityName, useSync)
 {
-  return this.getIdentitiesPromise_(useSync)
-  .then(function(identities) {
-    return identities.addPromise(identityName, useSync);
+  var thisPib = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.identities_.addPromise(identityName, useSync);
   });
 };
 
@@ -27709,9 +27723,10 @@ Pib.prototype.removeIdentityPromise_ = function(identityName, useSync)
       this.defaultIdentity_.getName().equals(identityName))
     this.defaultIdentity_ = null;
 
-  return this.getIdentitiesPromise_(useSync)
-  .then(function(identities) {
-    return identities.removePromise(identityName, useSync);
+  var thisPib = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.identities_.removePromise(identityName, useSync);
   });
 };
 
@@ -27729,9 +27744,9 @@ Pib.prototype.setDefaultIdentityPromise_ = function(identityName, useSync)
 {
   var thisPib = this;
 
-  return this.getIdentitiesPromise_(useSync)
-  .then(function(identities) {
-    return identities.addPromise(identityName, useSync);
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisPib.identities_.addPromise(identityName, useSync);
   })
   .then(function(identity) {
     thisPib.defaultIdentity_ = identity;
@@ -27744,23 +27759,28 @@ Pib.prototype.setDefaultIdentityPromise_ = function(identityName, useSync)
 };
 
 /**
- * If this.identities_ is not null, return it. Otherwise, set it using
- * PibIdentityContainer.makePromise.
+ * If isInitialized_ is false, initialize identities_ using
+ * PibIdentityContainer.makePromise and set isInitialized_. However, if
+ * isInitialized_ is already true, do nothing. This must be called by each
+ * method before using this object. This is necessary because the constructor
+ * cannot perform async operations.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which returns the PibIdentityContainer.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
  */
-Pib.prototype.getIdentitiesPromise_ = function(useSync)
+Pib.prototype.initializePromise_ = function(useSync)
 {
-  if (this.identities_ != null)
-    return SyncPromise.resolve(this.identities_);
+  if (this.isInitialized_)
+    return SyncPromise.resolve();
 
   var thisPib = this;
   return PibIdentityContainer.makePromise(this.pibImpl_, useSync)
   .then(function(container) {
     thisPib.identities_ = container;
-    return SyncPromise.resolve(container);
+
+    thisPib.isInitialized_ = true;
+    return SyncPromise.resolve();
   });
 };
 
@@ -27768,7 +27788,7 @@ Pib.prototype.getIdentitiesPromise_ = function(useSync)
  /** @ignore */
 var PibIdentityContainer = require('./pib-identity-container.js').PibIdentityContainer;
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/detail/identity-impl.cpp
  *
@@ -27995,7 +28015,7 @@ PibIdentityImpl.prototype.getDefaultKeyPromise = function(useSync)
     return SyncPromise.resolve(this.defaultKey_);
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/pib/detail/key-impl.cpp
  *
@@ -28291,7 +28311,7 @@ PibKeyImpl.prototype.getDefaultCertificatePromise = function(useSync)
     return SyncPromise.resolve(thisImpl.defaultCertificate_);
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -28337,7 +28357,7 @@ var ValidationRequest = function ValidationRequest
 
 exports.ValidationRequest = ValidationRequest;
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -28524,7 +28544,7 @@ PolicyManager.verifySignature = function
       ("PolicyManager.verify: Signature type is unknown"));
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From PyNDN certificate_cache.py by Adeola Bannis.
  * Originally from Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>.
@@ -28607,7 +28627,7 @@ CertificateCache.prototype.reset = function()
   this.cache = {};
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From PyNDN config_policy_manager.py by Adeola Bannis.
  * Originally from Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>.
@@ -29797,7 +29817,7 @@ ConfigPolicyManager.TrustAnchorRefreshManager.prototype.refreshAnchors = functio
   }
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -29913,7 +29933,7 @@ NoVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
   return new Name();
 };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -30238,7 +30258,7 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
     onComplete(new Blob(), "The signature KeyLocator doesn't have a key name");
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/tpm/back-end.cpp
  *
@@ -30414,7 +30434,7 @@ TpmBackEnd.prototype.deleteKeyPromise = function(keyName, useSync)
 
 /**
  * Import an encoded private key with name keyName in PKCS #8 format, possibly
- * passwprd-encrypted.
+ * password-encrypted.
  * @param {Name} keyName The name of the key to use in the TPM.
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
@@ -30545,7 +30565,7 @@ TpmBackEnd.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
 
 /**
  * A protected method to import an encoded private key with name keyName in
- * PKCS #8 format, possibly passwprd-encrypted.
+ * PKCS #8 format, possibly password-encrypted.
  * @param {Name} keyName The name of the key to use in the TPM.
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
@@ -30566,7 +30586,7 @@ TpmBackEnd.prototype.doImportKeyPromise_ = function
     ("TpmBackEnd.doImportKeyPromise_ is not implemented"));
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/tpm/back-end-mem.cpp
  *
@@ -30696,7 +30716,7 @@ TpmBackEndMemory.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
 
 /**
  * A protected method to import an encoded private key with name keyName in
- * PKCS #8 format, possibly passwprd-encrypted.
+ * PKCS #8 format, possibly password-encrypted.
  * @param {Name} keyName The name of the key to use in the TPM.
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
@@ -30728,7 +30748,7 @@ TpmBackEndMemory.prototype.doImportKeyPromise_ = function
   }
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/tpm/key-handle.cpp
  *
@@ -30852,7 +30872,7 @@ TpmKeyHandle.prototype.doDecryptPromise_ = function(cipherText, useSync)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @returns {Blob} The public key encoding Blob.
+ * @return {Blob} The public key encoding Blob.
  */
 TpmKeyHandle.prototype.doDerivePublicKey_ = function(useSync)
 {
@@ -30860,7 +30880,7 @@ TpmKeyHandle.prototype.doDerivePublicKey_ = function(useSync)
     ("TpmKeyHandle.doDerivePublicKey_ is not implemented"));
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/tpm/key-handle-mem.cpp
  *
@@ -30957,7 +30977,7 @@ TpmKeyHandleMemory.prototype.doDecryptPromise_ = function(cipherText, useSync)
 
 /**
  * A protected method to do the work of derivePublicKey().
- * @returns {Blob} The public key encoding Blob.
+ * @return {Blob} The public key encoding Blob.
  */
 TpmKeyHandle.prototype.doDerivePublicKey_ = function()
 {
@@ -30969,7 +30989,7 @@ TpmKeyHandle.prototype.doDerivePublicKey_ = function()
   }
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From https://github.com/named-data/ndn-cxx/blob/master/src/security/transform/private-key.cpp
  *
@@ -31163,7 +31183,7 @@ TpmPrivateKey.prototype.loadPkcs8 = function(encoding, keyType)
 
 /**
  * Get the encoded public key for this private key.
- * @returns {Blob} The public key encoding Blob.
+ * @return {Blob} The public key encoding Blob.
  * @throws TpmPrivateKey.Error if no private key is loaded, or error converting
  * to a public key.
  */
@@ -31512,7 +31532,7 @@ TpmPrivateKey.bigIntegerToBuffer = function(bigInteger)
 TpmPrivateKey.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
 TpmPrivateKey.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/tpm/tpm.cpp
  *
@@ -31741,7 +31761,7 @@ Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
 
 /**
  * Import an encoded private key with name keyName in PKCS #8 format, possibly
- * passwprd-encrypted. This should only be called by KeyChain.
+ * password-encrypted. This should only be called by KeyChain.
  * @param {Name} keyName The name of the key to use in the TPM.
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
@@ -31752,17 +31772,12 @@ Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which return true for success, false 
- * if importing fails.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished, or a
+ * promise rejected with TpmBackEnd.Error for an error importing the key.
  */
 Tpm.prototype.importPrivateKeyPromise_ = function(keyName, pkcs8, password, useSync)
 {
-  return this.backEnd_.importKeyPromise(keyName, pkcs8, password, useSync)
-  .then(function() {
-    return SyncPromise.resolve(true);
-  }, function() {
-    return SyncPromise.resolve(false);
-  });
+  return this.backEnd_.importKeyPromise(keyName, pkcs8, password, useSync);
 };
 
 /**
@@ -31772,7 +31787,7 @@ Tpm.prototype.importPrivateKeyPromise_ = function(keyName, pkcs8, password, useS
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which return the TpmKeyHandle in the
+ * @return {Promise|SyncPromise} A promise which returns the TpmKeyHandle in the
  * keys_ cache, or null if no key exists with name keyName.
  */
 Tpm.prototype.findKeyPromise_ = function(keyName, useSync)
@@ -31795,7 +31810,7 @@ Tpm.prototype.findKeyPromise_ = function(keyName, useSync)
   });
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/certificate-cache.cpp
  *
@@ -31877,7 +31892,7 @@ CertificateCacheV2.prototype.insert = function(certificate)
  * certificate (ordered by name) where the Name is a prefix of the certificate
  * name. If an Interest, return the first certificate (ordered by Name) where
  * interest.matchesData(certificate) .
- * @returns {CertificateV2}  The found certificate, or null if not found. You 
+ * @return {CertificateV2}  The found certificate, or null if not found. You 
  * must not modify the returned object. If you need to modify it, then make a
  * copy.
  * @note ChildSelector is not supported.
@@ -31962,7 +31977,7 @@ CertificateCacheV2.prototype.clear = function()
 };
 /**
  * Get the default maximum lifetime (1 hour).
- * @returns {number} The lifetime in milliseconds.
+ * @return {number} The lifetime in milliseconds.
  */
 CertificateCacheV2.getDefaultLifetime = function() { return 3600.0 * 1000; };
 
@@ -31983,7 +31998,7 @@ CertificateCacheV2.prototype.findFirstByName_ = function(name)
   return -1;
 };
 /**
- * Copyright (C) 2017 Regents of the University of California.
+ * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/certificate.hpp
  *
@@ -32161,7 +32176,7 @@ CertificateV2.prototype.getIssuerId = function()
 };
 
 /**
- * Get public key DER encoding.
+ * Get the public key DER encoding.
  * @return {Blob} The DER encoding Blob.
  * @throws CertificateV2.Error If the public key is not set.
  */
@@ -32287,7 +32302,7 @@ CertificateV2.isValidName = function(certificateName)
 /**
  * Extract the identity namespace from certificateName.
  * @param {Name} certificateName The name of the certificate.
- * @returns {Name} The identity namespace as a new Name.
+ * @return {Name} The identity namespace as a new Name.
  */
 CertificateV2.extractIdentityFromCertName = function(certificateName)
 {
@@ -32324,7 +32339,7 @@ CertificateV2.MIN_CERT_NAME_LENGTH = 4;
 CertificateV2.MIN_KEY_NAME_LENGTH = 2;
 CertificateV2.KEY_COMPONENT = new Name.Component("KEY");
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
@@ -32584,6 +32599,13 @@ KeyChain.prototype.getTpm = function()
 
   return this.tpm_;
 };
+
+/**                                                                                                                                                
+ * Get the flag set by the constructor if this is a security v1 or v2 KeyChain.
+ * @return (boolean} True if this is a security v1 KeyChain, false if this is a
+ * security v2 KeyChain.
+ */
+KeyChain.prototype.getIsSecurityV1 = function() { return this.isSecurityV1_; };
 
 // Identity management
 
@@ -33597,7 +33619,7 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password, useSync)
       (keyName, safeBag.getPrivateKeyBag().buf(), password, useSync)
     .catch(function(err) {
       return SyncPromise.reject(new KeyChain.Error(new Error
-        ("Failed to import private key `" + keyName.toUri() + "`")));
+        ("Failed to import private key `" + keyName.toUri() + "`: " + err)));
     });
   })
   .then(function() {
@@ -34569,7 +34591,7 @@ KeyChain.createPib_ = function(pibLocator)
 /**
  * Create a Tpm according to the tpmLocator.
  * @param {string} tpmLocator The TPM locator, e.g., "tpm-memory:".
- * @returns {Tpm} A new Tpm object.
+ * @return {Tpm} A new Tpm object.
  */
 KeyChain.createTpm_ = function(tpmLocator)
 {
@@ -34959,7 +34981,7 @@ LocatorMismatchError.prototype.name = "LocatorMismatchError";
 exports.LocatorMismatchError = LocatorMismatchError;
 /**
  * This class represents an Interest Exclude.
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -35162,7 +35184,7 @@ Exclude.prototype.getChangeCount = function()
 };
 /**
  * This class represents Interest Objects
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -36006,7 +36028,7 @@ Object.defineProperty(Interest.prototype, "nonce",
   { get: function() { return this.getNonceAsBuffer(); },
     set: function(val) { this.setNonce(val); } });
 /**
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -36103,7 +36125,7 @@ ForwardingFlags.prototype.setChildInherit = function(value) { this.childInherit 
  */
 ForwardingFlags.prototype.setCapture = function(value) { this.capture = value; };
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -36375,7 +36397,7 @@ ControlParameters.prototype.setExpirationPeriod = function(expirationPeriod)
   this.expirationPeriod = expirationPeriod;
 };
 /**
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -36527,7 +36549,7 @@ ControlResponse.prototype.setBodyAsControlParameters = function(controlParameter
   return this;
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -36666,7 +36688,7 @@ InterestFilter.makePattern = function(regexFilter)
   return pattern;
 };
 /**
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -36904,7 +36926,7 @@ DelegationSet.prototype.getChangeCount = function()
   return this.changeCount_;
 };
 /**
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -37054,7 +37076,7 @@ Link.prototype.encodeContent = function(wireFormat)
   this.getMetaInfo().setType(ContentType.LINK);
 };
 /**
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx nack.hpp https://github.com/named-data/ndn-cxx/blob/master/src/lp/nack.hpp
  *
@@ -37158,7 +37180,7 @@ NetworkNack.getFirstHeader = function(lpPacket)
   return null;
 };
 /**
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -38470,7 +38492,7 @@ Tlv0_2WireFormat.decodeDelegationSet_ = function
   }
 };
 /**
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -38523,7 +38545,7 @@ Tlv0_1_1WireFormat.get = function()
   return Tlv0_1_1WireFormat.instance;
 };
 /**
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -38577,7 +38599,7 @@ Tlv0_1WireFormat.get = function()
   return Tlv0_1WireFormat.instance;
 };
 /**
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -38637,7 +38659,7 @@ TlvWireFormat.get = function()
 WireFormat.setDefaultWireFormat(TlvWireFormat.get());
 /**
  * This file contains utilities to help encode and decode NDN objects.
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * author: Meki Cheraoui
  *
  * This program is free software: you can redistribute it and/or modify
@@ -38819,7 +38841,7 @@ var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSu
  */
 function encodeToBinaryInterest(interest) { return interest.wireEncode().buf(); }
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/algo/aes https://github.com/named-data/ndn-group-encrypt
  *
@@ -39041,7 +39063,7 @@ AesAlgorithm.encrypt = function(keyBits, plainData, params)
 
 AesAlgorithm.BLOCK_SIZE = 16;
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/encrypt-params https://github.com/named-data/ndn-group-encrypt
  *
@@ -39148,7 +39170,7 @@ EncryptParams.prototype.setInitialVector = function(initialVector)
   return this;
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/encryptor https://github.com/named-data/ndn-group-encrypt
  *
@@ -39387,7 +39409,7 @@ Encryptor.encryptAsymmetricPromise_ = function
     return SyncPromise.reject(new Error("Unsupported encryption method"));
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/algo/rsa https://github.com/named-data/ndn-group-encrypt
  *
@@ -39706,7 +39728,7 @@ RsaAlgorithm.getRsaPrivateKeyDer = function(pkcs8PrivateKeyDer)
   return pkcs8Children[2].getPayload();
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/consumer-db https://github.com/named-data/ndn-group-encrypt
  *
@@ -39809,7 +39831,7 @@ ConsumerDb.prototype.deleteKeyPromise = function(keyName, useSync)
     ("ConsumerDb.addKeyPromise is not implemented"));
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/consumer https://github.com/named-data/ndn-group-encrypt
  *
@@ -40321,7 +40343,7 @@ Consumer.prototype.getDecryptionKeyPromise_ = function(decryptionKeyName)
 
 Consumer.NO_LINK = new Link();
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/decrypt-key https://github.com/named-data/ndn-group-encrypt
  *
@@ -40372,7 +40394,7 @@ exports.DecryptKey = DecryptKey;
  */
 DecryptKey.prototype.getKeyBits = function() { return this.keyBits_; };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/error-code https://github.com/named-data/ndn-group-encrypt
  *
@@ -40411,7 +40433,7 @@ EncryptError.ErrorCode = {
   General:                     100
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/encrypt-key https://github.com/named-data/ndn-group-encrypt
  *
@@ -40462,7 +40484,7 @@ exports.EncryptKey = EncryptKey;
  */
 EncryptKey.prototype.getKeyBits = function() { return this.keyBits_; };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/encrypted-content https://github.com/named-data/ndn-group-encrypt
  *
@@ -40637,7 +40659,7 @@ EncryptedContent.prototype.wireDecode = function(input, wireFormat)
     wireFormat.decodeEncryptedContent(this, input, true);
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/group-manager-db https://github.com/named-data/ndn-group-encrypt
  *
@@ -40940,7 +40962,7 @@ GroupManagerDb.prototype.deleteMemberPromise = function(identity, useSync)
     ("GroupManagerDb.deleteMemberPromise is not implemented"));
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/group-manager https://github.com/named-data/ndn-group-encrypt
  *
@@ -41404,7 +41426,7 @@ GroupManager.prototype.createDKeyDataPromise_ = function
 
 GroupManager.MILLISECONDS_IN_HOUR = 3600 * 1000;
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/interval https://github.com/named-data/ndn-group-encrypt
  *
@@ -41620,7 +41642,7 @@ Interval.prototype.isEmpty = function()
   return this.startTime_ == this.endTime_;
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/producer-db https://github.com/named-data/ndn-group-encrypt
  *
@@ -41752,7 +41774,7 @@ ProducerDb.getFixedTimeSlot = function(timeSlot)
   return Math.floor(Math.round(timeSlot) / 3600000.0);
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/producer https://github.com/named-data/ndn-group-encrypt
  *
@@ -42512,7 +42534,7 @@ Producer.START_TIME_STAMP_INDEX = -2;
 Producer.END_TIME_STAMP_INDEX = -1;
 Producer.NO_LINK = new Link();
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/repetitive-interval https://github.com/named-data/ndn-group-encrypt
  *
@@ -42824,7 +42846,7 @@ RepetitiveInterval.toDateOnlyMilliseconds_ = function(timePoint)
 RepetitiveInterval.MILLISECONDS_IN_HOUR = 3600 * 1000;
 RepetitiveInterval.MILLISECONDS_IN_DAY = 24 * 3600 * 1000;
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/schedule https://github.com/named-data/ndn-group-encrypt
  *
@@ -43187,7 +43209,7 @@ Schedule.fromIsoString = function(timeString)
      parseInt(timeString.substr(13, 2)));
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -43309,7 +43331,7 @@ IndexedDbConsumerDb.prototype.deleteKeyPromise = function(keyName, useSync)
   });
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -43882,7 +43904,7 @@ IndexedDbGroupManagerDb.prototype.getScheduleIdPromise_ = function(name)
   });
 };
 /**
- * Copyright (C) 2015-2017 Regents of the University of California.
+ * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -44039,7 +44061,7 @@ IndexedDbProducerDb.prototype.deleteContentKeyPromise = function(timeSlot, useSy
 };
 /**
  * This class represents the digest tree for chrono-sync2013.
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Zhehao Wang, based on Jeff T.'s implementation in ndn-cpp
  *
  * This program is free software: you can redistribute it and/or modify
@@ -44294,7 +44316,7 @@ ChronoSync2013.prototype.shutdown = function()
  * A SyncState holds the values of a sync state message which is passed to the
  * onReceivedSyncState callback which was given to the ChronoSyn2013
  * constructor. Note: this has the same info as the Protobuf class
- * Sync::SyncState, but we make a separate class so that we don't need the
+ * Sync.SyncState, but we make a separate class so that we don't need the
  * Protobuf definition in the ChronoSync API.
  */
 ChronoSync2013.SyncState = function ChronoSync2013SyncState
@@ -44798,7 +44820,7 @@ ChronoSync2013.prototype.dummyOnData = function(interest, data)
   console.log("*** dummyOnData called. ***");
 };/**
  * This class represents the digest tree for chrono-sync2013.
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Zhehao Wang, based on Jeff T.'s implementation in ndn-cpp
  *
  * This program is free software: you can redistribute it and/or modify
@@ -45106,7 +45128,7 @@ var SyncStateProto = {
 
 exports.SyncStateProto = SyncStateProto;
 /**
- * Copyright (C) 2014-2017 Regents of the University of California.
+ * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -45197,7 +45219,7 @@ CommandInterestGenerator.prototype.generate = function
   });
 };
 /**
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -45344,7 +45366,7 @@ InterestFilterTable.prototype.unsetInterestFilter = function(interestFilterId)
       ("unsetInterestFilter: Didn't find interestFilterId " + interestFilterId);
 };
 /**
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -45614,7 +45636,7 @@ PendingInterestTable.prototype.removePendingInterest = function
   }
 };
 /**
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -45771,7 +45793,7 @@ RegisteredPrefixTable._Entry.prototype.getRelatedInterestFilterId = function()
   return this.relatedInterestFilterId;
 };
 /**
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx fields.hpp https://github.com/named-data/ndn-cxx/blob/master/src/lp/fields.hpp
  *
@@ -45835,7 +45857,7 @@ IncomingFaceId.getFirstHeader = function(lpPacket)
   return null;
 };
 /**
- * Copyright (C) 2016-2017 Regents of the University of California.
+ * Copyright (C) 2016-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx packet.hpp https://github.com/named-data/ndn-cxx/blob/master/src/lp/packet.hpp
  *
@@ -45932,7 +45954,7 @@ LpPacket.prototype.addHeaderField = function(headerField)
 };
 /**
  * This class represents the top-level object for communicating with an NDN host.
- * Copyright (C) 2013-2017 Regents of the University of California.
+ * Copyright (C) 2013-2018 Regents of the University of California.
  * @author: Meki Cherkaoui, Jeff Thompson <jefft0@remap.ucla.edu>, Wentao Shang
  *
  * This program is free software: you can redistribute it and/or modify
