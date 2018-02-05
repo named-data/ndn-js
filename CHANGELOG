@@ -1,5 +1,5 @@
-Interim changes since NDN-JS v0.13.0 (2018-01-16)
--------------------------------------------------
+NDN-JS v0.14.0 (2018-02-05)
+---------------------------
 
 Bug fixes
 * https://redmine.named-data.net/issues/4023 Ported the latest NDN regex code
@@ -16,6 +16,7 @@ Changes
   Updated SelfVerifyPolicyManager to support security v2 PibImpl,
   Updated examples to use the security v2 KeyChain.
   Added security v2 unit and integration tests.
+  (The security v2 Validator will be available soon.)
 * https://redmine.named-data.net/issues/4251 Added Interest get/setForwardingHint.
 
 Deprecated
