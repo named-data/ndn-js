@@ -129,7 +129,7 @@ TpmBackEndMemory.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
 
 /**
  * A protected method to import an encoded private key with name keyName in
- * PKCS #8 format, possibly passwprd-encrypted.
+ * PKCS #8 format, possibly password-encrypted.
  * @param {Name} keyName The name of the key to use in the TPM.
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
