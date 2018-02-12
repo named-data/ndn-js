@@ -21,7 +21,7 @@
 /** @ignore */
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
-var LOG = require('./log.js').Log.LOG;
+var LOG = require('./log.js').Log.LOG; /** @ignore */
 var DecodingException = require('./encoding/decoding-exception.js').DecodingException;
 
 /**
