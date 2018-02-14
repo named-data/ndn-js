@@ -78,6 +78,7 @@ exports.TpmBackEndMemory = require('./js/security/tpm/tpm-back-end-memory.js').T
 exports.CertificateV2 = require('./js/security/v2/certificate-v2.js').CertificateV2;
 exports.CertificateCacheV2 = require('./js/security/v2/certificate-cache-v2.js').CertificateCacheV2;
 exports.KeyChain = require('./js/security/key-chain.js').KeyChain;
+exports.ValidatorNull = require('./js/security/validator-null.js').ValidatorNull;
 exports.AesAlgorithm = require('./js/encrypt/algo/aes-algorithm.js').AesAlgorithm;
 exports.EncryptAlgorithmType = require('./js/encrypt/algo/encrypt-params.js').EncryptAlgorithmType;
 exports.EncryptParams = require('./js/encrypt/algo/encrypt-params.js').EncryptParams;
