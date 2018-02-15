@@ -132,7 +132,7 @@ TrustAnchorContainer.prototype.insert = function
 TrustAnchorContainer.prototype.clear = function()
 {
   this.groups_ = {};
-  this.anchors_ = {};
+  this.anchors_.clear();
 };
 
 /**
