@@ -146,7 +146,7 @@ Validator.prototype.validate = function
         state.bypassValidation_();
       else
         // We need to fetch the key and validate it.
-        thisValidator.requestCertificate(certificateRequest, state);
+        thisValidator.requestCertificate_(certificateRequest, state);
     });
 };
 
