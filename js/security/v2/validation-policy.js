@@ -53,9 +53,9 @@ exports.ValidationPolicy = ValidationPolicy;
  * @param {ValidationPolicy} innerPolicy
  * @throws Error if the innerPolicy is null.
  */
-ValidationPolicy.prototype.hasOutcome = function(innerPolicy)
+ValidationPolicy.prototype.setInnerPolicy = function(innerPolicy)
 { 
-  if (this.innerPolicy == null)
+  if (innerPolicy == null)
     throw new Error("The innerPolicy argument cannot be null");
 
   if (this.validator_ != null)
