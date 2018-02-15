@@ -136,7 +136,7 @@ ValidationPolicy.prototype.checkPolicy = function
 ValidationPolicy.prototype.checkCertificatePolicy = function
   (certificate, state, continueValidation)
 {
-  checkPolicy(certificate, state, continueValidation);
+  this.checkPolicy(certificate, state, continueValidation);
 };
 
 /** Extract the KeyLocator Name from a Data or signed Interest packet.
