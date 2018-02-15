@@ -20,8 +20,9 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var fs = require("fs");
+var Name = require('../../..').Name;
 var KeyChain = require('../../..').KeyChain;
-var Pib = require('../../..').Pib;
 var CertificateV2 = require('../../..').CertificateV2;
 var SigningInfo = require('../../..').SigningInfo;
 var ValidityPeriod = require('../../..').ValidityPeriod;
@@ -30,11 +31,37 @@ var ContentType = require('../../..').ContentType;
 var IdentityManagementFixture = function IdentityManagementFixture()
 {
   this.keyChain_ = new KeyChain("pib-memory:", "tpm-memory:");
-  this.identityNames_ = [];
-  this.certificateFiles_ = [];
+  // The object keys are the set of identity name URIs, and each value is true.
+  this.identityNameUris_ = {};
+  // The object keys are the set of file paths, and each value is true.
+  this.certificateFiles_ = {};
 };
 
 exports.IdentityManagementFixture = IdentityManagementFixture;
+
+/**
+ * Save the certificate Data packet to the file.
+ * @param {Data} data The certificate Data packet.
+ * @param {String} filePath The file path to save to.
+ * @returns {boolean} True for success, false for failure.
+ */
+IdentityManagementFixture.prototype.saveCertificateToFile = function
+  (data, filePath)
+{
+  this.certificateFiles_[filePath] = true;
+
+  try {
+    var encoding = data.wireEncode();
+    var encodedCertificate = encoding.buf().toString('base64');
+
+    fs.writeFileSync(filePath, encodedCertificate);
+
+    return true;
+  }
+  catch (ex) {
+    return false;
+  }
+};
 
 /**
  * Add an identity for the identityName.
@@ -49,18 +76,91 @@ IdentityManagementFixture.prototype.addIdentity = function(identityName, params)
     params = KeyChain.getDefaultKeyParams();
 
   var identity = this.keyChain_.createIdentityV2(identityName, params);
-  if (this.identityNamesIndexOf_(identityName) < 0)
-    this.identityNames_.push(identityName);
+  this.identityNameUris_[identityName.toUri()] = true;
   return identity;
 };
 
-// This is needed because Array indexOf doesn't work for Name objects.
-IdentityManagementFixture.prototype.identityNamesIndexOf_ = function(name)
+/**
+ *  Save the identity's certificate to a file.
+ *  @param {PibIdentity} identity The PibIdentity.
+ *  @param {String} filePath The file path, which should be writable.
+ *  @return {boolean} True if successful.
+ */
+IdentityManagementFixture.prototype.saveCertificate = function(identity, filePath)
 {
-  for (var i = 0; i < this.identityNames_.length; ++i) {
-    if (this.identityNames_[i].equals(name))
-      return i;
+  try {
+    var certificate = identity.getDefaultKey().getDefaultCertificate();
+    return this.saveCertificateToFile(certificate, filePath);
   }
+  catch (ex) {
+    return false;
+  }
+};
 
-  return -1;
+/**
+ * Issue a certificate for subIdentityName signed by issuer. If the identity
+ * does not exist, it is created. A new key is generated as the default key
+ * for the identity. A default certificate for the key is signed by the
+ * issuer using its default certificate.
+ * @param {Name} subIdentityName The name to issue the certificate for.
+ * @param {PibIdentity} issuer The identity of the signer.
+ * @param {KeyParams} params (optional) The key parameters if a key needs to be
+ * generated for the identity. If omitted, use KeyChain.getDefaultKeyParams().
+ * @return {PibIdentity} The sub identity.
+ */
+IdentityManagementFixture.prototype.addSubCertificate = function
+  (subIdentityName, issuer, params)
+{
+  if (params == undefined)
+    params = KeyChain.getDefaultKeyParams();
+
+  var subIdentity = this.addIdentity(subIdentityName, params);
+
+  var request = subIdentity.getDefaultKey().getDefaultCertificate();
+
+  request.setName(request.getKeyName().append("parent").appendVersion(1));
+
+  var certificateParams = new SigningInfo(issuer);
+  // Validity period of 20 years.
+  var now = new Date().getTime();
+  certificateParams.setValidityPeriod
+    (new ValidityPeriod(now, now + 20 * 365 * 24 * 3600 * 1000.0));
+
+  // Skip the AdditionalDescription.
+
+  this.keyChain_.sign(request, certificateParams);
+  this.keyChain_.setDefaultCertificate(subIdentity.getDefaultKey(), request);
+
+  return subIdentity;
+};
+
+/**
+ * Add a self-signed certificate made from the key and issuer ID.
+ * @param {PibKey} key The key for the certificate.
+ * @param {String} issuerId The issuer ID name component for the certificate name.
+ * @return {CertificateV2} The new certificate.
+ */
+IdentityManagementFixture.prototype.addCertificate = function(key, issuerId)
+{
+  var certificateName = new Name(key.getName());
+  certificateName.append(issuerId).appendVersion(3);
+  var certificate = new CertificateV2();
+  certificate.setName(certificateName);
+
+  // Set the MetaInfo.
+  certificate.getMetaInfo().setType(ContentType.KEY);
+  // One hour.
+  certificate.getMetaInfo().setFreshnessPeriod(3600 * 1000.);
+
+  // Set the content.
+  certificate.setContent(key.getPublicKey());
+
+  var params = new SigningInfo(key);
+  // Validity period of 10 days.
+  var now = new Date().getTime();
+  params.setValidityPeriod
+    (new ValidityPeriod(now, now + 10 * 24 * 3600 * 1000.0));
+
+  this.keyChain_.sign(certificate, params);
+  return certificate;
 };
