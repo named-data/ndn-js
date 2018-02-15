@@ -202,8 +202,8 @@ TrustAnchorContainer.prototype.getGroup = function(groupId)
  * @return {number} The number of trust anchors.
  */
 TrustAnchorContainer.prototype.size = function()
-{
-  return Object.keys(this.anchors_).length;
+{ 
+  return this.anchors_.size();
 };
 
 TrustAnchorContainer.AnchorContainer_ = function TrustAnchorContainerAnchorContainer()
@@ -249,7 +249,7 @@ TrustAnchorContainer.AnchorContainer_.prototype.add = function(certificate)
 TrustAnchorContainer.AnchorContainer_.prototype.remove = function(certificateName)
 {
   for (var i = 0; i < this.anchorsByName_.length; ++i) {
-    if (this.anchorsByName_[i].name.equals(name)) {
+    if (this.anchorsByName_[i].name.equals(certificateName)) {
       this.anchorsByName_.splice(i, 1);
       return;
     }
