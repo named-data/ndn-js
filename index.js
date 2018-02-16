@@ -48,6 +48,7 @@ exports.DigestAlgorithm = require('./js/security/security-types.js').DigestAlgor
 exports.EncryptMode = require('./js/security/security-types.js').EncryptMode;
 exports.SafeBag = require('./js/security/safe-bag.js').SafeBag;
 exports.SigningInfo = require('./js/security/signing-info.js').SigningInfo;
+exports.ValidatorConfigError = require('./js/security/validator-config-error.js').ValidatorConfigError;
 exports.ValidityPeriod = require('./js/security/validity-period.js').ValidityPeriod;
 exports.VerificationHelpers = require('./js/security/verification-helpers.js').VerificationHelpers;
 exports.CertificateExtension = require('./js/security/certificate/certificate-extension.js').CertificateExtension;
