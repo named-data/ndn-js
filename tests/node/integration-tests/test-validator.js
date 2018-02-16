@@ -22,6 +22,7 @@
 
 var assert = require("assert");
 var Name = require('../../..').Name;
+var Interest = require('../../..').Interest;
 var Data = require('../../..').Data;
 var NetworkNack = require('../../..').NetworkNack;
 var ContentType = require('../../..').ContentType;
@@ -306,5 +307,136 @@ describe ("TestValidator", function() {
     this.fixture_.keyChain_.sign(data, new SigningInfo(key1));
     this.validateExpectFailure(data, "Should fail since the certificate chain loops");
     assert.equal(3, this.fixture_.face_.sentInterests_.length);
+  });
+});
+
+var ValidationPolicySimpleHierarchyForInterestOnly =
+  function ValidationPolicySimpleHierarchyForInterestOnly()
+{
+  // Call the base constructor.
+  ValidationPolicySimpleHierarchy.call(this);
+};
+
+ValidationPolicySimpleHierarchyForInterestOnly.prototype =
+  new ValidationPolicySimpleHierarchy();
+ValidationPolicySimpleHierarchyForInterestOnly.prototype.name =
+  "ValidationPolicySimpleHierarchyForInterestOnly";
+
+ValidationPolicySimpleHierarchyForInterestOnly.prototype.checkPolicy = function
+  (dataOrInterest, state, continueValidation)
+{
+  if (dataOrInterest instanceof Data)
+    continueValidation(null, state);
+  else
+    // Call the base method for the Interest.
+    ValidationPolicySimpleHierarchy.prototype.checkPolicy.call
+      (this, dataOrInterest, state, continueValidation);
+};
+
+describe ("TestValidatorInterestOnly", function() {
+  beforeEach(function() {
+    this.fixture_ = new HierarchicalValidatorFixture
+      (new ValidationPolicySimpleHierarchyForInterestOnly());
+
+    /**
+     * Call fixture_.validator_.validate and if it calls the failureCallback then
+     * fail the test with the given message.
+     * @param {Data|Interest} dataOrInterest The Data to validate.
+     * @param {String} message The message to show if the test fails.
+     */
+    this.validateExpectSuccess = function(dataOrInterest, message) {
+      this.fixture_.validator_.validate
+        (dataOrInterest,
+         function(dataOrInterest) {},
+         function(dataOrInterest, error) { assert.fail('', '', message); });
+    };
+
+    /**
+     * Call fixture_.validator_.validate and if it calls the successCallback then
+     * fail the test with the given message.
+     * @param {Data|Interest} dataOrInterest The Data to validate.
+     * @param {String} message The message to show if the test fails.
+     */
+    this.validateExpectFailure = function(dataOrInterest, message) {
+      this.fixture_.validator_.validate
+        (dataOrInterest,
+         function(dataOrInterest) { assert.fail('', '', message); },
+         function(dataOrInterest, error) {});
+    };
+  });
+
+  it("ValidateInterestsButBypassForData", function() {
+    var interest = new Interest
+      (new Name("/Security/V2/ValidatorFixture/Sub1/Sub2/Interest"));
+    var data = new Data
+      (new Name("/Security/V2/ValidatorFixture/Sub1/Sub2/Interest"));
+
+    this.validateExpectFailure(interest, "Unsigned");
+    this.validateExpectSuccess
+      (data, "The policy requests to bypass validation for all data");
+    assert.equal(0, this.fixture_.face_.sentInterests_.length);
+    this.fixture_.face_.sentInterests_ = [];
+
+    interest = new Interest
+      (new Name("/Security/V2/ValidatorFixture/Sub1/Sub2/Interest"));
+    this.fixture_.keyChain_.sign
+      (interest, new SigningInfo(SigningInfo.SignerType.SHA256));
+    this.fixture_.keyChain_.sign
+      (data, new SigningInfo(SigningInfo.SignerType.SHA256));
+    this.validateExpectFailure(interest,
+      "Required KeyLocator/Name is missing (not passed to the policy)");
+    this.validateExpectSuccess
+      (data, "The policy requests to bypass validation for all data");
+    assert.equal(0, this.fixture_.face_.sentInterests_.length);
+    this.fixture_.face_.sentInterests_ = [];
+
+    interest = new Interest
+      (new Name("/Security/V2/ValidatorFixture/Sub1/Sub2/Interest"));
+    this.fixture_.keyChain_.sign(interest, new SigningInfo(this.fixture_.identity_));
+    this.fixture_.keyChain_.sign(data, new SigningInfo(this.fixture_.identity_));
+    this.validateExpectSuccess(interest,
+      "Should be successful since it is signed by the anchor");
+    this.validateExpectSuccess
+      (data, "The policy requests to bypass validation for all data");
+    assert.equal(0, this.fixture_.face_.sentInterests_.length);
+    this.fixture_.face_.sentInterests_ = [];
+
+    interest = new Interest
+      (new Name("/Security/V2/ValidatorFixture/Sub1/Sub2/Interest"));
+    this.fixture_.keyChain_.sign(interest, new SigningInfo(this.fixture_.subIdentity_));
+    this.fixture_.keyChain_.sign(data, new SigningInfo(this.fixture_.subIdentity_));
+   this.validateExpectFailure(interest,
+      "Should fail since the policy is not allowed to create new trust anchors");
+    this.validateExpectSuccess
+      (data, "The policy requests to bypass validation for all data");
+    assert.equal(1, this.fixture_.face_.sentInterests_.length);
+    this.fixture_.face_.sentInterests_ = [];
+
+    interest = new Interest
+      (new Name("/Security/V2/ValidatorFixture/Sub1/Sub2/Interest"));
+    this.fixture_.keyChain_.sign(interest, new SigningInfo(this.fixture_.otherIdentity_));
+    this.fixture_.keyChain_.sign(data, new SigningInfo(this.fixture_.otherIdentity_));
+    this.validateExpectFailure(interest,
+      "Should fail since it is signed by a policy-violating certificate");
+    this.validateExpectSuccess
+      (data, "The policy requests to bypass validation for all data");
+    // No network operations are expected since the certificate is not validated
+    // by the policy.
+    assert.equal(0, this.fixture_.face_.sentInterests_.length);
+    this.fixture_.face_.sentInterests_ = [];
+
+    // Make the trusted cache simulate a time 2 hours later, after expiration.
+    this.fixture_.validator_.setCacheNowOffsetMilliseconds_(2 * 3600 * 1000.0);
+
+    interest = new Interest
+      (new Name("/Security/V2/ValidatorFixture/Sub1/Sub2/Interest"));
+    this.fixture_.keyChain_.sign(interest, new SigningInfo(this.fixture_.subSelfSignedIdentity_));
+    this.fixture_.keyChain_.sign(data, new SigningInfo(this.fixture_.subSelfSignedIdentity_));
+    this.validateExpectFailure(interest,
+     "Should fail since the policy is not allowed to create new trust anchors");
+    this.validateExpectSuccess(data,
+      "The policy requests to bypass validation for all data");
+    assert.equal(1, this.fixture_.face_.sentInterests_.length);
+    this.fixture_.face_.sentInterests_ = [];
   });
 });
