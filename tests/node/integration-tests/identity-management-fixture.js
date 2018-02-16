@@ -43,7 +43,7 @@ exports.IdentityManagementFixture = IdentityManagementFixture;
  * Save the certificate Data packet to the file.
  * @param {Data} data The certificate Data packet.
  * @param {String} filePath The file path to save to.
- * @returns {boolean} True for success, false for failure.
+ * @return {boolean} True for success, false for failure.
  */
 IdentityManagementFixture.prototype.saveCertificateToFile = function
   (data, filePath)
