@@ -161,8 +161,11 @@ var KeyChain = function KeyChain(arg1, arg2, arg3)
     KeyChain.parseAndCheckTpmLocator_(tpmLocator, tpmScheme, tpmLocation);
     var canonicalTpmLocator = tpmScheme[0] + ":" + tpmLocation[0];
 
-    var config = new ConfigFile();
-    if (canonicalPibLocator == KeyChain.getDefaultPibLocator_(config)) {
+    var config;
+    if (ConfigFile)
+      // Assume we are not in the browser.
+      config = new ConfigFile();
+    if (ConfigFile && canonicalPibLocator == KeyChain.getDefaultPibLocator_(config)) {
       // The default PIB must use the default TPM.
       if (oldTpmLocator != "" &&
           oldTpmLocator != KeyChain.getDefaultTpmLocator_(config)) {
@@ -2130,8 +2133,10 @@ KeyChain.getPibFactories_ = function()
     KeyChain.pibFactories_ = {};
 
     // Add the standard factories.
-    KeyChain.pibFactories_[PibSqlite3.getScheme()] =
-      function(location) { return new PibSqlite3(location); };
+    if (PibSqlite3)
+      // PibSqlite3 is defined for Node.js .
+      KeyChain.pibFactories_[PibSqlite3.getScheme()] =
+        function(location) { return new PibSqlite3(location); };
     KeyChain.pibFactories_[PibMemory.getScheme()] =
       function(location) { return new PibMemory(); };
   }
@@ -2152,8 +2157,10 @@ KeyChain.getTpmFactories_ = function()
     KeyChain.tpmFactories_ = {};
 
     // Add the standard factories.
-    KeyChain.tpmFactories_[TpmBackEndFile.getScheme()] =
-      function(location) { return new TpmBackEndFile(location); };
+    if (TpmBackEndFile)
+      // TpmBackEndFile is defined for Node.js .
+      KeyChain.tpmFactories_[TpmBackEndFile.getScheme()] =
+        function(location) { return new TpmBackEndFile(location); };
     KeyChain.tpmFactories_[TpmBackEndMemory.getScheme()] =
       function(location) { return new TpmBackEndMemory(); };
   }
