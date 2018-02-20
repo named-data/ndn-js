@@ -24,7 +24,7 @@
  * @param {Error} error The exception created with new Error.
  * @constructor
  */
-function ValidatorConfigError(error)
+var ValidatorConfigError = function ValidatorConfigError(error)
 {
   if (error) {
     error.__proto__ = ValidatorConfigError.prototype;
