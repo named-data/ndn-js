@@ -1,3 +1,12 @@
+NDN-JS v0.15.0 (2018-02-20)
+---------------------------
+
+Changes
+* https://redmine.named-data.net/issues/4046
+  Added the security v2 Validator and policies such as ValidationPolicyConfig.
+  Updated examples to use the security v2 Validator.
+  Added security v2 Validator integration tests.
+
 NDN-JS v0.14.0 (2018-02-05)
 ---------------------------
 
