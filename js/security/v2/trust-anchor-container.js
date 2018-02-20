@@ -143,7 +143,7 @@ TrustAnchorContainer.prototype.clear = function()
  * with implicit digest are not supported.
  * @param {Name} keyName The key name prefix for searching for the certificate.
  * @param {Interest} interest The input interest packet.
- * @return The found certificate, or null if not found.
+ * @return {CertificateV2} The found certificate, or null if not found.
  */
 TrustAnchorContainer.prototype.find = function(keyNameOrInterest)
 {
