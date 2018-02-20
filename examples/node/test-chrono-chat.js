@@ -23,9 +23,6 @@ var Blob = require('../..').Blob;
 var Interest = require('../..').Interest;
 var Data = require('../..').Data;
 
-var PibMemory = require('../..').PibMemory;
-var TpmBackEndMemory = require('../..').TpmBackEndMemory;
-var SelfVerifyPolicyManager = require('../..').SelfVerifyPolicyManager;
 var SafeBag = require('../..').SafeBag;
 var KeyChain = require('../..').KeyChain;
 var KeyType = require('../..').KeyType;
@@ -507,9 +504,7 @@ function initiateChat()
   var face = new Face(new UnixTransport());
 
   // Set up the KeyChain.
-  var pibImpl = new PibMemory();
-  var keyChain = new KeyChain
-    (pibImpl, new TpmBackEndMemory(), new SelfVerifyPolicyManager(pibImpl));
+  var keyChain = new KeyChain("pib-memory:", "tpm-memory:");
   // This puts the public key in the pibImpl used by the SelfVerifyPolicyManager.
   keyChain.importSafeBag(new SafeBag
     (new Name("/testname/KEY/123"),

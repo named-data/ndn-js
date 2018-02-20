@@ -46,13 +46,13 @@ exports.TrustAnchorGroup = TrustAnchorGroup;
 
 /**
  * Get the group id given to the constructor.
- * @returns {string} The group id.
+ * @return {string} The group id.
  */
 TrustAnchorGroup.prototype.getId = function() { return this.id_; };
 
 /**
  * Get the number of certificates in the group.
- * @returns {number} The number of certificates.
+ * @return {number} The number of certificates.
  */
 TrustAnchorGroup.prototype.size = function()
 { 
@@ -67,7 +67,7 @@ TrustAnchorGroup.prototype.refresh = function() {};
 /**
  * Read a base-64-encoded certificate from a file.
  * @param {string} filePath The certificate file path.
- * @returns {CertificateV2} The decoded certificate, or null if there is an
+ * @return {CertificateV2} The decoded certificate, or null if there is an
  * error.
  */
 TrustAnchorGroup.readCertificate = function(filePath)

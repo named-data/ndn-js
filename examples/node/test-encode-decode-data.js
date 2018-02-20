@@ -28,9 +28,8 @@ var GenericSignature = require('../..').GenericSignature;
 var ContentType = require('../..').ContentType;
 var KeyType = require('../..').KeyType;
 var KeyLocatorType = require('../..').KeyLocatorType;
-var PibMemory = require('../..').PibMemory;
-var TpmBackEndMemory = require('../..').TpmBackEndMemory;
-var SelfVerifyPolicyManager = require('../..').SelfVerifyPolicyManager;
+var Validator = require('../..').Validator;
+var ValidationPolicyFromPib = require('../..').ValidationPolicyFromPib;
 var SafeBag = require('../..').SafeBag;
 var KeyChain = require('../..').KeyChain;
 
@@ -267,21 +266,19 @@ function main()
   dumpData(reDecodedData);
 
   // Set up the KeyChain.
-  var pibImpl = new PibMemory();
-  var keyChain = new KeyChain
-    (pibImpl, new TpmBackEndMemory(), new SelfVerifyPolicyManager(pibImpl));
-  // This puts the public key in the pibImpl used by the SelfVerifyPolicyManager.
+  var keyChain = new KeyChain("pib-memory:", "tpm-memory:");
   keyChain.importSafeBag(new SafeBag
     (new Name("/testname/KEY/123"),
      new Blob(DEFAULT_RSA_PRIVATE_KEY_DER, false),
      new Blob(DEFAULT_RSA_PUBLIC_KEY_DER, false)));
+  var validator = new Validator(new ValidationPolicyFromPib(keyChain.getPib()));
 
-  keyChain.verifyData
+  validator.validate
     (reDecodedData,
-     function() { console.log("Re-decoded Data signature verification: VERIFIED"); },
-     function(data, reason) {
+     function(data) { console.log("Re-decoded Data signature verification: VERIFIED"); },
+     function(data, error) {
        console.log("Re-decoded Data  signature verification: FAILED. Reason: " +
-                   reason);
+                   error.getInfo());
      });
 
   var freshData = new Data(new Name("/ndn/abc"));
@@ -293,12 +290,12 @@ function main()
   console.log("Freshly-signed Data:");
   dumpData(freshData);
 
-  keyChain.verifyData
+  validator.validate
     (freshData,
-     function() { console.log("Freshly-signed Data signature verification: VERIFIED"); },
-     function(data, reason) {
+     function(data) { console.log("Freshly-signed Data signature verification: VERIFIED"); },
+     function(data, error) {
        console.log("Freshly-signed Data signature verification: FAILED. Reason: " +
-                   reason);
+                   error.getInfo());
      });
 }
 

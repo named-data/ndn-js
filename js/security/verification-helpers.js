@@ -22,9 +22,11 @@
 var Crypto = require('../crypto.js'); /** @ignore */
 var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var Blob = require('../util/blob.js').Blob; /** @ignore */
+var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
 var KeyType = require('./security-types.js').KeyType; /** @ignore */
 var DigestAlgorithm = require('./security-types.js').DigestAlgorithm; /** @ignore */
 var UseSubtleCrypto = require("../use-subtle-crypto-node.js").UseSubtleCrypto; /** @ignore */
+var CertificateV2 = require('./v2/certificate-v2.js').CertificateV2; /** @ignore */
 var PublicKey = require('./certificate/public-key.js').PublicKey;
 
 /**
@@ -39,7 +41,7 @@ exports.VerificationHelpers = VerificationHelpers;
  * Verify the buffer against the signature using the public key.
  * @param {Buffer|Blob} buffer The input buffer to verify.
  * @param {Buffer|Blob} signature The signature bytes.
- * @param {PublicKey|Buffer:Blob} publicKey The object containing the public key,
+ * @param {PublicKey|Buffer|Blob} publicKey The object containing the public key,
  * or the public key DER which is used to make the PublicKey object.
  * @param {number} digestAlgorithm (optional) The digest algorithm as an int
  * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
@@ -71,7 +73,7 @@ VerificationHelpers.verifySignaturePromise = function
       publicKey = new PublicKey(publicKey);
     } catch (ex) {
       return SyncPromise.reject(new Error
-        ("verifySignature: Error decoding public key DER: " + ex));
+        ("verifySignaturePromise: Error decoding public key DER: " + ex));
     }
   }
   if (digestAlgorithm == undefined)
@@ -107,7 +109,7 @@ VerificationHelpers.verifySignaturePromise = function
           return SyncPromise.resolve(verifier.verify(keyPem, signatureBytes));
         } catch (ex) {
           return SyncPromise.reject(new Error
-            ("verifySignature: Error is RSA verify: " + ex));
+            ("verifySignaturePromise: Error is RSA verify: " + ex));
         }
       }
     }
@@ -131,22 +133,22 @@ VerificationHelpers.verifySignaturePromise = function
         return SyncPromise.resolve(verifier.verify(keyPem, signatureBytes));
       } catch (ex) {
         return SyncPromise.reject(new Error
-          ("verifySignature: Error is ECDSA verify: " + ex));
+          ("verifySignaturePromise: Error is ECDSA verify: " + ex));
       }
     }
     else
-      return SyncPromise.reject(new Error("verifySignature: Invalid key type"));
+      return SyncPromise.reject(new Error("verifySignaturePromise: Invalid key type"));
   }
   else
     return SyncPromise.reject(new Error
-      ("verifySignature: Invalid digest algorithm"));
+      ("verifySignaturePromise: Invalid digest algorithm"));
 };
 
 /**
  * Verify the buffer against the signature using the public key.
  * @param {Buffer|Blob} buffer The input buffer to verify.
  * @param {Buffer|Blob} signature The signature bytes.
- * @param {PublicKey|Buffer:Blob} publicKey The object containing the public key,
+ * @param {PublicKey|Buffer|Blob} publicKey The object containing the public key,
  * or the public key DER which is used to make the PublicKey object.
  * @param {number} digestAlgorithm (optional) The digest algorithm as an int
  * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
@@ -175,7 +177,7 @@ VerificationHelpers.verifySignaturePromise = function
 VerificationHelpers.verifySignature = function
   (buffer, signature, publicKey, digestAlgorithm, onComplete, onError)
 {
-  if (typeof digestAlgorithm === 'boolean') {
+  if (typeof digestAlgorithm === 'function') {
     // digestAlgorithm is omitted, so shift.
     onError = onComplete;
     onComplete = digestAlgorithm;
@@ -185,6 +187,157 @@ VerificationHelpers.verifySignature = function
   return SyncPromise.complete(onComplete, onError,
     this.verifySignaturePromise
       (buffer, signature, publicKey, digestAlgorithm, !onComplete));
+};
+
+/**
+ * Verify the Data packet using the public key. This does not check the type of
+ * public key or digest algorithm against the type of SignatureInfo in the Data
+ * packet such as Sha256WithRsaSignature.
+ * @param {Data} data The Data packet to verify.
+ * @param {PublicKey|Buffer|Blob|CertificateV2} publicKeyOrCertificate The
+ * object containing the public key, or the public key DER which is used to make
+ * the PublicKey object, or the certificate containing the public key.
+ * @param {number} digestAlgorithm (optional) The digest algorithm as an int
+ * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the Data packet. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if verification
+ * succeeds, false if verification fails, or a promise rejected with Error for
+ * an invalid public key type or digestAlgorithm.
+ */
+VerificationHelpers.verifyDataSignaturePromise = function
+  (data, publicKeyOrCertificate, digestAlgorithm, wireFormat, useSync)
+{
+  var arg3 = digestAlgorithm;
+  var arg4 = wireFormat;
+  var arg5 = useSync;
+  // arg3,            arg4,       arg5
+  // digestAlgorithm, wireFormat, useSync
+  // digestAlgorithm, wireFormat, null
+  // digestAlgorithm, useSync,    null
+  // digestAlgorithm, null,       null
+  // wireFormat,      useSync,    null
+  // wireFormat,      null,       null
+  // useSync,         null,       null
+  // null,            null,       null
+  if (typeof arg3 === 'number')
+    digestAlgorithm = arg3;
+  else
+    digestAlgorithm = undefined;
+
+  if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else if (arg4 instanceof WireFormat)
+    wireFormat = arg4;
+  else
+    wireFormat = undefined;
+
+  if (typeof arg3 === 'boolean')
+    useSync = arg3;
+  else if (typeof arg4 === 'boolean')
+    useSync = arg4;
+  else if (typeof arg5 === 'boolean')
+    useSync = arg5;
+  else
+    useSync = false;
+
+  var publicKey;
+  if (publicKeyOrCertificate instanceof CertificateV2) {
+    try {
+      publicKey = publicKeyOrCertificate.getPublicKey();
+    } catch (ex) {
+      return SyncPromise.resolve(false);
+    }
+  }
+  else
+    publicKey = publicKeyOrCertificate;
+
+  var encoding = data.wireEncode(wireFormat);
+  return VerificationHelpers.verifySignaturePromise
+    (encoding.signedBuf(), data.getSignature().getSignature(), publicKey,
+     digestAlgorithm, useSync);
+};
+
+/**
+ * Verify the Interest packet using the public key, where the last two name
+ * components are the SignatureInfo and signature bytes. This does not check the
+ * type of public key or digest algorithm against the type of SignatureInfo such
+ * as Sha256WithRsaSignature.
+ * @param {Interest} interest The Interest packet to verify.
+ * @param {PublicKey|Buffer|Blob|CertificateV2} publicKeyOrCertificate The
+ * object containing the public key, or the public key DER which is used to make
+ * the PublicKey object, or the certificate containing the public key.
+ * @param {number} digestAlgorithm (optional) The digest algorithm as an int
+ * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the Data packet. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if verification
+ * succeeds, false if verification fails, or a promise rejected with Error for
+ * an invalid public key type or digestAlgorithm.
+ */
+VerificationHelpers.verifyInterestSignaturePromise = function
+  (interest, publicKeyOrCertificate, digestAlgorithm, wireFormat, useSync)
+{
+  var arg3 = digestAlgorithm;
+  var arg4 = wireFormat;
+  var arg5 = useSync;
+  // arg3,            arg4,       arg5
+  // digestAlgorithm, wireFormat, useSync
+  // digestAlgorithm, wireFormat, null
+  // digestAlgorithm, useSync,    null
+  // digestAlgorithm, null,       null
+  // wireFormat,      useSync,    null
+  // wireFormat,      null,       null
+  // useSync,         null,       null
+  // null,            null,       null
+  if (typeof arg3 === 'number')
+    digestAlgorithm = arg3;
+  else
+    digestAlgorithm = undefined;
+
+  if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else if (arg4 instanceof WireFormat)
+    wireFormat = arg4;
+  else
+    wireFormat = undefined;
+
+  if (typeof arg3 === 'boolean')
+    useSync = arg3;
+  else if (typeof arg4 === 'boolean')
+    useSync = arg4;
+  else if (typeof arg5 === 'boolean')
+    useSync = arg5;
+  else
+    useSync = false;
+
+  var publicKey;
+  if (publicKeyOrCertificate instanceof CertificateV2) {
+    try {
+      publicKey = publicKeyOrCertificate.getPublicKey();
+    } catch (ex) {
+      return SyncPromise.resolve(false);
+    }
+  }
+  else
+    publicKey = publicKeyOrCertificate;
+
+  if (wireFormat == undefined)
+    wireFormat = WireFormat.getDefaultWireFormat();
+  var signature = VerificationHelpers.extractSignature_(interest, wireFormat);
+  if (signature == null)
+    return SyncPromise.resolve(false);
+
+  var encoding = interest.wireEncode(wireFormat);
+  return VerificationHelpers.verifySignaturePromise
+    (encoding.signedBuf(), signature.getSignature(), publicKey, digestAlgorithm,
+     useSync);
 };
 
 /**
@@ -219,6 +372,27 @@ VerificationHelpers.verifyDigest = function(buffer, digest, digestAlgorithm)
   }
   else
     throw new Error("verifyDigest: Invalid digest algorithm");
+};
+
+/**
+ * Extract the signature information from the interest name.
+ * @param {Interest} interest The interest whose signature is needed.
+ * @param {WireFormat} wireFormat The wire format used to decode signature
+ * information from the interest name.
+ * @return {Signature} The Signature object, or null if can't decode.
+ */
+VerificationHelpers.extractSignature_ = function(interest, wireFormat)
+{
+  if (interest.getName().size() < 2)
+    return null;
+
+  try {
+    return wireFormat.decodeSignatureInfoAndValue
+      (interest.getName().get(-2).getValue().buf(),
+       interest.getName().get(-1).getValue().buf(), false);
+  } catch (ex) {
+    return null;
+  }
 };
 
 // The first time verify is called, it sets this to determine if a signature

@@ -131,17 +131,15 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
 ]);
 
         var keyChain;
+        var validator;
         function encode(){
             // Set up the KeyChain.
-            var pibImpl = new PibMemory();
-            keyChain = new KeyChain
-              (pibImpl, new TpmBackEndMemory(),
-               new SelfVerifyPolicyManager(pibImpl));
-            // This puts the public key in the pibImpl used by the SelfVerifyPolicyManager.
+            keyChain = keyChain = new KeyChain("pib-memory:", "tpm-memory:");
             keyChain.importSafeBag(new SafeBag
               (new Name("/testname/KEY/123"),
                new Blob(DEFAULT_RSA_PRIVATE_KEY_DER, false),
                new Blob(DEFAULT_RSA_PUBLIC_KEY_DER, false)));
+            validator = new Validator(new ValidationPolicyFromPib(keyChain.getPib()));
 
             var contentname = new Name( document.getElementById('contentname').value );
 
@@ -171,14 +169,14 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
             var output = EncodingUtils.dataToHtml(data);
             // Verify with the same KeyChain used to sign.  Set the document
             //   element inside the callback so that it receives the result.
-            keyChain.verifyData
+            validator.validate
               (data,
-               function() {
+               function(data) {
                  output+= "<br/>SIGNATURE VALID<br/>";
                  document.getElementById('result').innerHTML = output;
                },
-               function(data, reason) {
-                 output+= "<br/>SIGNATURE INVALID. Reason: " + reason + "<br/>";
+               function(data, error) {
+                 output+= "<br/>SIGNATURE INVALID. Reason: " + error.getInfo() + "<br/>";
                  document.getElementById('result').innerHTML = output;
                });
         }

@@ -20,7 +20,9 @@
 
 /** @ignore */
 var Name = require('../../name.js').Name; /** @ignore */
-var CertificateV2 = require('./certificate-v2.js').CertificateV2;
+var Schedule = require('../../encrypt/schedule.js').Schedule; /** @ignore */
+var CertificateV2 = require('./certificate-v2.js').CertificateV2; /** @ignore */
+var LOG = require('../../log.js').Log.LOG;
 
 /**
  * A CertificateCacheV2 holds other user's verified certificates in security v2
@@ -35,12 +37,15 @@ var CertificateV2 = require('./certificate-v2.js').CertificateV2;
  */
 var CertificateCacheV2 = function CertificateCacheV2(maxLifetimeMilliseconds)
 {
-  // Array of objects with fields "name" of type Name and "certificate" of type
-  // CertificateV2. We can't use an {} object since the Name key itself is an
-  // object, and also it needs to be sorted by Name.
+  // Array of objects with fields "name" of type Name, "certificate" of type
+  // CertificateV2 and "removalTime" as milliseconds since Jan 1, 1970 UTC. We
+  // can't use an {} object since the Name key itself is an object, and also it
+  // needs to be sorted by Name.
   this.certificatesByName_ = [];
+  this.nextRefreshTime_ = Number.MAX_VALUE;
   this.maxLifetimeMilliseconds_ = (maxLifetimeMilliseconds == undefined ?
     CertificateCacheV2.getDefaultLifetime() : maxLifetimeMilliseconds);
+  this.nowOffsetMilliseconds_ = 0;
 };
 
 exports.CertificateCacheV2 = CertificateCacheV2;
@@ -53,9 +58,23 @@ exports.CertificateCacheV2 = CertificateCacheV2;
  */
 CertificateCacheV2.prototype.insert = function(certificate)
 {
-  // TODO: Implement certificatesByTime_ to support refresh(). There can be
-  // multiple certificate for the same removalTime, and adding the same
-  // certificate again should update the removalTime.
+  var notAfterTime = certificate.getValidityPeriod().getNotAfter();
+  // nowOffsetMilliseconds_ is only used for testing.
+  var now = new Date().getTime() + this.nowOffsetMilliseconds_;
+  if (notAfterTime < now) {
+    if (LOG > 3) console.log("Not adding " + certificate.getName().toUri() +
+      ": already expired at " + Schedule.toIsoString(notAfterTime));
+    return;
+  }
+
+  var removalTime =
+    Math.min(notAfterTime, now + this.maxLifetimeMilliseconds_);
+  if (removalTime < this.nextRefreshTime_)
+    // We need to run refresh() sooner.)
+    this.nextRefreshTime_ = removalTime;
+
+  if (LOG > 3) console.log("Adding " + certificate.getName().toUri() +
+    ", will remove in " + (removalTime - now) / (3600 * 1000.0) + " hours");
 
   var certificateCopy = new CertificateV2(certificate);
 
@@ -68,11 +87,13 @@ CertificateCacheV2.prototype.insert = function(certificate)
     if (this.certificatesByName_[i].name.equals(name)) {
       // Just replace the existing entry value.
       this.certificatesByName_[i].certificate = certificateCopy;
+      this.certificatesByName_[i].removalTime = removalTime;
       return;
     }
   }
 
-  this.certificatesByName_.splice(i, 0, {name: name, certificate: certificateCopy});
+  this.certificatesByName_.splice
+    (i, 0, {name: name, certificate: certificateCopy, removalTime: removalTime});
 };
 
 /**
@@ -96,7 +117,7 @@ CertificateCacheV2.prototype.find = function(prefixOrInterest)
       console.log
         ("Certificate search using a name with an implicit digest is not yet supported");
 
-    // TODO: refresh();
+    this.refresh_();
 
     var i = this.findFirstByName_(certificatePrefix);
     if (i < 0)
@@ -119,7 +140,7 @@ CertificateCacheV2.prototype.find = function(prefixOrInterest)
       console.log
         ("Certificate search using a name with an implicit digest is not yet supported");
 
-    // TODO: refresh();
+    this.refresh_();
 
     var i = this.findFirstByName_(interest.getName());
     if (i < 0)
@@ -153,7 +174,8 @@ CertificateCacheV2.prototype.deleteCertificate = function(certificateName)
     }
   }
 
-  // TODO: Delete from certificatesByTime_.
+  // This may be the certificate to be removed at nextRefreshTime_ by refresh(),
+  // but just allow refresh() to run instead of update nextRefreshTime_ now.
 };
 
 /**
@@ -162,13 +184,25 @@ CertificateCacheV2.prototype.deleteCertificate = function(certificateName)
 CertificateCacheV2.prototype.clear = function()
 {
   this.certificatesByName_ = [];
-  // TODO: certificatesByTime_.clear();
+  this.nextRefreshTime_ = Number.MAX_VALUE;
 };
+
 /**
  * Get the default maximum lifetime (1 hour).
  * @return {number} The lifetime in milliseconds.
  */
 CertificateCacheV2.getDefaultLifetime = function() { return 3600.0 * 1000; };
+
+/**
+ * Set the offset when insert() and refresh_() get the current time, which
+ * should only be used for testing.
+ * @param {number} nowOffsetMilliseconds The offset in milliseconds.
+ */
+CertificateCacheV2.prototype.setNowOffsetMilliseconds_ = function
+  (nowOffsetMilliseconds)
+{
+  this.nowOffsetMilliseconds_ = nowOffsetMilliseconds;
+};
 
 /**
  * A private helper method to get the first entry in certificatesByName_ whose
@@ -185,4 +219,29 @@ CertificateCacheV2.prototype.findFirstByName_ = function(name)
   }
 
   return -1;
+};
+
+/**
+ * Remove all outdated certificate entries.
+ */
+CertificateCacheV2.prototype.refresh_ = function()
+{
+  // nowOffsetMilliseconds_ is only used for testing.
+  var now = new Date().getTime() + this.nowOffsetMilliseconds_;
+  if (now < this.nextRefreshTime_)
+    return;
+
+  // We recompute nextRefreshTime_.
+  var nextRefreshTime = Number.MAX_VALUE;
+  // Go backwards through the list so we can erase entries.
+  for (var i = this.certificatesByName_.length - 1; i >= 0; --i) {
+    var entry = this.certificatesByName_[i];
+
+    if (entry.removalTime <= now)
+      this.certificatesByName_.splice(i, 1);
+    else
+      nextRefreshTime = Math.min(nextRefreshTime, entry.removalTime);
+  }
+
+  this.nextRefreshTime_ = nextRefreshTime;
 };

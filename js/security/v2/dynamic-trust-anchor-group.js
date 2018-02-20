@@ -86,7 +86,7 @@ DynamicTrustAnchorGroup.prototype.refresh = function()
     oldAnchorNameUris[uri] = true;
 
   if (!this.isDirectory_)
-    loadCertificate(this.path_, oldAnchorNameUris);
+    this.loadCertificate_(this.path_, oldAnchorNameUris);
   else {
     var allFiles;
     try {
@@ -97,7 +97,7 @@ DynamicTrustAnchorGroup.prototype.refresh = function()
     }
 
     for (var i = 0; i < allFiles.length; ++i)
-      this.loadCertificate(path.join(this.path_, allFiles[i]), oldAnchorNameUris);
+      this.loadCertificate_(path.join(this.path_, allFiles[i]), oldAnchorNameUris);
   }
 
   // Remove old certificates.

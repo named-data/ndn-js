@@ -16080,7 +16080,7 @@ exports.TcpTransport = require("./transport/web-socket-transport").WebSocketTran
 /** @ignore */
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
-var LOG = require('./log.js').Log.LOG;
+var LOG = require('./log.js').Log.LOG; /** @ignore */
 var DecodingException = require('./encoding/decoding-exception.js').DecodingException;
 
 /**
@@ -19911,9 +19911,11 @@ ValidityPeriod.prototype.getChangeCount = function()
 var Crypto = require('../crypto.js'); /** @ignore */
 var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var Blob = require('../util/blob.js').Blob; /** @ignore */
+var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
 var KeyType = require('./security-types.js').KeyType; /** @ignore */
 var DigestAlgorithm = require('./security-types.js').DigestAlgorithm; /** @ignore */
 var UseSubtleCrypto = require("../use-subtle-crypto-node.js").UseSubtleCrypto; /** @ignore */
+var CertificateV2 = require('./v2/certificate-v2.js').CertificateV2; /** @ignore */
 var PublicKey = require('./certificate/public-key.js').PublicKey;
 
 /**
@@ -19928,7 +19930,7 @@ exports.VerificationHelpers = VerificationHelpers;
  * Verify the buffer against the signature using the public key.
  * @param {Buffer|Blob} buffer The input buffer to verify.
  * @param {Buffer|Blob} signature The signature bytes.
- * @param {PublicKey|Buffer:Blob} publicKey The object containing the public key,
+ * @param {PublicKey|Buffer|Blob} publicKey The object containing the public key,
  * or the public key DER which is used to make the PublicKey object.
  * @param {number} digestAlgorithm (optional) The digest algorithm as an int
  * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
@@ -19960,7 +19962,7 @@ VerificationHelpers.verifySignaturePromise = function
       publicKey = new PublicKey(publicKey);
     } catch (ex) {
       return SyncPromise.reject(new Error
-        ("verifySignature: Error decoding public key DER: " + ex));
+        ("verifySignaturePromise: Error decoding public key DER: " + ex));
     }
   }
   if (digestAlgorithm == undefined)
@@ -19996,7 +19998,7 @@ VerificationHelpers.verifySignaturePromise = function
           return SyncPromise.resolve(verifier.verify(keyPem, signatureBytes));
         } catch (ex) {
           return SyncPromise.reject(new Error
-            ("verifySignature: Error is RSA verify: " + ex));
+            ("verifySignaturePromise: Error is RSA verify: " + ex));
         }
       }
     }
@@ -20020,22 +20022,22 @@ VerificationHelpers.verifySignaturePromise = function
         return SyncPromise.resolve(verifier.verify(keyPem, signatureBytes));
       } catch (ex) {
         return SyncPromise.reject(new Error
-          ("verifySignature: Error is ECDSA verify: " + ex));
+          ("verifySignaturePromise: Error is ECDSA verify: " + ex));
       }
     }
     else
-      return SyncPromise.reject(new Error("verifySignature: Invalid key type"));
+      return SyncPromise.reject(new Error("verifySignaturePromise: Invalid key type"));
   }
   else
     return SyncPromise.reject(new Error
-      ("verifySignature: Invalid digest algorithm"));
+      ("verifySignaturePromise: Invalid digest algorithm"));
 };
 
 /**
  * Verify the buffer against the signature using the public key.
  * @param {Buffer|Blob} buffer The input buffer to verify.
  * @param {Buffer|Blob} signature The signature bytes.
- * @param {PublicKey|Buffer:Blob} publicKey The object containing the public key,
+ * @param {PublicKey|Buffer|Blob} publicKey The object containing the public key,
  * or the public key DER which is used to make the PublicKey object.
  * @param {number} digestAlgorithm (optional) The digest algorithm as an int
  * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
@@ -20064,7 +20066,7 @@ VerificationHelpers.verifySignaturePromise = function
 VerificationHelpers.verifySignature = function
   (buffer, signature, publicKey, digestAlgorithm, onComplete, onError)
 {
-  if (typeof digestAlgorithm === 'boolean') {
+  if (typeof digestAlgorithm === 'function') {
     // digestAlgorithm is omitted, so shift.
     onError = onComplete;
     onComplete = digestAlgorithm;
@@ -20074,6 +20076,157 @@ VerificationHelpers.verifySignature = function
   return SyncPromise.complete(onComplete, onError,
     this.verifySignaturePromise
       (buffer, signature, publicKey, digestAlgorithm, !onComplete));
+};
+
+/**
+ * Verify the Data packet using the public key. This does not check the type of
+ * public key or digest algorithm against the type of SignatureInfo in the Data
+ * packet such as Sha256WithRsaSignature.
+ * @param {Data} data The Data packet to verify.
+ * @param {PublicKey|Buffer|Blob|CertificateV2} publicKeyOrCertificate The
+ * object containing the public key, or the public key DER which is used to make
+ * the PublicKey object, or the certificate containing the public key.
+ * @param {number} digestAlgorithm (optional) The digest algorithm as an int
+ * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the Data packet. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if verification
+ * succeeds, false if verification fails, or a promise rejected with Error for
+ * an invalid public key type or digestAlgorithm.
+ */
+VerificationHelpers.verifyDataSignaturePromise = function
+  (data, publicKeyOrCertificate, digestAlgorithm, wireFormat, useSync)
+{
+  var arg3 = digestAlgorithm;
+  var arg4 = wireFormat;
+  var arg5 = useSync;
+  // arg3,            arg4,       arg5
+  // digestAlgorithm, wireFormat, useSync
+  // digestAlgorithm, wireFormat, null
+  // digestAlgorithm, useSync,    null
+  // digestAlgorithm, null,       null
+  // wireFormat,      useSync,    null
+  // wireFormat,      null,       null
+  // useSync,         null,       null
+  // null,            null,       null
+  if (typeof arg3 === 'number')
+    digestAlgorithm = arg3;
+  else
+    digestAlgorithm = undefined;
+
+  if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else if (arg4 instanceof WireFormat)
+    wireFormat = arg4;
+  else
+    wireFormat = undefined;
+
+  if (typeof arg3 === 'boolean')
+    useSync = arg3;
+  else if (typeof arg4 === 'boolean')
+    useSync = arg4;
+  else if (typeof arg5 === 'boolean')
+    useSync = arg5;
+  else
+    useSync = false;
+
+  var publicKey;
+  if (publicKeyOrCertificate instanceof CertificateV2) {
+    try {
+      publicKey = publicKeyOrCertificate.getPublicKey();
+    } catch (ex) {
+      return SyncPromise.resolve(false);
+    }
+  }
+  else
+    publicKey = publicKeyOrCertificate;
+
+  var encoding = data.wireEncode(wireFormat);
+  return VerificationHelpers.verifySignaturePromise
+    (encoding.signedBuf(), data.getSignature().getSignature(), publicKey,
+     digestAlgorithm, useSync);
+};
+
+/**
+ * Verify the Interest packet using the public key, where the last two name
+ * components are the SignatureInfo and signature bytes. This does not check the
+ * type of public key or digest algorithm against the type of SignatureInfo such
+ * as Sha256WithRsaSignature.
+ * @param {Interest} interest The Interest packet to verify.
+ * @param {PublicKey|Buffer|Blob|CertificateV2} publicKeyOrCertificate The
+ * object containing the public key, or the public key DER which is used to make
+ * the PublicKey object, or the certificate containing the public key.
+ * @param {number} digestAlgorithm (optional) The digest algorithm as an int
+ * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the Data packet. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if verification
+ * succeeds, false if verification fails, or a promise rejected with Error for
+ * an invalid public key type or digestAlgorithm.
+ */
+VerificationHelpers.verifyInterestSignaturePromise = function
+  (interest, publicKeyOrCertificate, digestAlgorithm, wireFormat, useSync)
+{
+  var arg3 = digestAlgorithm;
+  var arg4 = wireFormat;
+  var arg5 = useSync;
+  // arg3,            arg4,       arg5
+  // digestAlgorithm, wireFormat, useSync
+  // digestAlgorithm, wireFormat, null
+  // digestAlgorithm, useSync,    null
+  // digestAlgorithm, null,       null
+  // wireFormat,      useSync,    null
+  // wireFormat,      null,       null
+  // useSync,         null,       null
+  // null,            null,       null
+  if (typeof arg3 === 'number')
+    digestAlgorithm = arg3;
+  else
+    digestAlgorithm = undefined;
+
+  if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else if (arg4 instanceof WireFormat)
+    wireFormat = arg4;
+  else
+    wireFormat = undefined;
+
+  if (typeof arg3 === 'boolean')
+    useSync = arg3;
+  else if (typeof arg4 === 'boolean')
+    useSync = arg4;
+  else if (typeof arg5 === 'boolean')
+    useSync = arg5;
+  else
+    useSync = false;
+
+  var publicKey;
+  if (publicKeyOrCertificate instanceof CertificateV2) {
+    try {
+      publicKey = publicKeyOrCertificate.getPublicKey();
+    } catch (ex) {
+      return SyncPromise.resolve(false);
+    }
+  }
+  else
+    publicKey = publicKeyOrCertificate;
+
+  if (wireFormat == undefined)
+    wireFormat = WireFormat.getDefaultWireFormat();
+  var signature = VerificationHelpers.extractSignature_(interest, wireFormat);
+  if (signature == null)
+    return SyncPromise.resolve(false);
+
+  var encoding = interest.wireEncode(wireFormat);
+  return VerificationHelpers.verifySignaturePromise
+    (encoding.signedBuf(), signature.getSignature(), publicKey, digestAlgorithm,
+     useSync);
 };
 
 /**
@@ -20108,6 +20261,27 @@ VerificationHelpers.verifyDigest = function(buffer, digest, digestAlgorithm)
   }
   else
     throw new Error("verifyDigest: Invalid digest algorithm");
+};
+
+/**
+ * Extract the signature information from the interest name.
+ * @param {Interest} interest The interest whose signature is needed.
+ * @param {WireFormat} wireFormat The wire format used to decode signature
+ * information from the interest name.
+ * @return {Signature} The Signature object, or null if can't decode.
+ */
+VerificationHelpers.extractSignature_ = function(interest, wireFormat)
+{
+  if (interest.getName().size() < 2)
+    return null;
+
+  try {
+    return wireFormat.decodeSignatureInfoAndValue
+      (interest.getName().get(-2).getValue().buf(),
+       interest.getName().get(-1).getValue().buf(), false);
+  } catch (ex) {
+    return null;
+  }
 };
 
 // The first time verify is called, it sets this to determine if a signature
@@ -31810,6 +31984,1216 @@ Tpm.prototype.findKeyPromise_ = function(keyName, useSync)
   });
 };
 /**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validator-config/checker.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../../name.js').Name; /** @ignore */
+var PibKey = require('../../pib/pib-key.js').PibKey; /** @ignore */
+var ValidationError = require('../validation-error.js').ValidationError; /** @ignore */
+var ConfigNameRelation = require('./config-name-relation.js').ConfigNameRelation; /** @ignore */
+var NdnRegexTopMatcher = require('../../../util/regex/ndn-regex-top-matcher.js').NdnRegexTopMatcher; /** @ignore */
+var ValidatorConfigError = require('../../validator-config-error.js').ValidatorConfigError;
+
+/**
+ * A ConfigChecker is an abstract base class for ConfigNameRelationChecker, etc.
+ * used by ValidatorConfig to check if a packet name and KeyLocator satisfy the
+ * conditions in a configuration section.
+ * @constructor
+ */
+var ConfigChecker = function ConfigChecker()
+{
+};
+
+exports.ConfigChecker = ConfigChecker;
+
+/**
+ * Check if the packet name ane KeyLocator name satisfy this checker's
+ * conditions.
+ * @param {boolean} isForInterest True if packetName is for an Interest, false
+ * if for a Data packet.
+ * @param {Name} packetName The packet name. For a signed interest, the last two
+ * components are skipped but not removed.
+ * @param {Name} keyLocatorName The KeyLocator's name.
+ * @param {ValidationState} state This calls state.fail() if the packet is
+ * invalid.
+ * @return {boolean} True if further signature verification is needed, or false
+ * if the packet is immediately determined to be invalid in which case this
+ * calls state.fail() with the proper code and message.
+ */
+ConfigChecker.prototype.check = function
+  (isForInterest, packetName, keyLocatorName, state)
+{
+  if (isForInterest) {
+    var signedInterestMinSize = 2;
+
+    if (packetName.size() < signedInterestMinSize)
+      return false;
+
+    return this.checkNames
+      (packetName.getPrefix(-signedInterestMinSize), keyLocatorName, state);
+  }
+  else
+    return this.checkNames(packetName, keyLocatorName, state);
+};
+
+/**
+ * Create a checker from the configuration section.
+ * @param {BoostInfoTree} configSection The section containing the definition of
+ * the checker, e.g. one of "validation.rule.checker".
+ * @return {ConfigChecker} A new checker created from the configuration section.
+ */
+ConfigChecker.create = function(configSection)
+{
+  // Get checker.type.
+  var checkerType = configSection.getFirstValue("type");
+  if (checkerType == null)
+    throw new ValidatorConfigError(new Error("Expected <checker.type>"));
+
+  if (checkerType.toLowerCase() == "customized")
+    return ConfigChecker.createCustomizedChecker_(configSection);
+  else if (checkerType.toLowerCase() == "hierarchical")
+    return ConfigChecker.createHierarchicalChecker_(configSection);
+  else
+    throw new ValidatorConfigError(new Error
+      ("Unsupported checker type: " + checkerType));
+};
+
+/**
+ * Check if the packet name ane KeyLocator name satisfy this checker's
+ * conditions.
+ * @param {Name} packetName The packet name, which is already stripped of
+ * signature components if this is a signed Interest name.
+ * @param {Name} keyLocatorName The KeyLocator's name.
+ * @param {ValidationState} state This calls state.fail() if the packet is
+ * invalid.
+ * @return {boolean} True if further signature verification is needed, or false
+ * if the packet is immediately determined to be invalid in which case this
+ * calls state.fail() with the proper code and message.
+ */
+ConfigChecker.prototype.checkNames = function
+  (packetName, keyLocatorName, state)
+{
+  throw new Error("ConfigChecker.checkNames is not implemented");
+};
+
+/**
+ * @param {BoostInfoTree} configSection
+ * @return {ConfigChecker}
+ */
+ConfigChecker.createCustomizedChecker_ = function( configSection)
+{
+  // Ignore sig-type.
+  // Get checker.key-locator .
+  keyLocatorSection = configSection.get("key-locator");
+  if (keyLocatorSection.length != 1)
+    throw new ValidatorConfigError(new Error("Expected one <checker.key-locator>"));
+
+  return ConfigChecker.createKeyLocatorChecker_(keyLocatorSection[0]);
+};
+
+/**
+ * @param {BoostInfoTree} configSection
+ * @return {ConfigChecker}
+ */
+ConfigChecker.createHierarchicalChecker_ = function(configSection)
+{
+  // Ignore sig-type.
+  return new ConfigHyperRelationChecker
+    ("^(<>*)$",        "\\1",
+     "^(<>*)<KEY><>$", "\\1",
+     ConfigNameRelation.Relation.IS_PREFIX_OF);
+};
+
+/**
+ * @param {BoostInfoTree} configSection
+ * @return {ConfigChecker}
+ */
+ConfigChecker.createKeyLocatorChecker_ = function(configSection)
+{
+  // Get checker.key-locator.type .
+  var keyLocatorType = configSection.getFirstValue("type");
+  if (keyLocatorType == null)
+    throw new ValidatorConfigError(new Error("Expected <checker.key-locator.type>"));
+
+  if (keyLocatorType.toLowerCase() == "name")
+    return ConfigChecker.createKeyLocatorNameChecker_(configSection);
+  else
+    throw new ValidatorConfigError(new Error
+      ("Unsupported checker.key-locator.type: " + keyLocatorType));
+};
+
+/**
+ * @param {BoostInfoTree} configSection
+ * @return {ConfigChecker}
+ */
+ConfigChecker.createKeyLocatorNameChecker_ = function(configSection)
+{
+  var nameUri = configSection.getFirstValue("name");
+  if (nameUri != null) {
+    var name = new Name(nameUri);
+
+    var relationValue = configSection.getFirstValue("relation");
+    if (relationValue == null)
+      throw new ValidatorConfigError(new Error
+        ("Expected <checker.key-locator.relation>"));
+
+    relation = ConfigNameRelation.getNameRelationFromString(relationValue);
+    return new ConfigNameRelationChecker(name, relation);
+  }
+
+  var regexString = configSection.getFirstValue("regex");
+  if (regexString != null) {
+    try {
+      return new ConfigRegexChecker(regexString);
+    }
+    catch (ex) {
+      throw new ValidatorConfigError(new Error
+        ("Invalid checker.key-locator.regex: " + regexString));
+    }
+  }
+
+  var hyperRelationList = configSection.get("hyper-relation");
+  if (hyperRelationList.length == 1) {
+    var hyperRelation = hyperRelationList[0];
+
+    // Get k-regex.
+    var keyRegex = hyperRelation.getFirstValue("k-regex");
+    if (keyRegex == null)
+      throw new ValidatorConfigError(new Error
+        ("Expected <checker.key-locator.hyper-relation.k-regex>"));
+
+    // Get k-expand.
+    var keyExpansion = hyperRelation.getFirstValue("k-expand");
+    if (keyExpansion == null)
+      throw new ValidatorConfigError(new Error
+        ("Expected <checker.key-locator.hyper-relation.k-expand"));
+
+    // Get h-relation.
+    var hyperRelationString = hyperRelation.getFirstValue("h-relation");
+    if (hyperRelationString == null)
+      throw new ValidatorConfigError(new Error
+        ("Expected <checker.key-locator.hyper-relation.h-relation>"));
+
+    // Get p-regex.
+    var packetNameRegex = hyperRelation.getFirstValue("p-regex");
+    if (packetNameRegex == null)
+      throw new ValidatorConfigError(new Error
+        ("Expected <checker.key-locator.hyper-relation.p-regex>"));
+
+    // Get p-expand.
+    var packetNameExpansion = hyperRelation.getFirstValue("p-expand");
+    if (packetNameExpansion == null)
+      throw new ValidatorConfigError(new Error
+        ("Expected <checker.key-locator.hyper-relation.p-expand>"));
+
+    var relation =
+      ConfigNameRelation.getNameRelationFromString(hyperRelationString);
+
+    try {
+      return new ConfigHyperRelationChecker
+        (packetNameRegex, packetNameExpansion, keyRegex, keyExpansion, relation);
+    }
+    catch (ex) {
+      throw new ValidatorConfigError(new Error
+        ("Invalid regex for key-locator.hyper-relation"));
+    }
+  }
+
+  throw new ValidatorConfigError(new Error("Unsupported checker.key-locator"));
+};
+
+/**
+ * ConfigNameRelationChecker extends ConfigChecker.
+ * @param {Name} name
+ * @param {number} relation The value for the ConfigNameRelation.Relation enum.
+ * @constructor
+ */
+var ConfigNameRelationChecker = function ConfigNameRelationChecker(name, relation)
+{
+  // Call the base constructor.
+  ConfigChecker.call(this);
+
+  this.name_ = name;
+  this.relation_ = relation;
+};
+
+ConfigNameRelationChecker.prototype = new ConfigChecker();
+ConfigNameRelationChecker.prototype.name = "ConfigNameRelationChecker";
+
+exports.ConfigNameRelationChecker = ConfigNameRelationChecker;
+
+/**
+ * @param {Name} packetName
+ * @param {Name} keyLocatorName
+ * @param {ValidationState} state
+ * @return {boolean}
+ */
+ConfigNameRelationChecker.prototype.checkNames = function
+  (packetName, keyLocatorName, state)
+{
+  // packetName is not used in this check.
+
+  var identity = PibKey.extractIdentityFromKeyName(keyLocatorName);
+  var result = ConfigNameRelation.checkNameRelation
+    (this.relation_, this.name_, identity);
+  if (!result)
+    state.fail(new ValidationError(ValidationError.POLICY_ERROR,
+      "KeyLocator check failed: name relation " + this.name_.toUri() + " " +
+      ConfigNameRelation.toString(this.relation_) + " for packet " +
+      packetName.toUri() + " is invalid (KeyLocator=" +
+      keyLocatorName.toUri() + ", identity=" + identity.toUri() + ")"));
+
+  return result;
+};
+
+/**
+ * ConfigRegexChecker extends ConfigChecker.
+ * @param {String} regexString
+ * @constructor
+ */
+var ConfigRegexChecker = function ConfigRegexChecker(regexString)
+{
+  // Call the base constructor.
+  ConfigChecker.call(this);
+
+  this.regex_ = new NdnRegexTopMatcher(regexString);
+};
+
+ConfigRegexChecker.prototype = new ConfigChecker();
+ConfigRegexChecker.prototype.name = "ConfigRegexChecker";
+
+exports.ConfigRegexChecker = ConfigRegexChecker;
+
+/**
+ * @param {Name} packetName
+ * @param {Name} keyLocatorName
+ * @param {ValidationState} state
+ * @return {boolean}
+ */
+ConfigRegexChecker.prototype.checkNames = function
+  (packetName, keyLocatorName, state)
+{
+  var result = this.regex_.match(keyLocatorName);
+  if (!result)
+    state.fail(new ValidationError(ValidationError.POLICY_ERROR,
+      "KeyLocator check failed: regex " + this.regex_.getExpr() + " for packet " +
+      packetName.toUri() + " is invalid (KeyLocator=" + keyLocatorName.toUri() +
+      ")"));
+
+  return result;
+};
+
+/**
+ * ConfigHyperRelationChecker extends ConfigChecker.
+ * @param {String} packetNameRegexString
+ * @param {String} packetNameExpansion
+ * @param {String} keyNameRegexString
+ * @param {String} keyNameExpansion
+ * @param {number} hyperRelation The value for the ConfigNameRelation.Relation enum.
+ * @constructor
+ */
+var ConfigHyperRelationChecker = function ConfigHyperRelationChecker
+  (packetNameRegexString, packetNameExpansion, keyNameRegexString,
+   keyNameExpansion, hyperRelation)
+{
+  // Call the base constructor.
+  ConfigChecker.call(this);
+
+  this.packetNameRegex_ = new NdnRegexTopMatcher(packetNameRegexString);
+  this.packetNameExpansion_ = packetNameExpansion;
+  this.keyNameRegex_ = new NdnRegexTopMatcher(keyNameRegexString);
+  this.keyNameExpansion_ = keyNameExpansion;
+  this.hyperRelation_ = hyperRelation;
+};
+
+ConfigHyperRelationChecker.prototype = new ConfigChecker();
+ConfigHyperRelationChecker.prototype.name = "ConfigHyperRelationChecker";
+
+exports.ConfigHyperRelationChecker = ConfigHyperRelationChecker;
+
+/**
+ * @param {Name} packetName
+ * @param {Name} keyLocatorName
+ * @param {ValidationState} state
+ * @return {boolean}
+ */
+ConfigHyperRelationChecker.prototype.checkNames = function
+  (packetName, keyLocatorName, state)
+{
+  if (!this.packetNameRegex_.match(packetName)) {
+    state.fail(new ValidationError(ValidationError.POLICY_ERROR,
+      "The packet " + packetName.toUri() + " (KeyLocator=" +
+      keyLocatorName.toUri() +
+      ") does not match the hyper relation packet name regex " +
+      this.packetNameRegex_.getExpr()));
+    return false;
+  }
+  if (!this.keyNameRegex_.match(keyLocatorName)) {
+    state.fail(new ValidationError(ValidationError.POLICY_ERROR,
+      "The packet " + packetName.toUri() + " (KeyLocator=" +
+      keyLocatorName.toUri() +
+      ") does not match the hyper relation key name regex " +
+      this.keyNameRegex_.getExpr()));
+    return false;
+  }
+
+  var keyNameMatchExpansion = this.keyNameRegex_.expand(this.keyNameExpansion_);
+  var packetNameMatchExpansion = 
+    this.packetNameRegex_.expand(this.packetNameExpansion_);
+  var result = ConfigNameRelation.checkNameRelation
+    (this.hyperRelation_, keyNameMatchExpansion, packetNameMatchExpansion);
+  if (!result)
+    state.fail(new ValidationError(ValidationError.POLICY_ERROR,
+      "KeyLocator check failed: hyper relation " +
+      ConfigNameRelation.toString(this.hyperRelation_) + " packet name match=" +
+      packetNameMatchExpansion.toUri() + ", key name match=" +
+      keyNameMatchExpansion.toUri() + " of packet " + packetName.toUri() +
+      " (KeyLocator=" + keyLocatorName.toUri() + ") is invalid"));
+
+  return result;
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validator-config/filter.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../../name.js').Name; /** @ignore */
+var ConfigNameRelation = require('./config-name-relation.js').ConfigNameRelation; /** @ignore */
+var NdnRegexTopMatcher = require('../../../util/regex/ndn-regex-top-matcher.js').NdnRegexTopMatcher; /** @ignore */
+var ValidatorConfigError = require('../../validator-config-error.js').ValidatorConfigError;
+
+/**
+ * ConfigFilter is an abstract base class for RegexNameFilter, etc. used by
+ * ValidatorConfig. The ValidatorConfig class consists of a set of rules.
+ * The Filter class is a part of a rule and is used to match a packet.
+ * Matched packets will be checked against the checkers defined in the rule.
+ * @constructor
+ */
+var ConfigFilter = function ConfigFilter()
+{
+};
+
+exports.ConfigFilter = ConfigFilter;
+
+/**
+ * Call the virtual matchName method based on the packet type.
+ * @param {boolean} isForInterest True if packetName is for an Interest, false
+ * if for a Data packet.
+ * @param {Name} packetName The packet name. For a signed interest, the last two
+ * components are skipped but not removed.
+ * @return {boolean} True for a match.
+ */
+ConfigFilter.prototype.match = function(isForInterest, packetName)
+{
+  if (isForInterest) {
+    var signedInterestMinSize = 2;
+
+    if (packetName.size() < signedInterestMinSize)
+      return false;
+
+    return this.matchName(packetName.getPrefix(-signedInterestMinSize));
+  }
+  else
+    // Data packet.
+    return this.matchName(packetName);
+};
+
+/**
+ * Create a filter from the configuration section.
+ * @param {BoostInfoTree} configSection The section containing the definition of
+ * the filter, e.g. one of "validator.rule.filter".
+ * @return {ConfigFilter} A new filter created from the configuration section.
+ */
+ConfigFilter.create = function(configSection)
+{
+  var filterType = configSection.getFirstValue("type");
+  if (filterType == null)
+    throw new ValidatorConfigError(new Error("Expected <filter.type>"));
+
+  if (filterType.toLowerCase() == "name")
+    return ConfigFilter.createNameFilter_(configSection);
+  else
+    throw new ValidatorConfigError(new Error
+      ("Unsupported filter.type: " + filterType));
+};
+
+/**
+ * Implementation of the check for match.
+ * @param {Name} packetName The packet name, which is already stripped of
+ * signature components if this is a signed Interest name.
+ * @return {boolean} True for a match.
+ */
+ConfigFilter.prototype.matchName = function(packetName)
+{
+  throw new Error("ConfigFilter.matchName is not implemented");
+};
+
+/**
+ * This is a helper for create() to create a filter from the configuration
+ * section which is type "name".
+ * @param {BoostInfoTree} configSection The section containing the definition of
+ * the filter.
+ * @return {ConfigFilter} A new filter created from the configuration section.
+ */
+ConfigFilter.createNameFilter_ = function(configSection)
+{
+  var nameUri = configSection.getFirstValue("name");
+  if (nameUri != null) {
+    // Get the filter.name.
+    var name = new Name(nameUri);
+
+    // Get the filter.relation.
+    var relationValue = configSection.getFirstValue("relation");
+    if (relationValue == null)
+      throw new ValidatorConfigError(new Error("Expected <filter.relation>"));
+
+    var relation = ConfigNameRelation.getNameRelationFromString(relationValue);
+
+    return new ConfigRelationNameFilter(name, relation);
+  }
+
+  var regexString = configSection.getFirstValue("regex");
+  if (regexString != null) {
+    try {
+      return new ConfigRegexNameFilter(regexString);
+    }
+    catch (ex) {
+      throw new ValidatorConfigError(new Error
+        ("Wrong filter.regex: " + regexString));
+    }
+  }
+
+  throw new ValidatorConfigError(new Error("Wrong filter(name) properties"));
+};
+
+/**
+ * ConfigRelationNameFilter extends ConfigFilter to check that the name is in
+ * the given relation to the packet name.
+ * The configuration
+ * "filter
+ * {
+ *   type name
+ *   name /example
+ *   relation is-prefix-of
+ * }"
+ * creates ConfigRelationNameFilter("/example",
+ *   ConfigNameRelation.Relation.IS_PREFIX_OF) .
+ *
+ * Create a ConfigRelationNameFilter for the given values.
+ * @param {Name} name The relation name, which is copied.
+ * @param {number} relation The relation type as a
+ * ConfigNameRelation.Relation enum.
+ * @constructor
+ */
+var ConfigRelationNameFilter = function ConfigRelationNameFilter
+  (name, relation)
+{
+  // Call the base constructor.
+  ConfigFilter.call(this);
+
+  // Copy the Name.
+  this.name_ = new Name(name);
+  this.relation_ = relation;
+};
+
+ConfigRelationNameFilter.prototype = new ConfigFilter();
+ConfigRelationNameFilter.prototype.name = "ConfigRelationNameFilter";
+
+exports.ConfigRelationNameFilter = ConfigRelationNameFilter;
+
+/**
+ * Implementation of the check for match.
+ * @param {Name} packetName The packet name, which is already stripped of
+ * signature components if this is a signed Interest name.
+ * @return {boolean} True for a match.
+ */
+ConfigRelationNameFilter.prototype.matchName = function(packetName)
+{
+  return ConfigNameRelation.checkNameRelation
+    (this.relation_, this.name_, packetName);
+};
+
+/**
+ * ConfigRegexNameFilter extends ConfigFilter to check that the packet name
+ * matches the specified regular expression.
+ * The configuration
+ * {@code
+ * "filter
+ * {
+ *   type name
+ *   regex ^[^<KEY>]*<KEY><>*<ksk-.*>$
+ * }"}
+ * creates
+ * {@code ConfigRegexNameFilter("^[^<KEY>]*<KEY><>*<ksk-.*>$") }.
+ *
+ * Create a ConfigRegexNameFilter from the regex string.
+ * @param {String} regexString The regex string.
+ * @constructor
+ */
+var ConfigRegexNameFilter = function ConfigRegexNameFilter(regexString)
+{
+  // Call the base constructor.
+  ConfigFilter.call(this);
+
+  this.regex_ = new NdnRegexTopMatcher(regexString);
+};
+
+ConfigRegexNameFilter.prototype = new ConfigFilter();
+ConfigRegexNameFilter.prototype.name = "ConfigRegexNameFilter";
+
+exports.ConfigRegexNameFilter = ConfigRegexNameFilter;
+
+/**
+ * Implementation of the check for match.
+ * @param {Name} packetName The packet name, which is already stripped of
+ * signature components if this is a signed Interest name.
+ * @return {boolean} True for a match.
+ */
+ConfigRegexNameFilter.prototype.matchName = function(packetName)
+{
+  return this.regex_.match(packetName);
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validator-config/name-relation.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var ValidatorConfigError = require('../../validator-config-error.js').ValidatorConfigError;
+
+/**
+ * ConfigNameRelation defines the ConfigNameRelation.Relation enum and static
+ * methods to work with name relations for the ValidatorConfig.
+ * @constructor
+ */
+var ConfigNameRelation = function ConfigNameRelation()
+{
+};
+
+exports.ConfigNameRelation = ConfigNameRelation;
+
+ConfigNameRelation.Relation = function ConfigNameRelationRelation() {};
+
+ConfigNameRelation.Relation.EQUAL = 0;
+ConfigNameRelation.Relation.IS_PREFIX_OF = 1;
+ConfigNameRelation.Relation.IS_STRICT_PREFIX_OF = 2;
+
+/**
+ * Get a string representation of the Relation enum.
+ * @param {number} relation The value for the ConfigNameRelation.Relation enum.
+ * @return {String} The string representation.
+ */
+ConfigNameRelation.toString = function(relation)
+{
+  if (relation == ConfigNameRelation.Relation.EQUAL)
+    return "equal";
+  else if (relation == ConfigNameRelation.Relation.IS_PREFIX_OF)
+    return "is-prefix-of";
+  else if (relation == ConfigNameRelation.Relation.IS_STRICT_PREFIX_OF)
+    return "is-strict-prefix-of";
+  else
+    // We don't expect this to happen.
+    return "";
+};
+
+/**
+ * Check whether name1 and name2 satisfy the relation.
+ * @param {number} relation The value for the ConfigNameRelation.Relation enum.
+ * @param {Name} name1 The first name to check.
+ * @param {Name} name2 The second name to check.
+ * @return {boolean} True if the names satisfy the relation.
+ */
+ConfigNameRelation.checkNameRelation = function(relation, name1, name2)
+{
+  if (relation == ConfigNameRelation.Relation.EQUAL)
+    return name1.equals(name2);
+  else if (relation == ConfigNameRelation.Relation.IS_PREFIX_OF)
+    return name1.isPrefixOf(name2);
+  else if (relation == ConfigNameRelation.Relation.IS_STRICT_PREFIX_OF)
+    return name1.isPrefixOf(name2) && name1.size() < name2.size();
+  else
+    // We don't expect this to happen.
+    return false;
+};
+
+/**
+ * Convert relationString to a Relation enum.
+ * @param {String} relationString the string to convert.
+ * @return {number} The value for the ConfigNameRelation.Relation enum.
+ * @throws ValidatorConfigError if relationString cannot be converted.
+ */
+ConfigNameRelation.getNameRelationFromString = function(relationString)
+{
+  if (relationString.toLowerCase() == "equal")
+    return ConfigNameRelation.Relation.EQUAL;
+  else if (relationString.toLowerCase() == "is-prefix-of")
+    return ConfigNameRelation.Relation.IS_PREFIX_OF;
+  else if (relationString.toLowerCase() == "is-strict-prefix-of")
+    return ConfigNameRelation.Relation.IS_STRICT_PREFIX_OF;
+  else
+    throw new ValidatorConfigError(new Error
+      ("Unsupported relation: " + relationString));
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validator-config/rule.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var ConfigChecker = require('./config-checker.js').ConfigChecker; /** @ignore */
+var ConfigFilter = require('./config-filter.js').ConfigFilter; /** @ignore */
+var ValidatorConfigError = require('../../validator-config-error.js').ValidatorConfigError; /** @ignore */
+var LOG = require('../../../log.js').Log.LOG;
+
+/**
+ * A ConfigRule represents a rule configuration section, used by ConfigValidator.
+ *
+ * Create a ConfigRule with empty filters and checkers.
+ * @param {String} id The rule ID from the configuration section.
+ * @param {boolean} isForInterest True if the rule is for an Interest packet,
+ * false if it is for a Data packet.
+ * @constructor
+ */
+var ConfigRule = function ConfigRule(id, isForInterest)
+{
+  this.id_ = id;
+  this.isForInterest_ = isForInterest;
+  this.filters_ = [];  // of ConfigFilter
+  this.checkers_ = []; // of ConfigChecker
+};
+
+exports.ConfigRule = ConfigRule;
+
+/**
+ * Get the rule ID.
+ * @return {String} The rule ID.
+ */
+ConfigRule.prototype.getId = function() { return this.id_; };
+
+/**
+ * Get the isForInterest flag.
+ * @return {boolean} True if the rule is for an Interest packet, false if it is
+ * for a Data packet.
+ */
+ConfigRule.prototype.getIsForInterest = function() { return this.isForInterest_; };
+
+/**
+ * Add the ConfigFilter to the list of filters.
+ * @param {ConfigFilter} filter The ConfigFilter.
+ */
+ConfigRule.prototype.addFilter = function(filter)
+{ 
+  this.filters_.push(filter);
+};
+
+/**
+ * Add the ConfigChecker to the list of checkers.
+ * @param {ConfigChecker} checker The ConfigChecker.
+ */
+ConfigRule.prototype.addChecker = function(checker)
+{ 
+  this.checkers_.push(checker);
+};
+
+/**
+ * Check if the packet name matches the rule's filter.
+ * If no filters were added, the rule matches everything.
+ * @param {boolean} isForInterest True if packetName is for an Interest, false
+ * if for a Data packet.
+ * @param {Name} packetName The packet name. For a signed interest, the last two
+ * components are skipped but not removed.
+ * @return {boolean} True if at least one filter matches the packet name, false
+ * if none of the filters match the packet name.
+ * @throws ValidatorConfigError if the supplied isForInterest doesn't match the
+ * one for which the rule is designed.
+ */
+ConfigRule.prototype.match = function(isForInterest, packetName)
+{
+  if (LOG > 3) console.log("Trying to match " + packetName.toUri());
+
+  if (isForInterest != this.isForInterest_)
+    throw new ValidatorConfigError(new Error
+      ("Invalid packet type supplied ( " +
+       (isForInterest ? "interest" : "data") + " != " +
+       (this.isForInterest_ ? "interest" : "data") + ")"));
+
+  if (this.filters_.length == 0)
+    return true;
+
+  var result = false;
+  for (var i = 0; i < this.filters_.length; ++i) {
+    result = (result || this.filters_[i].match(isForInterest, packetName));
+    if (result)
+      break;
+  }
+
+  return result;
+};
+
+/**
+ * Check if the packet satisfies the rule's condition.
+ * @param {boolean} isForInterest True if packetName is for an Interest, false
+ * if for a Data packet.
+ * @param {Name} packetName The packet name. For a signed interest, the last two
+ * components are skipped but not removed.
+ * @param {Name} keyLocatorName The KeyLocator's name.
+ * @param {ValidationState} state This calls state.fail() if the packet is invalid.
+ * @return {boolean} True if further signature verification is needed, or false
+ * if the packet is immediately determined to be invalid in which case this
+ * calls state.fail() with the proper code and message.
+ * @throws ValidatorConfigError if the supplied isForInterest doesn't match the
+ * one for which the rule is designed.
+ */
+ConfigRule.prototype.check = function
+  (isForInterest, packetName, keyLocatorName, state)
+{
+  if (LOG > 3) console.log("Trying to check " +  packetName.toUri() +
+    " with keyLocator " +keyLocatorName.toUri());
+
+  if (isForInterest != this.isForInterest_)
+    throw new ValidatorConfigError(new Error
+      ("Invalid packet type supplied ( " +
+       (isForInterest ? "interest" : "data") + " != " +
+       (this.isForInterest_ ? "interest" : "data") + ")"));
+
+  var hasPendingResult = false;
+  for (var i = 0; i < this.checkers_.length; ++i) {
+    var result = this.checkers_[i].check
+      (isForInterest, packetName, keyLocatorName, state);
+    if (!result)
+      return result;
+    hasPendingResult = true;
+  }
+
+  return hasPendingResult;
+};
+
+/**
+ * Create a rule from configuration section.
+ * @param {BoostInfoTree} configSection The section containing the definition of
+ * the checker, e.g. one of "validator.rule".
+ * @return {ConfigRule} A new ConfigRule created from the configuration
+ */
+ConfigRule.create = function(configSection)
+{
+  // Get rule.id .
+  var ruleId = configSection.getFirstValue("id");
+  if (ruleId == null)
+    throw new ValidatorConfigError(new Error("Expecting <rule.id>"));
+
+  // Get rule.for .
+  var usage = configSection.getFirstValue("for");
+  if (usage == null)
+    throw new ValidatorConfigError(new Error
+      ("Expecting <rule.for> in rule: " + ruleId));
+
+  var isForInterest;
+  if (usage.toLowerCase() == "data")
+    isForInterest = false;
+  else if (usage.toLowerCase() == "interest")
+    isForInterest = true;
+  else
+    throw new ValidatorConfigError(new Error
+      ("Unrecognized <rule.for>: " + usage + " in rule: " + ruleId));
+
+  var rule = new ConfigRule(ruleId, isForInterest);
+
+  // Get rule.filter(s)
+  var filterList = configSection.get("filter");
+  for (var i = 0; i < filterList.length; ++i)
+    rule.addFilter(ConfigFilter.create(filterList[i]));
+
+  // Get rule.checker(s)
+  var checkerList = configSection.get("checker");
+  for (var i = 0; i < checkerList.length; ++i)
+    rule.addChecker(ConfigChecker.create(checkerList[i]));
+
+  // Check other stuff.
+  if (checkerList.length == 0)
+    throw new ValidatorConfigError(new Error
+      ("No <rule.checker> is specified in rule: " + ruleId));
+
+  return rule;
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/trust-anchor-group.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var fs = require('fs'); /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var CertificateV2 = require('./certificate-v2.js').CertificateV2;
+
+/**
+ * TrustAnchorGroup represents a group of trust anchors which implement the
+ * CertificateContainer interface.
+ * 
+ * Create a TrustAnchorGroup to use an existing container.
+ * @param {CertificateContainer} certificateContainer The existing certificate
+ * container which implements the CertificateContainer interface.
+ * @param {string} id The group ID.
+ * @constructor
+ */
+var TrustAnchorGroup = function TrustAnchorGroup(certificateContainer, id)
+{
+  this.certificates_ = certificateContainer;
+  this.id_ = id;
+
+  // The object keys are the set of anchor name URIs, and each value is true.
+  this.anchorNameUris_ = {};
+};
+
+exports.TrustAnchorGroup = TrustAnchorGroup;
+
+/**
+ * Get the group id given to the constructor.
+ * @return {string} The group id.
+ */
+TrustAnchorGroup.prototype.getId = function() { return this.id_; };
+
+/**
+ * Get the number of certificates in the group.
+ * @return {number} The number of certificates.
+ */
+TrustAnchorGroup.prototype.size = function()
+{ 
+  return Object.keys(this.anchorNameUris_).length;
+};
+
+/**
+ * Request a certificate refresh. The base method does nothing.
+ */
+TrustAnchorGroup.prototype.refresh = function() {};
+
+/**
+ * Read a base-64-encoded certificate from a file.
+ * @param {string} filePath The certificate file path.
+ * @return {CertificateV2} The decoded certificate, or null if there is an
+ * error.
+ */
+TrustAnchorGroup.readCertificate = function(filePath)
+{
+  try {
+    var encodedData = fs.readFileSync(filePath).toString();
+    var decodedData = new Buffer(encodedData, 'base64');
+    var result = new CertificateV2();
+    result.wireDecode(new Blob(decodedData, false));
+    return result;
+  } catch (ex) {
+    return null;
+  }
+};
+
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validation-state.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var ValidationError = require('./validation-error.js').ValidationError; /** @ignore */
+var LOG = require('../../log.js').Log.LOG; /** @ignore */
+var VerificationHelpers = require('../verification-helpers.js').VerificationHelpers; /** @ignore */
+var CertificateV2 = require('./certificate-v2.js').CertificateV2;
+
+/**
+ * ValidationState is an abstract base class for DataValidationState and
+ * InterestValidationState.
+ *
+ * One instance of the validation state is kept for the validation of the whole
+ * certificate chain.
+ *
+ * The state collects the certificate chain that adheres to the selected
+ * validation policy to validate data or interest packets. Certificate, data,
+ * and interest packet signatures are verified only after the validator
+ * determines that the chain terminates with a trusted certificate (a trusted
+ * anchor or a previously validated certificate). This model allows filtering
+ * out invalid certificate chains without incurring (costly) cryptographic
+ * signature verification overhead and mitigates some forms of denial-of-service
+ * attacks.
+ *
+ * A validation policy and/or key fetcher may add custom information associated
+ * with the validation state using tags.
+ * @constructor
+ */
+var ValidationState = function ValidationState()
+{
+  /**
+   * Each certificate in the chain signs the next certificate. The last
+   * certificate signs the original packet.
+   */
+  this.certificateChain_ = []; // of CertificateV2
+  // The keys are the set of Name URI String, and each value is true.
+  this.seenCertificateNameUris_ = {};
+  this.hasOutcome_ = false;
+  this.outcome_ = false;
+};
+
+exports.ValidationState = ValidationState;
+
+/**
+ * Check if validation failed or success has been called.
+ * @return {boolean} True if validation failed or success has been called.
+ */
+ValidationState.prototype.hasOutcome = function() { return this.hasOutcome_; };
+
+/**
+ * Check if validation failed has been called.
+ * @return {boolean} True if validation failed has been called, false if no
+ * validation callbacks have been called or validation success was called.
+ */
+ValidationState.prototype.isOutcomeFailed = function()
+{ 
+  return this.hasOutcome_ && this.outcome_ == false;
+};
+
+/**
+ * Check if validation success has been called.
+ * @return {boolean} True if validation success has been called, false if no
+ * validation callbacks have been called or validation failed was called.
+ */
+ValidationState.prototype.isOutcomeSuccess = function()
+{ 
+  return this.hasOutcome_ && this.outcome_ == true;
+};
+
+/**
+ * Call the failure callback.
+ * @param {ValidationError} error
+ */
+ValidationState.prototype.fail = function(error)
+{
+  throw new Error("ValidationState.fail is not implemented");
+};
+
+/**
+ * Get the depth of the certificate chain.
+ * @return {number} The depth of the certificate chain.
+ */
+ValidationState.prototype.getDepth = function()
+{ 
+  return this.certificateChain_.length;
+};
+
+/**
+ * Check if certificateName has been previously seen, and record the supplied
+ * name.
+ * @param {Name} certificateName The certificate name, which is copied.
+ * @return {boolean} True if certificateName has been previously seen.
+ */
+ValidationState.prototype.hasSeenCertificateName = function(certificateName)
+{
+  var certificateNameUri = certificateName.toUri();
+  if (this.seenCertificateNameUris_[certificateNameUri] !== undefined)
+    return true;
+  else {
+    this.seenCertificateNameUris_[certificateNameUri] = true;
+    return false;
+  }
+};
+
+/**
+ * Add the certificate to the top of the certificate chain.
+ * If the certificate chain is empty, then the certificate should be the
+ * signer of the original packet. If the certificate chain is not empty, then
+ * the certificate should be the signer of the front of the certificate chain.
+ * @note This function does not verify the signature bits.
+ * @param {CertificateV2} certificate The certificate to add, which is copied.
+ */
+ValidationState.prototype.addCertificate = function(certificate)
+{
+  this.certificateChain_.unshift(new CertificateV2(certificate));
+};
+
+/**
+ * Set the outcome to the given value, and set hasOutcome_ true.
+ * @param {boolean} outcome The outcome.
+ * @throws Error If this ValidationState already has an outcome.
+ */
+ValidationState.prototype.setOutcome = function(outcome)
+{
+  if (this.hasOutcome_)
+    throw new Error("The ValidationState already has an outcome");
+
+  this.hasOutcome_ = true;
+  this.outcome_ = outcome;
+};
+
+/**
+ * Verify the signature of the original packet. This is only called by the
+ * Validator class.
+ * @param {CertificateV2} trustedCertificate The certificate that signs the
+ * original packet.
+ * @return {Promise|SyncPromise} A promise that resolves when the success or
+ * failure callback has been called.
+ */
+ValidationState.prototype.verifyOriginalPacketPromise_ = function
+  (trustedCertificate)
+{
+  return SyncPromise.reject(new Error
+    ("ValidationState.verifyOriginalPacketPromise_ is not implemented"));
+};
+
+/**
+ * Call the success callback of the original packet without signature
+ * validation. This is only called by the Validator class.
+ */
+ValidationState.prototype.bypassValidation_ = function()
+{
+  throw new Error("ValidationState.bypassValidation_ is not implemented");
+};
+
+/**
+ * Verify signatures of certificates in the certificate chain. On return, the
+ * certificate chain contains a list of certificates successfully verified by
+ * trustedCertificate.
+ * When the certificate chain cannot be verified, this method will call
+ * fail() with the INVALID_SIGNATURE error code and the appropriate message.
+ * This is only called by the Validator class.
+ * @param {CertificateV2} trustedCertificate
+ * @return {Promise|SyncPromise} A promise which returns the CertificateV2 to
+ * validate the original data packet, either the last entry in the certificate
+ * chain or trustedCertificate if the certificate chain is empty. However,
+ * return a promise which returns null if the signature of at least one
+ * certificate in the chain is invalid, in which case all unverified
+ * certificates have been removed from the certificate chain.
+ */
+ValidationState.prototype.verifyCertificateChainPromise_ = function
+  (trustedCertificate)
+{
+  var validatedCertificate = trustedCertificate;
+  var thisState = this;
+
+  // We're using Promises, so we need a function for the loop.
+  var loopPromise = function(i) {
+    if (i >= thisState.certificateChain_.length)
+      // Finished.
+      return SyncPromise.resolve(validatedCertificate);
+
+    var certificateToValidate = thisState.certificateChain_[i];
+
+    return VerificationHelpers.verifyDataSignaturePromise
+      (certificateToValidate, validatedCertificate)
+    .then(function(verifySuccess) {
+      if (!verifySuccess) {
+        thisState.fail(new ValidationError(ValidationError.INVALID_SIGNATURE,
+             "Invalid signature of certificate `" +
+             certificateToValidate.getName().toUri() + "`"));
+        // Remove this and remaining certificates in the chain.
+        while (thisState.certificateChain_.length > i)
+          thisState.certificateChain_.splice(i, 1);
+
+        return SyncPromise.resolve(null);
+      }
+      else {
+        if (LOG > 3) console.log("OK signature for certificate `" +
+          certificateToValidate.getName().toUri() + "`");
+        validatedCertificate = certificateToValidate;
+      }
+
+      ++i;
+      // Recurse to the next iteration.
+      return loopPromise(i);
+    });
+  };
+
+  return loopPromise(0);
+};
+/**
  * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/certificate-cache.cpp
@@ -31831,7 +33215,9 @@ Tpm.prototype.findKeyPromise_ = function(keyName, useSync)
 
 /** @ignore */
 var Name = require('../../name.js').Name; /** @ignore */
-var CertificateV2 = require('./certificate-v2.js').CertificateV2;
+var Schedule = require('../../encrypt/schedule.js').Schedule; /** @ignore */
+var CertificateV2 = require('./certificate-v2.js').CertificateV2; /** @ignore */
+var LOG = require('../../log.js').Log.LOG;
 
 /**
  * A CertificateCacheV2 holds other user's verified certificates in security v2
@@ -31846,12 +33232,15 @@ var CertificateV2 = require('./certificate-v2.js').CertificateV2;
  */
 var CertificateCacheV2 = function CertificateCacheV2(maxLifetimeMilliseconds)
 {
-  // Array of objects with fields "name" of type Name and "certificate" of type
-  // CertificateV2. We can't use an {} object since the Name key itself is an
-  // object, and also it needs to be sorted by Name.
+  // Array of objects with fields "name" of type Name, "certificate" of type
+  // CertificateV2 and "removalTime" as milliseconds since Jan 1, 1970 UTC. We
+  // can't use an {} object since the Name key itself is an object, and also it
+  // needs to be sorted by Name.
   this.certificatesByName_ = [];
+  this.nextRefreshTime_ = Number.MAX_VALUE;
   this.maxLifetimeMilliseconds_ = (maxLifetimeMilliseconds == undefined ?
     CertificateCacheV2.getDefaultLifetime() : maxLifetimeMilliseconds);
+  this.nowOffsetMilliseconds_ = 0;
 };
 
 exports.CertificateCacheV2 = CertificateCacheV2;
@@ -31864,9 +33253,23 @@ exports.CertificateCacheV2 = CertificateCacheV2;
  */
 CertificateCacheV2.prototype.insert = function(certificate)
 {
-  // TODO: Implement certificatesByTime_ to support refresh(). There can be
-  // multiple certificate for the same removalTime, and adding the same
-  // certificate again should update the removalTime.
+  var notAfterTime = certificate.getValidityPeriod().getNotAfter();
+  // nowOffsetMilliseconds_ is only used for testing.
+  var now = new Date().getTime() + this.nowOffsetMilliseconds_;
+  if (notAfterTime < now) {
+    if (LOG > 3) console.log("Not adding " + certificate.getName().toUri() +
+      ": already expired at " + Schedule.toIsoString(notAfterTime));
+    return;
+  }
+
+  var removalTime =
+    Math.min(notAfterTime, now + this.maxLifetimeMilliseconds_);
+  if (removalTime < this.nextRefreshTime_)
+    // We need to run refresh() sooner.)
+    this.nextRefreshTime_ = removalTime;
+
+  if (LOG > 3) console.log("Adding " + certificate.getName().toUri() +
+    ", will remove in " + (removalTime - now) / (3600 * 1000.0) + " hours");
 
   var certificateCopy = new CertificateV2(certificate);
 
@@ -31879,11 +33282,13 @@ CertificateCacheV2.prototype.insert = function(certificate)
     if (this.certificatesByName_[i].name.equals(name)) {
       // Just replace the existing entry value.
       this.certificatesByName_[i].certificate = certificateCopy;
+      this.certificatesByName_[i].removalTime = removalTime;
       return;
     }
   }
 
-  this.certificatesByName_.splice(i, 0, {name: name, certificate: certificateCopy});
+  this.certificatesByName_.splice
+    (i, 0, {name: name, certificate: certificateCopy, removalTime: removalTime});
 };
 
 /**
@@ -31907,7 +33312,7 @@ CertificateCacheV2.prototype.find = function(prefixOrInterest)
       console.log
         ("Certificate search using a name with an implicit digest is not yet supported");
 
-    // TODO: refresh();
+    this.refresh_();
 
     var i = this.findFirstByName_(certificatePrefix);
     if (i < 0)
@@ -31930,7 +33335,7 @@ CertificateCacheV2.prototype.find = function(prefixOrInterest)
       console.log
         ("Certificate search using a name with an implicit digest is not yet supported");
 
-    // TODO: refresh();
+    this.refresh_();
 
     var i = this.findFirstByName_(interest.getName());
     if (i < 0)
@@ -31964,7 +33369,8 @@ CertificateCacheV2.prototype.deleteCertificate = function(certificateName)
     }
   }
 
-  // TODO: Delete from certificatesByTime_.
+  // This may be the certificate to be removed at nextRefreshTime_ by refresh(),
+  // but just allow refresh() to run instead of update nextRefreshTime_ now.
 };
 
 /**
@@ -31973,13 +33379,25 @@ CertificateCacheV2.prototype.deleteCertificate = function(certificateName)
 CertificateCacheV2.prototype.clear = function()
 {
   this.certificatesByName_ = [];
-  // TODO: certificatesByTime_.clear();
+  this.nextRefreshTime_ = Number.MAX_VALUE;
 };
+
 /**
  * Get the default maximum lifetime (1 hour).
  * @return {number} The lifetime in milliseconds.
  */
 CertificateCacheV2.getDefaultLifetime = function() { return 3600.0 * 1000; };
+
+/**
+ * Set the offset when insert() and refresh_() get the current time, which
+ * should only be used for testing.
+ * @param {number} nowOffsetMilliseconds The offset in milliseconds.
+ */
+CertificateCacheV2.prototype.setNowOffsetMilliseconds_ = function
+  (nowOffsetMilliseconds)
+{
+  this.nowOffsetMilliseconds_ = nowOffsetMilliseconds;
+};
 
 /**
  * A private helper method to get the first entry in certificatesByName_ whose
@@ -31996,6 +33414,581 @@ CertificateCacheV2.prototype.findFirstByName_ = function(name)
   }
 
   return -1;
+};
+
+/**
+ * Remove all outdated certificate entries.
+ */
+CertificateCacheV2.prototype.refresh_ = function()
+{
+  // nowOffsetMilliseconds_ is only used for testing.
+  var now = new Date().getTime() + this.nowOffsetMilliseconds_;
+  if (now < this.nextRefreshTime_)
+    return;
+
+  // We recompute nextRefreshTime_.
+  var nextRefreshTime = Number.MAX_VALUE;
+  // Go backwards through the list so we can erase entries.
+  for (var i = this.certificatesByName_.length - 1; i >= 0; --i) {
+    var entry = this.certificatesByName_[i];
+
+    if (entry.removalTime <= now)
+      this.certificatesByName_.splice(i, 1);
+    else
+      nextRefreshTime = Math.min(nextRefreshTime, entry.removalTime);
+  }
+
+  this.nextRefreshTime_ = nextRefreshTime;
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/trust-anchor-group.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * @constructor
+ */
+var CertificateContainerInterface = function CertificateContainerInterface()
+{
+};
+
+exports.CertificateContainerInterface = CertificateContainerInterface;
+
+/**
+ * Add the certificate to the container.
+ * @param {CertificateV2} certificate The certificate to add, which is copied.
+ */
+CertificateContainerInterface.prototype.add = function(certificate)
+{
+  throw new Error("CertificateContainerInterface.add is unimplemented");
+};
+
+/**
+ * Remove the certificate with the given name. If the name does not exist,
+ * do nothing.
+ * @param {Name} certificateName The name of the certificate.
+ */
+CertificateContainerInterface.prototype.remove = function(certificateName)
+{
+  throw new Error("CertificateContainerInterface.remove is unimplemented");
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/certificate-fetcher.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var LOG = require('../../log.js').Log.LOG;
+
+/**
+ * CertificateFetcher is an abstract base class which provides an interface used
+ * by the validator to fetch missing certificates.
+ * @constructor
+ */
+var CertificateFetcher = function CertificateFetcher()
+{
+  this.certificateStorage_ = null;
+};
+
+exports.CertificateFetcher = CertificateFetcher;
+
+/**
+ * Assign the certificate storage used to check for known certificates and to
+ * cache unverified ones.
+ * @param {CertificateStorage} certificateStorage The certificate storage object
+ * which must be valid for the lifetime of this CertificateFetcher.
+ */
+CertificateFetcher.prototype.setCertificateStorage = function(certificateStorage)
+{ 
+  this.certificateStorage_ = certificateStorage;
+};
+
+/**
+ * Asynchronously fetch certificate a certificate. setCertificateStorage must
+ * have been called first.
+ * If the requested certificate exists in the storage, then this method will
+ * immediately call continueValidation with the certificate. If certificate is
+ * not available, then the implementation-specific doFetch will be called to
+ * asynchronously fetch the certificate. The successfully-retrieved
+ * certificate will be automatically added to the unverified cache of the
+ * certificate storage.
+ * When the requested certificate is retrieved, continueValidation is called.
+ * Otherwise, the fetcher implementation calls state.failed() with the
+ * appropriate error code and diagnostic message.
+ * @param {CertificateRequest} certificateRequest The the request with the
+ * Interest for fetching the certificate.
+ * @param {ValidationState} state The validation state.
+ * @param {function} continueValidation After fetching, this calls
+ * continueValidation(certificate, state) where certificate is the fetched
+ * certificate and state is the ValidationState.
+ */
+CertificateFetcher.prototype.fetch = function
+  (certificateRequest, state, continueValidation)
+{
+  if (this.certificateStorage_ == null)
+    throw new Error
+      ("CertificateFetcher.fetch: You must first call setCertificateStorage");
+
+  var certificate =
+    this.certificateStorage_.getUnverifiedCertificateCache().find
+      (certificateRequest.interest_);
+  if (certificate != null) {
+     if (LOG > 3) console.log("Found certificate in **un**verified key cache " +
+        certificate.getName().toUri());
+    continueValidation(certificate, state);
+    return;
+  }
+
+  var thisFetcher = this;
+  // Fetch asynchronously.
+  this.doFetch_
+    (certificateRequest, state, function(certificate, state) {
+      thisFetcher.certificateStorage_.cacheUnverifiedCertificate(certificate);
+      continueValidation(certificate, state);
+    });
+};
+
+/**
+ * An implementation to fetch a certificate asynchronously. The subclass must
+ * implement this method.
+ * @param {CertificateRequest} certificateRequest The the request with the
+ * Interest for fetching the certificate.
+ * @param {ValidationState} state The validation state.
+ * @param {function} continueValidation After fetching, this calls
+ * continueValidation(certificate, state) where certificate is the fetched
+ * certificate and state is the ValidationState.
+ */
+CertificateFetcher.prototype.doFetch_ = function
+  (certificateRequest, state, continueValidation)
+{
+  throw new Error("CertificateFetcher.doFetch_ is not implemented");
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/certificate-fetcher-from-network.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var LOG = require('../../log.js').Log.LOG; /** @ignore */
+var CertificateV2 = require('./certificate-v2.js').CertificateV2; /** @ignore */
+var ValidationError = require('./validation-error.js').ValidationError; /** @ignore */
+var CertificateFetcher = require('./certificate-fetcher.js').CertificateFetcher;
+
+/**
+ * CertificateFetcherFromNetwork extends CertificateFetcher to fetch missing
+ * certificates from the network.
+ *
+ * Create a CertificateFetcherFromNetwork to fetch certificates using the Face.
+ * @param {Face} face The face for calling expressInterest.
+ * @constructor
+ */
+var CertificateFetcherFromNetwork = function CertificateFetcherFromNetwork(face)
+{
+  // Call the base constructor.
+  CertificateFetcher.call(this);
+
+  this.face_ = face;
+};
+
+CertificateFetcherFromNetwork.prototype = new CertificateFetcher();
+CertificateFetcherFromNetwork.prototype.name = "CertificateFetcherFromNetwork";
+
+exports.CertificateFetcherFromNetwork = CertificateFetcherFromNetwork;
+
+/**
+ * Implement doFetch to use face_.expressInterest to fetch a certificate.
+ * @param {CertificateRequest} certificateRequest The the request with the
+ * Interest for fetching the certificate.
+ * @param {ValidationState} state The validation state.
+ * @param {function} continueValidation After fetching, this calls
+ * continueValidation.continueValidation(certificate, state) where certificate
+ * is the fetched certificate and state is the ValidationState.
+ */
+CertificateFetcherFromNetwork.prototype.doFetch_ = function
+  (certificateRequest, state, continueValidation)
+{
+  var thisFetcher = this;
+  try {
+    thisFetcher.face_.expressInterest
+      (certificateRequest.interest_,
+      function(interest, data) {
+        if (LOG > 3) console.log("Fetched certificate from network " +
+          data.getName().toUri());
+
+        var certificate;
+        try {
+          certificate = new CertificateV2(data);
+        } catch (ex) {
+          state.fail(new ValidationError
+            (ValidationError.MALFORMED_CERTIFICATE,
+             "Fetched a malformed certificate `" + data.getName().toUri() +
+             "` (" + ex + ")"));
+          return;
+        }
+
+        try {
+          continueValidation(certificate, state);
+        } catch (ex) {
+          state.fail(new ValidationError
+            (ValidationError.CANNOT_RETRIEVE_CERTIFICATE,
+             "Error in continueValidation: " + ex));
+        }
+      },
+      function(interest) {
+        if (LOG > 3) console.log("Timeout while fetching certificate " +
+          certificateRequest.interest_.getName().toUri() + ", retrying");
+
+        --certificateRequest.nRetriesLeft_;
+        if (certificateRequest.nRetriesLeft_ >= 0) {
+          try {
+            thisFetcher.fetch(certificateRequest, state, continueValidation);
+          } catch (ex) {
+             state.fail(new ValidationError
+               (ValidationError.CANNOT_RETRIEVE_CERTIFICATE,
+                "Error in fetch: " + ex));
+          }
+        }
+        else
+          state.fail(new ValidationError
+            (ValidationError.CANNOT_RETRIEVE_CERTIFICATE,
+             "Cannot fetch certificate after all retries `" +
+             certificateRequest.interest_.getName().toUri() + "`"));
+      },
+      function(interest, networkNack) {
+        if (LOG > 3) console.log("NACK (" + networkNack.getReason() +
+          ") while fetching certificate " +
+          certificateRequest.interest_.getName().toUri());
+
+        --certificateRequest.nRetriesLeft_;
+        if (certificateRequest.nRetriesLeft_ >= 0) {
+          try {
+            thisFetcher.fetch(certificateRequest, state, continueValidation);
+          } catch (ex) {
+             state.fail(new ValidationError
+               (ValidationError.CANNOT_RETRIEVE_CERTIFICATE,
+                "Error in fetch: " + ex));
+          }
+        }
+        else
+          state.fail(new ValidationError
+            (ValidationError.CANNOT_RETRIEVE_CERTIFICATE,
+             "Cannot fetch certificate after all retries `" +
+             certificateRequest.interest_.getName().toUri() + "`"));
+      });
+  } catch (ex) {
+    state.fail(new ValidationError(ValidationError.CANNOT_RETRIEVE_CERTIFICATE,
+      "Error in expressInterest: " + ex));
+  }
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/certificate-fetcher-offline.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var ValidationError = require('./validation-error.js').ValidationError; /** @ignore */
+var CertificateFetcher = require('./certificate-fetcher.js').CertificateFetcher;
+
+/**
+ * CertificateFetcherOffline extends CertificateFetcher to implement a fetcher
+ * that does not fetch certificates (always offline).
+ * @constructor
+ */
+var CertificateFetcherOffline = function CertificateFetcherOffline()
+{
+  // Call the base constructor.
+  CertificateFetcher.call(this);
+};
+
+CertificateFetcherOffline.prototype = new CertificateFetcher();
+CertificateFetcherOffline.prototype.name = "CertificateFetcherOffline";
+
+exports.CertificateFetcherOffline = CertificateFetcherOffline;
+
+CertificateFetcherOffline.prototype.doFetch_ = function
+  (certificateRequest, state, continueValidation)
+{
+  state.fail(new ValidationError
+    (ValidationError.CANNOT_RETRIEVE_CERTIFICATE,
+     "Cannot fetch certificate " +
+     certificateRequest.interest_.getName().toUri() + " in offline mode"));
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/certificate-request.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Interest = require('../../interest.js').Interest;
+
+/**
+ * A CertificateRequest represents a request for a certificate, associated with
+ * the number of retries left. The interest_ and nRetriesLeft_ fields are public
+ * so that you can modify them. interest_ is the Interest for the requested Data
+ * packet or Certificate, and nRetriesLeft_ is the number of remaining retries
+ * after a timeout or NACK.
+ *
+ * Create a CertificateRequest with an optional Interest.
+ * @param {Interest} interest (optional) If supplied, create a
+ * CertificateRequest with a copy of the interest and 3 retries left. Of omitted,
+ * create a CertificateRequest with a default Interest object and 0 retries left.
+ * @constructor
+ */
+var CertificateRequest = function CertificateRequest(interest)
+{
+  if (interest != undefined) {
+    this.interest_ = new Interest(interest);
+    this.nRetriesLeft_ = 3;
+  }
+  else {
+    this.interest_ = new Interest();
+    this.nRetriesLeft_ = 0;
+  }
+};
+
+exports.CertificateRequest = CertificateRequest;
+
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/certificate-storage.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var TrustAnchorContainer = require('./trust-anchor-container.js').TrustAnchorContainer; /** @ignore */
+var CertificateV2 = require('./certificate-v2.js').CertificateV2; /** @ignore */
+var CertificateCacheV2 = require('./certificate-cache-v2.js').CertificateCacheV2;
+
+/**
+ * The CertificateStorage class stores trusted anchors and has a verified
+ * certificate cache, and an unverified certificate cache.
+ *
+ * @constructor
+ */
+var CertificateStorage = function CertificateStorage()
+{
+  this.trustAnchors_ = new TrustAnchorContainer();
+  this.verifiedCertificateCache_ = new CertificateCacheV2(3600 * 1000.0);
+  this.unverifiedCertificateCache_ = new CertificateCacheV2(300 * 1000.0);
+};
+
+exports.CertificateStorage = CertificateStorage;
+
+/**
+ * Find a trusted certificate in the trust anchor container or in the
+ * verified cache.
+ * @param {Interest} interestForCertificate The Interest for the certificate.
+ * @return {CertificateV2} The found certificate, or null if not found.
+ */
+CertificateStorage.prototype.findTrustedCertificate = function
+  (interestForCertificate)
+{
+  var certificate = this.trustAnchors_.find(interestForCertificate);
+  if (certificate != null)
+    return certificate;
+
+  certificate = this.verifiedCertificateCache_.find(interestForCertificate);
+  return certificate;
+};
+
+/**
+ * Check if the certificate with the given name prefix exists in the verified
+ * cache, the unverified cache, or in the set of trust anchors.
+ * @param {Name} certificatePrefix The certificate name prefix.
+ * @return {boolean} True if the certificate is known.
+ */
+CertificateStorage.prototype.isCertificateKnown = function(certificatePrefix)
+{
+  return this.trustAnchors_.find(certificatePrefix) != null ||
+         this.verifiedCertificateCache_.find(certificatePrefix) != null ||
+         this.unverifiedCertificateCache_.find(certificatePrefix) != null;
+};
+
+/**
+ * Cache the unverified certificate for a period of time (5 minutes).
+ * @param {CertificateV2} certificate The certificate packet, which is copied.
+ */
+CertificateStorage.prototype.cacheUnverifiedCertificate = function(certificate)
+{
+  this.unverifiedCertificateCache_.insert(certificate);
+};
+
+/**
+ * Get the trust anchor container.
+ * @return {TrustAnchorContainer} The trust anchor container.
+ */
+CertificateStorage.prototype.getTrustAnchors = function()
+{ 
+  return this.trustAnchors_;
+};
+
+/**
+ * Get the verified certificate cache.
+ * @return {CertificateCacheV2} The verified certificate cache.
+ */
+CertificateStorage.prototype.getVerifiedCertificateCache = function()
+{ 
+  return this.verifiedCertificateCache_;
+};
+
+/**
+ * Get the unverified certificate cache.
+ * @return {CertificateCacheV2} The unverified certificate cache.
+ */
+CertificateStorage.prototype.getUnverifiedCertificateCache = function()
+{ 
+  return this.unverifiedCertificateCache_;
+};
+
+/**
+ * There are two forms of loadAnchor:
+ * loadAnchor(groupId, certificate) - Load a static trust anchor. Static trust
+ * anchors are permanently associated with the validator and never expire.
+ * loadAnchor(groupId, path, refreshPeriod, isDirectory) - Load dynamic trust
+ * anchors. Dynamic trust anchors are associated with the validator for as long
+ * as the underlying trust anchor file (or set of files) exists.
+ * @param {String} groupId The certificate group id.
+ * @param {CertificateV2} certificate The certificate to load as a trust anchor,
+ * which is copied.
+ * @param {String} path The path to load the trust anchors.
+ * @param {number} refreshPeriod  The refresh time in milliseconds for the 
+ * anchors under path. This must be positive. The relevant trust anchors will
+ * only be updated when find is called.
+ * @param {boolean} isDirectory (optional) If true, then path is a directory.
+ * If false or omitted, it is a single file.
+ */
+CertificateStorage.prototype.loadAnchor = function
+  (groupId, certificateOrPath, refreshPeriod, isDirectory)
+{
+  this.trustAnchors_.insert
+    (groupId, certificateOrPath, refreshPeriod, isDirectory);
+};
+
+/**
+ * Remove any previously loaded static or dynamic trust anchors.
+ */
+CertificateStorage.prototype.resetAnchors = function()
+{
+  this.trustAnchors_.clear();
+};
+
+/**
+ * Cache the verified certificate a period of time (1 hour).
+ * @param {CertificateV2} certificate The certificate object, which is copied.
+ */
+CertificateStorage.prototype.cacheVerifiedCertificate = function(certificate)
+{
+  this.verifiedCertificateCache_.insert(certificate);
+};
+
+/**
+ * Remove any cached verified certificates.
+ */
+CertificateStorage.prototype.resetVerifiedCertificates = function()
+{ 
+  this.verifiedCertificateCache_.clear();
+};
+
+/**
+ * Set the offset when the cache insert() and refresh() get the current time,
+ * which should only be used for testing.
+ * @param {number} nowOffsetMilliseconds The offset in milliseconds.
+ */
+CertificateStorage.prototype.setCacheNowOffsetMilliseconds_ = function
+  (nowOffsetMilliseconds)
+{
+  this.verifiedCertificateCache_.setNowOffsetMilliseconds_(nowOffsetMilliseconds);
+  this.unverifiedCertificateCache_.setNowOffsetMilliseconds_(nowOffsetMilliseconds);
 };
 /**
  * Copyright (C) 2017-2018 Regents of the University of California.
@@ -32339,6 +34332,1826 @@ CertificateV2.MIN_CERT_NAME_LENGTH = 4;
 CertificateV2.MIN_KEY_NAME_LENGTH = 2;
 CertificateV2.KEY_COMPONENT = new Name.Component("KEY");
 /**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validation-state.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var LOG = require('../../log.js').Log.LOG; /** @ignore */
+var ValidationError = require('./validation-error.js').ValidationError; /** @ignore */
+var ValidationState = require('./validation-state.js').ValidationState; /** @ignore */
+var VerificationHelpers = require('../verification-helpers.js').VerificationHelpers; /** @ignore */
+var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
+
+/**
+ * The DataValidationState class extends ValidationState to hold the validation
+ * state for a Data packet.
+ *
+ * Create a DataValidationState for the Data packet. The caller must ensure that
+ * the state instance is valid until the validation finishes (i.e., until
+ * validateCertificateChain() and validateOriginalPacket() have been called).
+ * @param {Data} data The Date packet being validated, which is copied.
+ * @param {function} successCallback This calls successCallback(data) to report
+ * a successful Data validation.
+ * @param {function} failureCallback This calls failureCallback(data, error) to
+ * report a failed Data validation, where error is a ValidationError.
+ * @constructor
+ */
+var DataValidationState = function DataValidationState
+  (data, successCallback, failureCallback)
+{
+  // Call the base constructor.
+  ValidationState.call(this);
+
+  // Make a copy.
+  this.data_ = new Data(data);
+  this.successCallback_ = successCallback;
+  this.failureCallback_ = failureCallback;
+
+  if (this.successCallback_ == null)
+    throw new Error("The successCallback is null");
+  if (this.failureCallback_ == null)
+    throw new Error("The failureCallback is null");
+};
+
+DataValidationState.prototype = new ValidationState();
+DataValidationState.prototype.name = "DataValidationState";
+
+exports.DataValidationState = DataValidationState;
+
+/**
+ * Call the failure callback.
+ * @param {ValidationError} error
+ */
+DataValidationState.prototype.fail = function(error)
+{
+  if (LOG > 3) console.log("" + error);
+  try {
+    this.failureCallback_(this.data_, error);
+  } catch (ex) {
+    console.log("Error in failureCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
+  this.setOutcome(false);
+};
+
+/**
+ * Get the original Data packet being validated which was given to the
+ * constructor.
+ * @return {Data} The original Data packet.
+ */
+DataValidationState.prototype.getOriginalData = function() { return this.data_; };
+
+/**
+ * Override to verify the Data packet given to the constructor.
+ * @param {CertificateV2} trustedCertificate The certificate that signs the
+ * original packet.
+ * @return {Promise|SyncPromise} A promise that resolves when the success or
+ * failure callback has been called.
+ */
+DataValidationState.prototype.verifyOriginalPacketPromise_ = function
+  (trustedCertificate)
+{
+  var thisState = this;
+
+  return VerificationHelpers.verifyDataSignaturePromise
+    (this.data_, trustedCertificate)
+  .then(function(verifySuccess) {
+    if (verifySuccess) {
+      if (LOG > 3) console.log("OK signature for data `" +
+        thisState.data_.getName().toUri() + "`");
+      try {
+        thisState.successCallback_(thisState.data_);
+      } catch (ex) {
+        console.log("Error in successCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+      thisState.setOutcome(true);
+    }
+    else
+      thisState.fail(new ValidationError(ValidationError.INVALID_SIGNATURE,
+        "Invalid signature of data `" + thisState.data_.getName().toUri() + "`"));
+
+    return SyncPromise.resolve();
+  });
+};
+
+/**
+ * Override to call the success callback using the Data packet given to the
+ * constructor.
+ */
+DataValidationState.prototype.bypassValidation_ = function()
+{
+  if (LOG > 3) console.log("Signature verification bypassed for data `" +
+    this.data_.getName().toUri() + "`");
+  try {
+    this.successCallback_(this.data_);
+  } catch (ex) {
+    console.log("Error in successCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
+  this.setOutcome(true);
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/trust-anchor-group.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var fs = require('fs'); /** @ignore */
+var path = require('path'); /** @ignore */
+var TrustAnchorGroup = require('./trust-anchor-group.js').TrustAnchorGroup; /** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var LOG = require('../../log.js').Log.LOG;
+
+/**
+ * The DynamicTrustAnchorGroup class extends TrustAnchorGroup to implement a
+ * dynamic trust anchor group.
+ * 
+ * Create a DynamicTrustAnchorGroup to use an existing container.
+ * @param {CertificateContainer} certificateContainer The existing certificate
+ * container which implements the CertificateContainer interface.
+ * @param {string} id The group ID.
+ * @param {string} path The file path for trust anchor(s), which could be a
+ * directory or a file. If it is a directory, all the certificates in the
+ * directory will be loaded.
+ * @param {number} refreshPeriod  The refresh time in milliseconds for the
+ * anchors under path. This must be positive.
+ * @param {boolean} isDirectory If true, then path is a directory. If false, it
+ * is a single file.
+ * @throws Error If refreshPeriod is not positive.
+ * @constructor
+ */
+var DynamicTrustAnchorGroup = function DynamicTrustAnchorGroup
+  (certificateContainer, id, path, refreshPeriod, isDirectory)
+{
+  // Call the base constructor.
+  TrustAnchorGroup.call(this, certificateContainer, id);
+
+  this.isDirectory_ = isDirectory;
+  this.path_ = path;
+  this.refreshPeriod_ = refreshPeriod;
+  this.expireTime_ = 0;
+  if (refreshPeriod <= 0)
+    throw new Error("Refresh period for the dynamic group must be positive");
+
+  if (LOG > 0)
+    console.log("Create a dynamic trust anchor group " + id + " for file/dir " +
+      path + " with refresh time " + refreshPeriod);
+  this.refresh();
+};
+
+DynamicTrustAnchorGroup.prototype = new TrustAnchorGroup();
+DynamicTrustAnchorGroup.prototype.name = "DynamicTrustAnchorGroup";
+
+exports.DynamicTrustAnchorGroup = DynamicTrustAnchorGroup;
+
+/**
+ * Request a certificate refresh.
+ */
+DynamicTrustAnchorGroup.prototype.refresh = function()
+{
+  var now = new Date().getTime();
+  if (this.expireTime_ > now)
+    return;
+
+  this.expireTime_ = now + this.refreshPeriod_;
+  if (LOG > 0)
+    console.log("Reloading the dynamic trust anchor group");
+
+  // Save a copy of anchorNameUris_ .
+  var oldAnchorNameUris = {};
+  for (var uri in this.anchorNameUris_)
+    oldAnchorNameUris[uri] = true;
+
+  if (!this.isDirectory_)
+    this.loadCertificate_(this.path_, oldAnchorNameUris);
+  else {
+    var allFiles;
+    try {
+      allFiles = fs.readdirSync(this.path_);
+    }
+    catch (e) {
+      throw new Error("Cannot list files in directory " + this.path_);
+    }
+
+    for (var i = 0; i < allFiles.length; ++i)
+      this.loadCertificate_(path.join(this.path_, allFiles[i]), oldAnchorNameUris);
+  }
+
+  // Remove old certificates.
+  for (var uri in oldAnchorNameUris) {
+    delete this.anchorNameUris_[uri];
+    this.certificates_.remove(new Name(uri));
+  }
+};
+
+/**
+ * @param {string} file
+ * @param {object} oldAnchorNameUris The keys are the set of anchor name URIs,
+ * and each value is true.
+ */
+DynamicTrustAnchorGroup.prototype.loadCertificate_ = function
+  (file, oldAnchorNameUris)
+{
+  var certificate = TrustAnchorGroup.readCertificate(file);
+  if (certificate != null) {
+    var certificateNameUri = certificate.getName().toUri();
+
+    if (!this.anchorNameUris_[certificateNameUri]) {
+      this.anchorNameUris_[certificateNameUri] = true;
+      this.certificates_.add(certificate);
+    }
+    else
+      delete oldAnchorNameUris[certificateNameUri];
+  }
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validation-state.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var Interest = require('../../interest.js').Interest; /** @ignore */
+var LOG = require('../../log.js').Log.LOG; /** @ignore */
+var ValidationError = require('./validation-error.js').ValidationError; /** @ignore */
+var ValidationState = require('./validation-state.js').ValidationState; /** @ignore */
+var VerificationHelpers = require('../verification-helpers.js').VerificationHelpers; /** @ignore */
+var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
+
+/**
+ * The InterestValidationState class extends ValidationState to hold the
+ * validation state for an Interest packet.
+ *
+ * Create an InterestValidationState for the Interest packet. The caller must 
+ * ensure that the state instance is valid until the validation finishes (i.e.,
+ * until validateCertificateChain() and validateOriginalPacket() have been
+ * called).
+ * @param {Interest} interest The Interest packet being validated, which is copied.
+ * @param {function} successCallback This calls successCallback(interest) to
+ * report a successful Interest validation.
+ * @param {function} failureCallback This calls failureCallback(interest, error)
+ * to report a failed Interest validation, where error is a ValidationError.
+ * @constructor
+ */
+var InterestValidationState = function InterestValidationState
+  (interest, successCallback, failureCallback)
+{
+  // Call the base constructor.
+  ValidationState.call(this);
+
+  // Make a copy.
+  this.interest_ = new Interest(interest);
+  this.successCallback_ = successCallback;
+  this.failureCallback_ = failureCallback;
+
+  if (this.successCallback_ == null)
+    throw new Error("The successCallback is null");
+  if (this.failureCallback_ == null)
+    throw new Error("The failureCallback is null");
+};
+
+InterestValidationState.prototype = new ValidationState();
+InterestValidationState.prototype.name = "InterestValidationState";
+
+exports.InterestValidationState = InterestValidationState;
+
+/**
+ * Call the failure callback.
+ * @param {ValidationError} error
+ */
+InterestValidationState.prototype.fail = function(error)
+{
+  if (LOG > 3) console.log("" + error);
+  try {
+    this.failureCallback_(this.interest_, error);
+  } catch (ex) {
+    console.log("Error in failureCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
+  this.setOutcome(false);
+};
+
+/**
+ * Get the original Interest packet being validated which was given to the
+ * constructor.
+ * @return {Interest} The original Interest packet.
+ */
+InterestValidationState.prototype.getOriginalInterest = function()
+{ 
+  return this.interest_;
+};
+
+/**
+ * Override to verify the Interest packet given to the constructor.
+ * @param {CertificateV2} trustedCertificate The certificate that signs the
+ * original packet.
+ * @return {Promise|SyncPromise} A promise that resolves when the success or
+ * failure callback has been called.
+ */
+InterestValidationState.prototype.verifyOriginalPacketPromise_ = function
+  (trustedCertificate)
+{
+  var thisState = this;
+
+  return VerificationHelpers.verifyInterestSignaturePromise
+    (this.interest_, trustedCertificate)
+  .then(function(verifySuccess) {
+    if (verifySuccess) {
+      if (LOG > 3) console.log("OK signature for interest `" +
+        thisState.interest_.getName().toUri() + "`");
+      try {
+        thisState.successCallback_(thisState.interest_);
+      } catch (ex) {
+        console.log("Error in successCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+      thisState.setOutcome(true);
+    }
+    else
+      thisState.fail(new ValidationError(ValidationError.INVALID_SIGNATURE,
+        "Invalid signature of interest `" +
+        thisState.interest_.getName().toUri() + "`"));
+
+    return SyncPromise.resolve();
+  });
+};
+
+/**
+ * Override to call the success callback using the Interest packet given to the
+ * constructor.
+ */
+InterestValidationState.prototype.bypassValidation_ = function()
+{
+  if (LOG > 3) console.log("Signature verification bypassed for interest `" +
+    this.interest_.getName().toUri() + "`");
+  try {
+    this.successCallback_(this.interest_);
+  } catch (ex) {
+    console.log("Error in successCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
+  this.setOutcome(true);
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/trust-anchor-group.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var TrustAnchorGroup = require('./trust-anchor-group.js').TrustAnchorGroup;
+
+/**
+ * The StaticTrustAnchorGroup class extends TrustAnchorGroup to implement a
+ * static trust anchor group.
+ * 
+ * Create a StaticTrustAnchorGroup to use an existing container.
+ * @param {CertificateContainer} certificateContainer The existing certificate
+ * container which implements the CertificateContainer interface.
+ * @param {string} id The group ID.
+ * @constructor
+ */
+var StaticTrustAnchorGroup = function StaticTrustAnchorGroup
+  (certificateContainer, id)
+{
+  // Call the base constructor.
+  TrustAnchorGroup.call(this, certificateContainer, id);
+};
+
+StaticTrustAnchorGroup.prototype = new TrustAnchorGroup();
+StaticTrustAnchorGroup.prototype.name = "StaticTrustAnchorGroup";
+
+exports.StaticTrustAnchorGroup = StaticTrustAnchorGroup;
+
+/**
+ * Load the static anchor certificate. If a certificate with the name is already
+ * added, do nothing.
+ * @param {CertificateV2} certificate The certificate to add, which is copied.
+ */
+StaticTrustAnchorGroup.prototype.add = function(certificate)
+{
+  var certificateNameUri = certificate.getName().toUri();
+  if (this.anchorNameUris_[certificateNameUri])
+    return;
+
+  this.anchorNameUris_[certificateNameUri] = true;
+  // This copies the certificate.
+  this.certificates_.add(certificate);
+};
+
+/**
+ * Remove the static anchor with the certificate name.
+ * @param {Name} certificateName The certificate name.
+ */
+StaticTrustAnchorGroup.prototype.remove = function(certificateName)
+{
+  delete this.anchorNameUris_[certificateName.toUri()];
+  this.certificates_.remove(certificateName);
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/trust-anchor-container.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var StaticTrustAnchorGroup = require('./static-trust-anchor-group.js').StaticTrustAnchorGroup; /** @ignore */
+var DynamicTrustAnchorGroup = require('./dynamic-trust-anchor-group.js').DynamicTrustAnchorGroup; /** @ignore */
+var CertificateV2 = require('./certificate-v2.js').CertificateV2; /** @ignore */
+var CertificateContainerInterface = require('./certificate-container-interface.js').CertificateContainerInterface;
+
+/**
+ * A TrustAnchorContainer represents a container for trust anchors.
+ *
+ * There are two kinds of anchors:
+ * static anchors that are permanent for the lifetime of the container, and
+ * dynamic anchors that are periodically updated.
+ *
+ * Trust anchors are organized in groups. Each group has a unique group id.
+ * The same anchor certificate (same name without considering the implicit
+ * digest) can be inserted into multiple groups, but no more than once into each.
+ *
+ * Dynamic groups are created using the appropriate TrustAnchorContainer.insert
+ * method. Once created, the dynamic anchor group cannot be updated.
+ *
+ * The returned pointer to Certificate from `find` methods is only guaranteed to
+ * be valid until the next invocation of `find` and may be invalidated
+ * afterwards.
+ * 
+ * Create an empty TrustAnchorContainer.
+ * @constructor
+ */
+var TrustAnchorContainer = function TrustAnchorContainer()
+{
+  // The key is the group ID string. The value is the TrustAnchorGroup.
+  this.groups_ = {};
+  this.anchors_ = new TrustAnchorContainer.AnchorContainer_();
+};
+
+exports.TrustAnchorContainer = TrustAnchorContainer;
+
+/**
+ * Create a TrustAnchorContainer.Error.
+ * Call with: throw new TrustAnchorContainer.Error(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+TrustAnchorContainer.Error = function TrustAnchorContainerError(error)
+{
+  if (error) {
+    error.__proto__ = TrustAnchorContainer.Error.prototype;
+    return error;
+  }
+};
+
+TrustAnchorContainer.Error.prototype = new Error();
+TrustAnchorContainer.Error.prototype.name = "TrustAnchorContainerError";
+
+/**
+ * There are two forms of insert:
+ * insert(groupId, certificate) - Insert a static trust anchor. If the
+ * certificate (having the same name without considering implicit digest)
+ * already exists in the group with groupId, then do nothing.
+ * insert(groupId, path, refreshPeriod, isDirectory) - Insert dynamic trust
+ * anchors from the path.
+ * @param {String} groupId The certificate group id.
+ * @param {CertificateV2} certificate The certificate to insert, which is copied.
+ * @param {String} path The path to load the trust anchors.
+ * @param {number} refreshPeriod  The refresh time in milliseconds for the
+ * anchors under path. This must be positive. The relevant trust anchors will
+ * only be updated when find is called.
+ * @param {boolean} isDirectory (optional) If true, then path is a directory. If
+ * false or omitted, it is a single file.
+ * @throws TrustAnchorContainer.Error If inserting a static trust anchor and
+ * groupId is for a dynamic anchor group , or if inserting a dynamic trust
+ * anchor and a group with groupId already exists.
+ * @throws Error If refreshPeriod is not positive.
+ */
+TrustAnchorContainer.prototype.insert = function
+  (groupId, certificateOrPath, refreshPeriod, isDirectory)
+{
+  if (certificateOrPath instanceof CertificateV2) {
+    var certificate = certificateOrPath;
+
+    var group = this.groups_[groupId];
+    if (group === undefined) {
+      group = new StaticTrustAnchorGroup(this.anchors_, groupId);
+      this.groups_[groupId] = group;
+    }
+
+    if (!(group instanceof StaticTrustAnchorGroup))
+      throw new TrustAnchorContainer.Error(new Error
+        ("Cannot add a static anchor to the non-static anchor group " + groupId));
+
+    group.add(certificate);
+  }
+  else {
+    var path = certificateOrPath;
+
+    if (isDirectory == null)
+      isDirectory = false;
+
+    if (this.groups_[groupId] !== undefined)
+      throw new TrustAnchorContainer.Error(new Error
+        ("Cannot create the dynamic group, because group " + groupId +
+        " already exists"));
+
+    this.groups_[groupId] = new DynamicTrustAnchorGroup
+      (this.anchors_, groupId, path, refreshPeriod, isDirectory);
+  }
+};
+
+/**
+ * Remove all static and dynamic anchors.
+ */
+TrustAnchorContainer.prototype.clear = function()
+{
+  this.groups_ = {};
+  this.anchors_.clear();
+};
+
+/**
+ * There are two forms of find:
+ * find(keyName) - Search for a certificate across all groups (longest prefix
+ * match).
+ * find(interest) - Find a certificate for the given interest. Note: Interests
+ * with implicit digest are not supported.
+ * @param {Name} keyName The key name prefix for searching for the certificate.
+ * @param {Interest} interest The input interest packet.
+ * @return The found certificate, or null if not found.
+ */
+TrustAnchorContainer.prototype.find = function(keyNameOrInterest)
+{
+  if (keyNameOrInterest instanceof Name) {
+    var keyName = keyNameOrInterest;
+
+    this.refresh_();
+
+    var i = this.anchors_.findFirstByName_(keyName);
+    if (i < 0)
+      return null;
+    var certificate = this.anchors_.anchorsByName_[i].certificate;
+    if (!keyName.isPrefixOf(certificate.getName()))
+      return null;
+    return certificate;
+  }
+  else {
+    var interest = keyNameOrInterest;
+
+    this.refresh_();
+
+    var i = this.anchors_.findFirstByName_(interest.getName());
+    if (i < 0)
+      return null;
+
+    for (; i < this.anchors_.anchorsByName_.length; ++i) {
+      var certificate = this.anchors_.anchorsByName_[i].certificate;
+      if (!interest.getName().isPrefixOf(certificate.getName()))
+        break;
+      if (interest.matchesData(certificate))
+        return certificate;
+    }
+
+    return null;
+  }
+};
+
+/**
+ * Get the trust anchor group for the groupId.
+ * @param {String} groupId The group ID.
+ * @return {TrustAnchorGroup} The trust anchor group.
+ * @throws TrustAnchorContainer.Error if the groupId does not exist.
+ */
+TrustAnchorContainer.prototype.getGroup = function(groupId)
+{
+  var group = this.groups_[groupId];
+  if (group === undefined)
+    throw new TrustAnchorContainer.Error(new Error
+      ("Trust anchor group " + groupId + " does not exist"));
+
+  return group;
+};
+
+/**
+ * Get the number of trust anchors across all groups.
+ * @return {number} The number of trust anchors.
+ */
+TrustAnchorContainer.prototype.size = function()
+{ 
+  return this.anchors_.size();
+};
+
+TrustAnchorContainer.AnchorContainer_ = function TrustAnchorContainerAnchorContainer()
+{
+  // Array of objects with fields "name" of type Name and "certificate" of type
+  // CertificateV2. We can't use an {} object since the Name key itself is an
+  // object, and also it needs to be sorted by Name.
+  this.anchorsByName_ = [];
+};
+
+TrustAnchorContainer.AnchorContainer_.prototype = new CertificateContainerInterface();
+TrustAnchorContainer.AnchorContainer_.prototype.name = "TrustAnchorContainerAnchorContainer";
+
+/**
+ * Add the certificate to the container.
+ * @param {CertificateV2} certificate The certificate to add, which is copied.
+ */
+TrustAnchorContainer.AnchorContainer_.prototype.add = function(certificate)
+{
+  var certificateCopy = new CertificateV2(certificate);
+
+  var name = certificateCopy.getName();
+  var i = this.findFirstByName_(name);
+  if (i < 0)
+    // Not found, so set to insert at the end of the list.
+    i = this.anchorsByName_.length;
+  else {
+    if (this.anchorsByName_[i].name.equals(name)) {
+      // Just replace the existing entry value.
+      this.anchorsByName_[i].certificate = certificateCopy;
+      return;
+    }
+  }
+
+  this.anchorsByName_.splice(i, 0, {name: name, certificate: certificateCopy});
+};
+
+/**
+ * Remove the certificate with the given name. If the name does not exist, do 
+ * nothing.
+ * @param {Name} certificateName The name of the certificate.
+ */
+TrustAnchorContainer.AnchorContainer_.prototype.remove = function(certificateName)
+{
+  for (var i = 0; i < this.anchorsByName_.length; ++i) {
+    if (this.anchorsByName_[i].name.equals(certificateName)) {
+      this.anchorsByName_.splice(i, 1);
+      return;
+    }
+  }
+};
+
+/**
+ * Clear all certificates.
+ */
+TrustAnchorContainer.AnchorContainer_.prototype.clear = function()
+{
+  this.anchorsByName_ = [];
+};
+
+TrustAnchorContainer.AnchorContainer_.prototype.size = function()
+{
+  return this.anchorsByName_.length;
+};
+
+/**
+ * A private helper method to get the first entry in anchorsByName_ whose
+ * name is greater than or equal to the given name.
+ * @param {Name} name The name to search for.
+ * @return {number} The index of the found anchorsByName_ entry, or -1 if
+ * not found.
+ */
+TrustAnchorContainer.AnchorContainer_.prototype.findFirstByName_ = function(name)
+{
+  for (var i = 0; i < this.anchorsByName_.length; ++i) {
+    if (this.anchorsByName_[i].name.compare(name) >= 0)
+      return i;
+  }
+
+  return -1;
+};
+
+TrustAnchorContainer.prototype.refresh_ = function()
+{
+  for (var groupId in this.groups_)
+    this.groups_[groupId].refresh();
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validation-error.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * A ValidationError holds an error code and an optional detailed error message.
+ *
+ * Create a new ValidationError for the given code.
+ * @param {number} code The code which is one of the standard error codes such as
+ * ValidationError.INVALID_SIGNATURE, or a custom code if greater than or equal
+ * to ValidationError.USER_MIN .
+ * @param {string} info {optinal) The error message. If omitted, use an empty
+ * string.
+ * @constructor
+ */
+var ValidationError = function ValidationError(code, info)
+{
+  this.code_ = code;
+  this.info_ = (info != undefined ? info : "");
+};
+
+exports.ValidationError = ValidationError;
+
+ValidationError.NO_ERROR =                    0;
+ValidationError.INVALID_SIGNATURE =           1;
+ValidationError.NO_SIGNATURE =                2;
+ValidationError.CANNOT_RETRIEVE_CERTIFICATE = 3;
+ValidationError.EXPIRED_CERTIFICATE =         4;
+ValidationError.LOOP_DETECTED =               5;
+ValidationError.MALFORMED_CERTIFICATE =       6;
+ValidationError.EXCEEDED_DEPTH_LIMIT =        7;
+ValidationError.INVALID_KEY_LOCATOR =         8;
+ValidationError.POLICY_ERROR =                9;
+ValidationError.IMPLEMENTATION_ERROR =        255;
+// Custom error codes should use >= USER_MIN.
+ValidationError.USER_MIN =                    256;
+
+/**
+ * Get the error code given to the constructor.
+ * @return The error code which is one of the standard error codes such as
+ * ValidationError.INVALID_SIGNATURE, or a custom code if greater than or equal
+ * to ValidationError.USER_MIN.
+ */
+ValidationError.prototype.getCode = function() { return this.code_; };
+
+/**
+ * Get the error message given to the constructor.
+ * @return The error message, or "" if none.
+ */
+ValidationError.prototype.getInfo = function() { return this.info_; };
+
+/**
+ * Get a string representation of this ValidationError.
+ * @return {string} The string representation.
+ */
+ValidationError.prototype.toString = function()
+{
+  var result;
+
+  if (this.code_ === ValidationError.NO_ERROR)
+    result = "No error";
+  else if (this.code_ === ValidationError.INVALID_SIGNATURE)
+    result = "Invalid signature";
+  else if (this.code_ === ValidationError.NO_SIGNATURE)
+    result = "Missing signature";
+  else if (this.code_ === ValidationError.CANNOT_RETRIEVE_CERTIFICATE)
+    result = "Cannot retrieve certificate";
+  else if (this.code_ === ValidationError.EXPIRED_CERTIFICATE)
+    result = "Certificate expired";
+  else if (this.code_ === ValidationError.LOOP_DETECTED)
+    result = "Loop detected in certification chain";
+  else if (this.code_ === ValidationError.MALFORMED_CERTIFICATE)
+    result = "Malformed certificate";
+  else if (this.code_ === ValidationError.EXCEEDED_DEPTH_LIMIT)
+    result = "Exceeded validation depth limit";
+  else if (this.code_ === ValidationError.INVALID_KEY_LOCATOR)
+    result = "Key locator violates validation policy";
+  else if (this.code_ === ValidationError.POLICY_ERROR)
+    result = "Validation policy error";
+  else if (this.code_ === ValidationError.IMPLEMENTATION_ERROR)
+    result = "Internal implementation error";
+  else if (this.code_ >= ValidationError.USER_MIN)
+    result = "Custom error code " + this.code_;
+  else
+    result = "Unrecognized error code " + this.code_;
+
+  if (this.info_.length > 0)
+    result += " (" + this.info_ + ")";
+
+  return result;
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validation-policy.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var KeyLocator = require('../../key-locator.js').KeyLocator; /** @ignore */
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
+var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
+var ValidationError = require('./validation-error.js').ValidationError; /** @ignore */
+var CertificateV2 = require('./certificate-v2.js').CertificateV2;
+
+/**
+ * ValidationPolicy is an abstract base class that implements a validation
+ * policy for Data and Interest packets.
+ * @constructor
+ */
+var ValidationPolicy = function ValidationPolicy()
+{
+  this.validator_ = null;
+  this.innerPolicy_ = null;
+};
+
+exports.ValidationPolicy = ValidationPolicy;
+
+/**
+ * Set the inner policy.
+ * Multiple assignments of the inner policy will create a "chain" of linked
+ * policies. The inner policy from the latest invocation of setInnerPolicy
+ * will be at the bottom of the policy list.
+ * For example, the sequence `this.setInnerPolicy(policy1)` and
+ * `this.setInnerPolicy(policy2)`, will result in
+ * `this.innerPolicy_ == policy1`,
+ * this.innerPolicy_.innerPolicy_ == policy2', and
+ * `this.innerPolicy_.innerPolicy_.innerPolicy_ == null`.
+ * @param {ValidationPolicy} innerPolicy
+ * @throws Error if the innerPolicy is null.
+ */
+ValidationPolicy.prototype.setInnerPolicy = function(innerPolicy)
+{ 
+  if (innerPolicy == null)
+    throw new Error("The innerPolicy argument cannot be null");
+
+  if (this.validator_ != null)
+    innerPolicy.setValidator(this.validator_);
+
+  if (this.innerPolicy_ == null)
+    this.innerPolicy_ = innerPolicy;
+  else
+    this.innerPolicy_.setInnerPolicy(innerPolicy);
+};
+
+/**
+ * Check if the inner policy is set.
+ * @return {boolean} True if the inner policy is set.
+ */
+ValidationPolicy.prototype.hasInnerPolicy = function()
+{
+  return this.innerPolicy_ != null;
+};
+
+/**
+ * Get the inner policy. If the inner policy was not set, the behavior is
+ * undefined.
+ * @return {ValidationPolicy} The inner policy.
+ */
+ValidationPolicy.prototype.getInnerPolicy = function()
+{
+  return this.innerPolicy_;
+};
+
+/**
+ * Set the validator to which this policy is associated. This replaces any
+ * previous validator.
+ * @param {Validator} validator The validator.
+ */
+ValidationPolicy.prototype.setValidator = function(validator)
+{
+  this.validator_ = validator;
+  if (this.innerPolicy_ != null)
+    this.innerPolicy_.setValidator(validator);
+};
+
+/**
+ * Check the Data or Interest packet against the policy.
+ * Your derived class must implement this.
+ * Depending on the implementation of the policy, this check can be done
+ * synchronously or asynchronously.
+ * The semantics of checkPolicy are as follows:
+ * If the packet violates the policy, then the policy should call
+ * state.fail() with an appropriate error code and error description.
+ * If the packet conforms to the policy and no further key retrievals are
+ * necessary, then the policy should call continueValidation(null, state).
+ * If the packet conforms to the policy and a key needs to be fetched, then
+ * the policy should call
+ * continueValidation({appropriate-key-request-instance}, state).
+ * @param {Data|Interest} dataOrInterest The Data or Interest packet to check.
+ * @param {ValidationState} state The ValidationState of this validation.
+ * @param {function} continueValidation The policy should call
+ * continueValidation() as described above.
+ */
+ValidationPolicy.prototype.checkPolicy = function
+  (dataOrInterest, state, continueValidation)
+{
+  throw new Error("ValidationPolicy.checkPolicy is not implemented");
+};
+
+/**
+ * Check the certificate against the policy.
+ * This base class implementation just calls checkPolicy(certificate, ...). Your 
+ * derived class may override. Depending on implementation of the policy, this
+ * check can be done synchronously or asynchronously. See the checkPolicy(Data)
+ * documentation for the semantics.
+ * @param {CertificateV2} certificate The certificate to check.
+ * @param {ValidationState} state The ValidationState of this validation.
+ * @param {function} continueValidation The policy should call
+ * continueValidation() as described above.
+ */
+ValidationPolicy.prototype.checkCertificatePolicy = function
+  (certificate, state, continueValidation)
+{
+  this.checkPolicy(certificate, state, continueValidation);
+};
+
+/** Extract the KeyLocator Name from a Data or signed Interest packet.
+ * The SignatureInfo in the packet must contain a KeyLocator of type KEYNAME.
+ * Otherwise, state.fail is invoked with INVALID_KEY_LOCATOR.
+ * @param {Data|Interest} dataOrInterest The Data or Interest packet with the
+ * KeyLocator.
+ * @param {ValidationState} state On error, this calls state.fail and returns an
+ * empty Name.
+ * @return {Name} The KeyLocator name, or an empty Name for failure.
+ */
+ValidationPolicy.getKeyLocatorName = function(dataOrInterest, state)
+{
+  if (dataOrInterest instanceof Data) {
+    var data = dataOrInterest;
+    return ValidationPolicy.getKeyLocatorNameFromSignature_
+      (data.getSignature(), state);
+  }
+  else {
+    var interest = dataOrInterest;
+
+    var name = interest.getName();
+    if (name.size() < 2) {
+      state.fail(new ValidationError(ValidationError.INVALID_KEY_LOCATOR,
+        "Invalid signed Interest: name too short"));
+      return new Name();
+    }
+
+    var signatureInfo;
+    try {
+      // TODO: Generalize the WireFormat.
+      signatureInfo =
+        WireFormat.getDefaultWireFormat().decodeSignatureInfoAndValue
+        (interest.getName().get(-2).getValue().buf(),
+         interest.getName().get(-1).getValue().buf());
+    } catch (ex) {
+      state.fail(new ValidationError(ValidationError.INVALID_KEY_LOCATOR,
+        "Invalid signed Interest: " + ex));
+      return new Name();
+    }
+
+    return ValidationPolicy.getKeyLocatorNameFromSignature_(signatureInfo, state);
+  }
+};
+
+/**
+ * A helper method for getKeyLocatorName.
+ * @param {Signature} signatureInfo
+ * @param {ValidationState} state
+ * @return {Name}
+ */
+ValidationPolicy.getKeyLocatorNameFromSignature_ = function(signatureInfo, state)
+{
+  if (!KeyLocator.canGetFromSignature(signatureInfo)) {
+    state.fail(new ValidationError
+      (ValidationError.INVALID_KEY_LOCATOR, "KeyLocator is missing"));
+    return new Name();
+  }
+
+  var keyLocator = KeyLocator.getFromSignature(signatureInfo);
+  if (keyLocator.getType() != KeyLocatorType.KEYNAME) {
+    state.fail(new ValidationError
+      (ValidationError.INVALID_KEY_LOCATOR, "KeyLocator type is not Name"));
+    return new Name();
+  }
+
+  return keyLocator.getKeyName();
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validation-policy-accept-all.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var ValidationPolicy = require('./validation-policy.js').ValidationPolicy;
+
+/**
+ * ValidationPolicyAcceptAll extends ValidationPolicy to implement a validator
+ * policy that accepts any signature of a Data or Interest packet.
+ * @constructor
+ */
+var ValidationPolicyAcceptAll = function ValidationPolicyAcceptAll()
+{
+  // Call the base constructor.
+  ValidationPolicy.call(this);
+};
+
+ValidationPolicyAcceptAll.prototype = new ValidationPolicy();
+ValidationPolicyAcceptAll.prototype.name = "ValidationPolicyAcceptAll";
+
+exports.ValidationPolicyAcceptAll = ValidationPolicyAcceptAll;
+
+/**
+ * @param {Data|Interest} dataOrInterest
+ * @param {ValidationState} state
+ * @param {function} continueValidation
+ */
+ValidationPolicyAcceptAll.prototype.checkPolicy = function
+  (dataOrInterest, state, continueValidation)
+{
+  continueValidation(null, state);
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validation-policy-config.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var BoostInfoParser = require('../../util/boost-info-parser.js').BoostInfoParser; /** @ignore */
+var CertificateRequest = require('./certificate-request.js').CertificateRequest; /** @ignore */
+var ValidatorConfigError = require('../validator-config-error.js').ValidatorConfigError; /** @ignore */
+var ValidationError = require('./validation-error.js').ValidationError; /** @ignore */
+var CertificateV2 = require('./certificate-v2.js').CertificateV2; /** @ignore */
+var ConfigRule = require('./validator-config/config-rule.js').ConfigRule; /** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var Interest = require('../../interest.js').Interest; /** @ignore */
+var ValidationPolicy = require('./validation-policy.js').ValidationPolicy;
+
+/**
+ * ValidationPolicyConfig implements a validator which can be set up via a
+ * configuration file. For command Interest validation, this policy must be
+ * combined with ValidationPolicyCommandInterest in order to guard against
+ * replay attacks.
+ * @note This policy does not support inner policies (a sole policy or a
+ * terminal inner policy).
+ * See https://named-data.net/doc/ndn-cxx/current/tutorials/security-validator-config.html
+ * @constructor
+ */
+var ValidationPolicyConfig = function ValidationPolicyConfig()
+{
+  // Call the base constructor.
+  ValidationPolicy.call(this);
+
+  this.shouldBypass_ = false;
+  this.isConfigured_ = false;
+  this.dataRules_ = [];     // of ConfigRule
+  this.interestRules_ = []; // of ConfigRule
+};
+
+ValidationPolicyConfig.prototype = new ValidationPolicy();
+ValidationPolicyConfig.prototype.name = "ValidationPolicyConfig";
+
+exports.ValidationPolicyConfig = ValidationPolicyConfig;
+
+/**
+ * There are three forms of load:
+ * load(filePath) - Load the configuration from the given config file.
+ * load(input, inputName) - Load the configuration from the given input string.
+ * load(configSection, inputName) - Load the configuration from the given
+ * configSection.
+ * Each of these forms of load replaces any existing configuration.
+ * @param {String} filePath The The path of the config file.
+ * @param {String} input The contents of the configuration rules, with lines
+ * separated by "\n" or "\r\n".
+ * @param {BoostInfoTree} The configuration section loaded from the config file.
+ * It should have one "validator" section.
+ * @param {String} inputName Used for log messages, etc.
+ */
+ValidationPolicyConfig.prototype.load = function
+  (filePathOrInputOrConfigSection, inputName)
+{
+  if (typeof filePathOrInputOrConfigSection === 'string' &&
+      inputName == undefined) {
+    var filePath = filePathOrInputOrConfigSection;
+
+    var parser = new BoostInfoParser();
+    parser.read(filePath);
+    this.load(parser.getRoot(), filePath);
+  }
+  else if (typeof filePathOrInputOrConfigSection === 'string' &&
+      typeof inputName === 'string') {
+    var input = filePathOrInputOrConfigSection;
+
+    var parser = new BoostInfoParser();
+    parser.read(input, inputName);
+    this.load(parser.getRoot(), inputName);
+  }
+  else {
+    var configSection = filePathOrInputOrConfigSection;
+
+    if (this.isConfigured_) {
+      // Reset the previous configuration.
+      this.shouldBypass_ = false;
+      this.dataRules_ = [];
+      this.interestRules_ = [];
+
+      this.validator_.resetAnchors();
+      this.validator_.resetVerifiedCertificates();
+    }
+    this.isConfigured_ = true;
+
+    var validatorList = configSection.get("validator");
+    if (validatorList.length != 1)
+      throw new ValidatorConfigError(new Error
+        ("ValidationPolicyConfig: Expected one validator section"));
+    var validatorSection = validatorList[0];
+
+    // Get the rules.
+    var ruleList = validatorSection.get("rule");
+    for (var i = 0; i < ruleList.length; ++i) {
+      var rule = ConfigRule.create(ruleList[i]);
+      if (rule.getIsForInterest())
+        this.interestRules_.push(rule);
+      else
+        this.dataRules_.push(rule);
+    }
+
+    // Get the trust anchors.
+    var trustAnchorList = validatorSection.get("trust-anchor");
+    for (var i = 0; i < trustAnchorList.list; ++i)
+      this.processConfigTrustAnchor_(trustAnchorList[i], inputName);
+  }
+};
+
+/**
+ * @param {Data|Interest} dataOrInterest
+ * @param {ValidationState} state
+ * @param {function} continueValidation
+ */
+ValidationPolicyConfig.prototype.checkPolicy = function
+  (dataOrInterest, state, continueValidation)
+{
+  if (this.hasInnerPolicy())
+    throw new ValidatorConfigError(new Error
+      ("ValidationPolicyConfig must be a terminal inner policy"));
+
+  if (this.shouldBypass_) {
+    continueValidation(null, state);
+    return;
+  }
+
+  var keyLocatorName = ValidationPolicy.getKeyLocatorName(dataOrInterest, state);
+  if (state.isOutcomeFailed())
+    // Already called state.fail() .
+    return;
+
+  if (dataOrInterest instanceof Data) {
+    var data = dataOrInterest;
+
+    for (var i = 0; i < this.dataRules_.length; ++i) {
+      var rule = this.dataRules_[i];
+
+      if (rule.match(false, data.getName())) {
+        if (rule.check(false, data.getName(), keyLocatorName, state)) {
+          continueValidation
+            (new CertificateRequest(new Interest(keyLocatorName)), state);
+          return;
+        }
+        else
+          // rule.check failed and already called state.fail() .
+          return;
+      }
+    }
+
+    state.fail(new ValidationError(ValidationError.POLICY_ERROR,
+      "No rule matched for data `" + data.getName().toUri() + "`"));
+  }
+  else {
+    var interest = dataOrInterest;
+
+    for (var i = 0; i < this.interestRules_.length; ++i) {
+      var rule = interestRules_[i];
+
+      if (rule.match(true, interest.getName())) {
+        if (rule.check(true, interest.getName(), keyLocatorName, state)) {
+          continueValidation
+            (new CertificateRequest(new Interest(keyLocatorName)), state);
+          return;
+        }
+        else
+          // rule.check failed and already called state.fail() .
+          return;
+      }
+    }
+
+    state.fail(new ValidationError(ValidationError.POLICY_ERROR,
+      "No rule matched for interest `" + interest.getName().toUri() + "`"));
+  }
+};
+
+/**
+ * Process the trust-anchor configuration section and call
+ * validator_.loadAnchor as needed.
+ * @param {BoostInfoTree} configSection The section containing the definition of
+ * the trust anchor, e.g. one of "validator.trust-anchor".
+ * @param {String} inputName Used for log messages, etc.
+ */
+ValidationPolicyConfig.prototype.processConfigTrustAnchor_ = function
+  (configSection, inputName)
+{
+  var anchorType = configSection.getFirstValue("type");
+  if (anchorType == null)
+    throw new ValidatorConfigError(new Error("Expected <trust-anchor.type>"));
+
+  if (anchorType.toLowerCase() == "file") {
+    // Get trust-anchor.file .
+    var fileName = configSection.getFirstValue("file-name");
+    if (fileName == null)
+      throw new ValidatorConfigError(new Error("Expected <trust-anchor.file-name>"));
+
+    var refreshPeriod = ValidationPolicyConfig.getRefreshPeriod_(configSection);
+    this.validator_.loadAnchor(fileName, fileName, refreshPeriod, false);
+
+    return;
+  }
+  else if (anchorType.toLowerCase() == "base64") {
+    // Get trust-anchor.base64-string .
+    var base64String = configSection.getFirstValue("base64-string");
+    if (base64String == null)
+      throw new ValidatorConfigError(new Error
+        ("Expected <trust-anchor.base64-string>"));
+
+    var encoding = new Buffer(base64String, 'base64');
+    var certificate = new CertificateV2();
+    try {
+      certificate.wireDecode(encoding);
+    } catch (ex) {
+      throw new ValidatorConfigError(new Error
+        ("Cannot decode certificate from base64-string: " + ex));
+    }
+    this.validator_.loadAnchor("", certificate);
+
+    return;
+  }
+  else if (anchorType.toLowerCase() == "dir") {
+    // Get trust-anchor.dir .
+    var dirString = configSection.getFirstValue("dir");
+    if (dirString == null)
+      throw new ValidatorConfigError(new Error("Expected <trust-anchor.dir>"));
+
+    var refreshPeriod = ValidationPolicyConfig.getRefreshPeriod_(configSection);
+    this.validator_.loadAnchor(dirString, dirString, refreshPeriod, true);
+
+    return;
+  }
+  else if (anchorType.toLowerCase() == "any")
+    this.shouldBypass_ = true;
+  else
+    throw new ValidatorConfigError(new Error("Unsupported trust-anchor.type"));
+}
+
+/**
+ * Get the "refresh" value. If the value is 9, return a period of one hour.
+ * @param {BoostInfoTree} configSection The section containing the definition of
+ * the trust anchor, e.g. one of "validator.trust-anchor".
+ * @return {number} The refresh period in milliseconds. However if there is no
+ * "refresh" value, return a large number (effectively no refresh).
+ */
+ValidationPolicyConfig.getRefreshPeriod_ = function(configSection)
+{
+  var refreshString = configSection.getFirstValue("refresh");
+  if (refreshString == null)
+    // Return a large value (effectively no refresh).
+    return 1e14;
+
+  var refreshSeconds = 0.0;
+  var refreshMatch = refreshString.match(/(\d+)([hms])/);;
+  if (refreshMatch != null) {
+    refreshSeconds = parseInt(refreshMatch[1]);
+    if (refreshMatch[2] != 's') {
+      refreshSeconds *= 60;
+      if (refreshMatch[2] != 'm')
+        refreshSeconds *= 60;
+    }
+  }
+
+  if (refreshSeconds == 0.0)
+    // Use an hour instead of 0.
+    return 3600 * 1000.0;
+  else
+    // Convert from seconds to milliseconds.
+    return refreshSeconds * 1000.0;
+}
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Interest = require('../../interest.js').Interest; /** @ignore */
+var CertificateRequest = require('./certificate-request.js').CertificateRequest; /** @ignore */
+var PibKey = require('../pib/pib-key.js').PibKey; /** @ignore */
+var ValidationError = require('./validation-error.js').ValidationError; /** @ignore */
+var ValidationPolicy = require('./validation-policy.js').ValidationPolicy;
+
+/**
+ * ValidationPolicyFromPib extends ValidationPolicy to implement a validator
+ * policy that validates a packet using the default certificate of the key in
+ * the PIB that is named by the packet's KeyLocator.
+ *
+ * Create a ValidationPolicyFromPib to use the given PIB.
+ * @param {Pib} pib The PIB with certificates.
+ * @constructor
+ */
+var ValidationPolicyFromPib = function ValidationPolicyFromPib(pib)
+{
+  // Call the base constructor.
+  ValidationPolicy.call(this);
+
+  this.pib_ = pib;
+};
+
+ValidationPolicyFromPib.prototype = new ValidationPolicy();
+ValidationPolicyFromPib.prototype.name = "ValidationPolicyFromPib";
+
+exports.ValidationPolicyFromPib = ValidationPolicyFromPib;
+
+/**
+ * @param {Data|Interest} dataOrInterest
+ * @param {ValidationState} state
+ * @param {function} continueValidation
+ */
+ValidationPolicyFromPib.prototype.checkPolicy = function
+  (dataOrInterest, state, continueValidation)
+{
+  var keyName = ValidationPolicy.getKeyLocatorName(dataOrInterest, state);
+  if (state.isOutcomeFailed())
+    // Already called state.fail() .
+    return;
+
+  this.checkPolicyHelper_(keyName, state, continueValidation);
+};
+
+ValidationPolicyFromPib.prototype.checkPolicyHelper_ = function
+  (keyName, state, continueValidation)
+{
+  var identity;
+  try {
+    identity = this.pib_.getIdentity(PibKey.extractIdentityFromKeyName(keyName));
+  } catch (ex) {
+    state.fail(new ValidationError
+      (ValidationError.CANNOT_RETRIEVE_CERTIFICATE,
+       "Cannot get the PIB identity for key " + keyName.toUri() + ": " + ex));
+    return;
+  }
+
+  var key;
+  try {
+    key = identity.getKey(keyName);
+  } catch (ex) {
+    state.fail(new ValidationError
+      (ValidationError.CANNOT_RETRIEVE_CERTIFICATE,
+       "Cannot get the PIB key " + keyName.toUri() + ": " + ex));
+    return;
+  }
+
+  var certificate;
+  try {
+    certificate = key.getDefaultCertificate();
+  } catch (ex) {
+    state.fail(new ValidationError
+      (ValidationError.CANNOT_RETRIEVE_CERTIFICATE,
+       "Cannot get the default certificate for key " + keyName.toUri() + ": " +
+       ex));
+    return;
+  }
+
+  // Add the certificate as the temporary trust anchor.
+  this.validator_.resetAnchors();
+  this.validator_.loadAnchor("", certificate);
+  continueValidation(new CertificateRequest(new Interest(keyName)), state);
+  // Clear the temporary trust anchor.
+  this.validator_.resetAnchors();
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validation-policy-simple-hierarchy.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var CertificateRequest = require('./certificate-request.js').CertificateRequest; /** @ignore */
+var ValidationError = require('./validation-error.js').ValidationError; /** @ignore */
+var Interest = require('../../interest.js').Interest; /** @ignore */
+var ValidationPolicy = require('./validation-policy.js').ValidationPolicy;
+
+/**
+ * ValidationPolicySimpleHierarchy extends ValidationPolicy to implement a
+ * Validation policy for a simple hierarchical trust model.
+ * @constructor
+ */
+var ValidationPolicySimpleHierarchy = function ValidationPolicySimpleHierarchy()
+{
+  // Call the base constructor.
+  ValidationPolicy.call(this);
+};
+
+ValidationPolicySimpleHierarchy.prototype = new ValidationPolicy();
+ValidationPolicySimpleHierarchy.prototype.name = "ValidationPolicySimpleHierarchy";
+
+exports.ValidationPolicySimpleHierarchy = ValidationPolicySimpleHierarchy;
+
+/**
+ * @param {Data|Interest} dataOrInterest
+ * @param {ValidationState} state
+ * @param {function} continueValidation
+ */
+ValidationPolicySimpleHierarchy.prototype.checkPolicy = function
+  (dataOrInterest, state, continueValidation)
+{
+  keyLocatorName = ValidationPolicy.getKeyLocatorName(dataOrInterest, state);
+  if (state.isOutcomeFailed())
+    // Already called state.fail().)
+    return;
+
+  if (keyLocatorName.getPrefix(-2).isPrefixOf(dataOrInterest.getName()))
+    continueValidation(new CertificateRequest(new Interest(keyLocatorName)), state);
+  else
+    state.fail(new ValidationError(ValidationError.INVALID_KEY_LOCATOR,
+      "Signing policy violation for " + dataOrInterest.getName().toUri() +
+      " by " + keyLocatorName.toUri()));
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validator.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var ValidationError = require('./validation-error.js').ValidationError; /** @ignore */
+var CertificateFetcherOffline = require('./certificate-fetcher-offline.js').CertificateFetcherOffline; /** @ignore */
+var CertificateStorage = require('./certificate-storage.js').CertificateStorage; /** @ignore */
+var DataValidationState = require('./data-validation-state.js').DataValidationState; /** @ignore */
+var InterestValidationState = require('./interest-validation-state.js').InterestValidationState; /** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var LOG = require('../../log.js').Log.LOG;
+
+/**
+ * The Validator class provides an interface for validating data and interest
+ * packets.
+ *
+ * Every time a validation process is initiated, it creates a ValidationState
+ * that exists until the validation finishes with either success or failure.
+ * This state serves several purposes:
+ * to record the Interest or Data packet being validated,
+ * to record the failure callback,
+ * to record certificates in the certification chain for the Interest or Data
+ * packet being validated,
+ * to record the names of the requested certificates in order to detect loops in
+ * the certificate chain,
+ * and to keep track of the validation chain size (also known as the validation
+ * "depth").
+ *
+ * During validation, the policy and/or key fetcher can augment the validation
+ * state with policy- and fetcher-specific information using tags.
+ *
+ * A Validator has a trust anchor cache to save static and dynamic trust
+ * anchors, a verified certificate cache for saving certificates that are
+ * already verified, and an unverified certificate cache for saving pre-fetched
+ * but not yet verified certificates.
+ *
+ * Create a Validator with the policy and fetcher.
+ * @param {ValidationPolicy} policy The validation policy to be associated with
+ * this validator.
+ * @param {CertificateFetcher} certificateFetcher (optional) The certificate
+ * fetcher implementation. If omitted, use a CertificateFetcherOffline (assuming
+ * that the validation policy doesn't need to fetch certificates).
+ * @constructor
+ */
+var Validator = function Validator(policy, certificateFetcher)
+{
+  // Call the base constructor.
+  CertificateStorage.call(this);
+
+  if (certificateFetcher == undefined)
+    certificateFetcher = new CertificateFetcherOffline();
+
+  this.policy_ = policy;
+  this.certificateFetcher_ = certificateFetcher;
+  this.maxDepth_ = 25;
+
+  if (this.policy_ == null)
+    throw new Error("The policy is null");
+  if (this.certificateFetcher_ == null)
+    throw new Error("The certificateFetcher is null");
+
+  this.policy_.setValidator(this);
+  this.certificateFetcher_.setCertificateStorage(this);
+};
+
+Validator.prototype = new CertificateStorage();
+Validator.prototype.name = "Validator";
+
+exports.Validator = Validator;
+
+/**
+ * Get the ValidationPolicy given to the constructor.
+ * @return {ValidationPolicy} The ValidationPolicy.
+ */
+Validator.prototype.getPolicy = function() { return this.policy_; };
+
+/**
+ * Get the CertificateFetcher given to (or created in) the constructor.
+ * @return {CertificateFetcher} The CertificateFetcher.
+ */
+Validator.prototype.getFetcher = function() { return this.certificateFetcher_; };
+
+/**
+ * Set the maximum depth of the certificate chain.
+ * @param {number} maxDepth The maximum depth.
+ */
+Validator.prototype.setMaxDepth = function(maxDepth)
+{ 
+  this.maxDepth_ = maxDepth;
+};
+
+/**
+ * Get the maximum depth of the certificate chain.
+ * @return {number} The maximum depth.
+ */
+Validator.prototype.getMaxDepth = function() { return this.maxDepth_; };
+
+/**
+ * Asynchronously validate the Data or Interest packet.
+ * @param {Data|Interest} dataOrInterest The Data or Interest packet to validate,
+ * which is copied.
+ * @param {function} successCallback On validation success, this calls
+ * successCallback(dataOrInterest).
+ * @param {function} failureCallback On validation failure, this calls
+ * failureCallback(dataOrInterest, error) where error is a ValidationError.
+ */
+Validator.prototype.validate = function
+  (dataOrInterest, successCallback, failureCallback)
+{
+  var state;
+  if (dataOrInterest instanceof Data) {
+    state = new DataValidationState
+      (dataOrInterest, successCallback, failureCallback);
+    if (LOG > 3) console.log("Start validating data " +
+      dataOrInterest.getName().toUri());
+  }
+  else {
+    state = new InterestValidationState
+      (dataOrInterest, successCallback, failureCallback);
+    if (LOG > 3) console.log("Start validating interest " +
+      dataOrInterest.getName().toUri());
+  }
+
+  var thisValidator = this;
+  this.policy_.checkPolicy
+    (dataOrInterest, state, function(certificateRequest, state) {
+      if (certificateRequest == null)
+        state.bypassValidation_();
+      else
+        // We need to fetch the key and validate it.
+        thisValidator.requestCertificate_(certificateRequest, state);
+    });
+};
+
+/**
+ * Recursively validate the certificates in the certification chain.
+ * @param {CertificateV2} certificate The certificate to check.
+ * @param {ValidationState} state The current validation state.
+ */
+Validator.prototype.validateCertificate_ = function(certificate, state)
+{
+  if (LOG > 3) console.log("Start validating certificate " +
+    certificate.getName().toUri());
+
+  if (!certificate.isValid()) {
+    state.fail(new ValidationError
+      (ValidationError.EXPIRED_CERTIFICATE,
+       "Retrieved certificate is not yet valid or expired `" +
+       certificate.getName().toUri() + "`"));
+    return;
+  }
+
+  var thisValidator = this;
+  this.policy_.checkCertificatePolicy
+    (certificate, state, function(certificateRequest, state) {
+      if (certificateRequest == null)
+        state.fail(new ValidationError
+          (ValidationError.POLICY_ERROR,
+           "Validation policy is not allowed to designate `" +
+           certificate.getName().toUri() + "` as a trust anchor"));
+      else {
+        // We need to fetch the key and validate it.
+        state.addCertificate(certificate);
+        thisValidator.requestCertificate_(certificateRequest, state);
+      }
+    });
+};
+
+/**
+ * Request a certificate for further validation.
+ * @param {CertificateRequest} certificateRequest The certificate request.
+ * @param {ValidationState} state The current validation state.
+ */
+Validator.prototype.requestCertificate_ = function(certificateRequest, state)
+{
+  if (state.getDepth() >= this.maxDepth_) {
+    state.fail(new ValidationError
+      (ValidationError.EXCEEDED_DEPTH_LIMIT, "Exceeded validation depth limit"));
+    return;
+  }
+
+  if (state.hasSeenCertificateName(certificateRequest.interest_.getName())) {
+    state.fail(new ValidationError
+      (ValidationError.LOOP_DETECTED,
+       "Validation loop detected for certificate `" +
+         certificateRequest.interest_.getName().toUri() + "`"));
+    return;
+  }
+
+  if (LOG > 3) console.log("Retrieving " +
+    certificateRequest.interest_.getName().toUri());
+
+  var thisValidator = this;
+
+  var certificate = this.findTrustedCertificate(certificateRequest.interest_);
+  if (certificate != null) {
+    if (LOG > 3) console.log("Found trusted certificate " +
+      certificate.getName().toUri());
+
+    state.verifyCertificateChainPromise_(certificate)
+    .then(function(certificate) {
+      if (certificate != null)
+        return state.verifyOriginalPacketPromise_(certificate);
+      else
+        return SyncPromise.resolve();
+    })
+    .then(function() {
+      for (var i = 0; i < state.certificateChain_.length; ++i)
+        thisValidator.cacheVerifiedCertificate(state.certificateChain_[i]);
+    });
+    
+    return;
+  }
+
+  this.certificateFetcher_.fetch
+    (certificateRequest, state, function(certificate, state) {
+      thisValidator.validateCertificate_(certificate, state);
+    });
+};
+/**
  * Copyright (C) 2014-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -32501,8 +36314,11 @@ var KeyChain = function KeyChain(arg1, arg2, arg3)
     KeyChain.parseAndCheckTpmLocator_(tpmLocator, tpmScheme, tpmLocation);
     var canonicalTpmLocator = tpmScheme[0] + ":" + tpmLocation[0];
 
-    var config = new ConfigFile();
-    if (canonicalPibLocator == KeyChain.getDefaultPibLocator_(config)) {
+    var config;
+    if (ConfigFile)
+      // Assume we are not in the browser.
+      config = new ConfigFile();
+    if (ConfigFile && canonicalPibLocator == KeyChain.getDefaultPibLocator_(config)) {
       // The default PIB must use the default TPM.
       if (oldTpmLocator != "" &&
           oldTpmLocator != KeyChain.getDefaultTpmLocator_(config)) {
@@ -34470,8 +38286,10 @@ KeyChain.getPibFactories_ = function()
     KeyChain.pibFactories_ = {};
 
     // Add the standard factories.
-    KeyChain.pibFactories_[PibSqlite3.getScheme()] =
-      function(location) { return new PibSqlite3(location); };
+    if (PibSqlite3)
+      // PibSqlite3 is defined for Node.js .
+      KeyChain.pibFactories_[PibSqlite3.getScheme()] =
+        function(location) { return new PibSqlite3(location); };
     KeyChain.pibFactories_[PibMemory.getScheme()] =
       function(location) { return new PibMemory(); };
   }
@@ -34492,8 +38310,10 @@ KeyChain.getTpmFactories_ = function()
     KeyChain.tpmFactories_ = {};
 
     // Add the standard factories.
-    KeyChain.tpmFactories_[TpmBackEndFile.getScheme()] =
-      function(location) { return new TpmBackEndFile(location); };
+    if (TpmBackEndFile)
+      // TpmBackEndFile is defined for Node.js .
+      KeyChain.tpmFactories_[TpmBackEndFile.getScheme()] =
+        function(location) { return new TpmBackEndFile(location); };
     KeyChain.tpmFactories_[TpmBackEndMemory.getScheme()] =
       function(location) { return new TpmBackEndMemory(); };
   }
@@ -34979,6 +38799,168 @@ LocatorMismatchError.prototype = new Error();
 LocatorMismatchError.prototype.name = "LocatorMismatchError";
 
 exports.LocatorMismatchError = LocatorMismatchError;
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/v2/validator-config/common.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * Create a new ValidatorConfigError to report an  error using ValidatorConfig.
+ * Call with: throw new ValidatorConfigError(new Error("message")).
+ * @param {Error} error The exception created with new Error.
+ * @constructor
+ */
+var ValidatorConfigError = function ValidatorConfigError(error)
+{
+  if (error) {
+    error.__proto__ = ValidatorConfigError.prototype;
+    return error;
+  }
+}
+
+ValidatorConfigError.prototype = new Error();
+ValidatorConfigError.prototype.name = "ValidatorConfigError";
+
+exports.ValidatorConfigError = ValidatorConfigError;
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/validator-config.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var CertificateFetcher = require('./v2/certificate-fetcher.js').CertificateFetcher; /** @ignore */
+var ValidationPolicyConfig = require('./v2/validation-policy-config.js').ValidationPolicyConfig; /** @ignore */
+var CertificateFetcherFromNetwork = require('./v2/certificate-fetcher-from-network.js').CertificateFetcherFromNetwork; /** @ignore */
+var Validator = require('./v2/validator.js').Validator;
+
+/**
+ * ValidatorConfig extends Validator to implements a validator which can be
+ * set up via a configuration file.
+ *
+ * The constructor has two forms:
+ * ValidatorConfig(fetcher) - Create a ValidatorConfig that uses the given
+ * certificate fetcher.
+ * ValidatorConfig(face) - Create a ValidatorConfig that uses a
+ * CertificateFetcherFromNetwork for the given Face.
+ * @param {CertificateFetcher} fetcher the certificate fetcher to use.
+ * @param {Face} face The face for the certificate fetcher to call
+ * expressInterest.
+ * @constructor
+ */
+var ValidatorConfig = function ValidatorConfig(fetcherOrFace)
+{
+  if (fetcherOrFace instanceof CertificateFetcher) {
+    // Call the base constructor.
+    Validator.call(this, new ValidationPolicyConfig(), fetcherOrFace);
+    // TODO: Use getInnerPolicy().
+    this.policyConfig_ = this.getPolicy();
+  }
+  else {
+    // Call the base constructor.
+    Validator.call
+      (this, new ValidationPolicyConfig(),
+       new CertificateFetcherFromNetwork(fetcherOrFace));
+    // TODO: Use getInnerPolicy().
+    this.policyConfig_ = this.getPolicy();
+  }
+};
+
+ValidatorConfig.prototype = new Validator
+  (new ValidationPolicyConfig(), new CertificateFetcherFromNetwork(null));
+ValidatorConfig.prototype.name = "ValidatorConfig";
+
+exports.ValidatorConfig = ValidatorConfig;
+
+/**
+ * There are three forms of load:
+ * load(filePath) - Load the configuration from the given config file.
+ * load(input, inputName) - Load the configuration from the given input string.
+ * load(configSection, inputName) - Load the configuration from the given
+ * configSection.
+ * Each of these forms of load replaces any existing configuration.
+ * @param {String} filePath The The path of the config file.
+ * @param {String} input The contents of the configuration rules, with lines
+ * separated by "\n" or "\r\n".
+ * @param {BoostInfoTree} The configuration section loaded from the config file.
+ * It should have one "validator" section.
+ * @param {String} inputName Used for log messages, etc.
+ */
+ValidatorConfig.prototype.load = function
+  (filePathOrInputOrConfigSection, inputName)
+{
+  this.policyConfig_.load(filePathOrInputOrConfigSection, inputName);
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/security/validator-null.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var ValidationPolicyAcceptAll = require('./v2/validation-policy-accept-all.js').ValidationPolicyAcceptAll; /** @ignore */
+var CertificateFetcherOffline = require('./v2/certificate-fetcher-offline.js').CertificateFetcherOffline; /** @ignore */
+var Validator = require('./v2/validator.js').Validator;
+
+/**
+ * A ValidatorNull extends Validator with an "accept-all" policy and an offline
+ * certificate fetcher.
+ * @constructor
+ */
+var ValidatorNull = function ValidatorNull()
+{
+  // Call the base constructor.
+  Validator.call
+    (this, new ValidationPolicyAcceptAll(), new CertificateFetcherOffline());
+};
+
+ValidatorNull.prototype = new Validator(new ValidationPolicyAcceptAll());
+ValidatorNull.prototype.name = "ValidatorNull";
+
+exports.ValidatorNull = ValidatorNull;
 /**
  * This class represents an Interest Exclude.
  * Copyright (C) 2014-2018 Regents of the University of California.
