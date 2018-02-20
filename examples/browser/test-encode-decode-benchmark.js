@@ -23,9 +23,8 @@ var MetaInfo = require('../..').MetaInfo;
 var KeyLocator = require('../..').KeyLocator;
 var KeyLocatorType = require('../..').KeyLocatorType;
 var KeyType = require('../..').KeyType;
-var PibMemory = require('../..').PibMemory;
-var TpmBackEndMemory = require('../..').TpmBackEndMemory;
-var SelfVerifyPolicyManager = require('../..').SelfVerifyPolicyManager;
+var Validator = require('../..').Validator;
+var ValidationPolicyFromPib = require('../..').ValidationPolicyFromPib;
 var SafeBag = require('../..').SafeBag;
 var KeyChain = require('../..').KeyChain;
 
@@ -187,19 +186,18 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
   // Initialize the KeyChain storage in case useCrypto is true.
 
   var certificateName;
+  var doDummySign = false;
 
   if (!keyChain){
     //generate KeyChain
-    var pibImpl = new PibMemory();
-    var keyChain = new KeyChain
-      (pibImpl, new TpmBackEndMemory(), new SelfVerifyPolicyManager(pibImpl));
+    keyChain = new KeyChain("pib-memory:", "tpm-memory:");
     keyChain.importSafeBag(new SafeBag
       (new Name("/testname/KEY/123"),
        new Blob(DEFAULT_RSA_PRIVATE_KEY_DER, false),
        new Blob(DEFAULT_RSA_PUBLIC_KEY_DER, false)));
     certificateName = keyChain.getDefaultCertificateName();
     //this is the first time, so do a dummy sign to make sure key is imported
-    var doDummySign = true;
+    doDummySign = true;
   }
 
   var signatureBits = new Buffer(256);
@@ -271,9 +269,9 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
   loopBody();
 };
 
-function onValidationFailed(data, reason)
+function onVerifyFailed(data, error)
 {
-  console.log("Signature verification: FAILED. Reason: " + reason);
+  console.log("Signature verification: FAILED. Reason: " + error.getInfo());
 }
 
 /**
@@ -293,21 +291,20 @@ TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function
   (nIterations, useCrypto, encoding, onFinished, nIterationsBeforeYield)
 {
   // Initialize the KeyChain storage in case useCrypto is true.
-  var pibImpl = new PibMemory();
-  var keyChain = new KeyChain
-    (pibImpl, new TpmBackEndMemory(), new SelfVerifyPolicyManager(pibImpl));
+  var keyChain = new KeyChain("pib-memory:", "tpm-memory:");
   // This puts the public key in the pibImpl used by the SelfVerifyPolicyManager.
   keyChain.importSafeBag(new SafeBag
     (new Name("/testname/KEY/123"),
      new Blob(DEFAULT_RSA_PRIVATE_KEY_DER, false),
      new Blob(DEFAULT_RSA_PUBLIC_KEY_DER, false)));
+  var validator = new Validator(new ValidationPolicyFromPib(keyChain.getPib()));
 
   var start = getNowSeconds();
   var count = 0;
-  var onVerified = function() {
+  var onVerifySuccess = function(data) {
     count += 1;
     if (count >= nIterations)
-      // We don't know when onVerified will be called. But after calling
+      // We don't know when onVerifySuccess will be called. But after calling
       //   nIterations times, we are finished.
       onFinished(getNowSeconds() - start);
   };
@@ -318,7 +315,7 @@ TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function
     for (j = 0; !nIterationsBeforeYield || j < nIterationsBeforeYield; ++j) {
       if (iteration >= nIterations) {
         if (!useCrypto)
-          // onVerified wasn't called to call onFinished, so do it here.
+          // onVerifySuccess wasn't called to call onFinished, so do it here.
           onFinished(getNowSeconds() - start);
 
         return;
@@ -328,7 +325,7 @@ TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function
       data.wireDecode(encoding);
 
       if (useCrypto)
-        keyChain.verifyData(data, onVerified, onValidationFailed);
+        validator.validate(data, onVerifySuccess, onVerifyFailed);
 
       ++iteration;
     }

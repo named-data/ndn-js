@@ -25,9 +25,8 @@ var Sha256WithRsaSignature = require('../..').Sha256WithRsaSignature;
 var ContentType = require('../..').ContentType;
 var KeyType = require('../..').KeyType;
 var KeyLocatorType = require('../..').KeyLocatorType;
-var PibMemory = require('../..').PibMemory;
-var TpmBackEndMemory = require('../..').TpmBackEndMemory;
-var SelfVerifyPolicyManager = require('../..').SelfVerifyPolicyManager;
+var Validator = require('../..').Validator;
+var ValidationPolicyFromPib = require('../..').ValidationPolicyFromPib;
 var SafeBag = require('../..').SafeBag;
 var KeyChain = require('../..').KeyChain;
 
@@ -229,14 +228,12 @@ function main()
   freshInterest.getForwardingHint().add(1, new Name("/A"));
 
   // Set up the KeyChain.
-  var pibImpl = new PibMemory();
-  var keyChain = new KeyChain
-    (pibImpl, new TpmBackEndMemory(), new SelfVerifyPolicyManager(pibImpl));
-  // This puts the public key in the pibImpl used by the SelfVerifyPolicyManager.
+  var keyChain = new KeyChain("pib-memory:", "tpm-memory:");
   keyChain.importSafeBag(new SafeBag
     (new Name("/testname/KEY/123"),
      new Blob(DEFAULT_RSA_PRIVATE_KEY_DER, false),
      new Blob(DEFAULT_RSA_PUBLIC_KEY_DER, false)));
+  var validator = new Validator(new ValidationPolicyFromPib(keyChain.getPib()));
 
   // Make a Face just so that we can sign the interest.
   var face = new Face({host: "localhost"});
@@ -249,12 +246,12 @@ function main()
   console.log("Re-decoded fresh Interest:");
   dumpInterest(reDecodedFreshInterest);
 
-  keyChain.verifyInterest
+  validator.validate
     (reDecodedFreshInterest,
-     function() { console.log("Freshly-signed Interest signature verification: VERIFIED"); },
-     function(interest, reason) {
+     function(interest) { console.log("Freshly-signed Interest signature verification: VERIFIED"); },
+     function(interest, error) {
        console.log("Freshly-signed Interest signature verification: FAILED. Reason: " +
-                   reason);
+                   error.getInfo());
      });
 }
 
