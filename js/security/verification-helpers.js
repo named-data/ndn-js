@@ -273,7 +273,7 @@ VerificationHelpers.verifyDataSignaturePromise = function
  * @param {number} digestAlgorithm (optional) The digest algorithm as an int
  * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
- * the Data packet. If omitted, use WireFormat getDefaultWireFormat().
+ * the Interest packet. If omitted, use WireFormat getDefaultWireFormat().
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
