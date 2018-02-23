@@ -55,7 +55,7 @@ describe ("TestValidator", function() {
      * Call fixture_.validator_.validate and if it calls the successCallback then
      * fail the test with the given message.
      * @param {Data} data The Data to validate.
-     * @param {String} message The message to show if the test fails.
+     * @param {String} message The message to show if the test succeeds.
      */
     this.validateExpectFailure = function(data, message) {
       this.fixture_.validator_.validate
@@ -355,7 +355,7 @@ describe ("TestValidatorInterestOnly", function() {
      * Call fixture_.validator_.validate and if it calls the successCallback then
      * fail the test with the given message.
      * @param {Data|Interest} dataOrInterest The Data to validate.
-     * @param {String} message The message to show if the test fails.
+     * @param {String} message The message to show if the test succeeds.
      */
     this.validateExpectFailure = function(dataOrInterest, message) {
       this.fixture_.validator_.validate
