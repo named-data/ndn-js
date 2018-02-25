@@ -120,7 +120,7 @@ ValidationPolicyConfig.prototype.load = function
 
     // Get the trust anchors.
     var trustAnchorList = validatorSection.get("trust-anchor");
-    for (var i = 0; i < trustAnchorList.list; ++i)
+    for (var i = 0; i < trustAnchorList.length; ++i)
       this.processConfigTrustAnchor_(trustAnchorList[i], inputName);
   }
 };
