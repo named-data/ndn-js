@@ -65,8 +65,8 @@ exports.ValidationPolicyConfig = ValidationPolicyConfig;
  * @param {String} filePath The The path of the config file.
  * @param {String} input The contents of the configuration rules, with lines
  * separated by "\n" or "\r\n".
- * @param {BoostInfoTree} The configuration section loaded from the config file.
- * It should have one "validator" section.
+ * @param {BoostInfoTree} configSection The configuration section loaded from
+ * the config file. It should have one "validator" section.
  * @param {String} inputName Used for log messages, etc.
  */
 ValidationPolicyConfig.prototype.load = function
@@ -172,7 +172,7 @@ ValidationPolicyConfig.prototype.checkPolicy = function
     var interest = dataOrInterest;
 
     for (var i = 0; i < this.interestRules_.length; ++i) {
-      var rule = interestRules_[i];
+      var rule = this.interestRules_[i];
 
       if (rule.match(true, interest.getName())) {
         if (rule.check(true, interest.getName(), keyLocatorName, state)) {
@@ -250,7 +250,7 @@ ValidationPolicyConfig.prototype.processConfigTrustAnchor_ = function
     this.shouldBypass_ = true;
   else
     throw new ValidatorConfigError(new Error("Unsupported trust-anchor.type"));
-}
+};
 
 /**
  * Get the "refresh" value. If the value is 9, return a period of one hour.
@@ -283,4 +283,4 @@ ValidationPolicyConfig.getRefreshPeriod_ = function(configSection)
   else
     // Convert from seconds to milliseconds.
     return refreshSeconds * 1000.0;
-}
+};
