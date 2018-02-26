@@ -20162,7 +20162,7 @@ VerificationHelpers.verifyDataSignaturePromise = function
  * @param {number} digestAlgorithm (optional) The digest algorithm as an int
  * from the DigestAlgorithm enum. If omitted, use DigestAlgorithm.SHA256.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
- * the Data packet. If omitted, use WireFormat getDefaultWireFormat().
+ * the Interest packet. If omitted, use WireFormat getDefaultWireFormat().
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -34950,7 +34950,7 @@ TrustAnchorContainer.prototype.clear = function()
  * with implicit digest are not supported.
  * @param {Name} keyName The key name prefix for searching for the certificate.
  * @param {Interest} interest The input interest packet.
- * @return The found certificate, or null if not found.
+ * @return {CertificateV2} The found certificate, or null if not found.
  */
 TrustAnchorContainer.prototype.find = function(keyNameOrInterest)
 {
@@ -35528,8 +35528,8 @@ exports.ValidationPolicyConfig = ValidationPolicyConfig;
  * @param {String} filePath The The path of the config file.
  * @param {String} input The contents of the configuration rules, with lines
  * separated by "\n" or "\r\n".
- * @param {BoostInfoTree} The configuration section loaded from the config file.
- * It should have one "validator" section.
+ * @param {BoostInfoTree} configSection The configuration section loaded from
+ * the config file. It should have one "validator" section.
  * @param {String} inputName Used for log messages, etc.
  */
 ValidationPolicyConfig.prototype.load = function
@@ -35583,7 +35583,7 @@ ValidationPolicyConfig.prototype.load = function
 
     // Get the trust anchors.
     var trustAnchorList = validatorSection.get("trust-anchor");
-    for (var i = 0; i < trustAnchorList.list; ++i)
+    for (var i = 0; i < trustAnchorList.length; ++i)
       this.processConfigTrustAnchor_(trustAnchorList[i], inputName);
   }
 };
@@ -35635,7 +35635,7 @@ ValidationPolicyConfig.prototype.checkPolicy = function
     var interest = dataOrInterest;
 
     for (var i = 0; i < this.interestRules_.length; ++i) {
-      var rule = interestRules_[i];
+      var rule = this.interestRules_[i];
 
       if (rule.match(true, interest.getName())) {
         if (rule.check(true, interest.getName(), keyLocatorName, state)) {
@@ -35713,7 +35713,7 @@ ValidationPolicyConfig.prototype.processConfigTrustAnchor_ = function
     this.shouldBypass_ = true;
   else
     throw new ValidatorConfigError(new Error("Unsupported trust-anchor.type"));
-}
+};
 
 /**
  * Get the "refresh" value. If the value is 9, return a period of one hour.
@@ -35746,7 +35746,7 @@ ValidationPolicyConfig.getRefreshPeriod_ = function(configSection)
   else
     // Convert from seconds to milliseconds.
     return refreshSeconds * 1000.0;
-}
+};
 /**
  * Copyright (C) 2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
