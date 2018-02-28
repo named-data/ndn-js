@@ -2436,7 +2436,7 @@ KeyChain.prototype.prepareSignatureInfoPromise_ = function
         if (key.getKeyType() == KeyType.RSA &&
             params.getDigestAlgorithm() == DigestAlgorithm.SHA256)
           signatureInfo = new Sha256WithRsaSignature();
-        else if (key.getKeyType() == KeyType.ECDSA &&
+        else if (key.getKeyType() == KeyType.EC &&
                  params.getDigestAlgorithm() == DigestAlgorithm.SHA256)
           signatureInfo = new Sha256WithEcdsaSignature()
         else

@@ -23,7 +23,7 @@
 var assert = require("assert");
 var Blob = require('../../..').Blob;
 var RsaKeyParams = require('../../..').RsaKeyParams;
-var EcdsaKeyParams = require('../../..').EcdsaKeyParams;
+var EcKeyParams = require('../../..').EcKeyParams;
 var PublicKey = require('../../..').PublicKey;
 var DigestAlgorithm = require('../../..').DigestAlgorithm;
 var VerificationHelpers = require('../../..').VerificationHelpers;
@@ -130,7 +130,7 @@ var RsaKeyTestData = function RsaKeyTestData()
 
 var EcKeyTestData = function RsaKeyTestData()
 {
-  this.keyParams = new EcdsaKeyParams();
+  this.keyParams = new EcKeyParams();
 
   this.privateKeyPkcs1 =
 "MIIBaAIBAQQgRxwcbzK9RV6AHYFsDcykI86o3M/a1KlJn0z8PcLMBZOggfowgfcC\n" +

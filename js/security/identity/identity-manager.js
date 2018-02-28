@@ -1401,7 +1401,7 @@ IdentityManager.prototype.makeSignatureByCertificatePromise = function
       signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
       signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
     }
-    else if (keyType == KeyType.ECDSA) {
+    else if (keyType == KeyType.EC) {
       signature = new Sha256WithEcdsaSignature();
       digestAlgorithm[0] = DigestAlgorithm.SHA256;
 

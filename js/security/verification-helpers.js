@@ -113,7 +113,7 @@ VerificationHelpers.verifySignaturePromise = function
         }
       }
     }
-    else if (publicKey.getKeyType() == KeyType.ECDSA) {
+    else if (publicKey.getKeyType() == KeyType.EC) {
       try {
         if (VerificationHelpers.verifyUsesString_ === null)
           VerificationHelpers.setVerifyUsesString_();
