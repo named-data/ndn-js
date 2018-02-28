@@ -42,6 +42,7 @@ exports.KeyType = require('./js/security/security-types.js').KeyType;
 exports.KeyClass = require('./js/security/security-types.js').KeyClass;
 exports.KeyParams = require('./js/security/key-params.js').KeyParams;
 exports.RsaKeyParams = require('./js/security/key-params.js').RsaKeyParams;
+exports.EcKeyParams = require('./js/security/key-params.js').EcKeyParams; // deprecated
 exports.EcdsaKeyParams = require('./js/security/key-params.js').EcdsaKeyParams;
 exports.AesKeyParams = require('./js/security/key-params.js').AesKeyParams;
 exports.DigestAlgorithm = require('./js/security/security-types.js').DigestAlgorithm;
