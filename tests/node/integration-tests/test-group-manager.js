@@ -458,4 +458,73 @@ describe ("TestGroupManager", function() {
     // When done is called, Mocha displays errors from assert.ok.
     .then(done, done);
   });
+
+  it("GetGroupKeyWithoutRegeneration", function(done) {
+    // Create the group manager.
+    var manager = new GroupManager
+      (new Name("Alice"), new Name("data_type"),
+       new Sqlite3GroupManagerDb(groupKeyDatabaseFilePath), 1024, 1, keyChain);
+
+    var result;
+    var result2;
+    var data;
+    var groupEKey1;
+    var timePoint1;
+
+    setManagerPromise(manager)
+    .then(function() {
+      // Get the data list from the group manager.
+      timePoint1 = Common.fromIsoString("20150825T093000");
+      return manager.getGroupKeyPromise(timePoint1);
+    })
+    .then(function(localResult) {
+      result = localResult;
+      assert.equal(result.length, 4);
+
+      // The first data packet contains the group's encryption key (public key).
+      data = result[0];
+      assert.equal
+        (data.getName().toUri(),
+         "/Alice/READ/data_type/E-KEY/20150825T090000/20150825T100000");
+      groupEKey1 = new EncryptKey(data.getContent());
+
+      // Get the second data packet and decrypt.
+      data = result[1];
+      assert.equal
+        (data.getName().toUri(),
+         "/Alice/READ/data_type/D-KEY/20150825T090000/20150825T100000/FOR/ndn/memberA/ksk-123");
+
+      // Add new members to the database.
+      var dataBlob = certificate.wireEncode();
+      var memberD = new Data();
+      memberD.wireDecode(dataBlob);
+      memberD.setName(new Name("/ndn/memberD/KEY/ksk-123/ID-CERT/123"));
+      return manager.addMemberPromise("schedule1", memberD);
+    })
+    .then(function() {
+      return manager.getGroupKeyPromise(timePoint1, false);
+    })
+    .then(function(localResult) {
+      result2 = localResult;
+      assert.equal(result2.length, 5);
+
+      // Check that the new EKey is the same as the previous one.
+      var data2 = result2[0];
+      assert.equal
+        ("/Alice/READ/data_type/E-KEY/20150825T090000/20150825T100000",
+         data2.getName().toUri());
+      var groupEKey2 = new EncryptKey(data2.getContent());
+      assert.ok(groupEKey1.getKeyBits().equals(groupEKey2.getKeyBits()));
+
+      // Check the second data packet.
+      data2 = result2[1];
+      assert.equal
+        ("/Alice/READ/data_type/D-KEY/20150825T090000/20150825T100000/FOR/ndn/memberA/ksk-123",
+         data2.getName().toUri());
+
+      return Promise.resolve();
+    })
+    // When done is called, Mocha displays errors from assert.ok.
+    .then(done, done);
+  });
 });
