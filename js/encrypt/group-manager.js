@@ -114,7 +114,14 @@ GroupManager.prototype.getGroupKeyPromise = function
     eKeyName.append(Encryptor.NAME_COMPONENT_E_KEY).append(startTimeStamp)
       .append(endTimeStamp);
 
-    return thisManager.database_.hasEKeyPromise(eKeyName, useSync)
+    return SyncPromise.resolve()
+    .then(function() {
+      // Only call hasEKeyPromise if needRegenerate is false.
+      if (!needRegenerate)
+        return thisManager.database_.hasEKeyPromise(eKeyName, useSync);
+      else
+        return SyncPromise.resolve(false);
+    })
     .then(function(hasEKey) {
       if (!needRegenerate && hasEKey) {
         return thisManager.getEKeyPromise_(eKeyName, useSync)
