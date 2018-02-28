@@ -301,3 +301,86 @@ GroupManagerDb.prototype.deleteMemberPromise = function(identity, useSync)
   return SyncPromise.reject(new Error
     ("GroupManagerDb.deleteMemberPromise is not implemented"));
 };
+
+/**
+ * Check if there is an EKey with the name eKeyName in the database.
+ * @param {Name} eKeyName The name of the EKey.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns true if the EKey exists
+ * (else false), or that is rejected with GroupManagerDb.Error for a database
+ * error.
+ */
+GroupManagerDb.prototype.hasEKeyPromise = function(eKeyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.hasEKeyPromise is not implemented"));
+};
+
+/**
+ * Add the EKey with name eKeyName to the database.
+ * @param {Name} eKeyName The name of the EKey. This copies the Name.
+ * @param {Blob} publicKey The encoded public Key of the group key pair.
+ * @param {Blob} privateKey The encoded private Key of the group key pair.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the EKey is added,
+ * or that is rejected with GroupManagerDb.Error if a key with name eKeyName
+ * already exists in the database, or other database error.
+ */
+GroupManagerDb.prototype.addEKeyPromise = function
+  (eKeyName, publicKey, privateKey, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.addEKeyPromise is not implemented"));
+};
+
+/**
+ * Get the group key pair with the name eKeyName from the database.
+ * @param {Name} eKeyName The name of the EKey.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns an object (where
+ * "publicKey" is the public key Blob and "privateKey" is the private key Blob),
+ * or that is rejected with GroupManagerDb.Error for a database error.
+ */
+GroupManagerDb.prototype.getEKeyPromise = function(eKeyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.getEKeyPromise is not implemented"));
+};
+
+/**
+ * Delete all the EKeys in the database. The database will keep growing because
+ * EKeys will keep being added, so this method should be called periodically.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the EKeys are
+ * deleted, or that is rejected with GroupManagerDb.Error for a database error.
+ */
+GroupManagerDb.prototype.cleanEKeysPromise = function(useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.cleanEKeysPromise is not implemented"));
+};
+
+/**
+ * Delete the EKey with name eKeyName from the database. If no key with the
+ * name exists in the database, do nothing.
+ * @param {Name} eKeyName The name of the EKey.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the EKey is
+ * deleted (or there is no such key), or that is rejected with
+ * GroupManagerDb.Error for a database error.
+ */
+GroupManagerDb.prototype.deleteEKeyPromise = function(eKeyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.deleteEKeyPromise is not implemented"));
+};

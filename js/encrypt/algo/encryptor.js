@@ -89,7 +89,7 @@ Encryptor.encryptDataPromise = function
   }
   else if (algorithmType == EncryptAlgorithmType.RsaPkcs ||
            algorithmType == EncryptAlgorithmType.RsaOaep) {
-    // Node.js doesn't have a direct way to get the maximum plain text size, so
+    // Node.js and Subtle don't have a direct way to get the maximum plain text size, so
     // try to encrypt the payload first and catch the error if it is too big.
     return Encryptor.encryptAsymmetricPromise_
       (payload, key, keyName, params, useSync)
@@ -97,10 +97,6 @@ Encryptor.encryptDataPromise = function
       data.setContent(content.wireEncode(TlvWireFormat.get()));
       return SyncPromise.resolve();
     }, function(err) {
-      if (err.message.indexOf("data too large for key size") < 0)
-        // Not the expected error.
-        throw err;
-
       // The payload is larger than the maximum plaintext size.
       // 128-bit nonce.
       var nonceKeyBuffer = Crypto.randomBytes(16);
@@ -112,15 +108,17 @@ Encryptor.encryptDataPromise = function
       var symmetricParams = new EncryptParams
         (EncryptAlgorithmType.AesCbc, AesAlgorithm.BLOCK_SIZE);
 
-      var nonceContent;
-      return Encryptor.encryptSymmetricPromise_
-        (payload, nonceKey, nonceKeyName, symmetricParams, useSync)
-      .then(function(localNonceContent) {
-        nonceContent = localNonceContent;
-        return Encryptor.encryptAsymmetricPromise_
-          (nonceKey, key, keyName, params, useSync);
+      // Do encryptAsymmetric first so that, if there really is an error, we
+      // catch it right away.
+      var payloadContent;
+      return Encryptor.encryptAsymmetricPromise_
+        (nonceKey, key, keyName, params, useSync)
+      .then(function(localPayloadContent) {
+        payloadContent = localPayloadContent;
+        return Encryptor.encryptSymmetricPromise_
+          (payload, nonceKey, nonceKeyName, symmetricParams, useSync);
       })
-      .then(function(payloadContent) {
+      .then(function(nonceContent) {
         var nonceContentEncoding = nonceContent.wireEncode();
         var payloadContentEncoding = payloadContent.wireEncode();
         var content = new Buffer
