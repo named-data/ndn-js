@@ -69,9 +69,16 @@ exports.GroupManager = GroupManager;
  * each eligible member.
  * @param {number} timeSlot The time slot to cover as milliseconds since
  * Jan 1, 1970 UTC.
+ * @param {boolean} needRegenerate (optional) needRegenerate should be true if
+ * this is the first time this method is called, or a member was removed.
+ * needRegenerate can be false if this is not the first time this method is
+ * called, or a member was added. If omitted, use true. If useSync is specified,
+ * then needRegenerate must also be specified (since this can't disambiguate
+ * two optional boolean parameters).
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * an async Promise. If useSync is specified, then needRegenerate must also be
+ * specified (since this can't disambiguate two optional boolean parameters).
  * @return {Promise|SyncPromise} A promise that returns a List of Data packets
  * (where the first is the E-KEY data packet with the group's public key and the
  * rest are the D-KEY data packets with the group's private key encrypted with
@@ -79,8 +86,12 @@ exports.GroupManager = GroupManager;
  * GroupManagerDb.Error for a database error or SecurityException for an error
  * using the security KeyChain.
  */
-GroupManager.prototype.getGroupKeyPromise = function(timeSlot, useSync)
+GroupManager.prototype.getGroupKeyPromise = function
+  (timeSlot, needRegenerate, useSync)
 {
+  if (needRegenerate == undefined)
+    needRegenerate = true;
+
   var memberKeys = [];
   var result = [];
   var thisManager = this;
@@ -99,11 +110,36 @@ GroupManager.prototype.getGroupKeyPromise = function(timeSlot, useSync)
     endTimeStamp = Schedule.toIsoString(finalInterval.getEndTime());
 
     // Generate the private and public keys.
-    return thisManager.generateKeyPairPromise_(useSync)
-    .then(function(keyPair) {
-      privateKeyBlob = keyPair.privateKeyBlob;
-      publicKeyBlob = keyPair.publicKeyBlob;
+    var eKeyName = new Name(thisManager.namespace_);
+    eKeyName.append(Encryptor.NAME_COMPONENT_E_KEY).append(startTimeStamp)
+      .append(endTimeStamp);
 
+    return thisManager.database_.hasEKeyPromise(eKeyName, useSync)
+    .then(function(hasEKey) {
+      if (!needRegenerate && hasEKey) {
+        return thisManager.getEKeyPromise_(eKeyName, useSync)
+        .then(function(keyPair) {
+          privateKeyBlob = keyPair.privateKey;
+          publicKeyBlob = keyPair.publicKey;
+          return SyncPromise.resolve();
+        });
+      }
+      else {
+        return thisManager.generateKeyPairPromise_(useSync)
+        .then(function(keyPair) {
+          privateKeyBlob = keyPair.privateKeyBlob;
+          publicKeyBlob = keyPair.publicKeyBlob;
+
+          // deleteEKeyPromise_ does nothing if eKeyName does not exist.
+          return thisManager.deleteEKeyPromise_(eKeyName, useSync);
+        })
+        .then(function() {
+          return thisManager.addEKeyPromise_
+            (eKeyName, publicKeyBlob, privateKeyBlob, useSync);
+        });
+      }
+    })
+    .then(function() {
       // Add the first element to the result.
       // The E-KEY (public key) data packet name convention is:
       // /<data_type>/E-KEY/[start-ts]/[end-ts]
@@ -193,7 +229,7 @@ GroupManager.prototype.deleteSchedulePromise = function(scheduleName, useSync)
  * or other database error.
  */
 GroupManager.prototype.updateSchedulePromise = function
-  (name, scheduleName, useSync)
+  (scheduleName, schedule, useSync)
 {
   return this.database_.updateSchedulePromise(scheduleName, schedule, useSync);
 };
@@ -255,6 +291,20 @@ GroupManager.prototype.updateMemberSchedulePromise = function
 {
   return this.database_.updateMemberSchedulePromise
     (identity, scheduleName, useSync);
+};
+
+/**
+ * Delete all the EKeys in the database. The database will keep growing because
+ * EKeys will keep being added, so this method should be called periodically.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the EKeys are
+ * deleted, or that is rejected with GroupManagerDb.Error for a database error.
+ */
+GroupManager.prototype.cleanEKeysPromise = function(useSync)
+{
+  return this.database_.cleanEKeysPromise(useSync);
 };
 
 /**
@@ -459,6 +509,55 @@ GroupManager.prototype.createDKeyDataPromise_ = function
   .then(function() {
     return thisManager.keyChain_.signPromise(data);
   });
+};
+
+/**
+ * Add the EKey with name eKeyName to the database.
+ * @param {Name} eKeyName The name of the EKey. This copies the Name.
+ * @param {Blob} publicKey The encoded public Key of the group key pair.
+ * @param {Blob} privateKey The encoded private Key of the group key pair.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the EKey is added,
+ * or that is rejected with GroupManagerDb.Error if a key with name eKeyName
+ * already exists in the database, or other database error.
+ */
+GroupManager.prototype.addEKeyPromise_ = function
+  (eKeyName, publicKey, privateKey, useSync)
+{
+  return this.database_.addEKeyPromise(eKeyName, publicKey, privateKey, useSync);
+};
+
+/**
+ * Get the group key pair with the name eKeyName from the database.
+ * @param {Name} eKeyName The name of the EKey.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns an object (where
+ * "publicKey" is the public key Blob and "privateKey" is the private key Blob),
+ * or that is rejected with GroupManagerDb.Error for a database error.
+ */
+GroupManager.prototype.getEKeyPromise_ = function(eKeyName, useSync)
+{
+  return this.database_.getEKeyPromise(eKeyName, useSync);
+};
+
+/**
+ * Delete the EKey with name eKeyName from the database. If no key with the
+ * name exists in the database, do nothing.
+ * @param {Name} eKeyName The name of the EKey.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the EKey is
+ * deleted (or there is no such key), or that is rejected with
+ * GroupManagerDb.Error for a database error.
+ */
+GroupManager.prototype.deleteEKeyPromise_ = function(eKeyName, useSync)
+{
+  return this.database_.deleteEKeyPromise(eKeyName, useSync);
 };
 
 GroupManager.MILLISECONDS_IN_HOUR = 3600 * 1000;
