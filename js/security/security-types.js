@@ -34,6 +34,10 @@ var KeyType = function KeyType()
 exports.KeyType = KeyType;
 
 KeyType.RSA = 0;
+KeyType.EC = 1;
+/**
+ * @deprecated Use KeyType.EC .
+ */
 KeyType.ECDSA = 1;
 KeyType.AES = 128;
 
