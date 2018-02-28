@@ -24,7 +24,6 @@ var Blob = require('../util/blob.js').Blob; /** @ignore */
 var Sqlite3Promise = require('../util/sqlite3-promise.js').Sqlite3Promise; /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 var TlvWireFormat = require('../encoding/tlv-wire-format').TlvWireFormat; /** @ignore */
-var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var GroupManagerDb = require('./group-manager-db.js').GroupManagerDb;
 
 /**
@@ -43,6 +42,9 @@ var Sqlite3GroupManagerDb = function Sqlite3GroupManagerDb(databaseFilePath)
 
   this.database_ = new Sqlite3Promise
     (databaseFilePath, Sqlite3GroupManagerDb.initializeDatabasePromise_);
+  // The map key is the E-KEY name URI string. The value is the private key Blob.
+  // (Use a string because we can't use the Name object as the key in JavaScript.)
+  this.privateKeyBase_ = {};
 };
 
 Sqlite3GroupManagerDb.prototype = new GroupManagerDb();
@@ -471,6 +473,141 @@ Sqlite3GroupManagerDb.prototype.deleteMemberPromise = function
 };
 
 /**
+ * Check if there is an EKey with the name eKeyName in the database.
+ * @param {Name} eKeyName The name of the EKey.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise|SyncPromise} A promise that returns true if the EKey exists
+ * (else false), or that is rejected with GroupManagerDb.Error for a database
+ * error.
+ */
+GroupManagerDb.prototype.hasEKeyPromise = function(eKeyName, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("Sqlite3GroupManagerDb.hasEKeyPromise is only supported for async")));
+
+  return this.getPromise_
+    ("SELECT ekey_id FROM ekeys where ekey_name=?", 
+     eKeyName.wireEncode(TlvWireFormat.get()).buf())
+  .then(function(row) {
+    if (row)
+      return Promise.resolve(true);
+    else
+      return Promise.resolve(false);
+  });
+};
+
+/**
+ * Add the EKey with name eKeyName to the database.
+ * Add the EKey with name eKeyName to the database.
+ * @param {Name} eKeyName The name of the EKey. This copies the Name.
+ * @param {Blob} publicKey The encoded public Key of the group key pair.
+ * @param {Blob} privateKey The encoded private Key of the group key pair.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise|SyncPromise} A promise that fulfills when the EKey is added,
+ * or that is rejected with GroupManagerDb.Error if a key with name eKeyName
+ * already exists in the database, or other database error.
+ */
+Sqlite3GroupManagerDb.prototype.addEKeyPromise = function
+  (eKeyName, publicKey, privateKey, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("Sqlite3GroupManagerDb.addEKeyPromise is only supported for async")));
+
+  var thisManager = this;
+  return this.runPromise_
+    ("INSERT INTO ekeys(ekey_name, pub_key) values (?, ?)",
+     [eKeyName.wireEncode(TlvWireFormat.get()).buf(), publicKey.buf()])
+  .then(function() {
+    thisManager.privateKeyBase_[eKeyName.toUri()] = privateKey;
+
+    return Promise.resolve();
+  });
+};
+
+/**
+ * Get the group key pair with the name eKeyName from the database.
+ * @param {Name} eKeyName The name of the EKey.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise|SyncPromise} A promise that returns an object (where
+ * "publicKey" is the public key Blob and "privateKey" is the private key Blob),
+ * or that is rejected with GroupManagerDb.Error for a database error.
+ */
+Sqlite3GroupManagerDb.prototype.getEKeyPromise = function(eKeyName, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("Sqlite3GroupManagerDb.getEKeyPromise is only supported for async")));
+
+  var thisManager = this;
+  return this.getPromise_
+    ("SELECT pub_key FROM ekeys where ekey_name=?",
+     eKeyName.wireEncode(TlvWireFormat.get()).buf())
+  .then(function(row) {
+    if (row)
+      return Promise.resolve({
+        publicKey: new Blob(row.pub_key, false),
+        privateKey: thisManager.privateKeyBase_[eKeyName.toUri()]  });
+    else
+      return Promise.reject(new GroupManagerDb.Error(new Error
+        ("Sqlite3GroupManagerDb.getEKeyPromise: Cannot get the result from the database")));
+  });
+};
+
+/**
+ * Delete all the EKeys in the database. The database will keep growing because
+ * EKeys will keep being added, so this method should be called periodically.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise|SyncPromise} A promise that fulfills when the EKeys are
+ * deleted, or that is rejected with GroupManagerDb.Error for a database error.
+ */
+GroupManagerDb.prototype.cleanEKeysPromise = function(useSync)
+{
+  return Promise.reject(new Error
+    ("GroupManagerDb.cleanEKeysPromise is not implemented"));
+
+  var thisManager = this;
+  return this.runPromise_("DELETE FROM ekeys")
+  .then(function() {
+    thisManager.privateKeyBase_ = {};
+
+    return Promise.resolve();
+  });
+};
+
+/**
+ * Delete the EKey with name eKeyName from the database. If no key with the
+ * name exists in the database, do nothing.
+ * @param {Name} eKeyName The name of the EKey.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise|SyncPromise} A promise that fulfills when the EKey is
+ * deleted (or there is no such key), or that is rejected with
+ * GroupManagerDb.Error for a database error.
+ */
+Sqlite3GroupManagerDb.prototype.deleteEKeyPromise = function(eKeyName, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("Sqlite3GroupManagerDb.deleteEKeyPromise is only supported for async")));
+
+  var thisManager = this;
+  return this.runPromise_
+    ("DELETE FROM ekeys WHERE ekey_name=?",
+     [eKeyName.wireEncode(TlvWireFormat.get()).buf()])
+  .then(function() {
+    delete thisManager.privateKeyBase_[eKeyName.toUri()];
+
+    return Promise.resolve();
+  });
+};
+
+/**
  * Get the ID for the schedule.
  * @param {string} name The schedule name.
  * @return {Promise} A promise that returns the ID (or -1 if not found), or that
@@ -536,6 +673,12 @@ Sqlite3GroupManagerDb.initializeDatabasePromise_ = function(database)
   })
   .then(function() {
     return database.runPromise(Sqlite3GroupManagerDb.INITIALIZATION4);
+  })
+  .then(function() {
+    return database.runPromise(Sqlite3GroupManagerDb.INITIALIZATION5);
+  })
+  .then(function() {
+    return database.runPromise(Sqlite3GroupManagerDb.INITIALIZATION6);
   });
 };
 
@@ -565,3 +708,13 @@ Sqlite3GroupManagerDb.INITIALIZATION3 =
 Sqlite3GroupManagerDb.INITIALIZATION4 =
   "CREATE UNIQUE INDEX IF NOT EXISTS                  \n" +
   "   memNameIndex ON members(member_name);           \n";
+Sqlite3GroupManagerDb.INITIALIZATION5 =
+  "CREATE TABLE IF NOT EXISTS                         \n" +
+  "  ekeys(                                           \n" +
+  "    ekey_id             INTEGER PRIMARY KEY,       \n" +
+  "    ekey_name           BLOB NOT NULL,             \n" +
+  "    pub_key             BLOB NOT NULL              \n" +
+  "  );                                               \n";
+Sqlite3GroupManagerDb.INITIALIZATION6 =
+    "CREATE UNIQUE INDEX IF NOT EXISTS                  \n" +
+    "   ekeyNameIndex ON ekeys(ekey_name);              \n";
