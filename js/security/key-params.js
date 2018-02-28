@@ -125,22 +125,22 @@ RsaKeyParams.getType = function() { return KeyType.RSA; };
 
 /**
  * Possible forms of the constructor are:
- * EcdsaKeyParams(keyId, size)
- * EcdsaKeyParams(keyId)
- * EcdsaKeyParams(size, keyIdType)
- * EcdsaKeyParams(size)
- * EcdsaKeyParams()
+ * EcKeyParams(keyId, size)
+ * EcKeyParams(keyId)
+ * EcKeyParams(size, keyIdType)
+ * EcKeyParams(size)
+ * EcKeyParams()
  * @constructor
  */
-var EcdsaKeyParams = function EcdsaKeyParams(keyIdOrSize, arg2)
+var EcKeyParams = function EcKeyParams(keyIdOrSize, arg2)
 {
   if (keyIdOrSize instanceof Name.Component) {
     var keyId = keyIdOrSize;
     // Call the base constructor.
-    KeyParams.call(this, EcdsaKeyParams.getType(), keyId);
+    KeyParams.call(this, EcKeyParams.getType(), keyId);
 
     if (arg2 == undefined)
-      this.size_ = EcdsaKeyParams.getDefaultSize();
+      this.size_ = EcKeyParams.getDefaultSize();
     else
       this.size_ = arg2;
   }
@@ -149,27 +149,45 @@ var EcdsaKeyParams = function EcdsaKeyParams(keyIdOrSize, arg2)
     if (size != undefined) {
       var keyIdType = (arg2 != undefined ? arg2 : KeyIdType.RANDOM);
       // Call the base constructor.
-      KeyParams.call(this, EcdsaKeyParams.getType(), keyIdType);
+      KeyParams.call(this, EcKeyParams.getType(), keyIdType);
       this.size_ = size;
     }
     else {
       // Call the base constructor.
-      KeyParams.call(this, EcdsaKeyParams.getType(), KeyIdType.RANDOM);
-      this.size_ = EcdsaKeyParams.getDefaultSize();
+      KeyParams.call(this, EcKeyParams.getType(), KeyIdType.RANDOM);
+      this.size_ = EcKeyParams.getDefaultSize();
     }
   }
 };
 
-EcdsaKeyParams.prototype = new KeyParams();
+EcKeyParams.prototype = new KeyParams();
+EcKeyParams.prototype.name = "EcKeyParams";
+
+exports.EcKeyParams = EcKeyParams;
+
+EcKeyParams.prototype.getKeySize = function() { return this.size_; };
+
+EcKeyParams.getDefaultSize = function() { return 256; };
+
+EcKeyParams.getType = function() { return KeyType.EC; };
+
+/**
+ * @deprecated Use EcKeyParams .
+ */
+var EcdsaKeyParams = function EcdsaKeyParams(keyIdOrSize, arg2)
+{
+  // Call the base constructor.
+  EcKeyParams.call(this, keyIdOrSize, arg2);
+};
+
+EcdsaKeyParams.prototype = new EcKeyParams();
 EcdsaKeyParams.prototype.name = "EcdsaKeyParams";
 
 exports.EcdsaKeyParams = EcdsaKeyParams;
 
-EcdsaKeyParams.prototype.getKeySize = function() { return this.size_; };
+EcdsaKeyParams.getDefaultSize = function() { return EcKeyParams.getDefaultSize(); };
 
-EcdsaKeyParams.getDefaultSize = function() { return 256; };
-
-EcdsaKeyParams.getType = function() { return KeyType.ECDSA; };
+EcdsaKeyParams.getType = function() { return EcKeyParams.getType(); };
 
 /**
  * Possible forms of the constructor are:

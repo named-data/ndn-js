@@ -107,14 +107,14 @@ TpmPrivateKey.prototype.loadPkcs1 = function(encoding, keyType)
         keyType = KeyType.RSA;
       else
         // Assume it is an EC key. Try decoding it below.
-        keyType = KeyType.ECDSA;
+        keyType = KeyType.EC;
     } catch (ex) {
       // Assume it is an EC key. Try decoding it below.
-      keyType = KeyType.ECDSA;
+      keyType = KeyType.EC;
     }
   }
 
-  if (keyType == KeyType.ECDSA) {
+  if (keyType == KeyType.EC) {
     // Encode the DER as PEM.
     var keyBase64 = encoding.toString('base64');
     var keyPem = "-----BEGIN EC PRIVATE KEY-----\n";
@@ -180,7 +180,7 @@ TpmPrivateKey.prototype.loadPkcs8 = function(encoding, keyType)
     }
 
     if (oidString == TpmPrivateKey.EC_ENCRYPTION_OID)
-      keyType = KeyType.ECDSA;
+      keyType = KeyType.EC;
     else if (oidString == TpmPrivateKey.RSA_ENCRYPTION_OID)
       keyType = KeyType.RSA;
     else
@@ -345,7 +345,7 @@ TpmPrivateKey.prototype.signPromise = function(data, digestAlgorithm, useSync)
     var signer;
     if (this.keyType_ === KeyType.RSA)
       signer = Crypto.createSign("RSA-SHA256");
-    else if (this.keyType === KeyType.ECDSA)
+    else if (this.keyType === KeyType.EC)
       // Just create a "sha256". The Crypto library will infer ECDSA from the key.
       signer = Crypto.createSign("sha256");
     else
@@ -392,7 +392,7 @@ TpmPrivateKey.prototype.toPkcs8 = function()
   var oid;
   if (this.keyType_ === KeyType.RSA)
     oid = new OID(TpmPrivateKey.RSA_ENCRYPTION_OID);
-  else if (this.keyType === KeyType.ECDSA)
+  else if (this.keyType === KeyType.EC)
     oid = new OID(TpmPrivateKey.EC_ENCRYPTION_OID);
   else
     // We don't expect this to happen.

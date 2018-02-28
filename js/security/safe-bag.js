@@ -132,7 +132,7 @@ SafeBag.makeSelfSignedCertificate_ = function
   // Set the signature info.
   if (publicKey.getKeyType() == KeyType.RSA)
     certificate.setSignature(new Sha256WithRsaSignature());
-  else if (publicKey.getKeyType() == KeyType.ECDSA)
+  else if (publicKey.getKeyType() == KeyType.EC)
     certificate.setSignature(new Sha256WithEcdsaSignature());
   else
     throw new Error("Unsupported key type");

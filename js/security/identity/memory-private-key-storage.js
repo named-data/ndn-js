@@ -95,7 +95,7 @@ MemoryPrivateKeyStorage.prototype.setPrivateKeyForKeyName = function
       keyPem += (keyBase64.substr(i, 64) + "\n");
     keyPem += "-----END RSA PRIVATE KEY-----";
   }
-  else if (keyType === KeyType.ECDSA) {
+  else if (keyType === KeyType.EC) {
     keyPem = "-----BEGIN EC PRIVATE KEY-----\n";
     for (var i = 0; i < keyBase64.length; i += 64)
       keyPem += (keyBase64.substr(i, 64) + "\n");
@@ -333,7 +333,7 @@ MemoryPrivateKeyStorage.prototype.signPromise = function
     var signer;
     if (privateKey.keyType === KeyType.RSA)
       signer = Crypto.createSign("RSA-SHA256");
-    else if (privateKey.keyType === KeyType.ECDSA)
+    else if (privateKey.keyType === KeyType.EC)
       // Just create a "sha256". The Crypto library will infer ECDSA from the key.
       signer = Crypto.createSign("sha256");
     else

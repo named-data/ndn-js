@@ -191,7 +191,7 @@ Tpm.prototype.getBackEnd_ = function() { return this.backEnd_; };
 Tpm.prototype.createKeyPromise_ = function(identityName, params, useSync)
 {
   if (params.getKeyType() == KeyType.RSA ||
-      params.getKeyType() == KeyType.ECDSA) {
+      params.getKeyType() == KeyType.EC) {
     var thisTpm = this;
 
     return this.backEnd_.createKeyPromise(identityName, params, useSync)
