@@ -119,9 +119,8 @@ PibSqlite3.getScheme = function() { return "pib-sqlite3"; };
  * Set the corresponding TPM information to tpmLocator. This method does not
  * reset the contents of the PIB.
  * @param {string} tpmLocator The TPM locator string.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the TPM locator is set.
  */
 PibSqlite3.prototype.setTpmLocatorPromise = function(tpmLocator, useSync)
@@ -143,9 +142,8 @@ PibSqlite3.prototype.setTpmLocatorPromise = function(tpmLocator, useSync)
 
 /**
  * Get the TPM Locator.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which returns the TPM locator string.
  */
 PibSqlite3.prototype.getTpmLocatorPromise = function(useSync)
@@ -168,9 +166,8 @@ PibSqlite3.prototype.getTpmLocatorPromise = function(useSync)
 /**
  * Check for the existence of an identity.
  * @param {Name} identityName The name of the identity.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which returns true if the identity exists,
  * otherwise false.
  */
@@ -193,9 +190,8 @@ PibSqlite3.prototype.hasIdentityPromise = function(identityName, useSync)
  * identity has been set, set the added identity as the default.
  * @param {Name} identityName The name of the identity to add. This copies the
  * name.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the identity is added.
  */
 PibSqlite3.prototype.addIdentityPromise = function(identityName, useSync)
@@ -230,9 +226,8 @@ PibSqlite3.prototype.addIdentityPromise = function(identityName, useSync)
  * identity is being removed, no default identity will be selected. If the
  * identity does not exist, do nothing.
  * @param {Name} identityName The name of the identity to remove.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the identity is removed.
  */
 PibSqlite3.prototype.removeIdentityPromise = function(identityName, useSync)
@@ -279,9 +274,8 @@ PibSqlite3.prototype.removeIdentityPromise = function(identityName, useSync)
 
 /**
  * Erase all certificates, keys, and identities.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the identities are cleared.
  */
 PibSqlite3.prototype.clearIdentitiesPromise = function(useSync)
@@ -304,9 +298,8 @@ PibSqlite3.prototype.clearIdentitiesPromise = function(useSync)
 
 /**
  * Get the names of all the identities.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which returns a fresh set of identity names
  * as an array of Name. The Name objects are fresh copies.
  */
@@ -334,9 +327,8 @@ PibSqlite3.prototype.getIdentitiesPromise = function(useSync)
  * identity with identityName does not exist, then it will be created.
  * @param {Name} identityName The name for the default identity. This copies the
  * name.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the default identity is
  * set.
  */
@@ -371,9 +363,8 @@ PibSqlite3.prototype.setDefaultIdentityPromise = function(identityName, useSync)
 
 /**
  * Get the default identity.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which returns the Name of the default
  * identity as a fresh copy, or a promise rejected with Pib.Error for no default
  * identity.
@@ -401,9 +392,8 @@ PibSqlite3.prototype.getDefaultIdentityPromise = function(useSync)
 /**
  * Check for the existence of a key with keyName.
  * @param {Name} keyName The name of the key.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which returns true if the key exists,
  * otherwise false. Return false if the identity does not exist.
  */
@@ -429,9 +419,8 @@ PibSqlite3.prototype.hasKeyPromise = function(keyName, useSync)
  * This copies the name.
  * @param {Name} keyName The name of the key. This copies the name.
  * @param {Buffer} key The public key bits. This copies the array.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the key is added.
  */
 PibSqlite3.prototype.addKeyPromise = function(identityName, keyName, key, useSync)
@@ -475,9 +464,8 @@ PibSqlite3.prototype.addKeyPromise = function(identityName, keyName, key, useSyn
  * Remove the key with keyName and its related certificates. If the key does not
  * exist, do nothing.
  * @param {Name} keyName The name of the key.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the key is removed.
  */
 PibSqlite3.prototype.removeKeyPromise = function(keyName, useSync)
@@ -503,9 +491,8 @@ PibSqlite3.prototype.removeKeyPromise = function(keyName, useSync)
 /**
  * Get the key bits of a key with name keyName.
  * @param {Name} keyName The name of the key.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which returns the key bits as a Blob, or a
  * promise rejected with Pib.Error if the key does not exist.
  */
@@ -531,9 +518,8 @@ PibSqlite3.prototype.getKeyBitsPromise = function(keyName, useSync)
  * returned key names can be used to create a KeyContainer. With a key name and
  * a backend implementation, one can create a Key front end instance.
  * @param {Name} identityName The name of the identity.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return SyncPromise} A promise which returns the set of key names as an array
  * of Name. The Name objects are fresh copies. If the identity does not exist,
  * return an empty array.
@@ -566,9 +552,8 @@ PibSqlite3.prototype.getKeysOfIdentityPromise = function(identityName, useSync)
  * identityName.
  * @param {Name} identityName The name of the identity. This copies the name.
  * @param {Name} keyName The name of the key. This copies the name.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the default key is set,
  * or a promise rejected with Pib.Error if the key does not exist.
  */
@@ -604,9 +589,8 @@ PibSqlite3.prototype.setDefaultKeyOfIdentityPromise = function
 /**
  * Get the name of the default key for the identity with name identityName.
  * @param {Name} identityName The name of the identity.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which returns the name of the default key as
  * a fresh copy, or a promise rejected with Pib.Error if the identity does not
  * exist.
@@ -652,9 +636,8 @@ PibSqlite3.prototype.getDefaultKeyOfIdentityPromise = function
 /**
  * Check for the existence of a certificate with name certificateName.
  * @param {Name} certificateName The name of the certificate.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which returns true if the certificate exists,
  * otherwise false.
  */
@@ -682,16 +665,15 @@ PibSqlite3.prototype.hasCertificatePromise = function(certificateName, useSync)
  * certificate's identity becomes the default.
  * @param {CertificateV2} certificate The certificate to add. This copies the
  * object.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the certificate is added.
  */
 PibSqlite3.prototype.addCertificatePromise = function(certificate, useSync)
 {
   if (useSync)
     return Promise.reject(new PibImpl.Error(new Error
-      ("PibSqlite3.zzz is only supported for async")));
+      ("PibSqlite3.addCertificatePromise is only supported for async")));
 
   var thisPib = this;
 
@@ -733,9 +715,8 @@ PibSqlite3.prototype.addCertificatePromise = function(certificate, useSync)
  * Remove the certificate with name certificateName. If the certificate does not
  * exist, do nothing.
  * @param {Name} certificateName The name of the certificate.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the certificate is
  * removed.
  */
@@ -743,7 +724,7 @@ PibSqlite3.prototype.removeCertificatePromise = function(certificateName, useSyn
 {
   if (useSync)
     return Promise.reject(new PibImpl.Error(new Error
-      ("PibSqlite3.zzz is only supported for async")));
+      ("PibSqlite3.removeCertificatePromise is only supported for async")));
 
   return this.runPromise_
     ("DELETE FROM certificates WHERE certificate_name=?",
@@ -753,9 +734,8 @@ PibSqlite3.prototype.removeCertificatePromise = function(certificateName, useSyn
 /**
  * Get the certificate with name certificateName.
  * @param {Name} certificateName The name of the certificate.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which returns the CertificateV2, or a promise
  * rejected with Pib.Error if the certificate does not exist.
  */
@@ -763,7 +743,7 @@ PibSqlite3.prototype.getCertificatePromise = function(certificateName, useSync)
 {
   if (useSync)
     return Promise.reject(new PibImpl.Error(new Error
-      ("PibSqlite3.zzz is only supported for async")));
+      ("PibSqlite3.getCertificatePromise is only supported for async")));
 
   return this.getPromise_
     ("SELECT certificate_data FROM certificates WHERE certificate_name=?",
@@ -785,9 +765,8 @@ PibSqlite3.prototype.getCertificatePromise = function(certificateName, useSync)
  * certificate names can be used to create a PibCertificateContainer. With a
  * certificate name and a backend implementation, one can obtain the certificate.
  * @param {Name} keyName The name of the key.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which returns the set of certificate names as
  * an array of Name. The Name objects are fresh copies. If the key does not
  * exist, return an empty array.
@@ -796,7 +775,7 @@ PibSqlite3.prototype.getCertificatesOfKeyPromise = function(keyName, useSync)
 {
   if (useSync)
     return Promise.reject(new PibImpl.Error(new Error
-      ("PibSqlite3.zzz is only supported for async")));
+      ("PibSqlite3.getCertificatesOfKeyPromise is only supported for async")));
 
   var certNames = [];
 
@@ -821,9 +800,8 @@ PibSqlite3.prototype.getCertificatesOfKeyPromise = function(keyName, useSync)
  * @param {Name} keyName The name of the key.
  * @param {Name} certificateName The name of the certificate. This copies the
  * name.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the default certificate
  * is set, or a promise rejected with Pib.Error if the certificate with name
  * certificateName does not exist.
@@ -833,7 +811,7 @@ PibSqlite3.prototype.setDefaultCertificateOfKeyPromise = function
 {
   if (useSync)
     return Promise.reject(new PibImpl.Error(new Error
-      ("PibSqlite3.zzz is only supported for async")));
+      ("PibSqlite3.setDefaultCertificateOfKeyPromise is only supported for async")));
 
   var thisPib = this;
   return this.hasCertificatePromise(certificateName)
@@ -860,9 +838,8 @@ PibSqlite3.prototype.setDefaultCertificateOfKeyPromise = function
 /**
  * Get the default certificate for the key with eyName.
  * @param {Name} keyName The name of the key.
- * @param {boolean} useSync (optional) If true then return a SyncPromise which
- * is already fulfilled. If omitted or false, this may return a SyncPromise or
- * an async Promise.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
  * @return {Promise} A promise which returns a copy of the default
  * CertificateV2, or a promise rejected with Pib.Error if the default
  * certificate does not exist.
@@ -871,7 +848,7 @@ PibSqlite3.prototype.getDefaultCertificateOfKeyPromise = function(keyName, useSy
 {
   if (useSync)
     return Promise.reject(new PibImpl.Error(new Error
-      ("PibSqlite3.zzz is only supported for async")));
+      ("PibSqlite3.getDefaultCertificateOfKeyPromise is only supported for async")));
 
   return this.getPromise_
     ("SELECT certificate_data " +
