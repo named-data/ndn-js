@@ -1143,13 +1143,37 @@ KeyChain.prototype.sign = function
  * version based on the current time. If no default certificate for the key has
  * been set, then set the certificate as the default for the key.
  * @param {PibKey} key The PibKey with the key name and public key.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the certificate. If omitted, use WireFormat getDefaultWireFormat().
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
  * @return {Promise|SyncPromise} A promise that returns the new CertificateV2.
  */
-KeyChain.prototype.selfSignPromise = function(key, useSync)
+KeyChain.prototype.selfSignPromise = function(key, wireFormat, useSync)
 {
+  var arg2 = wireFormat;
+  var arg3 = useSync;
+  // arg2,       arg3
+  // wireFormat, useSync
+  // wireFormat, null
+  // useSync,    null
+
+  if (arg2 instanceof WireFormat)
+    wireFormat = arg2;
+  else
+    wireFormat = undefined;
+
+  if (typeof arg2 === "boolean")
+    useSync = arg2;
+  else if (typeof arg3 === "boolean")
+    useSync = arg3;
+  else
+    useSync = false;
+
+  if (wireFormat == undefined)
+    wireFormat = WireFormat.getDefaultWireFormat();
+
   var certificate = new CertificateV2();
 
   // Set the name.
@@ -1172,7 +1196,7 @@ KeyChain.prototype.selfSignPromise = function(key, useSync)
   signingInfo.setValidityPeriod
     (new ValidityPeriod(now, now + 20 * 365 * 24 * 3600 * 1000.0));
 
-  return this.signPromise(certificate, signingInfo, useSync)
+  return this.signPromise(certificate, signingInfo, wireFormat, useSync)
   .then(function() {
     return key.addCertificatePromise_(certificate, useSync)
     .catch(function(ex) {
@@ -1192,6 +1216,8 @@ KeyChain.prototype.selfSignPromise = function(key, useSync)
  * version based on the current time. If no default certificate for the key has
  * been set, then set the certificate as the default for the key.
  * @param {PibKey} key The PibKey with the key name and public key.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the certificate. If omitted, use WireFormat getDefaultWireFormat().
  * @param {function} onComplete (optional) This calls
  * onComplete(certificate) with the new CertificateV2. If omitted, the return
  * value is described below. (Some crypto libraries only use a callback, so
@@ -1211,10 +1237,20 @@ KeyChain.prototype.selfSignPromise = function(key, useSync)
  * Otherwise, if onComplete is supplied then return undefined and use onComplete
  * as described above.
  */
-KeyChain.prototype.selfSign = function(key, onComplete, onError)
+KeyChain.prototype.selfSign = function(key, wireFormat, onComplete, onError)
 {
+  if (typeof wireFormat === 'function') {
+    // wireFormat is omitted, so shift.
+    onError = onComplete;
+    onComplete = wireFormat;
+    wireFormat = undefined;
+  }
+
+  if (wireFormat == undefined)
+    wireFormat = WireFormat.getDefaultWireFormat();
+
   return SyncPromise.complete(onComplete, onError,
-    this.selfSignPromise(key, !onComplete));
+    this.selfSignPromise(key, wireFormat, !onComplete));
 };
 
 // Import and export
