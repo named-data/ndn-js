@@ -27,7 +27,7 @@ var Name = require('../../..').Name;
 var Pib = require('../../..').Pib;
 var PibMemory = require('../../..').PibMemory;
 var PibSqlite3 = require('../../..').PibSqlite3;
-var PibDataFixture = require('../unit-tests//pib-data-fixture.js').PibDataFixture;
+var PibDataFixture = require('../unit-tests/pib-data-fixture.js').PibDataFixture;
 
 var PibMemoryFixture = function PibMemoryFixture()
 {
@@ -37,6 +37,9 @@ var PibMemoryFixture = function PibMemoryFixture()
   this.myPib_ = new PibMemory();
   this.pib = this.myPib_;
 };
+
+PibMemoryFixture.prototype = new PibDataFixture();
+PibMemoryFixture.prototype.name = "PibMemoryFixture";
 
 var PibSqlite3Fixture = function PibSqlite3Fixture
   (databaseDirectoryPath, databaseFilename)
@@ -48,8 +51,8 @@ var PibSqlite3Fixture = function PibSqlite3Fixture
   this.pib = this.myPib_;
 };
 
-PibMemoryFixture.prototype = new PibDataFixture();
-PibMemoryFixture.prototype.name = "PibMemoryFixture";
+PibSqlite3Fixture.prototype = new PibDataFixture();
+PibSqlite3Fixture.prototype.name = "PibSqlite3Fixture";
 
 describe ("TestPibImpl", function() {
   beforeEach(function(done) {
