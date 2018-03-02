@@ -169,6 +169,7 @@ def build (bld):
                  "js/security/pib/pib-identity-container.js",
                  "js/security/pib/pib-identity.js",
                  "js/security/pib/pib-impl.js",
+                 "js/security/pib/pib-indexeddb.js",
                  "js/security/pib/pib-key-container.js",
                  "js/security/pib/pib-key.js",
                  "js/security/pib/pib-memory.js",
