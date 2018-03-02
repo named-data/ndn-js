@@ -38,7 +38,7 @@ describe ("TestTrustAnchorContainer", function() {
     // Create a directory and prepares two certificates.
     this.certificateDirectoryPath = path.join("policy_config", "test-cert-dir");
     try {
-      fs.mkdirSync(certificateDirectoryPath);
+      fs.mkdirSync(this.certificateDirectoryPath);
     } catch (ex) {}
 
     this.certificatePath1 = 
