@@ -36,24 +36,35 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * Create a new Interest with the optional values.
  *
  * @constructor
- * @param {Name|Interest} nameOrInterest If this is an Interest, copy values from the interest and ignore the
- * other arguments.  Otherwise this is the optional name for the new Interest.
- * @param {number} minSuffixComponents
- * @param {number} maxSuffixComponents
+ * @param {Name|Interest} nameOrInterest (optional) If this is an Interest, copy
+ * values from the Interest. If this is a Name, create an Interest with the Name.
  */
 var Interest = function Interest
    (nameOrInterest, minSuffixComponents, maxSuffixComponents,
     publisherPublicKeyDigest, exclude, childSelector, answerOriginKind, scope,
     interestLifetimeMilliseconds, nonce)
 {
-  if (publisherPublicKeyDigest)
+  if (publisherPublicKeyDigest != null)
     throw new Error
       ("Interest constructor: PublisherPublicKeyDigest support has been removed.");
-  if (answerOriginKind)
+  if (answerOriginKind != null)
     throw new Error
       ("Interest constructor: answerOriginKind support has been removed. Use setMustBeFresh().");
-  if (scope)
+  if (scope != null)
     throw new Error("Interest constructor: scope support has been removed.");
+  if (nonce != null)
+    throw new Error("Interest constructor: nonce support in the constructor has been removed.");
+
+  if (minSuffixComponents != null)
+    console.log("Interest constructor: The minSuffixComponents param is deprecated. Use setMinSuffixComponents().")
+  if (maxSuffixComponents != null)
+    console.log("Interest constructor: The maxSuffixComponents param is deprecated. Use setMaxSuffixComponents().")
+  if (exclude != null)
+    console.log("Interest constructor: The exclude param is deprecated. Use setExclude().")
+  if (childSelector != null)
+    console.log("Interest constructor: The childSelector param is deprecated. Use setChildSelector().")
+  if (interestLifetimeMilliseconds != null)
+    console.log("Interest constructor: The interestLifetimeMilliseconds param is deprecated. Use setInterestLifetimeMilliseconds().")
 
   if (typeof nameOrInterest === 'object' && nameOrInterest instanceof Interest) {
     // Special case: this is a copy constructor.  Ignore all but the first argument.
@@ -94,8 +105,7 @@ var Interest = function Interest
     this.mustBeFresh_ = true;
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
     this.forwardingHint_ = new ChangeCounter(new DelegationSet());
-    this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
-      nonce : new Blob(nonce, true);
+    this.nonce_ = new Blob();
     this.linkWireEncoding_ = new Blob();
     this.linkWireEncodingFormat_ = null;
     this.link_ = new ChangeCounter(null);
