@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.15.0 (2018-02-28)
+Interim changes since NDN-JS v0.15.0 (2018-03-03)
 -------------------------------------------------
 
 Changes
@@ -8,6 +8,8 @@ Changes
   to KeyType.EC and EcKeyParams. Deprecated KeyType.ECDSA and EcdsaKeyParams.
 
 Deprecated
+* In the Interest constructor, deprecated params for selectors such as
+  minSuffixComponents. Use setMinSuffixComponents(), etc.
 * Deprecated KeyType.ECDSA. Use KeyType.EC.
 * Deprecated EcdsaKeyParams. Use EcKeyParams.
 
