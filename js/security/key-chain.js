@@ -2652,14 +2652,14 @@ KeyChain.defaultKeyParams_ = new RsaKeyParams();
  */
 function InvalidSigningInfoError(error)
 {
-  if (error) {
-    error.__proto__ = InvalidSigningInfoError.prototype;
-    return error;
-  }
+  // Call the base constructor.
+  KeyChain.Error.call(this, error);
 }
 
-InvalidSigningInfoError.prototype = new Error();
+InvalidSigningInfoError.prototype = new KeyChain.Error();
 InvalidSigningInfoError.prototype.name = "InvalidSigningInfoError";
+
+exports.InvalidSigningInfoError = InvalidSigningInfoError;
 
 exports.InvalidSigningInfoError = InvalidSigningInfoError;
 
@@ -2672,13 +2672,11 @@ exports.InvalidSigningInfoError = InvalidSigningInfoError;
  */
 function LocatorMismatchError(error)
 {
-  if (error) {
-    error.__proto__ = LocatorMismatchError.prototype;
-    return error;
-  }
+  // Call the base constructor.
+  KeyChain.Error.call(this, error);
 }
 
-LocatorMismatchError.prototype = new Error();
+LocatorMismatchError.prototype = new KeyChain.Error();
 LocatorMismatchError.prototype.name = "LocatorMismatchError";
 
 exports.LocatorMismatchError = LocatorMismatchError;
