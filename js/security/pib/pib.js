@@ -107,11 +107,25 @@ Pib.prototype.getPibLocator = function()
 Pib.prototype.setTpmLocatorPromise = function(tpmLocator, useSync)
 {
   var thisPib = this;
-
   return this.initializePromise_(useSync)
   .then(function() {
-    return thisPib.pibImpl_.getTpmLocatorPromise(useSync);
+    return thisPib.doSetTpmLocatorPromise_(tpmLocator, useSync);
   })
+};
+
+/**
+ * Do the work of setTpmLocatorPromise without calling initializePromise_.
+ * @param {string} tpmLocator The TPM locator.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
+ */
+Pib.prototype.doSetTpmLocatorPromise_ = function(tpmLocator, useSync)
+{
+  var thisPib = this;
+
+  return this.pibImpl_.getTpmLocatorPromise(useSync)
   .then(function(pibTpmLocator) {
     if (tpmLocator == pibTpmLocator)
       return SyncPromise.resolve();
