@@ -34,11 +34,6 @@ var SecurityException = require('./security-exception.js').SecurityException; /*
 var RsaKeyParams = require('./key-params.js').RsaKeyParams; /** @ignore */
 var BasicIdentityStorage = require('./identity/basic-identity-storage.js').BasicIdentityStorage; /** @ignore */
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
-var Pib = require('./pib/pib.js').Pib; /** @ignore */
-var PibImpl = require('./pib/pib-impl.js').PibImpl; /** @ignore */
-var PibKey = require('./pib/pib-key.js').PibKey; /** @ignore */
-var PibSqlite3 = require('./pib/pib-sqlite3.js').PibSqlite3; /** @ignore */
-var PibMemory = require('./pib/pib-memory.js').PibMemory; /** @ignore */
 var Tpm = require('./tpm/tpm.js').Tpm; /** @ignore */
 var TpmBackEndFile = require('./tpm/tpm-back-end-file.js').TpmBackEndFile; /** @ignore */
 var TpmBackEndMemory = require('./tpm/tpm-back-end-memory.js').TpmBackEndMemory; /** @ignore */
@@ -146,53 +141,16 @@ var KeyChain = function KeyChain(arg1, arg2, arg3)
     KeyChain.parseAndCheckPibLocator_(pibLocator, pibScheme, pibLocation);
     var canonicalPibLocator = pibScheme[0] + ":" + pibLocation[0];
 
-    // Create the PIB.
+    // Create the PIB and TPM, where Pib.initializePromise_ will complete the
+    // initialization the first time it is called in an asynchronous context. We
+    // can't do it here because this constructor cannot perform async operations.
     this.pib_ = KeyChain.createPib_(canonicalPibLocator);
-    var oldTpmLocator = "";
-    try {
-      oldTpmLocator = this.pib_.getTpmLocator();
-    } catch (ex) {
-      // The TPM locator is not set in the PIB yet.
-    }
-
-    // TPM locator.
-    var tpmScheme = [null];
-    var tpmLocation = [null];
-    KeyChain.parseAndCheckTpmLocator_(tpmLocator, tpmScheme, tpmLocation);
-    var canonicalTpmLocator = tpmScheme[0] + ":" + tpmLocation[0];
-
-    var config;
-    if (ConfigFile)
-      // Assume we are not in the browser.
-      config = new ConfigFile();
-    if (ConfigFile && canonicalPibLocator == KeyChain.getDefaultPibLocator_(config)) {
-      // The default PIB must use the default TPM.
-      if (oldTpmLocator != "" &&
-          oldTpmLocator != KeyChain.getDefaultTpmLocator_(config)) {
-        this.pib_.reset_();
-        canonicalTpmLocator = this.getDefaultTpmLocator_(config);
-      }
-    }
-    else {
-      // Check the consistency of the non-default PIB.
-      if (oldTpmLocator != "" && oldTpmLocator != canonicalTpmLocator) {
-        if (allowReset)
-          this.pib_.reset_();
-        else
-          throw new LocatorMismatchError(new Error
-            ("The supplied TPM locator does not match the TPM locator in the PIB: " +
-             oldTpmLocator + " != " + canonicalTpmLocator));
-      }
-    }
-
-    // Note that a key mismatch may still happen if the TPM locator is
-    // initially set to a wrong one or if the PIB was shared by more than
-    // one TPM before. This is due to the old PIB not having TPM info.
-    // The new PIB should not have this problem.
-    this.tpm_ = KeyChain.createTpm_(canonicalTpmLocator);
-/* debug
-    this.pib_.setTpmLocator(canonicalTpmLocator);
-*/
+    this.tpm_ = new Tpm("", "", null);
+    this.pib_.initializeTpm_ = this.tpm_;
+    this.pib_.initializePibLocator_ = pibLocator;
+    this.pib_.initializeTpmLocator_ = tpmLocator;
+    this.pib_.initializeAllowReset_ = allowReset;
+    this.tpm_.initializePib_ = this.pib_;
   }
   else if (arg1 instanceof PibImpl) {
     var pibImpl = arg1;
@@ -2292,17 +2250,21 @@ KeyChain.createPib_ = function(pibLocator)
 };
 
 /**
- * Create a Tpm according to the tpmLocator.
+ * Set up tpm according to the tpmLocator. This is called by
+ * Pib.initializePromise_ after determining the correct tpmLocator.
+ * @param {Tpm} tpm The Tpm to set up.
  * @param {string} tpmLocator The TPM locator, e.g., "tpm-memory:".
  * @return {Tpm} A new Tpm object.
  */
-KeyChain.createTpm_ = function(tpmLocator)
+KeyChain.setUpTpm_ = function(tpm, tpmLocator)
 {
   var tpmScheme = [null];
   var tpmLocation = [null];
   KeyChain.parseAndCheckTpmLocator_(tpmLocator, tpmScheme, tpmLocation);
   var tpmFactory = KeyChain.getTpmFactories_()[tpmScheme[0]];
-  return new Tpm(tpmScheme[0], tpmLocation[0], tpmFactory(tpmLocation[0]));
+  tpm.scheme_ = tpmScheme[0];
+  tpm.location_ = tpmLocation[0];
+  tpm.backEnd_ = tpmFactory(tpmLocation[0]);
 };
 
 /**
@@ -2680,3 +2642,11 @@ LocatorMismatchError.prototype = new KeyChain.Error();
 LocatorMismatchError.prototype.name = "LocatorMismatchError";
 
 exports.LocatorMismatchError = LocatorMismatchError;
+
+// Put these last to avoid a require loop.
+/** @ignore */
+var Pib = require('./pib/pib.js').Pib; /** @ignore */
+var PibImpl = require('./pib/pib-impl.js').PibImpl; /** @ignore */
+var PibKey = require('./pib/pib-key.js').PibKey; /** @ignore */
+var PibSqlite3 = require('./pib/pib-sqlite3.js').PibSqlite3; /** @ignore */
+var PibMemory = require('./pib/pib-memory.js').PibMemory;
