@@ -19,6 +19,7 @@
  */
 
 /** @ignore */
+var ConfigFile = require('../../util/config-file.js').ConfigFile; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
@@ -54,6 +55,10 @@ var Pib = function Pib(scheme, location, pibImpl)
   // Must call initializePromise_ before accessing this.
   this.identities_ = null;
   this.pibImpl_ = pibImpl;
+  this.initializeTpm_ = null;
+  this.initializePibLocator_ = null;
+  this.initializeTpmLocator_ = null;
+  this.initializeAllowReset_ = false;
   this.isInitialized_ = false;
 
   if (pibImpl == null)
@@ -275,7 +280,7 @@ Pib.prototype.getDefaultIdentity = function(onComplete, onError)
 
 /**
  * Reset the content in the PIB, including a reset of the TPM locator. This
- * should only be called by KeyChain.
+ * should only be called by initializeFromLocatorsPromise_.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -285,18 +290,19 @@ Pib.prototype.resetPromise_ = function(useSync)
 {
   var thisPib = this;
 
-  return this.initializePromise_(useSync)
-  .then(function() {
-    return thisPib.pibImpl_.clearIdentitiesPromise(useSync);
-  })
+  // Don't call initializePromise_ since this is already being called by it.
+  return this.pibImpl_.clearIdentitiesPromise(useSync)
   .then(function() {
     return thisPib.pibImpl_.setTpmLocatorPromise("", useSync);
   })
   .then(function() {
     thisPib.defaultIdentity_ = null;
-    return thisPib.initializePromise_(useSync)
+
+    // Call PibIdentityContainer.makePromise the same as initializePromise_ .
+    return PibIdentityContainer.makePromise(thisPib.pibImpl_, useSync);
   })
-  .then(function() {
+  .then(function(container) {
+    thisPib.identities_ = container;
     return thisPib.identities_.resetPromise(useSync);
   });
 };
@@ -393,11 +399,89 @@ Pib.prototype.initializePromise_ = function(useSync)
   .then(function(container) {
     thisPib.identities_ = container;
 
+    if (thisPib.initializeTpm_ != null)
+      return thisPib.initializeFromLocatorsPromise_(useSync);
+    else
+      return SyncPromise.resolve();
+  })
+  .then(function() {
     thisPib.isInitialized_ = true;
     return SyncPromise.resolve();
   });
 };
 
-// Put this last to avoid a require loop.
- /** @ignore */
+/**
+ * Initialize from initializePibLocator_ and initializeTpmLocator_ in the same 
+ * way that the KeyChain constructor would if it could do async operations. Set 
+ * up initializeTpm_ and set its isInitialized_ true.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
+ */
+Pib.prototype.initializeFromLocatorsPromise_ = function(useSync)
+{
+  // Repeat this from the KeyChain constructor.
+  var pibScheme = [null];
+  var pibLocation = [null];
+  KeyChain.parseAndCheckPibLocator_
+    (this.initializePibLocator_, pibScheme, pibLocation);
+  var canonicalPibLocator = pibScheme[0] + ":" + pibLocation[0];
+
+  var canonicalTpmLocator;
+  var thisPib = this;
+  return this.pibImpl_.getTpmLocatorPromise(useSync)
+  .then(function(oldTpmLocator) {
+    // TPM locator.
+    var tpmScheme = [null];
+    var tpmLocation = [null];
+    KeyChain.parseAndCheckTpmLocator_
+      (thisPib.initializeTpmLocator_, tpmScheme, tpmLocation);
+    canonicalTpmLocator = tpmScheme[0] + ":" + tpmLocation[0];
+
+    var resetPib = false;
+    var config;
+    if (ConfigFile)
+      // Assume we are not in the browser.
+      config = new ConfigFile();
+    if (ConfigFile && canonicalPibLocator == KeyChain.getDefaultPibLocator_(config)) {
+      // The default PIB must use the default TPM.
+      if (oldTpmLocator != "" &&
+          oldTpmLocator != KeyChain.getDefaultTpmLocator_(config)) {
+        resetPib = true;
+        canonicalTpmLocator = KeyChain.getDefaultTpmLocator_(config);
+      }
+    }
+    else {
+      // Check the consistency of the non-default PIB.
+      if (oldTpmLocator != "" && oldTpmLocator != canonicalTpmLocator) {
+        if (thisPib.initializeAllowReset_)
+          resetPib = true;
+        else
+          return SyncPromise.reject(new LocatorMismatchError(new Error
+            ("The supplied TPM locator does not match the TPM locator in the PIB: " +
+             oldTpmLocator + " != " + canonicalTpmLocator)));
+      }
+    }
+
+    if (resetPib)
+      return thisPib.resetPromise_(useSync);
+    else
+      return SyncPromise.resolve();
+  })
+  .then(function() {
+    // Note that a key mismatch may still happen if the TPM locator is initially
+    // set to a wrong one or if the PIB was shared by more than one TPM before.
+    // This is due to the old PIB not having TPM info. The new PIB should not
+    // have this problem.
+    KeyChain.setUpTpm_(thisPib.initializeTpm_, canonicalTpmLocator);
+    thisPib.initializeTpm_.isInitialized_ = true;
+    return thisPib.doSetTpmLocatorPromise_(canonicalTpmLocator, useSync);
+  });
+};
+
+// Put these last to avoid a require loop.
+/** @ignore */
+var KeyChain = require('../key-chain.js').KeyChain; /** @ignore */
+var LocatorMismatchError = require('../key-chain.js').LocatorMismatchError; /** @ignore */
 var PibIdentityContainer = require('./pib-identity-container.js').PibIdentityContainer;
