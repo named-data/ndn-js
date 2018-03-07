@@ -58,6 +58,8 @@ var Tpm = function Tpm(scheme, location, backEnd)
   this.scheme_ = scheme;
   this.location_ = location;
   this.backEnd_ = backEnd;
+  this.initializePib_ = null;
+  this.isInitialized_ = false;
 };
 
 exports.Tpm = Tpm;
@@ -81,6 +83,9 @@ Tpm.Error.prototype.name = "TpmError";
 
 Tpm.prototype.getTpmLocator = function()
 {
+  if (!this.isInitialized_)
+    throw new Tpm.Error(new Error("getTpmLocator: The Tpm is not initialized"));
+
   return this.scheme_ + ":" + this.location_;
 };
 
@@ -94,7 +99,11 @@ Tpm.prototype.getTpmLocator = function()
  */
 Tpm.prototype.hasKeyPromise = function(keyName, useSync)
 {
-  return this.backEnd_.hasKeyPromise(keyName, useSync);
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisTpm.backEnd_.hasKeyPromise(keyName, useSync);
+  });
 };
 
 /**
@@ -108,7 +117,11 @@ Tpm.prototype.hasKeyPromise = function(keyName, useSync)
  */
 Tpm.prototype.getPublicKeyPromise = function(keyName, useSync)
 {
-  return this.findKeyPromise_(keyName, useSync)
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisTpm.findKeyPromise_(keyName, useSync);
+  })
   .then(function(key) {
     if (key == null)
       return SyncPromise.resolve(new Blob());
@@ -133,7 +146,11 @@ Tpm.prototype.getPublicKeyPromise = function(keyName, useSync)
  */
 Tpm.prototype.signPromise = function(data, keyName, digestAlgorithm, useSync)
 {
-  return this.findKeyPromise_(keyName, useSync)
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisTpm.findKeyPromise_(keyName, useSync);
+  })
   .then(function(key) {
     if (key == null)
       return SyncPromise.resolve(new Blob());
@@ -155,7 +172,11 @@ Tpm.prototype.signPromise = function(data, keyName, digestAlgorithm, useSync)
  */
 Tpm.prototype.decryptPromise = function(cipherText, keyName, useSync)
 {
-  return this.findKeyPromise_(keyName, useSync)
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisTpm.findKeyPromise_(keyName, useSync);
+  })
   .then(function(key) {
     if (key == null)
       return SyncPromise.resolve(new Blob());
@@ -168,12 +189,6 @@ Tpm.prototype.decryptPromise = function(cipherText, keyName, useSync)
 // TODO: setTerminalModePromise
 // TODO: isTpmLockedPromise
 // TODO: unlockTpmPromise
-
-/**
- * Get the TpmBackEnd. This should only be called by KeyChain.
- * @return {TpmBackEnd}
- */
-Tpm.prototype.getBackEnd_ = function() { return this.backEnd_; };
 
 /**
  * Create a key for the identityName according to params. The created key is
@@ -190,20 +205,22 @@ Tpm.prototype.getBackEnd_ = function() { return this.backEnd_; };
  */
 Tpm.prototype.createKeyPromise_ = function(identityName, params, useSync)
 {
-  if (params.getKeyType() == KeyType.RSA ||
-      params.getKeyType() == KeyType.EC) {
-    var thisTpm = this;
-
-    return this.backEnd_.createKeyPromise(identityName, params, useSync)
-    .then(function(keyHandle) {
-      var keyName = keyHandle.getKeyName()
-      thisTpm.keys_[keyName.toUri()] = keyHandle;
-      return SyncPromise.resolve(keyName);
-    });
-  }
-  else
-    return SyncPromise.resolve(new Tpm.Error(new Error
-      ("createKey: Unsupported key type")));
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    if (params.getKeyType() == KeyType.RSA ||
+        params.getKeyType() == KeyType.EC) {
+      return thisTpm.backEnd_.createKeyPromise(identityName, params, useSync)
+      .then(function(keyHandle) {
+        var keyName = keyHandle.getKeyName()
+        thisTpm.keys_[keyName.toUri()] = keyHandle;
+        return SyncPromise.resolve(keyName);
+      });
+    }
+    else
+      return SyncPromise.resolve(new Tpm.Error(new Error
+        ("createKey: Unsupported key type")));
+  });
 };
 
 /**
@@ -219,9 +236,13 @@ Tpm.prototype.createKeyPromise_ = function(identityName, params, useSync)
  */
 Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
 {
-  delete this.keys_[keyName.toUri()];
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    delete thisTpm.keys_[keyName.toUri()];
 
-  return this.backEnd_.deleteKeyPromise(keyName, useSync);
+    return thisTpm.backEnd_.deleteKeyPromise(keyName, useSync);
+  });
 };
 
 // TODO: exportPrivateKeyPromise_
@@ -244,7 +265,11 @@ Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
  */
 Tpm.prototype.importPrivateKeyPromise_ = function(keyName, pkcs8, password, useSync)
 {
-  return this.backEnd_.importKeyPromise(keyName, pkcs8, password, useSync);
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisTpm.backEnd_.importKeyPromise(keyName, pkcs8, password, useSync);
+  });
 };
 
 /**
@@ -259,20 +284,50 @@ Tpm.prototype.importPrivateKeyPromise_ = function(keyName, pkcs8, password, useS
  */
 Tpm.prototype.findKeyPromise_ = function(keyName, useSync)
 {
-  var keyNameUri = keyName.toUri();
-  var handle = this.keys_[keyNameUri];
-
-  if (handle != undefined)
-    return SyncPromise.resolve(handle);
-
   var thisTpm = this;
-  return this.backEnd_.getKeyHandlePromise(keyName, useSync)
-  .then(function(handle) {
-    if (handle != null) {
-      thisTpm.keys_[keyNameUri] = handle;
-      return SyncPromise.resolve(handle);
-    }
+  return this.initializePromise_(useSync)
+  .then(function() {
+    var keyNameUri = keyName.toUri();
+    var handle = thisTpm.keys_[keyNameUri];
 
-    return SyncPromise.resolve(null);
+    if (handle != undefined)
+      return SyncPromise.resolve(handle);
+
+    return thisTpm.backEnd_.getKeyHandlePromise(keyName, useSync)
+    .then(function(handle) {
+      if (handle != null) {
+        thisTpm.keys_[keyNameUri] = handle;
+        return SyncPromise.resolve(handle);
+      }
+
+      return SyncPromise.resolve(null);
+    });
   });
+};
+
+/**
+ * If isInitialized_ is false and initializePib_ is not null (because it was set
+ * by the KeyChain constructor), call initializePib_.initializePromise_ which
+ * joinly initializes the Pib and Tpm and sets isInitialized_ true. However, if
+ * isInitialized_ is already true or initializePib_ is null, do nothing. This
+ * must be called by each method before using this object. This is necessary
+ * because the constructor (and the KeyChain constructor) cannot perform async
+ * operations.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
+ */
+Tpm.prototype.initializePromise_ = function(useSync)
+{
+  if (this.isInitialized_)
+    return SyncPromise.resolve();
+
+  if (this.initializePib_ == null) {
+    // We don't need to jointly initialize with the Pib.
+    this.isInitialized_ = true;
+    return SyncPromise.resolve();
+  }
+
+   return this.initializePib_.initializePromise_(useSync);
 };
