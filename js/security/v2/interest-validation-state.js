@@ -50,7 +50,7 @@ var InterestValidationState = function InterestValidationState
 
   // Make a copy.
   this.interest_ = new Interest(interest);
-  this.successCallbacks_ = []; // of SuccessCallback
+  this.successCallbacks_ = []; // of SuccessCallback function
   this.failureCallback_ = failureCallback;
 
   if (successCallback == null)
@@ -95,7 +95,7 @@ InterestValidationState.prototype.getOriginalInterest = function()
 InterestValidationState.prototype.addSuccessCallback = function(successCallback)
 {
   this.successCallbacks_.push(successCallback);
-}
+};
 
 /**
  * Override to verify the Interest packet given to the constructor.
