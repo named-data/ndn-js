@@ -50,10 +50,10 @@ var InterestValidationState = function InterestValidationState
 
   // Make a copy.
   this.interest_ = new Interest(interest);
-  this.successCallback_ = successCallback;
+  this.successCallbacks_ = []; // of SuccessCallback
   this.failureCallback_ = failureCallback;
 
-  if (this.successCallback_ == null)
+  if (successCallback == null)
     throw new Error("The successCallback is null");
   if (this.failureCallback_ == null)
     throw new Error("The failureCallback is null");
@@ -90,6 +90,14 @@ InterestValidationState.prototype.getOriginalInterest = function()
 };
 
 /**
+ * @param {function} successCallback This calls successCallback(interest).
+ */
+InterestValidationState.prototype.addSuccessCallback = function(successCallback)
+{
+  this.successCallbacks_.push(successCallback);
+}
+
+/**
  * Override to verify the Interest packet given to the constructor.
  * @param {CertificateV2} trustedCertificate The certificate that signs the
  * original packet.
@@ -107,10 +115,12 @@ InterestValidationState.prototype.verifyOriginalPacketPromise_ = function
     if (verifySuccess) {
       if (LOG > 3) console.log("OK signature for interest `" +
         thisState.interest_.getName().toUri() + "`");
-      try {
-        thisState.successCallback_(thisState.interest_);
-      } catch (ex) {
-        console.log("Error in successCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+      for (var i = 0; i < thisState.successCallbacks_.length; ++i) {
+        try {
+          thisState.successCallbacks_[i](thisState.interest_);
+        } catch (ex) {
+          console.log("Error in successCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
       }
       thisState.setOutcome(true);
     }
@@ -131,10 +141,12 @@ InterestValidationState.prototype.bypassValidation_ = function()
 {
   if (LOG > 3) console.log("Signature verification bypassed for interest `" +
     this.interest_.getName().toUri() + "`");
-  try {
-    this.successCallback_(this.interest_);
-  } catch (ex) {
-    console.log("Error in successCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+  for (var i = 0; i < this.successCallbacks_.length; ++i) {
+    try {
+      this.successCallbacks_[i](this.interest_);
+    } catch (ex) {
+      console.log("Error in successCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
   }
   this.setOutcome(true);
 };
