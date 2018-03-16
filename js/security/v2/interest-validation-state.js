@@ -50,7 +50,7 @@ var InterestValidationState = function InterestValidationState
 
   // Make a copy.
   this.interest_ = new Interest(interest);
-  this.successCallbacks_ = []; // of SuccessCallback function
+  this.successCallbacks_ = [successCallback]; // of SuccessCallback function
   this.failureCallback_ = failureCallback;
 
   if (successCallback == null)
