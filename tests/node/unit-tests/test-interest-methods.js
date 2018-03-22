@@ -60,6 +60,12 @@ var codedInterest = new Buffer([
 1
 ]);
 
+var codedInterestNoSelectors = new Buffer([
+0x05, 0x12, // Interest
+  0x07, 0x0A, 0x08, 0x03, 0x6E, 0x64, 0x6E, 0x08, 0x03, 0x61, 0x62, 0x63, // Name
+  0x0A, 0x04, 0x61, 0x62, 0x61, 0x62   // Nonce
+]);
+
 var initialDump = ['name: /ndn/abc',
   'minSuffixComponents: 4',
   'maxSuffixComponents: 6',
@@ -223,6 +229,13 @@ describe('TestInterestDump', function() {
     var reDecodedFreshDump = dumpInterest(reDecodedFreshInterest);
 
     assert.ok(interestDumpsEqual(freshDump, reDecodedFreshDump), 'Redecoded fresh interest does not match original');
+  });
+
+  it('NoSelectorsMustBeFresh', function() {
+    var interest = new Interest();
+    interest.wireDecode(codedInterestNoSelectors);
+    assert.equal(false, interest.getMustBeFresh(),
+      "MustBeFresh should be false if no selectors");
   });
 });
 
