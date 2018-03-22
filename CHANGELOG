@@ -1,5 +1,9 @@
-Interim changes since NDN-JS v0.15.0 (2018-03-03)
+Interim changes since NDN-JS v0.15.0 (2018-03-22)
 -------------------------------------------------
+
+Bug fixes
+* https://redmine.named-data.net/issues/4428 MustBeFresh should be false if the
+  decoded Interest has no selectors.
 
 Changes
 * https://redmine.named-data.net/issues/3812 In encrypt GroupManager, save private

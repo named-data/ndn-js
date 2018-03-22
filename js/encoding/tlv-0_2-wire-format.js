@@ -198,6 +198,14 @@ Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
   var offsets = Tlv0_2WireFormat.decodeName(interest.getName(), decoder, copy);
   if (decoder.peekType(Tlv.Selectors, endOffset))
     Tlv0_2WireFormat.decodeSelectors(interest, decoder, copy);
+  else {
+    // Set selectors to none.
+    interest.setMinSuffixComponents(null);
+    interest.setMaxSuffixComponents(null);
+    interest.getExclude().clear();
+    interest.setChildSelector(null);
+    interest.setMustBeFresh(false);
+  }
   // Require a Nonce, but don't force it to be 4 bytes.
   var nonce = decoder.readBlobTlv(Tlv.Nonce);
   interest.setInterestLifetimeMilliseconds
