@@ -28399,6 +28399,7 @@ PibMemory.prototype.getDefaultCertificateOfKeyPromise = function(keyName)
  */
 
 /** @ignore */
+var ConfigFile = require('../../util/config-file.js').ConfigFile; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
@@ -28434,6 +28435,10 @@ var Pib = function Pib(scheme, location, pibImpl)
   // Must call initializePromise_ before accessing this.
   this.identities_ = null;
   this.pibImpl_ = pibImpl;
+  this.initializeTpm_ = null;
+  this.initializePibLocator_ = null;
+  this.initializeTpmLocator_ = null;
+  this.initializeAllowReset_ = false;
   this.isInitialized_ = false;
 
   if (pibImpl == null)
@@ -28487,11 +28492,25 @@ Pib.prototype.getPibLocator = function()
 Pib.prototype.setTpmLocatorPromise = function(tpmLocator, useSync)
 {
   var thisPib = this;
-
   return this.initializePromise_(useSync)
   .then(function() {
-    return thisPib.pibImpl_.getTpmLocatorPromise(useSync);
+    return thisPib.doSetTpmLocatorPromise_(tpmLocator, useSync);
   })
+};
+
+/**
+ * Do the work of setTpmLocatorPromise without calling initializePromise_.
+ * @param {string} tpmLocator The TPM locator.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
+ */
+Pib.prototype.doSetTpmLocatorPromise_ = function(tpmLocator, useSync)
+{
+  var thisPib = this;
+
+  return this.pibImpl_.getTpmLocatorPromise(useSync)
   .then(function(pibTpmLocator) {
     if (tpmLocator == pibTpmLocator)
       return SyncPromise.resolve();
@@ -28641,7 +28660,7 @@ Pib.prototype.getDefaultIdentity = function(onComplete, onError)
 
 /**
  * Reset the content in the PIB, including a reset of the TPM locator. This
- * should only be called by KeyChain.
+ * should only be called by initializeFromLocatorsPromise_.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -28651,18 +28670,19 @@ Pib.prototype.resetPromise_ = function(useSync)
 {
   var thisPib = this;
 
-  return this.initializePromise_(useSync)
-  .then(function() {
-    return thisPib.pibImpl_.clearIdentitiesPromise(useSync);
-  })
+  // Don't call initializePromise_ since this is already being called by it.
+  return this.pibImpl_.clearIdentitiesPromise(useSync)
   .then(function() {
     return thisPib.pibImpl_.setTpmLocatorPromise("", useSync);
   })
   .then(function() {
     thisPib.defaultIdentity_ = null;
-    return thisPib.initializePromise_(useSync)
+
+    // Call PibIdentityContainer.makePromise the same as initializePromise_ .
+    return PibIdentityContainer.makePromise(thisPib.pibImpl_, useSync);
   })
-  .then(function() {
+  .then(function(container) {
+    thisPib.identities_ = container;
     return thisPib.identities_.resetPromise(useSync);
   });
 };
@@ -28759,13 +28779,91 @@ Pib.prototype.initializePromise_ = function(useSync)
   .then(function(container) {
     thisPib.identities_ = container;
 
+    if (thisPib.initializeTpm_ != null)
+      return thisPib.initializeFromLocatorsPromise_(useSync);
+    else
+      return SyncPromise.resolve();
+  })
+  .then(function() {
     thisPib.isInitialized_ = true;
     return SyncPromise.resolve();
   });
 };
 
-// Put this last to avoid a require loop.
- /** @ignore */
+/**
+ * Initialize from initializePibLocator_ and initializeTpmLocator_ in the same 
+ * way that the KeyChain constructor would if it could do async operations. Set 
+ * up initializeTpm_ and set its isInitialized_ true.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
+ */
+Pib.prototype.initializeFromLocatorsPromise_ = function(useSync)
+{
+  // Repeat this from the KeyChain constructor.
+  var pibScheme = [null];
+  var pibLocation = [null];
+  KeyChain.parseAndCheckPibLocator_
+    (this.initializePibLocator_, pibScheme, pibLocation);
+  var canonicalPibLocator = pibScheme[0] + ":" + pibLocation[0];
+
+  var canonicalTpmLocator;
+  var thisPib = this;
+  return this.pibImpl_.getTpmLocatorPromise(useSync)
+  .then(function(oldTpmLocator) {
+    // TPM locator.
+    var tpmScheme = [null];
+    var tpmLocation = [null];
+    KeyChain.parseAndCheckTpmLocator_
+      (thisPib.initializeTpmLocator_, tpmScheme, tpmLocation);
+    canonicalTpmLocator = tpmScheme[0] + ":" + tpmLocation[0];
+
+    var resetPib = false;
+    var config;
+    if (ConfigFile)
+      // Assume we are not in the browser.
+      config = new ConfigFile();
+    if (ConfigFile && canonicalPibLocator == KeyChain.getDefaultPibLocator_(config)) {
+      // The default PIB must use the default TPM.
+      if (oldTpmLocator != "" &&
+          oldTpmLocator != KeyChain.getDefaultTpmLocator_(config)) {
+        resetPib = true;
+        canonicalTpmLocator = KeyChain.getDefaultTpmLocator_(config);
+      }
+    }
+    else {
+      // Check the consistency of the non-default PIB.
+      if (oldTpmLocator != "" && oldTpmLocator != canonicalTpmLocator) {
+        if (thisPib.initializeAllowReset_)
+          resetPib = true;
+        else
+          return SyncPromise.reject(new LocatorMismatchError(new Error
+            ("The supplied TPM locator does not match the TPM locator in the PIB: " +
+             oldTpmLocator + " != " + canonicalTpmLocator)));
+      }
+    }
+
+    if (resetPib)
+      return thisPib.resetPromise_(useSync);
+    else
+      return SyncPromise.resolve();
+  })
+  .then(function() {
+    // Note that a key mismatch may still happen if the TPM locator is initially
+    // set to a wrong one or if the PIB was shared by more than one TPM before.
+    // This is due to the old PIB not having TPM info. The new PIB should not
+    // have this problem.
+    KeyChain.setUpTpm_(thisPib.initializeTpm_, canonicalTpmLocator);
+    thisPib.initializeTpm_.isInitialized_ = true;
+    return thisPib.doSetTpmLocatorPromise_(canonicalTpmLocator, useSync);
+  });
+};
+
+// Put these last to avoid a require loop.
+/** @ignore */
+var KeyChain = require('../key-chain.js').KeyChain; /** @ignore */
+var LocatorMismatchError = require('../key-chain.js').LocatorMismatchError; /** @ignore */
 var PibIdentityContainer = require('./pib-identity-container.js').PibIdentityContainer;
 /**
  * Copyright (C) 2017-2018 Regents of the University of California.
@@ -32571,6 +32669,8 @@ var Tpm = function Tpm(scheme, location, backEnd)
   this.scheme_ = scheme;
   this.location_ = location;
   this.backEnd_ = backEnd;
+  this.initializePib_ = null;
+  this.isInitialized_ = false;
 };
 
 exports.Tpm = Tpm;
@@ -32594,6 +32694,9 @@ Tpm.Error.prototype.name = "TpmError";
 
 Tpm.prototype.getTpmLocator = function()
 {
+  if (!this.isInitialized_)
+    throw new Tpm.Error(new Error("getTpmLocator: The Tpm is not initialized"));
+
   return this.scheme_ + ":" + this.location_;
 };
 
@@ -32607,7 +32710,11 @@ Tpm.prototype.getTpmLocator = function()
  */
 Tpm.prototype.hasKeyPromise = function(keyName, useSync)
 {
-  return this.backEnd_.hasKeyPromise(keyName, useSync);
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisTpm.backEnd_.hasKeyPromise(keyName, useSync);
+  });
 };
 
 /**
@@ -32621,7 +32728,11 @@ Tpm.prototype.hasKeyPromise = function(keyName, useSync)
  */
 Tpm.prototype.getPublicKeyPromise = function(keyName, useSync)
 {
-  return this.findKeyPromise_(keyName, useSync)
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisTpm.findKeyPromise_(keyName, useSync);
+  })
   .then(function(key) {
     if (key == null)
       return SyncPromise.resolve(new Blob());
@@ -32646,7 +32757,11 @@ Tpm.prototype.getPublicKeyPromise = function(keyName, useSync)
  */
 Tpm.prototype.signPromise = function(data, keyName, digestAlgorithm, useSync)
 {
-  return this.findKeyPromise_(keyName, useSync)
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisTpm.findKeyPromise_(keyName, useSync);
+  })
   .then(function(key) {
     if (key == null)
       return SyncPromise.resolve(new Blob());
@@ -32668,7 +32783,11 @@ Tpm.prototype.signPromise = function(data, keyName, digestAlgorithm, useSync)
  */
 Tpm.prototype.decryptPromise = function(cipherText, keyName, useSync)
 {
-  return this.findKeyPromise_(keyName, useSync)
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisTpm.findKeyPromise_(keyName, useSync);
+  })
   .then(function(key) {
     if (key == null)
       return SyncPromise.resolve(new Blob());
@@ -32681,12 +32800,6 @@ Tpm.prototype.decryptPromise = function(cipherText, keyName, useSync)
 // TODO: setTerminalModePromise
 // TODO: isTpmLockedPromise
 // TODO: unlockTpmPromise
-
-/**
- * Get the TpmBackEnd. This should only be called by KeyChain.
- * @return {TpmBackEnd}
- */
-Tpm.prototype.getBackEnd_ = function() { return this.backEnd_; };
 
 /**
  * Create a key for the identityName according to params. The created key is
@@ -32703,20 +32816,22 @@ Tpm.prototype.getBackEnd_ = function() { return this.backEnd_; };
  */
 Tpm.prototype.createKeyPromise_ = function(identityName, params, useSync)
 {
-  if (params.getKeyType() == KeyType.RSA ||
-      params.getKeyType() == KeyType.EC) {
-    var thisTpm = this;
-
-    return this.backEnd_.createKeyPromise(identityName, params, useSync)
-    .then(function(keyHandle) {
-      var keyName = keyHandle.getKeyName()
-      thisTpm.keys_[keyName.toUri()] = keyHandle;
-      return SyncPromise.resolve(keyName);
-    });
-  }
-  else
-    return SyncPromise.resolve(new Tpm.Error(new Error
-      ("createKey: Unsupported key type")));
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    if (params.getKeyType() == KeyType.RSA ||
+        params.getKeyType() == KeyType.EC) {
+      return thisTpm.backEnd_.createKeyPromise(identityName, params, useSync)
+      .then(function(keyHandle) {
+        var keyName = keyHandle.getKeyName()
+        thisTpm.keys_[keyName.toUri()] = keyHandle;
+        return SyncPromise.resolve(keyName);
+      });
+    }
+    else
+      return SyncPromise.resolve(new Tpm.Error(new Error
+        ("createKey: Unsupported key type")));
+  });
 };
 
 /**
@@ -32732,9 +32847,13 @@ Tpm.prototype.createKeyPromise_ = function(identityName, params, useSync)
  */
 Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
 {
-  delete this.keys_[keyName.toUri()];
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    delete thisTpm.keys_[keyName.toUri()];
 
-  return this.backEnd_.deleteKeyPromise(keyName, useSync);
+    return thisTpm.backEnd_.deleteKeyPromise(keyName, useSync);
+  });
 };
 
 // TODO: exportPrivateKeyPromise_
@@ -32757,7 +32876,11 @@ Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
  */
 Tpm.prototype.importPrivateKeyPromise_ = function(keyName, pkcs8, password, useSync)
 {
-  return this.backEnd_.importKeyPromise(keyName, pkcs8, password, useSync);
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisTpm.backEnd_.importKeyPromise(keyName, pkcs8, password, useSync);
+  });
 };
 
 /**
@@ -32772,22 +32895,52 @@ Tpm.prototype.importPrivateKeyPromise_ = function(keyName, pkcs8, password, useS
  */
 Tpm.prototype.findKeyPromise_ = function(keyName, useSync)
 {
-  var keyNameUri = keyName.toUri();
-  var handle = this.keys_[keyNameUri];
-
-  if (handle != undefined)
-    return SyncPromise.resolve(handle);
-
   var thisTpm = this;
-  return this.backEnd_.getKeyHandlePromise(keyName, useSync)
-  .then(function(handle) {
-    if (handle != null) {
-      thisTpm.keys_[keyNameUri] = handle;
-      return SyncPromise.resolve(handle);
-    }
+  return this.initializePromise_(useSync)
+  .then(function() {
+    var keyNameUri = keyName.toUri();
+    var handle = thisTpm.keys_[keyNameUri];
 
-    return SyncPromise.resolve(null);
+    if (handle != undefined)
+      return SyncPromise.resolve(handle);
+
+    return thisTpm.backEnd_.getKeyHandlePromise(keyName, useSync)
+    .then(function(handle) {
+      if (handle != null) {
+        thisTpm.keys_[keyNameUri] = handle;
+        return SyncPromise.resolve(handle);
+      }
+
+      return SyncPromise.resolve(null);
+    });
   });
+};
+
+/**
+ * If isInitialized_ is false and initializePib_ is not null (because it was set
+ * by the KeyChain constructor), call initializePib_.initializePromise_ which
+ * joinly initializes the Pib and Tpm and sets isInitialized_ true. However, if
+ * isInitialized_ is already true or initializePib_ is null, do nothing. This
+ * must be called by each method before using this object. This is necessary
+ * because the constructor (and the KeyChain constructor) cannot perform async
+ * operations.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
+ */
+Tpm.prototype.initializePromise_ = function(useSync)
+{
+  if (this.isInitialized_)
+    return SyncPromise.resolve();
+
+  if (this.initializePib_ == null) {
+    // We don't need to jointly initialize with the Pib.
+    this.isInitialized_ = true;
+    return SyncPromise.resolve();
+  }
+
+   return this.initializePib_.initializePromise_(useSync);
 };
 /**
  * Copyright (C) 2018 Regents of the University of California.
@@ -35453,10 +35606,10 @@ var InterestValidationState = function InterestValidationState
 
   // Make a copy.
   this.interest_ = new Interest(interest);
-  this.successCallback_ = successCallback;
+  this.successCallbacks_ = [successCallback]; // of SuccessCallback function
   this.failureCallback_ = failureCallback;
 
-  if (this.successCallback_ == null)
+  if (successCallback == null)
     throw new Error("The successCallback is null");
   if (this.failureCallback_ == null)
     throw new Error("The failureCallback is null");
@@ -35493,6 +35646,14 @@ InterestValidationState.prototype.getOriginalInterest = function()
 };
 
 /**
+ * @param {function} successCallback This calls successCallback(interest).
+ */
+InterestValidationState.prototype.addSuccessCallback = function(successCallback)
+{
+  this.successCallbacks_.push(successCallback);
+};
+
+/**
  * Override to verify the Interest packet given to the constructor.
  * @param {CertificateV2} trustedCertificate The certificate that signs the
  * original packet.
@@ -35510,10 +35671,12 @@ InterestValidationState.prototype.verifyOriginalPacketPromise_ = function
     if (verifySuccess) {
       if (LOG > 3) console.log("OK signature for interest `" +
         thisState.interest_.getName().toUri() + "`");
-      try {
-        thisState.successCallback_(thisState.interest_);
-      } catch (ex) {
-        console.log("Error in successCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+      for (var i = 0; i < thisState.successCallbacks_.length; ++i) {
+        try {
+          thisState.successCallbacks_[i](thisState.interest_);
+        } catch (ex) {
+          console.log("Error in successCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
       }
       thisState.setOutcome(true);
     }
@@ -35534,10 +35697,12 @@ InterestValidationState.prototype.bypassValidation_ = function()
 {
   if (LOG > 3) console.log("Signature verification bypassed for interest `" +
     this.interest_.getName().toUri() + "`");
-  try {
-    this.successCallback_(this.interest_);
-  } catch (ex) {
-    console.log("Error in successCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+  for (var i = 0; i < this.successCallbacks_.length; ++i) {
+    try {
+      this.successCallbacks_[i](this.interest_);
+    } catch (ex) {
+      console.log("Error in successCallback: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
   }
   this.setOutcome(true);
 };
@@ -36993,11 +37158,6 @@ var SecurityException = require('./security-exception.js').SecurityException; /*
 var RsaKeyParams = require('./key-params.js').RsaKeyParams; /** @ignore */
 var BasicIdentityStorage = require('./identity/basic-identity-storage.js').BasicIdentityStorage; /** @ignore */
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
-var Pib = require('./pib/pib.js').Pib; /** @ignore */
-var PibImpl = require('./pib/pib-impl.js').PibImpl; /** @ignore */
-var PibKey = require('./pib/pib-key.js').PibKey; /** @ignore */
-var PibSqlite3 = require('./pib/pib-sqlite3.js').PibSqlite3; /** @ignore */
-var PibMemory = require('./pib/pib-memory.js').PibMemory; /** @ignore */
 var Tpm = require('./tpm/tpm.js').Tpm; /** @ignore */
 var TpmBackEndFile = require('./tpm/tpm-back-end-file.js').TpmBackEndFile; /** @ignore */
 var TpmBackEndMemory = require('./tpm/tpm-back-end-memory.js').TpmBackEndMemory; /** @ignore */
@@ -37105,53 +37265,16 @@ var KeyChain = function KeyChain(arg1, arg2, arg3)
     KeyChain.parseAndCheckPibLocator_(pibLocator, pibScheme, pibLocation);
     var canonicalPibLocator = pibScheme[0] + ":" + pibLocation[0];
 
-    // Create the PIB.
+    // Create the PIB and TPM, where Pib.initializePromise_ will complete the
+    // initialization the first time it is called in an asynchronous context. We
+    // can't do it here because this constructor cannot perform async operations.
     this.pib_ = KeyChain.createPib_(canonicalPibLocator);
-    var oldTpmLocator = "";
-    try {
-      oldTpmLocator = this.pib_.getTpmLocator();
-    } catch (ex) {
-      // The TPM locator is not set in the PIB yet.
-    }
-
-    // TPM locator.
-    var tpmScheme = [null];
-    var tpmLocation = [null];
-    KeyChain.parseAndCheckTpmLocator_(tpmLocator, tpmScheme, tpmLocation);
-    var canonicalTpmLocator = tpmScheme[0] + ":" + tpmLocation[0];
-
-    var config;
-    if (ConfigFile)
-      // Assume we are not in the browser.
-      config = new ConfigFile();
-    if (ConfigFile && canonicalPibLocator == KeyChain.getDefaultPibLocator_(config)) {
-      // The default PIB must use the default TPM.
-      if (oldTpmLocator != "" &&
-          oldTpmLocator != KeyChain.getDefaultTpmLocator_(config)) {
-        this.pib_.reset_();
-        canonicalTpmLocator = this.getDefaultTpmLocator_(config);
-      }
-    }
-    else {
-      // Check the consistency of the non-default PIB.
-      if (oldTpmLocator != "" && oldTpmLocator != canonicalTpmLocator) {
-        if (allowReset)
-          this.pib_.reset_();
-        else
-          throw new LocatorMismatchError(new Error
-            ("The supplied TPM locator does not match the TPM locator in the PIB: " +
-             oldTpmLocator + " != " + canonicalTpmLocator));
-      }
-    }
-
-    // Note that a key mismatch may still happen if the TPM locator is
-    // initially set to a wrong one or if the PIB was shared by more than
-    // one TPM before. This is due to the old PIB not having TPM info.
-    // The new PIB should not have this problem.
-    this.tpm_ = KeyChain.createTpm_(canonicalTpmLocator);
-/* debug
-    this.pib_.setTpmLocator(canonicalTpmLocator);
-*/
+    this.tpm_ = new Tpm("", "", null);
+    this.pib_.initializeTpm_ = this.tpm_;
+    this.pib_.initializePibLocator_ = pibLocator;
+    this.pib_.initializeTpmLocator_ = tpmLocator;
+    this.pib_.initializeAllowReset_ = allowReset;
+    this.tpm_.initializePib_ = this.pib_;
   }
   else if (arg1 instanceof PibImpl) {
     var pibImpl = arg1;
@@ -39251,17 +39374,21 @@ KeyChain.createPib_ = function(pibLocator)
 };
 
 /**
- * Create a Tpm according to the tpmLocator.
+ * Set up tpm according to the tpmLocator. This is called by
+ * Pib.initializePromise_ after determining the correct tpmLocator.
+ * @param {Tpm} tpm The Tpm to set up.
  * @param {string} tpmLocator The TPM locator, e.g., "tpm-memory:".
  * @return {Tpm} A new Tpm object.
  */
-KeyChain.createTpm_ = function(tpmLocator)
+KeyChain.setUpTpm_ = function(tpm, tpmLocator)
 {
   var tpmScheme = [null];
   var tpmLocation = [null];
   KeyChain.parseAndCheckTpmLocator_(tpmLocator, tpmScheme, tpmLocation);
   var tpmFactory = KeyChain.getTpmFactories_()[tpmScheme[0]];
-  return new Tpm(tpmScheme[0], tpmLocation[0], tpmFactory(tpmLocation[0]));
+  tpm.scheme_ = tpmScheme[0];
+  tpm.location_ = tpmLocation[0];
+  tpm.backEnd_ = tpmFactory(tpmLocation[0]);
 };
 
 /**
@@ -39609,16 +39736,16 @@ KeyChain.defaultKeyParams_ = new RsaKeyParams();
  * @param {Error} error The exception created with new Error.
  * @constructor
  */
-function InvalidSigningInfoError(error)
+var InvalidSigningInfoError = function InvalidSigningInfoError(error)
 {
-  if (error) {
-    error.__proto__ = InvalidSigningInfoError.prototype;
-    return error;
-  }
+  // Call the base constructor.
+  KeyChain.Error.call(this, error);
 }
 
-InvalidSigningInfoError.prototype = new Error();
+InvalidSigningInfoError.prototype = new KeyChain.Error();
 InvalidSigningInfoError.prototype.name = "InvalidSigningInfoError";
+
+exports.InvalidSigningInfoError = InvalidSigningInfoError;
 
 exports.InvalidSigningInfoError = InvalidSigningInfoError;
 
@@ -39629,18 +39756,24 @@ exports.InvalidSigningInfoError = InvalidSigningInfoError;
  * @param {Error} error The exception created with new Error.
  * @constructor
  */
-function LocatorMismatchError(error)
+var LocatorMismatchError = function LocatorMismatchError(error)
 {
-  if (error) {
-    error.__proto__ = LocatorMismatchError.prototype;
-    return error;
-  }
+  // Call the base constructor.
+  KeyChain.Error.call(this, error);
 }
 
-LocatorMismatchError.prototype = new Error();
+LocatorMismatchError.prototype = new KeyChain.Error();
 LocatorMismatchError.prototype.name = "LocatorMismatchError";
 
 exports.LocatorMismatchError = LocatorMismatchError;
+
+// Put these last to avoid a require loop.
+/** @ignore */
+var Pib = require('./pib/pib.js').Pib; /** @ignore */
+var PibImpl = require('./pib/pib-impl.js').PibImpl; /** @ignore */
+var PibKey = require('./pib/pib-key.js').PibKey; /** @ignore */
+var PibSqlite3 = require('./pib/pib-sqlite3.js').PibSqlite3; /** @ignore */
+var PibMemory = require('./pib/pib-memory.js').PibMemory;
 /**
  * Copyright (C) 2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -42213,6 +42346,14 @@ Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
   var offsets = Tlv0_2WireFormat.decodeName(interest.getName(), decoder, copy);
   if (decoder.peekType(Tlv.Selectors, endOffset))
     Tlv0_2WireFormat.decodeSelectors(interest, decoder, copy);
+  else {
+    // Set selectors to none.
+    interest.setMinSuffixComponents(null);
+    interest.setMaxSuffixComponents(null);
+    interest.getExclude().clear();
+    interest.setChildSelector(null);
+    interest.setMustBeFresh(false);
+  }
   // Require a Nonce, but don't force it to be 4 bytes.
   var nonce = decoder.readBlobTlv(Tlv.Nonce);
   interest.setInterestLifetimeMilliseconds
