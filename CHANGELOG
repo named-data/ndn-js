@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.15.0 (2018-03-22)
+Interim changes since NDN-JS v0.15.0 (2018-03-26)
 -------------------------------------------------
 
 Bug fixes
@@ -10,6 +10,8 @@ Changes
   keys in memory to avoid regenerate group key pairs.
 * https://redmine.named-data.net/issues/4064 Rename KeyType.ECDSA and EcdsaKeyParams
   to KeyType.EC and EcKeyParams. Deprecated KeyType.ECDSA and EcdsaKeyParams.
+* Added security CommandInterestSigner.
+* Added security ValidationPolicyCommandInterest.
 
 Deprecated
 * In the Interest constructor, deprecated params for selectors such as
