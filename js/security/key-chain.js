@@ -2612,7 +2612,7 @@ KeyChain.defaultKeyParams_ = new RsaKeyParams();
  * @param {Error} error The exception created with new Error.
  * @constructor
  */
-function InvalidSigningInfoError(error)
+var InvalidSigningInfoError = function InvalidSigningInfoError(error)
 {
   // Call the base constructor.
   KeyChain.Error.call(this, error);
@@ -2632,7 +2632,7 @@ exports.InvalidSigningInfoError = InvalidSigningInfoError;
  * @param {Error} error The exception created with new Error.
  * @constructor
  */
-function LocatorMismatchError(error)
+var LocatorMismatchError = function LocatorMismatchError(error)
 {
   // Call the base constructor.
   KeyChain.Error.call(this, error);
