@@ -35,10 +35,11 @@ var ValidationPolicy = require('./validation-policy.js').ValidationPolicy;
  * inner policy.
  *
  * Create a ValidationPolicyCommandInterest.
- * @param innerPolicy {ValidationPolicy} a ValidationPolicy for signed Interest
+ * @param {ValidationPolicy} innerPolicy a ValidationPolicy for signed Interest
  * signature validation and Data validation. This must not be null.
  * @param {ValidationPolicyCommandInterest.Options} options (optional) The
- * stop-and-wait command Interest validation options.
+ * stop-and-wait command Interest validation options. If omitted, use a default
+ * Options().
  * @throws Error if innerPolicy is null.
  * @constructor
  */
