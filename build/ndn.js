@@ -18978,7 +18978,7 @@ var SigningInfo = require('./signing-info.js').SigningInfo;
 var CommandInterestSigner = function CommandInterestSigner(keyChain)
 {
   this.keyChain_ = keyChain;
-  this.lastUsedTimestamp = Math.round(new Date().getTime());
+  this.lastUsedTimestamp_ = Math.round(new Date().getTime());
   this.nowOffsetMilliseconds_ = 0;
 };
 
@@ -19074,9 +19074,10 @@ CommandInterestSigner.prototype.makeCommandInterest = function
   // This copies the Name.
   var commandInterest = new Interest(name);
 
+  // nowOffsetMilliseconds_ is only used for testing.
   var now = new Date().getTime() + this.nowOffsetMilliseconds_;
   var timestamp = Math.round(now);
-  while (timestamp <= this.lastTimestamp)
+  while (timestamp <= this.lastUsedTimestamp_)
     timestamp += 1.0;
 
   // The timestamp is encoded as a TLV nonNegativeInteger.
@@ -19089,7 +19090,7 @@ CommandInterestSigner.prototype.makeCommandInterest = function
   commandInterest.getName().append(new Blob(Crypto.randomBytes(8), false));
 
   // Update the timestamp before calling async sign.
-  this.lastTimestamp = timestamp;
+  this.lastUsedTimestamp_ = timestamp;
 
   return this.keyChain_.sign
     (commandInterest, params, wireFormat, onComplete, onError);
@@ -36639,10 +36640,11 @@ var ValidationPolicy = require('./validation-policy.js').ValidationPolicy;
  * inner policy.
  *
  * Create a ValidationPolicyCommandInterest.
- * @param innerPolicy {ValidationPolicy} a ValidationPolicy for signed Interest
+ * @param {ValidationPolicy} innerPolicy a ValidationPolicy for signed Interest
  * signature validation and Data validation. This must not be null.
  * @param {ValidationPolicyCommandInterest.Options} options (optional) The
- * stop-and-wait command Interest validation options.
+ * stop-and-wait command Interest validation options. If omitted, use a default
+ * Options().
  * @throws Error if innerPolicy is null.
  * @constructor
  */
