@@ -14,6 +14,8 @@ message FaceStatusMessage {
     required uint64 face_scope = 132;
     required uint64 face_persistency = 133;
     required uint64 link_type = 134;
+    optional uint64 base_congestion_marking_interval = 135;
+    optional uint64 default_congestion_threshold = 136;
     required uint64 n_in_interests = 144;
     required uint64 n_in_datas = 145;
     required uint64 n_in_nacks = 151;
