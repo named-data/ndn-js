@@ -131,7 +131,7 @@ CertificateCacheV2.prototype.find = function(prefixOrInterest)
   else {
     var interest = prefixOrInterest;
 
-    if (interest.getChildSelector() >= 0)
+    if (interest.getChildSelector() != null)
       console.log
         ("Certificate search using a ChildSelector is not supported. Searching as if this selector not specified");
 
