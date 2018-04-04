@@ -354,7 +354,7 @@ MemoryContentCache.prototype.onInterest = function
       content = this.noStaleTimeCache[i - this.staleTimeCache.length];
 
     if (interest.matchesName(content.getName())) {
-      if (interest.getChildSelector() < 0) {
+      if (interest.getChildSelector() == null) {
         // No child selector, so send the first match that we have found.
         face.send(content.getDataEncoding());
         return;
