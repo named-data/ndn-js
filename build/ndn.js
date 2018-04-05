@@ -13280,6 +13280,7 @@ var MemoryContentCache = function MemoryContentCache
   //StaleTimeContent.Compare contentCompare_;
   this.emptyComponent = new Name.Component();
   this.pendingInterestTable = [];
+  this.minimumCacheLifetime_ = 0.0;
 
   var thisMemoryContentCache = this;
   this.storePendingInterestCallback = function
@@ -13457,11 +13458,13 @@ MemoryContentCache.prototype.unregisterAll = function()
 };
 
 /**
- * Add the Data packet to the cache so that it is available to use to answer
- * interests. If data.getMetaInfo().getFreshnessPeriod() is not null, set the
- * staleness time to now plus data.getMetaInfo().getFreshnessPeriod(), which is
- * checked during cleanup to remove stale content. This also checks if
- * cleanupIntervalMilliseconds milliseconds have passed and removes stale
+ * Add the Data packet to the cache so that it is available to use to
+ * answer interests. If data.getMetaInfo().getFreshnessPeriod() is not
+ * negative, set the staleness time to now plus the maximum of
+ * data.getMetaInfo().getFreshnessPeriod() and minimumCacheLifetime, which is
+ * checked during cleanup to remove stale content.
+ * This also checks if cleanupIntervalMilliseconds
+ * milliseconds have passed and removes stale
  * content from the cache. After removing stale content, remove timed-out
  * pending interests from storePendingInterest(), then if the added Data packet
  * satisfies any interest, send it through the face and remove the interest
@@ -13471,22 +13474,25 @@ MemoryContentCache.prototype.unregisterAll = function()
  */
 MemoryContentCache.prototype.add = function(data)
 {
-  this.doCleanup();
+  var nowMilliseconds = new Date().getTime();
+  this.doCleanup(nowMilliseconds);
 
   if (data.getMetaInfo().getFreshnessPeriod() != null &&
       data.getMetaInfo().getFreshnessPeriod() >= 0.0) {
     // The content will go stale, so use staleTimeCache.
-    var content = new MemoryContentCache.StaleTimeContent(data);
-    // Insert into staleTimeCache, sorted on content.staleTimeMilliseconds.
+    var content = new MemoryContentCache.StaleTimeContent
+      (data, nowMilliseconds, this.minimumCacheLifetime_);
+    // Insert into staleTimeCache, sorted on content.cacheRemovalTimeMilliseconds_.
     // Search from the back since we expect it to go there.
     var i = this.staleTimeCache.length - 1;
     while (i >= 0) {
-      if (this.staleTimeCache[i].staleTimeMilliseconds <= content.staleTimeMilliseconds)
+      if (this.staleTimeCache[i].cacheRemovalTimeMilliseconds_ <=
+          content.cacheRemovalTimeMilliseconds_)
         break;
       --i;
     }
     // Element i is the greatest less than or equal to
-    // content.staleTimeMilliseconds, so insert after it.
+    // content.cacheRemovalTimeMilliseconds_, so insert after it.
     this.staleTimeCache.splice(i + 1, 0, content);
   }
   else
@@ -13496,7 +13502,6 @@ MemoryContentCache.prototype.add = function(data)
   // Remove timed-out interests and check if the data packet matches any pending
   // interest.
   // Go backwards through the list so we can erase entries.
-  var nowMilliseconds = new Date().getTime();
   for (var i = this.pendingInterestTable.length - 1; i >= 0; --i) {
     if (this.pendingInterestTable[i].isTimedOut(nowMilliseconds)) {
       this.pendingInterestTable.splice(i, 1);
@@ -13549,6 +13554,30 @@ MemoryContentCache.prototype.getStorePendingInterest = function()
 };
 
 /**
+ * Get the minimum lifetime before removing stale content from the cache.
+ * @return {number} The minimum cache lifetime in milliseconds.
+ */
+MemoryContentCache.prototype.getMinimumCacheLifetime = function()
+{ 
+  return this.minimumCacheLifetime_;
+};
+
+/**
+ * Set the minimum lifetime before removing stale content from the cache which
+ * can keep content in the cache longer than the lifetime defined in the meta
+ * info. This can be useful for matching interests where MustBeFresh is false.
+ * The default minimum cache lifetime is zero, meaning that content is removed
+ * when its lifetime expires.
+ * @param {number} minimumCacheLifetime The minimum cache lifetime in
+ * milliseconds.
+ */
+MemoryContentCache.prototype.setMinimumCacheLifetime = function
+  (minimumCacheLifetime)
+{
+  this.minimumCacheLifetime_ = minimumCacheLifetime;
+};
+
+/**
  * This is the OnInterest callback which is called when the library receives
  * an interest whose name has the prefix given to registerPrefix. First check
  * if cleanupIntervalMilliseconds milliseconds have passed and remove stale
@@ -13560,22 +13589,27 @@ MemoryContentCache.prototype.getStorePendingInterest = function()
 MemoryContentCache.prototype.onInterest = function
   (prefix, interest, face, interestFilterId, filter)
 {
-  this.doCleanup();
+  var nowMilliseconds = new Date().getTime();
+  this.doCleanup(nowMilliseconds);
 
-  var selectedComponent = 0;
+  var selectedComponent = null;
   var selectedEncoding = null;
   // We need to iterate over both arrays.
   var totalSize = this.staleTimeCache.length + this.noStaleTimeCache.length;
   for (var i = 0; i < totalSize; ++i) {
     var content;
-    if (i < this.staleTimeCache.length)
+    var isFresh = true;
+    if (i < this.staleTimeCache.length) {
       content = this.staleTimeCache[i];
+      isFresh = content.isFresh(nowMilliseconds);
+    }
     else
       // We have iterated over the first array. Get from the second.
       content = this.noStaleTimeCache[i - this.staleTimeCache.length];
 
-    if (interest.matchesName(content.getName())) {
-      if (interest.getChildSelector() < 0) {
+    if (interest.matchesName(content.getName()) &&
+        !(interest.getMustBeFresh() && !isFresh)) {
+      if (interest.getChildSelector() == null) {
         // No child selector, so send the first match that we have found.
         face.send(content.getDataEncoding());
         return;
@@ -13630,17 +13664,19 @@ MemoryContentCache.prototype.onInterest = function
  * cleanupIntervalMilliseconds. Since add(Data) does a sorted insert into
  * staleTimeCache, the check for stale data is quick and does not require
  * searching the entire staleTimeCache.
+ * @param {number} nowMilliseconds The current time in milliseconds from
+ * new Date().getTime().
  */
-MemoryContentCache.prototype.doCleanup = function()
+MemoryContentCache.prototype.doCleanup = function(nowMilliseconds)
 {
-  var now = new Date().getTime();
-  if (now >= this.nextCleanupTime) {
-    // staleTimeCache is sorted on staleTimeMilliseconds, so we only need to
+  if (nowMilliseconds >= this.nextCleanupTime) {
+    // staleTimeCache is sorted on cacheRemovalTimeMilliseconds_, so we only need to
     // erase the stale entries at the front, then quit.
-    while (this.staleTimeCache.length > 0 && this.staleTimeCache[0].isStale(now))
+    while (this.staleTimeCache.length > 0 && 
+           this.staleTimeCache[0].isPastRemovalTime(nowMilliseconds))
       this.staleTimeCache.shift();
 
-    this.nextCleanupTime = now + this.cleanupIntervalMilliseconds;
+    this.nextCleanupTime = nowMilliseconds + this.cleanupIntervalMilliseconds;
   }
 };
 
@@ -13667,23 +13703,33 @@ MemoryContentCache.Content.prototype.getName = function() { return this.name; };
 MemoryContentCache.Content.prototype.getDataEncoding = function() { return this.dataEncoding; };
 
 /**
- * StaleTimeContent extends Content to include the staleTimeMilliseconds for
+ * StaleTimeContent extends Content to include the cacheRemovalTimeMilliseconds_ for
  * when this entry should be cleaned up from the cache.
  *
- * Create a new StaleTimeContent to hold data's name and wire encoding as well
- * as the staleTimeMilliseconds which is now plus
- * data.getMetaInfo().getFreshnessPeriod().
+ * Create a new StaleTimeContent to hold data's name and wire encoding
+ * as well as the cacheRemovalTimeMilliseconds_ which is now plus the maximum of
+ * data.getMetaInfo().getFreshnessPeriod() and the minimumCacheLifetime.
  * @param {Data} data The Data packet whose name and wire encoding are copied.
+ * @param {number} nowMilliseconds The current time in milliseconds from
+ * new Date().getTime().
+ * @param {number} minimumCacheLifetime The minimum cache lifetime in milliseconds.
  */
 MemoryContentCache.StaleTimeContent = function MemoryContentCacheStaleTimeContent
-  (data)
+  (data, nowMilliseconds, minimumCacheLifetime)
 {
   // Call the base constructor.
   MemoryContentCache.Content.call(this, data);
 
-  // Set up staleTimeMilliseconds which is The time when the content becomse
-  // stale in milliseconds according to new Date().getTime().
-  this.staleTimeMilliseconds = new Date().getTime() +
+  // Set up cacheRemovalTimeMilliseconds_ which is the time when the content
+  // becomes stale and should be removed from the cache in milliseconds
+  // according to new Date().getTime().
+  this.cacheRemovalTimeMilliseconds_ = nowMilliseconds +
+    Math.max(data.getMetaInfo().getFreshnessPeriod(), minimumCacheLifetime);
+
+  // Set up freshnessExpiryTimeMilliseconds_ which is the time time when
+  // the freshness period of the content expires (independent of when to
+  // remove from the cache) in milliseconds according to new Date().getTime().
+  this.freshnessExpiryTimeMilliseconds_ = nowMilliseconds +
     data.getMetaInfo().getFreshnessPeriod();
 };
 
@@ -13691,14 +13737,16 @@ MemoryContentCache.StaleTimeContent.prototype = new MemoryContentCache.Content()
 MemoryContentCache.StaleTimeContent.prototype.name = "StaleTimeContent";
 
 /**
- * Check if this content is stale.
+ * Check if this content is stale and should be removed from the cache,
+ * according to the content freshness period and the minimumCacheLifetime.
  * @param {number} nowMilliseconds The current time in milliseconds from
  * new Date().getTime().
  * @return {boolean} True if this content is stale, otherwise false.
  */
-MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds)
+MemoryContentCache.StaleTimeContent.prototype.isPastRemovalTime = function
+  (nowMilliseconds)
 {
-  return this.staleTimeMilliseconds <= nowMilliseconds;
+  return this.cacheRemovalTimeMilliseconds_ <= nowMilliseconds;
 };
 
 /**
@@ -34456,7 +34504,7 @@ CertificateCacheV2.prototype.find = function(prefixOrInterest)
   else {
     var interest = prefixOrInterest;
 
-    if (interest.getChildSelector() >= 0)
+    if (interest.getChildSelector() != null)
       console.log
         ("Certificate search using a ChildSelector is not supported. Searching as if this selector not specified");
 
