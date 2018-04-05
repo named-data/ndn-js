@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.15.0 (2018-03-26)
+Interim changes since NDN-JS v0.15.0 (2018-04-05)
 -------------------------------------------------
 
 Bug fixes
@@ -12,6 +12,8 @@ Changes
   to KeyType.EC and EcKeyParams. Deprecated KeyType.ECDSA and EcdsaKeyParams.
 * Added security CommandInterestSigner.
 * Added security ValidationPolicyCommandInterest.
+* In MemoryContentCache, added setMinimumCacheLifetime which can extend the
+  cache lifetime of content to match an Interest where MustBeFresh is false.
 
 Deprecated
 * In the Interest constructor, deprecated params for selectors such as
