@@ -250,12 +250,13 @@ MemoryContentCache.prototype.unregisterAll = function()
  */
 MemoryContentCache.prototype.add = function(data)
 {
-  this.doCleanup();
+  var nowMilliseconds = new Date().getTime();
+  this.doCleanup(nowMilliseconds);
 
   if (data.getMetaInfo().getFreshnessPeriod() != null &&
       data.getMetaInfo().getFreshnessPeriod() >= 0.0) {
     // The content will go stale, so use staleTimeCache.
-    var content = new MemoryContentCache.StaleTimeContent(data);
+    var content = new MemoryContentCache.StaleTimeContent(data, nowMilliseconds);
     // Insert into staleTimeCache, sorted on content.staleTimeMilliseconds.
     // Search from the back since we expect it to go there.
     var i = this.staleTimeCache.length - 1;
@@ -275,7 +276,6 @@ MemoryContentCache.prototype.add = function(data)
   // Remove timed-out interests and check if the data packet matches any pending
   // interest.
   // Go backwards through the list so we can erase entries.
-  var nowMilliseconds = new Date().getTime();
   for (var i = this.pendingInterestTable.length - 1; i >= 0; --i) {
     if (this.pendingInterestTable[i].isTimedOut(nowMilliseconds)) {
       this.pendingInterestTable.splice(i, 1);
@@ -339,7 +339,8 @@ MemoryContentCache.prototype.getStorePendingInterest = function()
 MemoryContentCache.prototype.onInterest = function
   (prefix, interest, face, interestFilterId, filter)
 {
-  this.doCleanup();
+  var nowMilliseconds = new Date().getTime();
+  this.doCleanup(nowMilliseconds);
 
   var selectedComponent = 0;
   var selectedEncoding = null;
@@ -409,17 +410,19 @@ MemoryContentCache.prototype.onInterest = function
  * cleanupIntervalMilliseconds. Since add(Data) does a sorted insert into
  * staleTimeCache, the check for stale data is quick and does not require
  * searching the entire staleTimeCache.
+ * @param {number} nowMilliseconds The current time in milliseconds from
+ * new Date().getTime().
  */
-MemoryContentCache.prototype.doCleanup = function()
+MemoryContentCache.prototype.doCleanup = function(nowMilliseconds)
 {
-  var now = new Date().getTime();
-  if (now >= this.nextCleanupTime) {
+  if (nowMilliseconds >= this.nextCleanupTime) {
     // staleTimeCache is sorted on staleTimeMilliseconds, so we only need to
     // erase the stale entries at the front, then quit.
-    while (this.staleTimeCache.length > 0 && this.staleTimeCache[0].isStale(now))
+    while (this.staleTimeCache.length > 0 && 
+           this.staleTimeCache[0].isStale(nowMilliseconds))
       this.staleTimeCache.shift();
 
-    this.nextCleanupTime = now + this.cleanupIntervalMilliseconds;
+    this.nextCleanupTime = nowMilliseconds + this.cleanupIntervalMilliseconds;
   }
 };
 
@@ -453,16 +456,18 @@ MemoryContentCache.Content.prototype.getDataEncoding = function() { return this.
  * as the staleTimeMilliseconds which is now plus
  * data.getMetaInfo().getFreshnessPeriod().
  * @param {Data} data The Data packet whose name and wire encoding are copied.
+ * @param {number} nowMilliseconds The current time in milliseconds from
+ * new Date().getTime().
  */
 MemoryContentCache.StaleTimeContent = function MemoryContentCacheStaleTimeContent
-  (data)
+  (data, nowMilliseconds)
 {
   // Call the base constructor.
   MemoryContentCache.Content.call(this, data);
 
   // Set up staleTimeMilliseconds which is The time when the content becomse
   // stale in milliseconds according to new Date().getTime().
-  this.staleTimeMilliseconds = new Date().getTime() +
+  this.staleTimeMilliseconds = nowMilliseconds +
     data.getMetaInfo().getFreshnessPeriod();
 };
 
