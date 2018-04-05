@@ -257,16 +257,17 @@ MemoryContentCache.prototype.add = function(data)
       data.getMetaInfo().getFreshnessPeriod() >= 0.0) {
     // The content will go stale, so use staleTimeCache.
     var content = new MemoryContentCache.StaleTimeContent(data, nowMilliseconds);
-    // Insert into staleTimeCache, sorted on content.staleTimeMilliseconds.
+    // Insert into staleTimeCache, sorted on content.cacheRemovalTimeMilliseconds_.
     // Search from the back since we expect it to go there.
     var i = this.staleTimeCache.length - 1;
     while (i >= 0) {
-      if (this.staleTimeCache[i].staleTimeMilliseconds <= content.staleTimeMilliseconds)
+      if (this.staleTimeCache[i].cacheRemovalTimeMilliseconds_ <=
+          content.cacheRemovalTimeMilliseconds_)
         break;
       --i;
     }
     // Element i is the greatest less than or equal to
-    // content.staleTimeMilliseconds, so insert after it.
+    // content.cacheRemovalTimeMilliseconds_, so insert after it.
     this.staleTimeCache.splice(i + 1, 0, content);
   }
   else
@@ -342,19 +343,23 @@ MemoryContentCache.prototype.onInterest = function
   var nowMilliseconds = new Date().getTime();
   this.doCleanup(nowMilliseconds);
 
-  var selectedComponent = 0;
+  var selectedComponent = null;
   var selectedEncoding = null;
   // We need to iterate over both arrays.
   var totalSize = this.staleTimeCache.length + this.noStaleTimeCache.length;
   for (var i = 0; i < totalSize; ++i) {
     var content;
-    if (i < this.staleTimeCache.length)
+    var isFresh = true;
+    if (i < this.staleTimeCache.length) {
       content = this.staleTimeCache[i];
+      isFresh = content.isFresh(nowMilliseconds);
+    }
     else
       // We have iterated over the first array. Get from the second.
       content = this.noStaleTimeCache[i - this.staleTimeCache.length];
 
-    if (interest.matchesName(content.getName())) {
+    if (interest.matchesName(content.getName()) &&
+        !(interest.getMustBeFresh() && !isFresh)) {
       if (interest.getChildSelector() == null) {
         // No child selector, so send the first match that we have found.
         face.send(content.getDataEncoding());
@@ -416,10 +421,10 @@ MemoryContentCache.prototype.onInterest = function
 MemoryContentCache.prototype.doCleanup = function(nowMilliseconds)
 {
   if (nowMilliseconds >= this.nextCleanupTime) {
-    // staleTimeCache is sorted on staleTimeMilliseconds, so we only need to
+    // staleTimeCache is sorted on cacheRemovalTimeMilliseconds_, so we only need to
     // erase the stale entries at the front, then quit.
     while (this.staleTimeCache.length > 0 && 
-           this.staleTimeCache[0].isStale(nowMilliseconds))
+           this.staleTimeCache[0].isPastRemovalTime(nowMilliseconds))
       this.staleTimeCache.shift();
 
     this.nextCleanupTime = nowMilliseconds + this.cleanupIntervalMilliseconds;
@@ -449,11 +454,11 @@ MemoryContentCache.Content.prototype.getName = function() { return this.name; };
 MemoryContentCache.Content.prototype.getDataEncoding = function() { return this.dataEncoding; };
 
 /**
- * StaleTimeContent extends Content to include the staleTimeMilliseconds for
+ * StaleTimeContent extends Content to include the cacheRemovalTimeMilliseconds_ for
  * when this entry should be cleaned up from the cache.
  *
  * Create a new StaleTimeContent to hold data's name and wire encoding as well
- * as the staleTimeMilliseconds which is now plus
+ * as the cacheRemovalTimeMilliseconds_ which is now plus
  * data.getMetaInfo().getFreshnessPeriod().
  * @param {Data} data The Data packet whose name and wire encoding are copied.
  * @param {number} nowMilliseconds The current time in milliseconds from
@@ -465,24 +470,31 @@ MemoryContentCache.StaleTimeContent = function MemoryContentCacheStaleTimeConten
   // Call the base constructor.
   MemoryContentCache.Content.call(this, data);
 
-  // Set up staleTimeMilliseconds which is The time when the content becomse
-  // stale in milliseconds according to new Date().getTime().
-  this.staleTimeMilliseconds = nowMilliseconds +
+  // Set up cacheRemovalTimeMilliseconds_ which is the time when the content
+  // becomes stale and should be removed from the cache in milliseconds
+  // according to new Date().getTime().
+  this.cacheRemovalTimeMilliseconds_ = nowMilliseconds +
     data.getMetaInfo().getFreshnessPeriod();
+
+  // Set up freshnessExpiryTimeMilliseconds_ which is the time time when
+  // the freshness period of the content expires (independent of when to
+  // remove from the cache) in milliseconds according to new Date().getTime().
+  this.freshnessExpiryTimeMilliseconds_ = this.cacheRemovalTimeMilliseconds_;
 };
 
 MemoryContentCache.StaleTimeContent.prototype = new MemoryContentCache.Content();
 MemoryContentCache.StaleTimeContent.prototype.name = "StaleTimeContent";
 
 /**
- * Check if this content is stale.
+ * Check if this content is stale and should be removed from the cache.
  * @param {number} nowMilliseconds The current time in milliseconds from
  * new Date().getTime().
  * @return {boolean} True if this content is stale, otherwise false.
  */
-MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds)
+MemoryContentCache.StaleTimeContent.prototype.isPastRemovalTime = function
+  (nowMilliseconds)
 {
-  return this.staleTimeMilliseconds <= nowMilliseconds;
+  return this.cacheRemovalTimeMilliseconds_ <= nowMilliseconds;
 };
 
 /**
