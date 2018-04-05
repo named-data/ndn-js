@@ -13750,6 +13750,19 @@ MemoryContentCache.StaleTimeContent.prototype.isPastRemovalTime = function
 };
 
 /**
+ * Check if the content is still fresh according to its freshness period
+ * (independent of when to remove from the cache).
+ * @param {number} nowMilliseconds The current time in milliseconds from
+ * new Date().getTime().
+ * @return {boolean} True if the content is still fresh, otherwise false.
+ */
+MemoryContentCache.StaleTimeContent.prototype.isFresh = function
+  (nowMilliseconds)
+{
+  return this.freshnessExpiryTimeMilliseconds_ > nowMilliseconds;
+};
+
+/**
  * A PendingInterest holds an interest which onInterest received but could
  * not satisfy. When we add a new data packet to the cache, we will also check
  * if it satisfies a pending interest.
