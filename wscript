@@ -261,6 +261,7 @@ def build (bld):
                  "js/impl/interest-filter-table.js",
                  "js/impl/pending-interest-table.js",
                  "js/impl/registered-prefix-table.js",
+                 "js/lp/congestion-mark.js",
                  "js/lp/incoming-face-id.js",
                  "js/lp/lp-packet.js",
                  "js/face.js",
