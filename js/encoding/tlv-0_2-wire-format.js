@@ -39,6 +39,7 @@ var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ig
 var NetworkNack = require('../network-nack.js').NetworkNack; /** @ignore */
 var Schedule = require('../encrypt/schedule.js').Schedule; /** @ignore */
 var IncomingFaceId = require('../lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
+var CongestionMark = require('../lp/congestion-mark.js').CongestionMark; /** @ignore */
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
@@ -549,6 +550,12 @@ Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input, copy)
       var incomingFaceId = new IncomingFaceId();
       incomingFaceId.setFaceId(decoder.readNonNegativeInteger(fieldLength));
       lpPacket.addHeaderField(incomingFaceId);
+    }
+    else if (fieldType == Tlv.LpPacket_CongestionMark) {
+      var congestionMark = new CongestionMark();
+      congestionMark.setCongestionMark(decoder.readNonNegativeInteger
+        (fieldLength));
+      lpPacket.addHeaderField(congestionMark);
     }
     else {
       // Unrecognized field type. The conditions for ignoring are here:
