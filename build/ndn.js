@@ -10222,6 +10222,7 @@ Tlv.LpPacket_NextHopFaceId =   816;
 Tlv.LpPacket_IncomingFaceId =  817;
 Tlv.LpPacket_CachePolicy =     820;
 Tlv.LpPacket_CachePolicyType = 821;
+Tlv.LpPacket_CongestionMark =  832;
 Tlv.LpPacket_IGNORE_MIN =      800;
 Tlv.LpPacket_IGNORE_MAX =      959;
 
@@ -18503,6 +18504,7 @@ var Name = require('./name.js').Name; /** @ignore */
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var MetaInfo = require('./meta-info.js').MetaInfo; /** @ignore */
 var IncomingFaceId = require('./lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
+var CongestionMark = require('./lp/congestion-mark.js').CongestionMark; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
 var Crypto = require('./crypto.js');
 
@@ -18652,6 +18654,17 @@ Data.prototype.getIncomingFaceId = function()
   var field =
     this.lpPacket_ === null ? null : IncomingFaceId.getFirstHeader(this.lpPacket_);
   return field === null ? null : field.getFaceId();
+};
+
+/**
+ * Get the congestion mark according to the incoming packet header.
+ * @return {number} The congestion mark. If not specified, return 0.
+ */
+Data.prototype.getCongestionMark = function()
+{
+  var field =
+    this.lpPacket_ === null ? null : CongestionMark.getFirstHeader(this.lpPacket_);
+  return field === null ? 0 : field.getCongestionMark();
 };
 
 /**
@@ -42731,6 +42744,7 @@ var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ig
 var NetworkNack = require('../network-nack.js').NetworkNack; /** @ignore */
 var Schedule = require('../encrypt/schedule.js').Schedule; /** @ignore */
 var IncomingFaceId = require('../lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
+var CongestionMark = require('../lp/congestion-mark.js').CongestionMark; /** @ignore */
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
@@ -43241,6 +43255,12 @@ Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input, copy)
       var incomingFaceId = new IncomingFaceId();
       incomingFaceId.setFaceId(decoder.readNonNegativeInteger(fieldLength));
       lpPacket.addHeaderField(incomingFaceId);
+    }
+    else if (fieldType == Tlv.LpPacket_CongestionMark) {
+      var congestionMark = new CongestionMark();
+      congestionMark.setCongestionMark(decoder.readNonNegativeInteger
+        (fieldLength));
+      lpPacket.addHeaderField(congestionMark);
     }
     else {
       // Unrecognized field type. The conditions for ignoring are here:
@@ -51657,6 +51677,73 @@ RegisteredPrefixTable._Entry.prototype.getPrefix = function()
 RegisteredPrefixTable._Entry.prototype.getRelatedInterestFilterId = function()
 {
   return this.relatedInterestFilterId;
+};
+/**
+ * Copyright (C) 2018 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * CongestionMark represents the congestion mark header field in an NDNLPv2
+ * packet.
+ * http://redmine.named-data.net/projects/nfd/wiki/NDNLPv2
+ * @constructor
+ */
+var CongestionMark = function CongestionMark()
+{
+  this.congestionMark_ = 0;
+};
+
+exports.CongestionMark = CongestionMark;
+
+/**
+ * Get the congestion mark value.
+ * @return {number} The congestion mark value.
+ */
+CongestionMark.prototype.getCongestionMark = function()
+{ 
+  return this.congestionMark_;
+};
+
+/**
+ * Set the congestion mark value.
+ * @param {number} congestionMark The congestion mark ID value.
+ */
+CongestionMark.prototype.setCongestionMark = function(congestionMark)
+{
+  this.congestionMark_ = congestionMark;
+};
+
+/**
+ * Get the first header field in lpPacket which is a CongestionMark. This is
+ * an internal method which the application normally would not use.
+ * @param {LpPacket} lpPacket The LpPacket with the header fields to search.
+ * @return {CongestionMark} The first CongestionMark header field, or null if
+ * not found.
+ */
+CongestionMark.getFirstHeader = function(lpPacket)
+{
+  for (var i = 0; i < lpPacket.countHeaderFields(); ++i) {
+    var field = lpPacket.getHeaderField(i);
+    if (field instanceof CongestionMark)
+      return field;
+  }
+
+  return null;
 };
 /**
  * Copyright (C) 2016-2018 Regents of the University of California.
