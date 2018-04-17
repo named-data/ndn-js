@@ -1,5 +1,5 @@
-Interim changes since NDN-JS v0.15.0 (2018-04-17)
--------------------------------------------------
+NDN-JS v0.16.0 (2018-04-17)
+---------------------------
 
 Bug fixes
 * https://redmine.named-data.net/issues/4428 MustBeFresh should be false if the

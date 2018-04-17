@@ -1,6 +1,6 @@
 {
   "name": "ndn-js",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "A JavaScript client library for Named Data Networking",
   "main": "index.js",
   "directories": {
