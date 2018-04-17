@@ -103,6 +103,7 @@ Tlv.LpPacket_NextHopFaceId =   816;
 Tlv.LpPacket_IncomingFaceId =  817;
 Tlv.LpPacket_CachePolicy =     820;
 Tlv.LpPacket_CachePolicyType = 821;
+Tlv.LpPacket_CongestionMark =  832;
 Tlv.LpPacket_IGNORE_MIN =      800;
 Tlv.LpPacket_IGNORE_MAX =      959;
 

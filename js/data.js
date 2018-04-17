@@ -27,6 +27,7 @@ var Name = require('./name.js').Name; /** @ignore */
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var MetaInfo = require('./meta-info.js').MetaInfo; /** @ignore */
 var IncomingFaceId = require('./lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
+var CongestionMark = require('./lp/congestion-mark.js').CongestionMark; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
 var Crypto = require('./crypto.js');
 
@@ -176,6 +177,17 @@ Data.prototype.getIncomingFaceId = function()
   var field =
     this.lpPacket_ === null ? null : IncomingFaceId.getFirstHeader(this.lpPacket_);
   return field === null ? null : field.getFaceId();
+};
+
+/**
+ * Get the congestion mark according to the incoming packet header.
+ * @return {number} The congestion mark. If not specified, return 0.
+ */
+Data.prototype.getCongestionMark = function()
+{
+  var field =
+    this.lpPacket_ === null ? null : CongestionMark.getFirstHeader(this.lpPacket_);
+  return field === null ? 0 : field.getCongestionMark();
 };
 
 /**
