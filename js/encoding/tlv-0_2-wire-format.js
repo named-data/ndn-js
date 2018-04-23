@@ -203,6 +203,7 @@ Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
     // Set selectors to none.
     interest.setMinSuffixComponents(null);
     interest.setMaxSuffixComponents(null);
+    interest.getKeyLocator().clear();
     interest.getExclude().clear();
     interest.setChildSelector(null);
     interest.setMustBeFresh(false);
