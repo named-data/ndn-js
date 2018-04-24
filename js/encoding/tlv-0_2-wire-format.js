@@ -190,6 +190,25 @@ Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
  */
 Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
 {
+  try {
+    return this.decodeInterestV02(interest, input, copy);
+  } catch (exceptionV02) {
+    try {
+      // Failed to decode as format v0.2. Try to decode as v0.3.
+      return Tlv0_2WireFormat.decodeInterestV03_(interest, input, copy);
+    } catch (ex) {
+      // Ignore the exception decoding as format v0.3 and throw the exception
+      // from trying to decode as format as format v0.2.
+      throw exceptionV02;
+    }
+  }
+};
+
+/**
+ * Do the work of decodeInterest to decode strictly as format v0.2.
+ */
+Tlv0_2WireFormat.prototype.decodeInterestV02 = function(interest, input, copy)
+{
   if (copy == null)
     copy = true;
 
@@ -1328,4 +1347,74 @@ Tlv0_2WireFormat.decodeDelegationSet_ = function
     // index will work.
     delegationSet.addUnsorted(preference, name);
   }
+};
+
+/**
+ * Decode input as an Interest in NDN-TLV format v0.3 and set the fields of
+ * the Interest object. This private method is called if the main decodeInterest
+ * fails to decode as v0.2. This ignores HopLimit and Parameters, and interprets
+ * CanBePrefix using MaxSuffixComponents.
+ * @param {Interest} interest The Interest object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @return {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
+ */
+Tlv0_2WireFormat.decodeInterestV03_ = function(interest, input, copy)
+{
+  if (copy == null)
+    copy = true;
+
+  var decoder = new TlvDecoder(input);
+
+  var endOffset = decoder.readNestedTlvsStart(Tlv.Interest);
+  var offsets = Tlv0_2WireFormat.decodeName(interest.getName(), decoder, copy);
+
+  if (decoder.readBooleanTlv(Tlv.CanBePrefix, endOffset))
+    // No limit on MaxSuffixComponents.
+    interest.setMaxSuffixComponents(null);
+  else
+    // The one suffix components is for the implicit digest.
+    interest.setMaxSuffixComponents(1);
+
+  interest.setMustBeFresh(decoder.readBooleanTlv(Tlv.MustBeFresh, endOffset));
+
+  if (decoder.peekType(Tlv.ForwardingHint, endOffset)) {
+    var forwardingHintEndOffset = decoder.readNestedTlvsStart
+      (Tlv.ForwardingHint);
+    Tlv0_2WireFormat.decodeDelegationSet_
+      (interest.getForwardingHint(), forwardingHintEndOffset, decoder, copy);
+    decoder.finishNestedTlvs(forwardingHintEndOffset);
+  }
+  else
+    interest.getForwardingHint().clear();
+
+  var nonce = decoder.readOptionalBlobTlv(Tlv.Nonce, endOffset);
+  interest.setInterestLifetimeMilliseconds
+    (decoder.readOptionalNonNegativeIntegerTlv(Tlv.InterestLifetime, endOffset));
+
+  // Clear the unused fields.
+  interest.setMinSuffixComponents(null);
+  interest.getKeyLocator().clear();
+  interest.getExclude().clear();
+  interest.setChildSelector(null);
+  interest.unsetLink();
+  interest.setSelectedDelegationIndex(null);
+
+  // Ignore the HopLimit and Parameters.
+  decoder.readOptionalBlobTlv(Tlv.HopLimit, endOffset);
+  decoder.readOptionalBlobTlv(Tlv.Parameters, endOffset);
+
+  // Set the nonce last because setting other interest fields clears it.
+  interest.setNonce(nonce == null ? new Blob() : new Blob(nonce, copy));
+
+  decoder.finishNestedTlvs(endOffset);
+  return offsets;
 };
