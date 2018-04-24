@@ -191,7 +191,7 @@ Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
 Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
 {
   try {
-    return this.decodeInterestV02(interest, input, copy);
+    return this.decodeInterestV02_(interest, input, copy);
   } catch (exceptionV02) {
     try {
       // Failed to decode as format v0.2. Try to decode as v0.3.
@@ -207,7 +207,7 @@ Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
 /**
  * Do the work of decodeInterest to decode strictly as format v0.2.
  */
-Tlv0_2WireFormat.prototype.decodeInterestV02 = function(interest, input, copy)
+Tlv0_2WireFormat.prototype.decodeInterestV02_ = function(interest, input, copy)
 {
   if (copy == null)
     copy = true;
