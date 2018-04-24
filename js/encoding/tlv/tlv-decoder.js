@@ -136,9 +136,9 @@ TlvDecoder.prototype.readNestedTlvsStart = function(expectedType)
  * skipping TLVs.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @param skipCritical (optional) If omitted or false and the unrecognized type
- * code to skip is critical, throw an exception. If true, then skip the
- * unrecognized type code without error.
+ * @param {boolean} skipCritical (optional) If omitted or false and the
+ * unrecognized type code to skip is critical, throw an exception. If true, then
+ * skip the unrecognized type code without error.
  * @throws DecodingException if the TLV length does not equal the total length
  * of the nested TLVs.
  */
