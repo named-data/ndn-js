@@ -132,22 +132,34 @@ TlvDecoder.prototype.readNestedTlvsStart = function(expectedType)
 /**
  * Call this after reading all nested TLVs to skip any remaining unrecognized
  * TLVs and to check if the offset after the final nested TLV matches the
- * endOffset returned by readNestedTlvsStart.
+ * endOffset returned by readNestedTlvsStart. Update the offset as needed if
+ * skipping TLVs.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
+ * @param skipCritical (optional) If omitted or false and the unrecognized type
+ * code to skip is critical, throw an exception. If true, then skip the
+ * unrecognized type code without error.
  * @throws DecodingException if the TLV length does not equal the total length
  * of the nested TLVs.
  */
-TlvDecoder.prototype.finishNestedTlvs = function(endOffset)
+TlvDecoder.prototype.finishNestedTlvs = function(endOffset, skipCritical)
 {
   // We expect offset to be endOffset, so check this first.
   if (this.offset == endOffset)
     return;
 
+  if (skipCritical == undefined)
+    skipCritical = false;
+
   // Skip remaining TLVs.
   while (this.offset < endOffset) {
     // Skip the type VAR-NUMBER.
-    this.readVarNumber();
+    var type = this.readVarNumber();
+    var critical = (type <= 31 || (type & 1) == 1);
+    if (critical && !skipCritical)
+      throw new DecodingException(new Error
+        ("Unrecognized critical type code " + type));
+
     // Read the length and update offset.
     var length = this.readVarNumber();
     this.offset += length;

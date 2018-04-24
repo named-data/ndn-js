@@ -1002,7 +1002,8 @@ Tlv0_2WireFormat.encodeSignatureInfo_ = function(signature, encoder)
       var decoder = new TlvDecoder(encoding.buf());
       var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
       decoder.readNonNegativeIntegerTlv(Tlv.SignatureType);
-      decoder.finishNestedTlvs(endOffset);
+      // Skip unrecognized TLVs, even if they have a critical type code.
+      decoder.finishNestedTlvs(endOffset, true);
     } catch (ex) {
       throw new Error
         ("The GenericSignature encoding is not a valid NDN-TLV SignatureInfo: " +
@@ -1093,6 +1094,8 @@ Tlv0_2WireFormat.decodeSignatureInfo = function(data, decoder, copy)
     // Get the bytes of the SignatureInfo TLV.
     signatureInfo.setSignatureInfoEncoding
       (new Blob(decoder.getSlice(beginOffset, endOffset), copy), signatureType);
+    // Skip the remaining TLVs now, allowing unrecognized critical type codes.
+    decoder.finishNestedTlvs(endOffset, true);
   }
 
   decoder.finishNestedTlvs(endOffset);
