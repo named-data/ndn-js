@@ -78,6 +78,52 @@ var initialDump = ['name: /ndn/abc',
   'forwardingHint:',
   '  Preference: 1, Name: /A'];
 
+var simpleCodedInterestV03 = new Buffer([
+0x05, 0x07, // Interest
+  0x07, 0x03, 0x08, 0x01, 0x49, // Name = /I
+  0x12, 0x00, // MustBeFresh
+]);
+
+var simpleCodedInterestV03Dump = [
+  "name: /I",
+  "minSuffixComponents: <none>",
+  "maxSuffixComponents: 1",
+  "keyLocator: <none>",
+  "exclude: <none>",
+  "childSelector: <none>",
+  "mustBeFresh: true",
+  "nonce: <none>",
+  "lifetimeMilliseconds: <none>",
+  "forwardingHint: <none>"];
+
+var fullCodedInterestV03 = new Buffer([
+0x05, 0x29, // Interest
+  0x07, 0x03, 0x08, 0x01, 0x49, // Name = /I
+  0x21, 0x00, // CanBePrefix
+  0x12, 0x00, // MustBeFresh
+  0x1E, 0x0B, // ForwardingHint
+    0x1F, 0x09, // Delegation
+      0x1E, 0x02, 0x01, 0x00, // Preference = 256
+      0x07, 0x03, 0x08, 0x01, 0x48, // Name = /H
+  0x0A, 0x04, 0x12, 0x34, 0x56, 0x78, // Nonce
+  0x0C, 0x02, 0x10, 0x00, // InterestLifetime = 4096
+  0x22, 0x01, 0xD6, // HopLimit
+  0x23, 0x04, 0xC0, 0xC1, 0xC2, 0xC3 // Parameters
+]);
+
+var fullCodedInterestV03Dump = [
+    "name: /I",
+    "minSuffixComponents: <none>",
+    "maxSuffixComponents: <none>",
+    "keyLocator: <none>",
+    "exclude: <none>",
+    "childSelector: <none>",
+    "mustBeFresh: true",
+    "nonce: 12345678",
+    "lifetimeMilliseconds: 4096",
+    "forwardingHint:",
+    "  Preference: 256, Name: /H"];
+
 function dump(s1, s2)
 {
   var result = s1;
@@ -236,6 +282,22 @@ describe('TestInterestDump', function() {
     interest.wireDecode(codedInterestNoSelectors);
     assert.equal(false, interest.getMustBeFresh(),
       "MustBeFresh should be false if no selectors");
+  });
+
+  it('DecodeV03AsV02', function() {
+    var interest1 = new Interest();
+    interest1.wireDecode(simpleCodedInterestV03);
+
+    var dump1 = dumpInterest(interest1);
+    assert.deepEqual(dump1, simpleCodedInterestV03Dump,
+      "Decoded simpleCodedInterestV03 does not match the dump");
+
+    var interest2 = new Interest();
+    interest2.wireDecode(fullCodedInterestV03);
+
+    var dump2 = dumpInterest(interest2);
+    assert.deepEqual(dump2, fullCodedInterestV03Dump,
+      "Decoded fullCodedInterestV03Dump does not match the dump");
   });
 });
 
