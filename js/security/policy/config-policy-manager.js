@@ -590,11 +590,27 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
         return false;
       }
     }
-    else {
-      failureReason[0] = "The hierarchical identityRegex \"" + identityRegex +
-        "\" does not match signatureName \"" + signatureName.toUri() + "\"";
-      return false;
+
+    if (!this.isSecurityV1_) {
+      // Check for a security v2 key name.
+      var identityRegex2 = "^(<>*)<KEY><>$";
+      var identityMatch2 = new NdnRegexTopMatcher(identityRegex2);
+      if (identityMatch2.match(signatureName)) {
+        var identityPrefix = identityMatch2.expand("\\1");
+        if (ConfigPolicyManager.matchesRelation
+            (objectName, identityPrefix, "is-prefix-of"))
+          return true;
+        else {
+          failureReason[0] = "The hierarchical objectName \"" + objectName.toUri() +
+            "\" is not a prefix of \"" + identityPrefix.toUri() + "\"";
+          return false;
+        }
+      }
     }
+
+    failureReason[0] = "The hierarchical identityRegex \"" + identityRegex +
+      "\" does not match signatureName \"" + signatureName.toUri() + "\"";
+    return false;
   }
   else if (checkerType == "customized") {
     var keyLocatorInfo = checker.get("key-locator")[0];
