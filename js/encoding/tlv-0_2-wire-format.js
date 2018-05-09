@@ -351,15 +351,16 @@ Tlv0_2WireFormat.prototype.encodeControlParameters = function(controlParameters)
 };
 
 /**
-  * Decode controlParameters in NDN-TLV and return the encoding.
-  * @param {ControlParameters} controlParameters The ControlParameters object to
-  * encode.
-  * @param {Buffer} input The buffer with the bytes to decode.
+ * Decode controlParameters in NDN-TLV and set the fields of the
+ * controlParameters object.
+ * @param {ControlParameters} controlParameters The ControlParameters object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
  * @param {boolean} copy (optional) If true, copy from the input when making new
  * Blob values. If false, then Blob values share memory with the input, which
  * must remain unchanged while the Blob values are used. If omitted, use true.
-  * @throws DecodingException For invalid encoding
-  */
+ * @throws DecodingException For invalid encoding
+ */
 Tlv0_2WireFormat.prototype.decodeControlParameters = function
   (controlParameters, input, copy)
 {
@@ -400,9 +401,10 @@ Tlv0_2WireFormat.prototype.encodeControlResponse = function(controlResponse)
 };
 
 /**
- * Decode controlResponse in NDN-TLV and return the encoding.
- * @param {ControlResponse} controlResponse The ControlResponse object to
- * encode.
+ * Decode controlResponse in NDN-TLV and set the fields of the controlResponse
+ * object
+ * @param {ControlResponse} controlResponse The ControlResponse object whose
+ * fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
  * @param {boolean} copy (optional) If true, copy from the input when making new
  * Blob values. If false, then Blob values share memory with the input, which
