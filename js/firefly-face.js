@@ -216,6 +216,16 @@ FireflyFace.toFirestorePath = function(name)
   return result;
 };
 
+/**
+ * Recursively add an onSnapsuot listener at collection.doc("_") and all
+ * children. When collection.doc("_") receives an interestExpressTime, 
+ * onSnapshot processes as if we have received an interest and calls OnInterest
+ * callbacks. Add nameUri to listeningNameUris_. However, if nameUri is already
+ * in listeningNameUris_, do nothing.
+ * @param {string} nameUri The URI of the name represented by collection.
+ * @param {firebase.firestore.DocumentReference} collection The collection with
+ * name nameUri.
+ */
 FireflyFace.prototype.addListeners_ = function(nameUri, collection)
 {
   if (this.listeningNameUris_[nameUri])
