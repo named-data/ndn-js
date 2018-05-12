@@ -302,9 +302,9 @@ FireflyFace.prototype.setDataPromise_ = function(data, wireFormat)
 /**
  * Get the Firestore document for the given name, creating the "children"
  * documents at each level in the collection tree as needed. For example, if
- * Firestore has the document /ndn/_/user/_/joe_ and you ask for the document
+ * Firestore has the document /ndn/_/user/_/joe/_ and you ask for the document
  * for the name /ndn/role/doctor this returns the document
- * /ndn/_/role/_/leader_ and adds { role: null } to /ndn/children and adds
+ * /ndn/_/role/_/doctor/_ and adds { role: null } to /ndn/children and adds
  * { doctor: null } to /ndn/_/role/children . (We represent the set of children
  * by an object with the set elements are the key and the value is null.)
  * @param {Name} name The Name for the document.
