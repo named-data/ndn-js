@@ -19,7 +19,14 @@
 
 /**
  * FireflyFace extends Face to override expressInterest, registerPrefix and
- * putData to interface with Google Firestore.
+ * putData to interface with Google Firestore. In general, this converts each
+ * NDN name like "/ndn/user/bob" to the Firestore path "/ndn/_/user/_/bob/_"
+ * where each name component has a document named "_" and a collection having
+ * the name of its child component. This updates the "_" document with fields
+ * like "interestExpressTime" and "data" to simulate NDN messaging. (The "_"
+ * document also has a "children" field with a set of the names of the children
+ * nodes, which is necessary because Firestore doesn't allow enumerating
+ * children.)
  * @param {firebase.firestore.Firestore} (optional) The Firestore object which
  * is already created. If omitted, use the default "ndn-firefly" project.
  */
@@ -57,7 +64,10 @@ FireflyFace.prototype = new Face(new Transport(), { equals: function() { return 
 FireflyFace.prototype.name = "FireflyFace";
 
 /**
- * Override to do the work of expressInterest using Firestore.
+ * Override to do the work of expressInterest using Firestore. If a data packet
+ * matching the interest is already in Firestore, call onData immediately,
+ * Otherwise, add onSnapshot listeners at toFirestorePath(interest.getName())
+ * and children to monitor for the addition of a "data" field.
  */
 FireflyFace.prototype.expressInterestHelper = function
   (pendingInterestId, interest, onData, onTimeout, onNetworkNack, wireFormat)
@@ -118,7 +128,9 @@ FireflyFace.prototype.expressInterestHelper = function
 };
 
 /**
- * Override to do the work of registerPrefix using Firestore.
+ * Override to do the work of registerPrefix using Firestore. Add onSnapshot
+ * listeners at toFirestorePath(prefix.getName()) and children to monitor for
+ * the addition of an "interestExpressTime" field. See addListeners_ for details.
  */
 FireflyFace.prototype.nfdRegisterPrefix = function
   (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
@@ -202,7 +214,8 @@ FireflyFace.prototype.getMatchingDataPromise_ = function(name, mustBeFresh)
 };
 
 /**
- * Get the Firestore path for the Name, for example "/ndn/_/user/_/file/_".
+ * Get the Firestore path for the Name, for example "/ndn/_/user/_/bob/_" for
+ * the NDN name "/ndn/user/bob".
  * @param {Name} name The Name.
  * @returns {string} The Firestore path.
  */
@@ -217,11 +230,11 @@ FireflyFace.toFirestorePath = function(name)
 };
 
 /**
- * Recursively add an onSnapsuot listener at collection.doc("_") and all
- * children. When collection.doc("_") receives an interestExpressTime, 
- * onSnapshot processes as if we have received an interest and calls OnInterest
- * callbacks. Add nameUri to listeningNameUris_. However, if nameUri is already
- * in listeningNameUris_, do nothing.
+ * Recursively add an onSnapshot listener at collection.doc("_") and all
+ * children. When collection.doc("_") is updated with an "interestExpressTime"
+ * field, onSnapshot processes as if we have received an interest and calls
+ * OnInterest callbacks. Add nameUri to listeningNameUris_. However, if nameUri
+ * is already in listeningNameUris_, do nothing.
  * @param {string} nameUri The URI of the name represented by collection.
  * @param {firebase.firestore.DocumentReference} collection The collection with
  * name nameUri.
