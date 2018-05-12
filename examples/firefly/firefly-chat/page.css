@@ -1,0 +1,202 @@
+h1
+{
+    text-align:center;
+    margin-bottom:0;
+}
+button
+{
+    text-align:center;
+}
+#txt 
+{
+    margin-top:10px;
+    margin-left:10px;
+    text-align:left;
+    border-style:solid;
+    border-width:2px;
+    overflow:auto;
+    width:600px;
+    height:300px;
+    font-size:20px;
+    float:left; 
+    border-radius:10px;
+    font-family: 'Alegreya', serif;
+}
+#title
+{
+    width:700px;
+    font-family: 'Sonsie One', cursive;
+}
+#log
+{
+    border-style:dashed;
+    border-width:2px;
+    border-radius:10px;
+    width:550px;
+    height:320px;
+    font-family: 'Autour One', cursive;
+}
+#name
+{
+    margin-top:100px;
+    width:200px;
+    height:20px;
+    font-size:15px;
+    font-family: 'Autour One', cursive;
+    border-radius:3px;
+}
+#hubPrefix
+{
+    margin-top:10px;
+    width:200px;
+    height:20px;
+    font-size:15px;
+    font-family: 'Autour One', cursive;
+    border-radius:3px;
+}
+#chatroom
+{
+    margin-top:10px;
+    width:200px;
+    height:20px;
+    font-size:15px;
+    font-family: 'Autour One', cursive;
+    border-radius:3px;
+}
+#hub
+{
+    margin-top:10px;
+    width:200px;
+    height:20px;
+    font-size:15px;
+    font-family: 'Autour One', cursive;
+    border-radius:3px;
+}
+#info
+{
+    margin-left:50px;
+    float:left;
+}
+#login
+{
+    margin-top:95px;
+    width:100px;
+    height:100px;
+    font-family: 'Autour One', cursive;
+    font-size:20px;
+    float:left;
+    border-radius:15px;
+    border-color:#727272;
+}
+#menu
+{
+    margin-top:10px;
+    height:450px;
+    width:200px;
+    float:right;
+    font-size:20px;
+    font-family: 'Quintessential', cursive;
+    border-left-style:dashed;
+    border-width:2px;
+    margin-bottom:10px;
+    text-align:left;
+     
+} 
+#fname
+{
+    width:600px;
+    height:100px;
+    font-size:20px;
+    float:left;
+    margin-top:10px;
+    margin-bottom:10px;
+    border-radius:10px;
+    margin-left:10px;
+    font-family: 'Alegreya', serif;
+    border-width:2px;
+}
+#send
+{   
+    background:#3090C7;
+    margin-right:30px;
+    font-size:20px;
+    float:right;
+    width:100px;
+    height:60px;
+    border-radius:10px;
+    font-family: 'Alegreya', serif;
+}
+#leave
+{
+    background:white;
+    font-size:20px;
+    font-color:#3090C7;
+    float:right;
+    width:100px;
+    height:60px;
+    border-radius:10px;
+    font-family: 'Alegreya', serif;
+    margin-right:30px;
+    
+}
+#room
+{
+    font-size:30px;
+    font-family: 'Architects Daughter', cursive;
+    width:620px;
+    height:50px;
+    text-align:left;
+    float:left;
+}
+#note
+{
+    font-size:15px;
+    font-family: 'Alegreya', serif;
+    float:left;
+    margin-left:30px;
+}
+#footer
+{
+    padding-bottom: 2px;
+    text-align: right;
+    float:right
+    width:200px;
+    font-family: 'Quintessential', cursive;
+}
+#chat
+{
+    width:850px;
+}
+.center
+{
+    margin:auto;
+}
+grey
+{
+    color: #727272;
+    font-weight: 200;
+}
+
+green
+{
+    color: #2D9A65;
+    font-weight: 200;
+}
+
+red
+{
+    color: #E41B17;
+    font-weight: 200;
+}
+
+blue
+{
+    color: #3090C7;
+    font-weight: 200;
+}
+
+yellow
+{
+    color: #FBB917;
+    font-weight: 200;
+}

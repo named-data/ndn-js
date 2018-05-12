@@ -1,9 +1,10 @@
-Interim changes since NDN-JS v0.16.0 (2018-04-24)
+Interim changes since NDN-JS v0.16.0 (2018-05-12)
 -------------------------------------------------
 
 Changes
 * https://redmine.named-data.net/issues/4591 Accept Interests encoded with
   packet format v0.3.
+* examples: Added firefly-chat which uses FireflyFace.
 
 NDN-JS v0.16.0 (2018-04-17)
 ---------------------------
