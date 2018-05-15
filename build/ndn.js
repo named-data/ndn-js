@@ -37757,6 +37757,7 @@ var SigningInfo = require('./signing-info.js').SigningInfo; /** @ignore */
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var Sha256WithEcdsaSignature = require('../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
+var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature; /** @ignore */
 var KeyLocator = require('../key-locator.js').KeyLocator; /** @ignore */
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
 var DigestAlgorithm = require('./security-types.js').DigestAlgorithm; /** @ignore */
@@ -39764,17 +39765,28 @@ KeyChain.prototype.setFace = function(face)
 };
 
 /**
- * Wire encode the target, compute an HmacWithSha256 and update the signature
- * value.
+ * Wire encode the target, compute an HmacWithSha256 and update the object.
  * Note: This method is an experimental feature. The API may change.
- * @param {Data} target If this is a Data object, update its signature and wire
- * encoding.
+ * @param {Data|Interest} target If the target is a Data object (which should
+ * already have an HmacWithSha256Signature with a KeyLocator for the key name),
+ * then update its signature and wire encoding. If the target is an Interest,
+ * then append a SignatureInfo to the Interest name, compute an HmacWithSha256
+ * signature for the name components and append a final name component with the
+ * signature bits.
  * @param {Blob} key The key for the HmacWithSha256.
+ * param {Name} keyName (needed if target is an Interest) The name of the key
+ * for the KeyLocator in the SignatureInfo which is added to the Interest name.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the target. If omitted, use WireFormat getDefaultWireFormat().
  */
-KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
+KeyChain.signWithHmacWithSha256 = function(target, key, keyName, wireFormat)
 {
+  if (keyName instanceof WireFormat) {
+    // The keyName is omitted, so shift arguments.
+    wireFormat = keyName;
+    keyName = undefined;
+  }
+
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
   if (target instanceof Data) {
@@ -39787,6 +39799,33 @@ KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
     data.getSignature().setSignature(
       new Blob(signer.digest(), false));
   }
+  else if (target instanceof Interest) {
+    var interest = target;
+
+    if (keyName == null)
+      throw new SecurityException(new Error
+        ("signWithHmacWithSha256: keyName is required to sign an Interest"));
+
+    var signature = new HmacWithSha256Signature();
+    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+    signature.getKeyLocator().setKeyName(keyName);
+
+    // Append the encoded SignatureInfo.
+    interest.getName().append(wireFormat.encodeSignatureInfo(signature));
+    // Append an empty signature so that the "signedPortion" is correct.
+    interest.getName().append(new Name.Component());
+
+    // Encode once to get the signed portion.
+    var encoding = interest.wireEncode(wireFormat);
+
+    var signer = Crypto.createHmac('sha256', key.buf());
+    signer.update(encoding.signedBuf());
+    signature.setSignature(new Blob(signer.digest(), false));
+
+    // Remove the empty signature and append the real one.
+    interest.setName(interest.getName().getPrefix(-1).append
+      (wireFormat.encodeSignatureValue(signature)));
+  }
   else
     throw new SecurityException(new Error
       ("signWithHmacWithSha256: Unrecognized target type"));
@@ -39796,10 +39835,10 @@ KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
  * Compute a new HmacWithSha256 for the target and verify it against the
  * signature value.
  * Note: This method is an experimental feature. The API may change.
- * @param {Data} target The Data object to verify.
+ * @param {Data} data The Data object to verify.
  * @param {Blob} key The key for the HmacWithSha256.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
- * the target. If omitted, use WireFormat getDefaultWireFormat().
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
  * @return {boolean} True if the signature verifies, otherwise false.
  */
 KeyChain.verifyDataWithHmacWithSha256 = function(data, key, wireFormat)
@@ -39815,6 +39854,36 @@ KeyChain.verifyDataWithHmacWithSha256 = function(data, key, wireFormat)
 
   // Use the flexible Blob.equals operator.
   return newSignatureBits.equals(data.getSignature().getSignature());
+};
+
+/**
+ * Compute a new HmacWithSha256 for all but the final name component and verify
+ * it against the signature value in the final name component.
+ * Note: This method is an experimental feature. The API may change.
+ * @param {Interest} interest The Interest object to verify.
+ * @param {Blob} key The key for the HmacWithSha256.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @return {boolean} True if the signature verifies, otherwise false.
+ */
+KeyChain.verifyInterestWithHmacWithSha256 = function(interest, key, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  // Decode the last two name components of the signed interest.
+  var signature = wireFormat.decodeSignatureInfoAndValue
+    (interest.getName().get(-2).getValue().buf(),
+     interest.getName().get(-1).getValue().buf());
+
+  // wireEncode returns the cached encoding if available.
+  var encoding = interest.wireEncode(wireFormat);
+
+  var signer = Crypto.createHmac('sha256', key.buf());
+  signer.update(encoding.signedBuf());
+  var newSignatureBits = new Blob(signer.digest(), false);
+
+  // Use the flexible Blob.equals operator.
+  return newSignatureBits.equals(signature.getSignature());
 };
 
 KeyChain.getDefaultKeyParams = function() { return KeyChain.defaultKeyParams_; };
@@ -53185,7 +53254,14 @@ Face.nonceTemplate_ = new Blob(new Buffer(4), false);
 
 /**
  * FireflyFace extends Face to override expressInterest, registerPrefix and
- * putData to interface with Google Firestore.
+ * putData to interface with Google Firestore. In general, this converts each
+ * NDN name like "/ndn/user/bob" to the Firestore path "/ndn/_/user/_/bob/_"
+ * where each name component has a document named "_" and a collection having
+ * the name of its child component. This updates the "_" document with fields
+ * like "interestExpressTime" and "data" to simulate NDN messaging. (The "_"
+ * document also has a "children" field with a set of the names of the children
+ * nodes, which is necessary because Firestore doesn't allow enumerating
+ * children.)
  * @param {firebase.firestore.Firestore} (optional) The Firestore object which
  * is already created. If omitted, use the default "ndn-firefly" project.
  */
@@ -53223,7 +53299,10 @@ FireflyFace.prototype = new Face(new Transport(), { equals: function() { return 
 FireflyFace.prototype.name = "FireflyFace";
 
 /**
- * Override to do the work of expressInterest using Firestore.
+ * Override to do the work of expressInterest using Firestore. If a data packet
+ * matching the interest is already in Firestore, call onData immediately,
+ * Otherwise, add onSnapshot listeners at toFirestorePath(interest.getName())
+ * and children to monitor for the addition of a "data" field.
  */
 FireflyFace.prototype.expressInterestHelper = function
   (pendingInterestId, interest, onData, onTimeout, onNetworkNack, wireFormat)
@@ -53284,7 +53363,9 @@ FireflyFace.prototype.expressInterestHelper = function
 };
 
 /**
- * Override to do the work of registerPrefix using Firestore.
+ * Override to do the work of registerPrefix using Firestore. Add onSnapshot
+ * listeners at toFirestorePath(prefix.getName()) and children to monitor for
+ * the addition of an "interestExpressTime" field. See addListeners_ for details.
  */
 FireflyFace.prototype.nfdRegisterPrefix = function
   (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
@@ -53368,7 +53449,8 @@ FireflyFace.prototype.getMatchingDataPromise_ = function(name, mustBeFresh)
 };
 
 /**
- * Get the Firestore path for the Name, for example "/ndn/_/user/_/file/_".
+ * Get the Firestore path for the Name, for example "/ndn/_/user/_/bob/_" for
+ * the NDN name "/ndn/user/bob".
  * @param {Name} name The Name.
  * @returns {string} The Firestore path.
  */
@@ -53382,6 +53464,16 @@ FireflyFace.toFirestorePath = function(name)
   return result;
 };
 
+/**
+ * Recursively add an onSnapshot listener at collection.doc("_") and all
+ * children. When collection.doc("_") is updated with an "interestExpressTime"
+ * field, onSnapshot processes as if we have received an interest and calls
+ * OnInterest callbacks. Add nameUri to listeningNameUris_. However, if nameUri
+ * is already in listeningNameUris_, do nothing.
+ * @param {string} nameUri The URI of the name represented by collection.
+ * @param {firebase.firestore.DocumentReference} collection The collection with
+ * name nameUri.
+ */
 FireflyFace.prototype.addListeners_ = function(nameUri, collection)
 {
   if (this.listeningNameUris_[nameUri])
@@ -53458,9 +53550,9 @@ FireflyFace.prototype.setDataPromise_ = function(data, wireFormat)
 /**
  * Get the Firestore document for the given name, creating the "children"
  * documents at each level in the collection tree as needed. For example, if
- * Firestore has the document /ndn/_/user/_/joe_ and you ask for the document
+ * Firestore has the document /ndn/_/user/_/joe/_ and you ask for the document
  * for the name /ndn/role/doctor this returns the document
- * /ndn/_/role/_/leader_ and adds { role: null } to /ndn/children and adds
+ * /ndn/_/role/_/doctor/_ and adds { role: null } to /ndn/children and adds
  * { doctor: null } to /ndn/_/role/children . (We represent the set of children
  * by an object with the set elements are the key and the value is null.)
  * @param {Name} name The Name for the document.
