@@ -45,6 +45,7 @@ var SigningInfo = require('./signing-info.js').SigningInfo; /** @ignore */
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var Sha256WithEcdsaSignature = require('../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
+var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature; /** @ignore */
 var KeyLocator = require('../key-locator.js').KeyLocator; /** @ignore */
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
 var DigestAlgorithm = require('./security-types.js').DigestAlgorithm; /** @ignore */
@@ -2052,17 +2053,28 @@ KeyChain.prototype.setFace = function(face)
 };
 
 /**
- * Wire encode the target, compute an HmacWithSha256 and update the signature
- * value.
+ * Wire encode the target, compute an HmacWithSha256 and update the object.
  * Note: This method is an experimental feature. The API may change.
- * @param {Data} target If this is a Data object, update its signature and wire
- * encoding.
+ * @param {Data|Interest} target If the target is a Data object (which should
+ * already have an HmacWithSha256Signature with a KeyLocator for the key name),
+ * then update its signature and wire encoding. If the target is an Interest,
+ * then append a SignatureInfo to the Interest name, compute an HmacWithSha256
+ * signature for the name components and append a final name component with the
+ * signature bits.
  * @param {Blob} key The key for the HmacWithSha256.
+ * param {Name} keyName (needed if target is an Interest) The name of the key
+ * for the KeyLocator in the SignatureInfo which is added to the Interest name.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the target. If omitted, use WireFormat getDefaultWireFormat().
  */
-KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
+KeyChain.signWithHmacWithSha256 = function(target, key, keyName, wireFormat)
 {
+  if (keyName instanceof WireFormat) {
+    // The keyName is omitted, so shift arguments.
+    wireFormat = keyName;
+    keyName = undefined;
+  }
+
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
   if (target instanceof Data) {
@@ -2075,6 +2087,33 @@ KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
     data.getSignature().setSignature(
       new Blob(signer.digest(), false));
   }
+  else if (target instanceof Interest) {
+    var interest = target;
+
+    if (keyName == null)
+      throw new SecurityException(new Error
+        ("signWithHmacWithSha256: keyName is required to sign an Interest"));
+
+    var signature = new HmacWithSha256Signature();
+    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+    signature.getKeyLocator().setKeyName(keyName);
+
+    // Append the encoded SignatureInfo.
+    interest.getName().append(wireFormat.encodeSignatureInfo(signature));
+    // Append an empty signature so that the "signedPortion" is correct.
+    interest.getName().append(new Name.Component());
+
+    // Encode once to get the signed portion.
+    var encoding = interest.wireEncode(wireFormat);
+
+    var signer = Crypto.createHmac('sha256', key.buf());
+    signer.update(encoding.signedBuf());
+    signature.setSignature(new Blob(signer.digest(), false));
+
+    // Remove the empty signature and append the real one.
+    interest.setName(interest.getName().getPrefix(-1).append
+      (wireFormat.encodeSignatureValue(signature)));
+  }
   else
     throw new SecurityException(new Error
       ("signWithHmacWithSha256: Unrecognized target type"));
@@ -2084,10 +2123,10 @@ KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
  * Compute a new HmacWithSha256 for the target and verify it against the
  * signature value.
  * Note: This method is an experimental feature. The API may change.
- * @param {Data} target The Data object to verify.
+ * @param {Data} data The Data object to verify.
  * @param {Blob} key The key for the HmacWithSha256.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
- * the target. If omitted, use WireFormat getDefaultWireFormat().
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
  * @return {boolean} True if the signature verifies, otherwise false.
  */
 KeyChain.verifyDataWithHmacWithSha256 = function(data, key, wireFormat)
@@ -2103,6 +2142,36 @@ KeyChain.verifyDataWithHmacWithSha256 = function(data, key, wireFormat)
 
   // Use the flexible Blob.equals operator.
   return newSignatureBits.equals(data.getSignature().getSignature());
+};
+
+/**
+ * Compute a new HmacWithSha256 for all but the final name component and verify
+ * it against the signature value in the final name component.
+ * Note: This method is an experimental feature. The API may change.
+ * @param {Interest} interest The Interest object to verify.
+ * @param {Blob} key The key for the HmacWithSha256.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @return {boolean} True if the signature verifies, otherwise false.
+ */
+KeyChain.verifyInterestWithHmacWithSha256 = function(interest, key, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  // Decode the last two name components of the signed interest.
+  var signature = wireFormat.decodeSignatureInfoAndValue
+    (interest.getName().get(-2).getValue().buf(),
+     interest.getName().get(-1).getValue().buf());
+
+  // wireEncode returns the cached encoding if available.
+  var encoding = interest.wireEncode(wireFormat);
+
+  var signer = Crypto.createHmac('sha256', key.buf());
+  signer.update(encoding.signedBuf());
+  var newSignatureBits = new Blob(signer.digest(), false);
+
+  // Use the flexible Blob.equals operator.
+  return newSignatureBits.equals(signature.getSignature());
 };
 
 KeyChain.getDefaultKeyParams = function() { return KeyChain.defaultKeyParams_; };
