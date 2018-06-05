@@ -496,7 +496,8 @@ Name.Component.prototype.getSuccessor = function()
     // We didn't need the extra byte.
     result = result.slice(0, this.value_.size());
 
-  return new Name.Component(new Blob(result, false));
+  return new Name.Component
+    (new Blob(result, false), this.type_, this.otherTypeCode_);
 };
 
 /**
