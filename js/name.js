@@ -351,14 +351,22 @@ Name.Component.prototype.toSequenceNumber = function()
 /**
  * Create a component whose value is the nonNegativeInteger encoding of the
  * number.
- * @param {number} number
- * @return {Name.Component}
+ * @param {number} number The number to be encoded.
+ * @param (number) type (optional) The component type as an int from the
+ * ComponentType enum. If name component type is not a recognized ComponentType
+ * enum value, then set this to ComponentType.OTHER_CODE and use the
+ * otherTypeCode parameter. If omitted, use ComponentType.GENERIC.
+ * @param (number) otherTypeCode (optional) If type is ComponentType.OTHER_CODE,
+ * then this is the packet's unrecognized content type code, which must be
+ * non-negative.
+ * @return {Name.Component} The new component value.
  */
-Name.Component.fromNumber = function(number)
+Name.Component.fromNumber = function(number, type, otherTypeCode)
 {
   var encoder = new TlvEncoder(8);
   encoder.writeNonNegativeInteger(number);
-  return new Name.Component(new Blob(encoder.getOutput(), false));
+  return new Name.Component
+    (new Blob(encoder.getOutput(), false), type, otherTypeCode);
 };
 
 /**
