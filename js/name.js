@@ -72,17 +72,26 @@ exports.Name = Name;
 exports.ComponentType = ComponentType;
 
 /**
- * Create a new GENERIC Name.Component with a copy of the given value.
+ * Create a new Name.Component with a copy of the given value.
  * (To create an ImplicitSha256Digest component, use fromImplicitSha256Digest.)
- * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer} value If the value is a string, encode it as utf8 (but don't unescape).
+ * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer} value If the
+ * value is a string, encode it as utf8 (but don't unescape).
+ * @param (number) type (optional) The component type as an int from the
+ * ComponentType enum. If name component type is not a recognized ComponentType
+ * enum value, then set this to ComponentType.OTHER_CODE and use the
+ * otherTypeCode parameter. If omitted, use ComponentType.GENERIC.
+ * @param (number) otherTypeCode (optional) If type is ComponentType.OTHER_CODE,
+ * then this is the packet's unrecognized content type code, which must be
+ * non-negative.
  * @constructor
  */
-Name.Component = function NameComponent(value)
+Name.Component = function NameComponent(value, type, otherTypeCode)
 {
   if (typeof value === 'object' && value instanceof Name.Component) {
     // The copy constructor.
     this.value_ = value.value_;
     this.type_ = value.type_;
+    this.otherTypeCode_ = value.otherTypeCode_;
     return;
   }
 
@@ -99,7 +108,19 @@ Name.Component = function NameComponent(value)
     // Blob will make a copy if needed.
     this.value_ = new Blob(value);
 
-  this.type_ = ComponentType.GENERIC;
+  if (type === ComponentType.OTHER_CODE) {
+    if (otherTypeCode == undefined)
+      throw new Error
+        ("To use an other code, call Name.Component(value, ComponentType.OTHER_CODE, otherTypeCode)");
+    
+    if (otherTypeCode < 0)
+      throw new Error("Name.Component other type code must be non-negative");
+    this.otherTypeCode_ = otherTypeCode;
+  }
+  else
+    this.otherTypeCode_ = -1;
+
+  this.type_ = (type == undefined ? ComponentType.GENERIC : type);
 };
 
 /**
@@ -119,6 +140,28 @@ Name.Component.prototype.getValueAsBuffer = function()
 {
   // Assume the caller won't modify it.
   return this.value_.buf();
+};
+
+/**
+ * Get the name component type.
+ * @return {number} The name component type as an int from the ComponentType
+ * enum. If this is ComponentType.OTHER_CODE, then call getOtherTypeCode() to
+ * get the unrecognized component type code.
+ */
+Name.Component.prototype.getType = function()
+{ 
+  return this.type_;
+};
+
+/**
+ * Get the component type code from the packet which is other than a
+ * recognized ComponentType enum value. This is only meaningful if getType()
+ * is ComponentType.OTHER_CODE.
+ * @return (Number) The type code.
+ */
+Name.Component.prototype.getOtherTypeCode = function()
+{ 
+  return this.otherTypeCode_;
 };
 
 /**
