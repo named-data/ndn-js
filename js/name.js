@@ -677,12 +677,21 @@ Name.prototype.set = function(uri)
 };
 
 /**
- * Convert the component to a Buffer and append a GENERIC component to this Name.
- * Return this Name object to allow chaining calls to add.
- * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8 (but don't unescape).
- * @return {Name}
+ * Convert the component to a Buffer and append a component to this Name.
+ * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer|Name} component
+ * If a component is a string, encode as utf8 (but don't unescape).
+ * @param (number) type (optional) The component type as an int from the
+ * ComponentType enum. If name component type is not a recognized ComponentType
+ * enum value, then set this to ComponentType.OTHER_CODE and use the
+ * otherTypeCode parameter. If omitted, use ComponentType.GENERIC. If the
+ * component param is a Name or another Name.Component, then this is ignored.
+ * @param (number) otherTypeCode (optional) If type is ComponentType.OTHER_CODE,
+ * then this is the packet's unrecognized content type code, which must be
+ * non-negative. If the component param is a Name or another Name.Component,
+ * then this is ignored.
+ * @return {Name} This name so that you can chain calls to append.
  */
-Name.prototype.append = function(component)
+Name.prototype.append = function(component, type, otherTypeCode)
 {
   if (typeof component == 'object' && component instanceof Name) {
     var components;
@@ -700,7 +709,7 @@ Name.prototype.append = function(component)
     this.components.push(component);
   else
     // Just use the Name.Component constructor.
-    this.components.push(new Name.Component(component));
+    this.components.push(new Name.Component(component, type, otherTypeCode));
 
   ++this.changeCount;
   return this;
