@@ -55,7 +55,21 @@ var Name = function Name(components)
   this.changeCount = 0;
 };
 
+/**
+ * A ComponentType specifies the recognized types of a name component. If
+ * the component type in the packet is not a recognized enum value, then we
+ * use ComponentType.OTHER_CODE and you can call
+ * Name.Component.getOtherTypeCode(). We do this to keep the recognized
+ * component type values independent of packet encoding details.
+ */
+var ComponentType = {
+  IMPLICIT_SHA256_DIGEST: 1,
+  GENERIC: 8,
+  OTHER_CODE: 0x7fff
+};
+
 exports.Name = Name;
+exports.ComponentType = ComponentType;
 
 /**
  * Create a new GENERIC Name.Component with a copy of the given value.
@@ -85,16 +99,7 @@ Name.Component = function NameComponent(value)
     // Blob will make a copy if needed.
     this.value_ = new Blob(value);
 
-  this.type_ = Name.Component.ComponentType.GENERIC;
-};
-
-/**
- * A Name.Component.ComponentType specifies the recognized types of a name
- * component.
- */
-Name.Component.ComponentType = {
-  IMPLICIT_SHA256_DIGEST: 1,
-  GENERIC: 8
+  this.type_ = ComponentType.GENERIC;
 };
 
 /**
@@ -130,7 +135,7 @@ Object.defineProperty(Name.Component.prototype, "value",
  */
 Name.Component.prototype.toEscapedString = function()
 {
-  if (this.type_ === Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST)
+  if (this.type_ === ComponentType.IMPLICIT_SHA256_DIGEST)
     return "sha256digest=" + this.value_.toHex();
   else
     return Name.toEscapedString(this.value_.buf());
@@ -202,7 +207,7 @@ Name.Component.prototype.isSequenceNumber = function()
  */
 Name.Component.prototype.isGeneric = function()
 {
-  return this.type_ === Name.Component.ComponentType.GENERIC;
+  return this.type_ === ComponentType.GENERIC;
 };
 
 /**
@@ -211,7 +216,7 @@ Name.Component.prototype.isGeneric = function()
  */
 Name.Component.prototype.isImplicitSha256Digest = function()
 {
-  return this.type_ === Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST;
+  return this.type_ === ComponentType.IMPLICIT_SHA256_DIGEST;
 };
 
 /**
@@ -408,7 +413,7 @@ Name.Component.fromImplicitSha256Digest = function(digest)
       ("Name.Component.fromImplicitSha256Digest: The digest length must be 32 bytes");
 
   var result = new Name.Component(digestBlob);
-  result.type_ = Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST;
+  result.type_ = ComponentType.IMPLICIT_SHA256_DIGEST;
   return result;
 };
 
