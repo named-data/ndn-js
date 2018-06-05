@@ -507,8 +507,15 @@ Name.Component.prototype.getSuccessor = function()
  */
 Name.Component.prototype.equals = function(other)
 {
-  return typeof other === 'object' && other instanceof Name.Component &&
-    this.value_.equals(other.value_) && this.type_ === other.type_;
+  if (!(typeof other === 'object' && other instanceof Name.Component))
+    return false;
+
+  if (this.type_ === ComponentType.OTHER_CODE)
+    return this.value_.equals(other.value_) &&
+      other.type_ === ComponentType.OTHER_CODE &&
+      this.otherTypeCode_ == other.otherTypeCode_;
+  else
+    return this.value_.equals(other.value_) && this.type_ === other.type_;
 };
 
 /**
@@ -522,9 +529,14 @@ Name.Component.prototype.equals = function(other)
  */
 Name.Component.prototype.compare = function(other)
 {
-  if (this.type_ < other.type_)
+  var myTypeCode = (this.type_ === ComponentType.OTHER_CODE ?
+                    otherTypeCode_ : this.type_);
+  var otherTypeCode = (other.type_ === ComponentType.OTHER_CODE ?
+                       other.otherTypeCode_ : other.type_);
+
+  if (myTypeCode < otherTypeCode)
     return -1;
-  if (this.type_ > other.type_)
+  if (myTypeCode > otherTypeCode)
     return 1;
 
   return Name.Component.compareBuffers(this.value_.buf(), other.value_.buf());
