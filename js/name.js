@@ -180,8 +180,15 @@ Name.Component.prototype.toEscapedString = function()
 {
   if (this.type_ === ComponentType.IMPLICIT_SHA256_DIGEST)
     return "sha256digest=" + this.value_.toHex();
+
+  var typeString;
+  if (this.type_ === ComponentType.GENERIC)
+    typeString = "";
   else
-    return Name.toEscapedString(this.value_.buf());
+    typeString = (this.type_ === ComponentType.OTHER_CODE ?
+                  this.otherTypeCode_ : this.type_) + "=";
+
+  return typeString + Name.toEscapedString(this.value_.buf());
 };
 
 /**
@@ -611,14 +618,39 @@ Name.createNameArray = function(uri)
   // Unescape the components.
   var sha256digestPrefix = "sha256digest=";
   for (var i = 0; i < array.length; ++i) {
+    var componentString = array[i];
     var component;
-    if (array[i].substr(0, sha256digestPrefix.length) == sha256digestPrefix) {
-      var hexString = array[i].substr(sha256digestPrefix.length).trim();
+    if (componentString.substr(0, sha256digestPrefix.length) == sha256digestPrefix) {
+      var hexString = componentString.substr(sha256digestPrefix.length).trim();
       component = Name.Component.fromImplicitSha256Digest
         (new Blob(new Buffer(hexString, 'hex')), false);
     }
-    else
-      component = new Name.Component(Name.fromEscapedString(array[i]));
+    else {
+      var type = ComponentType.GENERIC;
+      var otherTypeCode = -1;
+
+      // Check for a component type.
+      var iTypeCodeEnd = componentString.indexOf("=");
+      if (iTypeCodeEnd >= 0) {
+        var typeString = componentString.substring(0, iTypeCodeEnd);
+        otherTypeCode = parseInt(typeString);
+        if (otherTypeCode === NaN)
+          throw new Error
+            ("Can't parse decimal Name Component type: " + typeString +
+             " in URI " + uri);
+
+        if (otherTypeCode == ComponentType.GENERIC ||
+            otherTypeCode == ComponentType.IMPLICIT_SHA256_DIGEST)
+          throw new Error("Unexpected Name Component type: " + typeString +
+             " in URI " + uri);
+
+        type = ComponentType.OTHER_CODE;
+        componentString = componentString.substring(iTypeCodeEnd + 1);
+      }
+
+      component = new Name.Component
+        (Name.fromEscapedString(componentString), type, otherTypeCode);
+    }
 
     if (component.getValue().isNull()) {
       // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
