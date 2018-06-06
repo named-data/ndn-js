@@ -537,7 +537,7 @@ Name.Component.prototype.equals = function(other)
 Name.Component.prototype.compare = function(other)
 {
   var myTypeCode = (this.type_ === ComponentType.OTHER_CODE ?
-                    otherTypeCode_ : this.type_);
+                    this.otherTypeCode_ : this.type_);
   var otherTypeCode = (other.type_ === ComponentType.OTHER_CODE ?
                        other.otherTypeCode_ : other.type_);
 
