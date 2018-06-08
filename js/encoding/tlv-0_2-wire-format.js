@@ -21,6 +21,7 @@
 var Crypto = require('../crypto.js'); /** @ignore */
 var Blob = require('../util/blob.js').Blob; /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
+var ComponentType = require('../name.js').ComponentType; /** @ignore */
 var ForwardingFlags = require('../forwarding-flags').ForwardingFlags; /** @ignore */
 var Tlv = require('./tlv/tlv.js').Tlv; /** @ignore */
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
@@ -720,8 +721,13 @@ Tlv0_2WireFormat.get = function()
  */
 Tlv0_2WireFormat.encodeNameComponent = function(component, encoder)
 {
-  var type = component.isImplicitSha256Digest() ?
-      Tlv.ImplicitSha256DigestComponent : Tlv.NameComponent;
+  var type;
+  if (component.getType() === ComponentType.OTHER_CODE)
+    type = component.getOtherTypeCode();
+  else
+    // The enum values are the same as the TLV type codes.
+    type = component.getType();
+
   encoder.writeBlobTlv(type, component.getValue().buf());
 };
 
@@ -747,8 +753,11 @@ Tlv0_2WireFormat.decodeNameComponent = function(decoder, copy)
   var value = new Blob(decoder.readBlobTlv(type), copy);
   if (type === Tlv.ImplicitSha256DigestComponent)
     return Name.Component.fromImplicitSha256Digest(value);
-  else
+  else if (type === Tlv.NameComponent)
     return new Name.Component(value);
+  else
+    // Unrecognized type code.
+    return new Name.Component(value, ComponentType.OTHER_CODE, type);
 };
 
 /**

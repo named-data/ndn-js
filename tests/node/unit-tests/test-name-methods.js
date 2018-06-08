@@ -23,6 +23,7 @@
 
 var assert = require("assert");
 var Name = require('../../..').Name;
+var ComponentType = require('../../..').ComponentType;
 var Blob = require('../../..').Blob;
 var TlvWireFormat = require('../../..').TlvWireFormat;
 
@@ -317,12 +318,22 @@ describe('TestNameMethods', function() {
       ("/hello/sha256digest=" +
        "28BAD4B5275BD392DBB670C75CF0B66F13F7942B21E80F55C0E86B374753A548");
     assert.ok(name.get(0).equals(name2.get(1)));
+  });
 
-    // This is not a valid sha256digest component. It should be treated as generic.
-    name2 = new Name
-      ("/hello/SHA256DIGEST=" +
-       "28BAD4B5275BD392DBB670C75CF0B66F13F7942B21E80F55C0E86B374753A548");
-    assert.ok(!name.get(0).equals(name2.get(1)));
-    assert.ok(name2.get(1).isGeneric());
+  it('TypedNameComponent', function() {
+    var otherTypeCode = 99;
+    var uri = "/ndn/" + otherTypeCode + "=value";
+    var name = new Name();
+    name.append("ndn").append("value", ComponentType.OTHER_CODE, otherTypeCode);
+    assert.equal(uri, name.toUri());
+
+    var nameFromUri = new Name(uri);
+    assert.equal("value", nameFromUri.get(1).getValue().toString());
+    assert.equal(otherTypeCode, nameFromUri.get(1).getOtherTypeCode());
+
+    var decodedName = new Name();
+    decodedName.wireDecode(name.wireEncode());
+    assert.equal("value", decodedName.get(1).getValue().toString());
+    assert.equal(otherTypeCode, decodedName.get(1).getOtherTypeCode());
   });
 });

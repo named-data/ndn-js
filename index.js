@@ -1,5 +1,6 @@
 exports.Face = require('./js/face.js').Face;
 exports.Name = require('./js/name.js').Name;
+exports.ComponentType = require('./js/name.js').ComponentType;
 exports.ForwardingFlags = require('./js/forwarding-flags.js').ForwardingFlags;
 exports.Interest = require('./js/interest.js').Interest;
 exports.Exclude = require('./js/exclude.js').Exclude;

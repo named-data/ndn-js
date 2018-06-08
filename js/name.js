@@ -55,20 +55,43 @@ var Name = function Name(components)
   this.changeCount = 0;
 };
 
+/**
+ * A ComponentType specifies the recognized types of a name component. If
+ * the component type in the packet is not a recognized enum value, then we
+ * use ComponentType.OTHER_CODE and you can call
+ * Name.Component.getOtherTypeCode(). We do this to keep the recognized
+ * component type values independent of packet encoding details.
+ */
+var ComponentType = {
+  IMPLICIT_SHA256_DIGEST: 1,
+  GENERIC: 8,
+  OTHER_CODE: 0x7fff
+};
+
 exports.Name = Name;
+exports.ComponentType = ComponentType;
 
 /**
- * Create a new GENERIC Name.Component with a copy of the given value.
+ * Create a new Name.Component with a copy of the given value.
  * (To create an ImplicitSha256Digest component, use fromImplicitSha256Digest.)
- * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer} value If the value is a string, encode it as utf8 (but don't unescape).
+ * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer} value If the
+ * value is a string, encode it as utf8 (but don't unescape).
+ * @param (number) type (optional) The component type as an int from the
+ * ComponentType enum. If name component type is not a recognized ComponentType
+ * enum value, then set this to ComponentType.OTHER_CODE and use the
+ * otherTypeCode parameter. If omitted, use ComponentType.GENERIC.
+ * @param (number) otherTypeCode (optional) If type is ComponentType.OTHER_CODE,
+ * then this is the packet's unrecognized content type code, which must be
+ * non-negative.
  * @constructor
  */
-Name.Component = function NameComponent(value)
+Name.Component = function NameComponent(value, type, otherTypeCode)
 {
   if (typeof value === 'object' && value instanceof Name.Component) {
     // The copy constructor.
     this.value_ = value.value_;
     this.type_ = value.type_;
+    this.otherTypeCode_ = value.otherTypeCode_;
     return;
   }
 
@@ -85,16 +108,19 @@ Name.Component = function NameComponent(value)
     // Blob will make a copy if needed.
     this.value_ = new Blob(value);
 
-  this.type_ = Name.Component.ComponentType.GENERIC;
-};
+  if (type === ComponentType.OTHER_CODE) {
+    if (otherTypeCode == undefined)
+      throw new Error
+        ("To use an other code, call Name.Component(value, ComponentType.OTHER_CODE, otherTypeCode)");
+    
+    if (otherTypeCode < 0)
+      throw new Error("Name.Component other type code must be non-negative");
+    this.otherTypeCode_ = otherTypeCode;
+  }
+  else
+    this.otherTypeCode_ = -1;
 
-/**
- * A Name.Component.ComponentType specifies the recognized types of a name
- * component.
- */
-Name.Component.ComponentType = {
-  IMPLICIT_SHA256_DIGEST: 1,
-  GENERIC: 8
+  this.type_ = (type == undefined ? ComponentType.GENERIC : type);
 };
 
 /**
@@ -117,6 +143,28 @@ Name.Component.prototype.getValueAsBuffer = function()
 };
 
 /**
+ * Get the name component type.
+ * @return {number} The name component type as an int from the ComponentType
+ * enum. If this is ComponentType.OTHER_CODE, then call getOtherTypeCode() to
+ * get the unrecognized component type code.
+ */
+Name.Component.prototype.getType = function()
+{ 
+  return this.type_;
+};
+
+/**
+ * Get the component type code from the packet which is other than a
+ * recognized ComponentType enum value. This is only meaningful if getType()
+ * is ComponentType.OTHER_CODE.
+ * @return (Number) The type code.
+ */
+Name.Component.prototype.getOtherTypeCode = function()
+{ 
+  return this.otherTypeCode_;
+};
+
+/**
  * @deprecated Use getValue which returns a Blob.
  */
 Object.defineProperty(Name.Component.prototype, "value",
@@ -130,10 +178,17 @@ Object.defineProperty(Name.Component.prototype, "value",
  */
 Name.Component.prototype.toEscapedString = function()
 {
-  if (this.type_ === Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST)
+  if (this.type_ === ComponentType.IMPLICIT_SHA256_DIGEST)
     return "sha256digest=" + this.value_.toHex();
+
+  var typeString;
+  if (this.type_ === ComponentType.GENERIC)
+    typeString = "";
   else
-    return Name.toEscapedString(this.value_.buf());
+    typeString = (this.type_ === ComponentType.OTHER_CODE ?
+                  this.otherTypeCode_ : this.type_) + "=";
+
+  return typeString + Name.toEscapedString(this.value_.buf());
 };
 
 /**
@@ -202,7 +257,7 @@ Name.Component.prototype.isSequenceNumber = function()
  */
 Name.Component.prototype.isGeneric = function()
 {
-  return this.type_ === Name.Component.ComponentType.GENERIC;
+  return this.type_ === ComponentType.GENERIC;
 };
 
 /**
@@ -211,7 +266,7 @@ Name.Component.prototype.isGeneric = function()
  */
 Name.Component.prototype.isImplicitSha256Digest = function()
 {
-  return this.type_ === Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST;
+  return this.type_ === ComponentType.IMPLICIT_SHA256_DIGEST;
 };
 
 /**
@@ -303,14 +358,22 @@ Name.Component.prototype.toSequenceNumber = function()
 /**
  * Create a component whose value is the nonNegativeInteger encoding of the
  * number.
- * @param {number} number
- * @return {Name.Component}
+ * @param {number} number The number to be encoded.
+ * @param (number) type (optional) The component type as an int from the
+ * ComponentType enum. If name component type is not a recognized ComponentType
+ * enum value, then set this to ComponentType.OTHER_CODE and use the
+ * otherTypeCode parameter. If omitted, use ComponentType.GENERIC.
+ * @param (number) otherTypeCode (optional) If type is ComponentType.OTHER_CODE,
+ * then this is the packet's unrecognized content type code, which must be
+ * non-negative.
+ * @return {Name.Component} The new component value.
  */
-Name.Component.fromNumber = function(number)
+Name.Component.fromNumber = function(number, type, otherTypeCode)
 {
   var encoder = new TlvEncoder(8);
   encoder.writeNonNegativeInteger(number);
-  return new Name.Component(new Blob(encoder.getOutput(), false));
+  return new Name.Component
+    (new Blob(encoder.getOutput(), false), type, otherTypeCode);
 };
 
 /**
@@ -408,7 +471,7 @@ Name.Component.fromImplicitSha256Digest = function(digest)
       ("Name.Component.fromImplicitSha256Digest: The digest length must be 32 bytes");
 
   var result = new Name.Component(digestBlob);
-  result.type_ = Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST;
+  result.type_ = ComponentType.IMPLICIT_SHA256_DIGEST;
   return result;
 };
 
@@ -440,7 +503,8 @@ Name.Component.prototype.getSuccessor = function()
     // We didn't need the extra byte.
     result = result.slice(0, this.value_.size());
 
-  return new Name.Component(new Blob(result, false));
+  return new Name.Component
+    (new Blob(result, false), this.type_, this.otherTypeCode_);
 };
 
 /**
@@ -450,8 +514,15 @@ Name.Component.prototype.getSuccessor = function()
  */
 Name.Component.prototype.equals = function(other)
 {
-  return typeof other === 'object' && other instanceof Name.Component &&
-    this.value_.equals(other.value_) && this.type_ === other.type_;
+  if (!(typeof other === 'object' && other instanceof Name.Component))
+    return false;
+
+  if (this.type_ === ComponentType.OTHER_CODE)
+    return this.value_.equals(other.value_) &&
+      other.type_ === ComponentType.OTHER_CODE &&
+      this.otherTypeCode_ == other.otherTypeCode_;
+  else
+    return this.value_.equals(other.value_) && this.type_ === other.type_;
 };
 
 /**
@@ -465,9 +536,14 @@ Name.Component.prototype.equals = function(other)
  */
 Name.Component.prototype.compare = function(other)
 {
-  if (this.type_ < other.type_)
+  var myTypeCode = (this.type_ === ComponentType.OTHER_CODE ?
+                    this.otherTypeCode_ : this.type_);
+  var otherTypeCode = (other.type_ === ComponentType.OTHER_CODE ?
+                       other.otherTypeCode_ : other.type_);
+
+  if (myTypeCode < otherTypeCode)
     return -1;
-  if (this.type_ > other.type_)
+  if (myTypeCode > otherTypeCode)
     return 1;
 
   return Name.Component.compareBuffers(this.value_.buf(), other.value_.buf());
@@ -542,14 +618,39 @@ Name.createNameArray = function(uri)
   // Unescape the components.
   var sha256digestPrefix = "sha256digest=";
   for (var i = 0; i < array.length; ++i) {
+    var componentString = array[i];
     var component;
-    if (array[i].substr(0, sha256digestPrefix.length) == sha256digestPrefix) {
-      var hexString = array[i].substr(sha256digestPrefix.length).trim();
+    if (componentString.substr(0, sha256digestPrefix.length) == sha256digestPrefix) {
+      var hexString = componentString.substr(sha256digestPrefix.length).trim();
       component = Name.Component.fromImplicitSha256Digest
         (new Blob(new Buffer(hexString, 'hex')), false);
     }
-    else
-      component = new Name.Component(Name.fromEscapedString(array[i]));
+    else {
+      var type = ComponentType.GENERIC;
+      var otherTypeCode = -1;
+
+      // Check for a component type.
+      var iTypeCodeEnd = componentString.indexOf("=");
+      if (iTypeCodeEnd >= 0) {
+        var typeString = componentString.substring(0, iTypeCodeEnd);
+        otherTypeCode = parseInt(typeString);
+        if (otherTypeCode === NaN)
+          throw new Error
+            ("Can't parse decimal Name Component type: " + typeString +
+             " in URI " + uri);
+
+        if (otherTypeCode == ComponentType.GENERIC ||
+            otherTypeCode == ComponentType.IMPLICIT_SHA256_DIGEST)
+          throw new Error("Unexpected Name Component type: " + typeString +
+             " in URI " + uri);
+
+        type = ComponentType.OTHER_CODE;
+        componentString = componentString.substring(iTypeCodeEnd + 1);
+      }
+
+      component = new Name.Component
+        (Name.fromEscapedString(componentString), type, otherTypeCode);
+    }
 
     if (component.getValue().isNull()) {
       // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
@@ -576,12 +677,21 @@ Name.prototype.set = function(uri)
 };
 
 /**
- * Convert the component to a Buffer and append a GENERIC component to this Name.
- * Return this Name object to allow chaining calls to add.
- * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8 (but don't unescape).
- * @return {Name}
+ * Convert the component to a Buffer and append a component to this Name.
+ * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer|Name} component
+ * If a component is a string, encode as utf8 (but don't unescape).
+ * @param (number) type (optional) The component type as an int from the
+ * ComponentType enum. If name component type is not a recognized ComponentType
+ * enum value, then set this to ComponentType.OTHER_CODE and use the
+ * otherTypeCode parameter. If omitted, use ComponentType.GENERIC. If the
+ * component param is a Name or another Name.Component, then this is ignored.
+ * @param (number) otherTypeCode (optional) If type is ComponentType.OTHER_CODE,
+ * then this is the packet's unrecognized content type code, which must be
+ * non-negative. If the component param is a Name or another Name.Component,
+ * then this is ignored.
+ * @return {Name} This name so that you can chain calls to append.
  */
-Name.prototype.append = function(component)
+Name.prototype.append = function(component, type, otherTypeCode)
 {
   if (typeof component == 'object' && component instanceof Name) {
     var components;
@@ -599,7 +709,7 @@ Name.prototype.append = function(component)
     this.components.push(component);
   else
     // Just use the Name.Component constructor.
-    this.components.push(new Name.Component(component));
+    this.components.push(new Name.Component(component, type, otherTypeCode));
 
   ++this.changeCount;
   return this;
