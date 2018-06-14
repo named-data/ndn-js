@@ -35,7 +35,7 @@ var Blob = require('../util/blob.js').Blob; /** @ignore */
  * documentation:
  * https://redmine.named-data.net/projects/ndn-cxx/wiki/CommandInterest
  *
- * Create a CommandInterestSigner and initialize the timestamp to now.
+ * Create a CommandInterestPreparer and initialize the timestamp to now.
  * @constructor
  */
 var CommandInterestPreparer = function CommandInterestPreparer()
