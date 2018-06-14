@@ -18,14 +18,11 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-// Use capitalized Crypto to not clash with the browser's crypto.subtle.
 /** @ignore */
-var Crypto = require('../crypto.js'); /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
-var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
-var Blob = require('../util/blob.js').Blob; /** @ignore */
-var SigningInfo = require('./signing-info.js').SigningInfo;
+var SigningInfo = require('./signing-info.js').SigningInfo; /** @ignore */
+var CommandInterestPreparer = require('./command-interest-preparer.js').CommandInterestPreparer;
 
 /**
  * CommandInterestSigner is a helper class to create command interests. This
@@ -40,10 +37,14 @@ var SigningInfo = require('./signing-info.js').SigningInfo;
  */
 var CommandInterestSigner = function CommandInterestSigner(keyChain)
 {
+  // Call the base constructor.
+  CommandInterestPreparer.call(this);
+
   this.keyChain_ = keyChain;
-  this.lastUsedTimestamp_ = Math.round(new Date().getTime());
-  this.nowOffsetMilliseconds_ = 0;
 };
+
+CommandInterestSigner.prototype = new CommandInterestPreparer();
+CommandInterestSigner.prototype.name = "CommandInterestSigner";
 
 exports.CommandInterestSigner = CommandInterestSigner;
 
@@ -137,35 +138,7 @@ CommandInterestSigner.prototype.makeCommandInterest = function
   // This copies the Name.
   var commandInterest = new Interest(name);
 
-  // nowOffsetMilliseconds_ is only used for testing.
-  var now = new Date().getTime() + this.nowOffsetMilliseconds_;
-  var timestamp = Math.round(now);
-  while (timestamp <= this.lastUsedTimestamp_)
-    timestamp += 1.0;
-
-  // The timestamp is encoded as a TLV nonNegativeInteger.
-  var encoder = new TlvEncoder(8);
-  encoder.writeNonNegativeInteger(timestamp);
-  commandInterest.getName().append(new Blob(encoder.getOutput(), false));
-
-  // The random value is a TLV nonNegativeInteger too, but we know it is 8
-  // bytes, so we don't need to call the nonNegativeInteger encoder.
-  commandInterest.getName().append(new Blob(Crypto.randomBytes(8), false));
-
-  // Update the timestamp before calling async sign.
-  this.lastUsedTimestamp_ = timestamp;
-
+  this.prepareCommandInterestName(commandInterest, wireFormat);
   return this.keyChain_.sign
     (commandInterest, params, wireFormat, onComplete, onError);
-};
-
-/**
- * Set the offset for when makeCommandInterest() gets the current time, which
- * should only be used for testing.
- * @param {number} nowOffsetMilliseconds The offset in milliseconds.
- */
-CommandInterestSigner.prototype.setNowOffsetMilliseconds_ = function
-  (nowOffsetMilliseconds)
-{
-  this.nowOffsetMilliseconds_ = nowOffsetMilliseconds;
 };
