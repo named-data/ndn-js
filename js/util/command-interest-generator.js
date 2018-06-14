@@ -17,12 +17,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-// Use capitalized Crypto to not clash with the browser's crypto.subtle.
-/** @ignore */
-var Crypto = require('../crypto.js'); /** @ignore */
 var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
-var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
-var Blob = require('./blob.js').Blob;
+var CommandInterestPreparer = require('../security/command-interest-preparer.js').CommandInterestPreparer;
 
 /**
  * A CommandInterestGenerator keeps track of a timestamp and generates command
@@ -34,8 +30,12 @@ var Blob = require('./blob.js').Blob;
  */
 var CommandInterestGenerator = function CommandInterestGenerator()
 {
-  this.lastTimestamp = Math.round(new Date().getTime());
+  // Call the base constructor.
+  CommandInterestPreparer.call(this);
 };
+
+CommandInterestGenerator.prototype = new CommandInterestPreparer();
+CommandInterestGenerator.prototype.name = "CommandInterestGenerator";
 
 exports.CommandInterestGenerator = CommandInterestGenerator;
 
@@ -63,22 +63,7 @@ CommandInterestGenerator.prototype.generate = function
   wireFormat = (typeof wireFormat === "function" || !wireFormat) ?
     WireFormat.getDefaultWireFormat() : wireFormat;
 
-  var timestamp = Math.round(new Date().getTime());
-  while (timestamp <= this.lastTimestamp)
-    timestamp += 1.0;
-
-  // The timestamp is encoded as a TLV nonNegativeInteger.
-  var encoder = new TlvEncoder(8);
-  encoder.writeNonNegativeInteger(timestamp);
-  interest.getName().append(new Blob(encoder.getOutput(), false));
-
-  // The random value is a TLV nonNegativeInteger too, but we know it is 8
-  // bytes, so we don't need to call the nonNegativeInteger encoder.
-  interest.getName().append(new Blob(Crypto.randomBytes(8), false));
-
-  // Update the timestamp before calling async sign.
-  this.lastTimestamp = timestamp;
-
+  this.prepareCommandInterestName(interest, wireFormat);
   keyChain.sign(interest, certificateName, wireFormat, function() {
     if (interest.getInterestLifetimeMilliseconds() == null ||
         interest.getInterestLifetimeMilliseconds() < 0)
