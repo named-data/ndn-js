@@ -147,6 +147,7 @@ def build (bld):
                  "js/data.js",
                  "js/security/security-exception.js",
                  "js/security/security-types.js",
+                 "js/security/command-interest-preparer.js",
                  "js/security/command-interest-signer.js",
                  "js/security/key-id-type.js",
                  "js/security/key-params.js",

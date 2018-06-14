@@ -38,6 +38,7 @@ exports.SegmentFetcher = require('./js/util/segment-fetcher.js').SegmentFetcher;
 exports.ExponentialReExpress = require('./js/util/exponential-re-express.js').ExponentialReExpress;
 exports.SecurityException = require('./js/security/security-exception.js').SecurityException;
 exports.InvalidArgumentException = require('./js/security/security-exception.js').InvalidArgumentException;
+exports.CommandInterestPreparer = require('./js/security/command-interest-preparer.js').CommandInterestPreparer;
 exports.CommandInterestSigner = require('./js/security/command-interest-signer.js').CommandInterestSigner;
 exports.KeyIdType = require('./js/security/key-id-type.js').KeyIdType;
 exports.KeyType = require('./js/security/security-types.js').KeyType;
