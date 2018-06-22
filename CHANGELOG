@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.16.0 (2018-06-08)
+Interim changes since NDN-JS v0.16.0 (2018-06-22)
 -------------------------------------------------
 
 Changes
@@ -6,6 +6,10 @@ Changes
   packet format v0.3.
 * https://redmine.named-data.net/issues/4397 In Name, API for typed name components.
 * examples: Added firefly-chat which uses FireflyFace.
+
+Bug fixes
+* In ChronoSync2013 timeout, get the digest component based on the broadcast
+  prefix size instead of a hard-coded value.
 
 NDN-JS v0.16.0 (2018-04-17)
 ---------------------------
