@@ -337,7 +337,7 @@ ChronoSync2013.PrefixAndSessionNo.prototype.getSessionNo = function()
 
 // Private methods for ChronoSync2013 class,
 /**
- * Make a data packet with the syncMessage and with name applicationBroadcastPrefix_ + digest.
+ * Make a data packet with the syncMessage and with name applicationBroadcastPrefix + digest.
  * Sign and send.
  * @param {string} The root digest as a hex string for the data packet name.
  * @param {SyncStateMsg} The syncMessage updates the digest tree state with the given digest.
@@ -675,7 +675,8 @@ ChronoSync2013.prototype.syncTimeout = function(interest)
     // Ignore callbacks after the application calls shutdown().
     return;
 
-  var component = interest.getName().get(4).toEscapedString();
+  var component = interest.getName().get
+    (this.applicationBroadcastPrefix.size()).toEscapedString();
   if (component == this.digest_tree.root) {
     var n = new Name(interest.getName());
     var newInterest = new Interest(n);
