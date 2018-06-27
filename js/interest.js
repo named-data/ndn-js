@@ -277,6 +277,17 @@ Interest.prototype.getMaxSuffixComponents = function()
 };
 
 /**
+ * Get the CanBePrefix flag. If not specified, the default is true.
+ * @returns {boolean} The CanBePrefix flag.
+ */
+Interest.prototype.getCanBePrefix = function()
+{
+  // Use the closest v0.2 semantics. CanBePrefix is the opposite of exact
+  // match where MaxSuffixComponents is 1 (for the implicit digest).
+  return this.maxSuffixComponents_ != 1;
+};
+
+/**
  * Get the interest key locator.
  * @return {KeyLocator} The key locator. If its getType() is null,
  * then the key locator is not specified.
@@ -503,6 +514,21 @@ Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
   this.maxSuffixComponents_ = maxSuffixComponents;
+  ++this.changeCount_;
+  return this;
+};
+
+/**
+ * Set the CanBePrefix flag.
+ * @param {boolean} canBePrefix True if the Interest name can be a prefix. If
+ * you do not set this flag, the default value is true.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setCanBePrefix = function(canBePrefix)
+{
+  // Use the closest v0.2 semantics. CanBePrefix is the opposite of exact
+  // match where MaxSuffixComponents is 1 (for the implicit digest).
+  this.maxSuffixComponents_ = (canBePrefix ? null : 1);
   ++this.changeCount_;
   return this;
 };
