@@ -45,7 +45,7 @@ exports.PibKey = PibKey;
 
 /**
  * Get the key name.
- * @return {Name} The key name. You must not modify the Key object. If you need
+ * @return {Name} The key name. You must not modify the Name object. If you need
  * to modify it, make a copy.
  * @throws Error if the backend implementation instance is invalid.
  */
