@@ -1388,12 +1388,8 @@ Tlv0_2WireFormat.decodeInterestV03_ = function(interest, input, copy)
   var endOffset = decoder.readNestedTlvsStart(Tlv.Interest);
   var offsets = Tlv0_2WireFormat.decodeName(interest.getName(), decoder, copy);
 
-  if (decoder.readBooleanTlv(Tlv.CanBePrefix, endOffset))
-    // No limit on MaxSuffixComponents.
-    interest.setMaxSuffixComponents(null);
-  else
-    // The one suffix components is for the implicit digest.
-    interest.setMaxSuffixComponents(1);
+  // In v0.2 semantics, this calls setMaxSuffixComponents.
+  interest.setCanBePrefix(decoder.readBooleanTlv(Tlv.CanBePrefix, endOffset));
 
   interest.setMustBeFresh(decoder.readBooleanTlv(Tlv.MustBeFresh, endOffset));
 
