@@ -33,6 +33,7 @@ var OID = require('../../encoding/oid.js').OID; /** @ignore */
 var PrivateKeyStorage = require('../../security/identity/private-key-storage.js').PrivateKeyStorage; /** @ignore */
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var PublicKey = require('../../security/certificate/public-key.js').PublicKey; /** @ignore */
 var rsaKeygen = null;
 try {
   // This should be installed with: sudo npm install rsa-keygen
@@ -111,7 +112,7 @@ RsaAlgorithm.generateKeyPromise = function(params, useSync)
  */
 RsaAlgorithm.generateKey = function(params)
 {
-  return SyncPromise.getValue(this.generateKeyPromise(params, true));
+  return SyncPromise.getValue(RsaAlgorithm.generateKeyPromise(params, true));
 };
 
 /**
@@ -221,7 +222,7 @@ RsaAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
  */
 RsaAlgorithm.decrypt = function(keyBits, encryptedData, params)
 {
-  return SyncPromise.getValue(this.decryptPromise
+  return SyncPromise.getValue(RsaAlgorithm.decryptPromise
     (keyBits, encryptedData, params, true));
 };
 
@@ -238,49 +239,14 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params)
  */
 RsaAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
 {
-  if (UseSubtleCrypto() && !useSync &&
-      // Crypto.subtle doesn't implement PKCS1 padding.
-      params.getAlgorithmType() != EncryptAlgorithmType.RsaPkcs) {
-    if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep) {
-      return crypto.subtle.importKey
-        ("spki", keyBits.buf(), { name: "RSA-OAEP", hash: {name: "SHA-1"} },
-         false, ["encrypt"])
-      .then(function(publicKey) {
-        return crypto.subtle.encrypt
-          ({ name: "RSA-OAEP" }, publicKey, plainData.buf());
-      })
-      .then(function(result) {
-        return Promise.resolve(new Blob(new Uint8Array(result), false));
-      });
-    }
-    else
-      return Promise.reject(new Error("unsupported padding scheme"));
+  var publicKey;
+  try {
+    publicKey = new PublicKey(keyBits);
+  } catch (ex) {
+    return SyncPromise.reject(ex);
   }
-  else {
-    // Encode the key DER as a PEM public key as needed by Crypto.
-    var keyBase64 = keyBits.buf().toString('base64');
-    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
-    for (var i = 0; i < keyBase64.length; i += 64)
-      keyPem += (keyBase64.substr(i, 64) + "\n");
-    keyPem += "-----END PUBLIC KEY-----";
 
-    var padding;
-    if (params.getAlgorithmType() == EncryptAlgorithmType.RsaPkcs)
-      padding = constants.RSA_PKCS1_PADDING;
-    else if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep)
-      padding = constants.RSA_PKCS1_OAEP_PADDING;
-    else
-      return SyncPromise.reject(new Error("unsupported padding scheme"));
-
-    try {
-      // In Node.js, publicEncrypt requires version v0.12.
-      return SyncPromise.resolve(new Blob
-        (Crypto.publicEncrypt({ key: keyPem, padding: padding }, plainData.buf()),
-         false));
-    } catch (err) {
-      return SyncPromise.reject(err);
-    }
-  }
+  return publicKey.encryptPromise(plainData, params.getAlgorithmType(), useSync);
 };
 
 /**
@@ -295,7 +261,7 @@ RsaAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
  */
 RsaAlgorithm.encrypt = function(keyBits, plainData, params)
 {
-  return SyncPromise.getValue(this.encryptPromise
+  return SyncPromise.getValue(RsaAlgorithm.encryptPromise
     (keyBits, plainData, params, true));
 };
 
