@@ -20,13 +20,16 @@
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
 /** @ignore */
+var constants = require('constants'); /** @ignore */
 var Crypto = require('../../crypto.js'); /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
-var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException; /** @ignore */
 var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
 var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
 var UnrecognizedKeyFormatException = require('../security-exception.js').UnrecognizedKeyFormatException; /** @ignore */
 var KeyType = require('../security-types.js').KeyType; /** @ignore */
+var EncryptAlgorithmType = require('../../encrypt/algo/encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 
 /**
@@ -117,6 +120,91 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
 PublicKey.prototype.getKeyDer = function()
 {
   return this.keyDer;
+};
+
+/**
+ * Encrypt the plainData using the keyBits according the encrypt algorithm type.
+ * @param {Blob|Buffer} plainData The data to encrypt.
+ * @param {number} algorithmType The algorithm type from the
+ * EncryptAlgorithmType enum, e.g., RsaOaep.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the encrypted Blob.
+ */
+PublicKey.prototype.encryptPromise = function(plainData, algorithmType, useSync)
+{
+  if (typeof plainData === 'object' && plainData instanceof Blob)
+    plainData = plainData.buf();
+
+  if (UseSubtleCrypto() && !useSync &&
+      // Crypto.subtle doesn't implement PKCS1 padding.
+      algorithmType != EncryptAlgorithmType.RsaPkcs) {
+    if (algorithmType == EncryptAlgorithmType.RsaOaep) {
+      if (this.keyType != KeyType.RSA)
+        return Promise.reject(new Error("The key type must be RSA"));
+
+      return crypto.subtle.importKey
+        ("spki", this.keyDer.buf(), { name: "RSA-OAEP", hash: {name: "SHA-1"} },
+         false, ["encrypt"])
+      .then(function(publicKey) {
+        return crypto.subtle.encrypt({ name: "RSA-OAEP" }, publicKey, plainData);
+      })
+      .then(function(result) {
+        return Promise.resolve(new Blob(new Uint8Array(result), false));
+      });
+    }
+    else
+      return Promise.reject(new Error("unsupported padding scheme"));
+  }
+  else {
+    // Encode the key DER as a PEM public key as needed by Crypto.
+    var keyBase64 = this.keyDer.buf().toString('base64');
+    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END PUBLIC KEY-----";
+
+    var padding;
+    if (algorithmType == EncryptAlgorithmType.RsaPkcs) {
+      if (this.keyType != KeyType.RSA)
+        return SyncPromise.reject(new Error("The key type must be RSA"));
+
+      padding = constants.RSA_PKCS1_PADDING;
+    }
+    else if (algorithmType == EncryptAlgorithmType.RsaOaep) {
+      if (this.keyType != KeyType.RSA)
+        return SyncPromise.reject(new Error("The key type must be RSA"));
+
+      padding = constants.RSA_PKCS1_OAEP_PADDING;
+    }
+    else
+      return SyncPromise.reject(new Error("unsupported padding scheme"));
+
+    try {
+      // In Node.js, publicEncrypt requires version v0.12.
+      return SyncPromise.resolve(new Blob
+        (Crypto.publicEncrypt({ key: keyPem, padding: padding }, plainData),
+         false));
+    } catch (err) {
+      return SyncPromise.reject(err);
+    }
+  }
+};
+
+/**
+ * Encrypt the plainData using the keyBits according the encrypt algorithm type.
+ * @param {Blob|Buffer} plainData The data to encrypt.
+ * @param {number} algorithmType The algorithm type from the
+ * EncryptAlgorithmType enum, e.g., RsaOaep.
+ * @return {Blob} The encrypted data.
+ * @throws Error If encryptPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+PublicKey.prototype.encrypt = function(plainData, algorithmType)
+{
+  return SyncPromise.getValue(this.encryptPromise
+    (plainData, algorithmType, true));
 };
 
 PublicKey.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
