@@ -10,6 +10,8 @@ Changes
 Bug fixes
 * In ChronoSync2013 timeout, get the digest component based on the broadcast
   prefix size instead of a hard-coded value.
+* https://github.com/named-data/jndn/pull/22 In decodeLpPacket, fix the check for
+  ignoring an unrecognized field type.
 
 NDN-JS v0.16.0 (2018-04-17)
 ---------------------------
