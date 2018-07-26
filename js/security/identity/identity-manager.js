@@ -82,7 +82,7 @@ var IdentityManager = function IdentityManager
     var thisStorage = this;
     // Make the function that BasicIdentityStorage will call the first time it
     // is used. It has to be an async promise becuase getTpmLocatorPromise is async.
-    function initialCheckPromise() 
+    function initialCheckPromise()
     {
       return thisStorage.checkTpmPromise_(canonicalTpmLocator[0]);
     }
@@ -865,7 +865,7 @@ IdentityManager.prototype.addCertificateAsDefault = function
  * Get a certificate which is still valid with the specified name.
  * @param {Name} certificateName The name of the requested certificate.
  * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate. If omitted, the return value is 
+ * with the requested IdentityCertificate. If omitted, the return value is
  * described below. (Some database libraries only use a callback, so onComplete
  * is required to use these.)
  * @param {function} onError (optional) If defined, then onComplete must be

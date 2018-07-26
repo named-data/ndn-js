@@ -24,7 +24,7 @@ var TrustAnchorGroup = require('./trust-anchor-group.js').TrustAnchorGroup;
 /**
  * The StaticTrustAnchorGroup class extends TrustAnchorGroup to implement a
  * static trust anchor group.
- * 
+ *
  * Create a StaticTrustAnchorGroup to use an existing container.
  * @param {CertificateContainer} certificateContainer The existing certificate
  * container which implements the CertificateContainer interface.

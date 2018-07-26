@@ -85,7 +85,7 @@ function addRoute() {
     transport.sendObject({
       type: "faces/query",
       uri: addRouteUri
-    });      
+    });
 }
 
 function showStatus() {

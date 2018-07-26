@@ -124,13 +124,13 @@ ChronoChat.prototype.initial = function()
           var uri = decodedKey+'/0/'+delta[key]; // beware! session number is hardcoded as zero here!!
           var interest = new Interest(new Name(uri));
           interest.setInterestLifetimeMilliseconds(self.sync_lifetime);
-      
+
           if (LOG > 0) console.log('expressing interest for historical data ', interest.getName().toUri());
           self.face.expressInterest(interest, self.onData.bind(self), self.chatTimeout.bind(self));
         }
-  
+
         if (idx == arr.length-1)
-        { 
+        {
           self.fetchedHistorical = true;
           if (LOG > 0) console.log('requested all historical ',self.fetchedHistorical);
         }
@@ -183,7 +183,7 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
 
   // this one is to prevent chronochat from retrieving latest data which
   // should be fetched as part of initial historical retrieval
-  if (!this.fetchedHistorical) 
+  if (!this.fetchedHistorical)
   {
     if (LOG > 0) console.log('hasnt fetched historical yet ', this.fetchedHistorical);
     return;
@@ -222,7 +222,7 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
     var uri = sendList[i] + "/" + sessionNoList[i] + "/" + sequenceNoList[i];
     var interest = new Interest(new Name(uri));
     interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
-    
+
     if (LOG > 0) console.log('expressing interest for data ', interest.getName().toUri());
     this.face.expressInterest(interest, this.onData.bind(this), this.chatTimeout.bind(this));
   }
@@ -240,7 +240,7 @@ ChronoChat.prototype.onData = function(interest, co)
   var content = this.ChatMessage.decode(arr.buffer);
 
   var temp = (new Date()).getTime();
-  // if (temp - content.timestamp * 1000 < 120000) 
+  // if (temp - content.timestamp * 1000 < 120000)
   {
     var t = (new Date(content.timestamp * 1000)).toLocaleTimeString();
     var name = content.from;

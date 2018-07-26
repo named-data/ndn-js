@@ -23,10 +23,10 @@ var fireflySyncDebug = false;
 /**
  * FireflySync provides sync mechanism similar to ChronoSync, only backed by Firestore backend.
  * @param {firebase.firestore.Firestore} An initialized Firestore object
- * @param syncDoc 	A dictionary with two keys: appName and syncId which together identify 
- *					client's app sync entity (example: WhatsApp chatroom; appName='whatsapp', 
+ * @param syncDoc 	A dictionary with two keys: appName and syncId which together identify
+ *					client's app sync entity (example: WhatsApp chatroom; appName='whatsapp',
  *					syncId='chatroom-id').
- * @param applicationPrefix 	Simliar to ChronoSync, this is an application prefix, which 
+ * @param applicationPrefix 	Simliar to ChronoSync, this is an application prefix, which
  *								client code will use for data publishing.
  * @param onReceivedSyncState 	A callback (function({'prefix':<seq-no>})) which will be called
  *								whenever new updates (sequence numbres) are received.

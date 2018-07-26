@@ -59,13 +59,13 @@ NetworkNack.prototype.getReason = function() { return this.reason_; };
  * @return {number} The reason code.
  */
 NetworkNack.prototype.getOtherReasonCode = function()
-{ 
+{
   return this.otherReasonCode_;
 };
 
 /**
  * Set the network Nack reason.
- * @param {number} reason The network Nack reason enum value from 
+ * @param {number} reason The network Nack reason enum value from
  * NetworkNack.Reason. If the packet's reason code is not a recognized Reason
  * enum value, use Reason.OTHER_CODE and call setOtherReasonCode().
  */

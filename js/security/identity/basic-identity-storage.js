@@ -36,7 +36,7 @@ var path = require('path');
  * @param {string} databaseFilePath (optional) The path of the SQLite3 file. If
  * omitted, use the default file (~/.ndn/ndnsec-public-info.db).
  * @param {function} initialCheckPromise (optional) If supplied, then after
- * initializing the database this calls initialCheckPromise() which returns a 
+ * initializing the database this calls initialCheckPromise() which returns a
  * Promise that resolves when the initial check passes or is rejected for a
  * problem.
  * @constructor

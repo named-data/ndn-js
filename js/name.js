@@ -112,7 +112,7 @@ Name.Component = function NameComponent(value, type, otherTypeCode)
     if (otherTypeCode == undefined)
       throw new Error
         ("To use an other code, call Name.Component(value, ComponentType.OTHER_CODE, otherTypeCode)");
-    
+
     if (otherTypeCode < 0)
       throw new Error("Name.Component other type code must be non-negative");
     this.otherTypeCode_ = otherTypeCode;
@@ -149,7 +149,7 @@ Name.Component.prototype.getValueAsBuffer = function()
  * get the unrecognized component type code.
  */
 Name.Component.prototype.getType = function()
-{ 
+{
   return this.type_;
 };
 
@@ -160,7 +160,7 @@ Name.Component.prototype.getType = function()
  * @return (Number) The type code.
  */
 Name.Component.prototype.getOtherTypeCode = function()
-{ 
+{
   return this.otherTypeCode_;
 };
 
@@ -1143,7 +1143,7 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
 
 /**
  * Return value as an escaped string according to NDN URI Scheme.
- * We can't use encodeURIComponent because that doesn't encode all the 
+ * We can't use encodeURIComponent because that doesn't encode all the
  * characters we want to.
  * This does not add a type code prefix such as "sha256digest=".
  * @param {Buffer|Name.Component} value The value or Name.Component to escape.
@@ -1187,7 +1187,7 @@ Name.toEscapedString = function(value)
 
 /**
  * Make a blob value by decoding the escapedString according to NDN URI Scheme.
- * If escapedString is "", "." or ".." then return null, which means to skip the 
+ * If escapedString is "", "." or ".." then return null, which means to skip the
  * component in the name.
  * This does not check for a type code prefix such as "sha256digest=".
  * @param {string} escapedString The escaped string to decode.

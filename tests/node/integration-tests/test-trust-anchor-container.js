@@ -41,9 +41,9 @@ describe ("TestTrustAnchorContainer", function() {
       fs.mkdirSync(this.certificateDirectoryPath);
     } catch (ex) {}
 
-    this.certificatePath1 = 
+    this.certificatePath1 =
       path.join(this.certificateDirectoryPath, "trust-anchor-1.cert");
-    this.certificatePath2 = 
+    this.certificatePath2 =
       path.join(this.certificateDirectoryPath, "trust-anchor-2.cert");
 
     this.identity1 = this.fixture.addIdentity(new Name("/TestAnchorContainer/First"));

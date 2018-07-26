@@ -83,7 +83,7 @@ CertificateStorage.prototype.cacheUnverifiedCertificate = function(certificate)
  * @return {TrustAnchorContainer} The trust anchor container.
  */
 CertificateStorage.prototype.getTrustAnchors = function()
-{ 
+{
   return this.trustAnchors_;
 };
 
@@ -92,7 +92,7 @@ CertificateStorage.prototype.getTrustAnchors = function()
  * @return {CertificateCacheV2} The verified certificate cache.
  */
 CertificateStorage.prototype.getVerifiedCertificateCache = function()
-{ 
+{
   return this.verifiedCertificateCache_;
 };
 
@@ -101,7 +101,7 @@ CertificateStorage.prototype.getVerifiedCertificateCache = function()
  * @return {CertificateCacheV2} The unverified certificate cache.
  */
 CertificateStorage.prototype.getUnverifiedCertificateCache = function()
-{ 
+{
   return this.unverifiedCertificateCache_;
 };
 
@@ -116,7 +116,7 @@ CertificateStorage.prototype.getUnverifiedCertificateCache = function()
  * @param {CertificateV2} certificate The certificate to load as a trust anchor,
  * which is copied.
  * @param {String} path The path to load the trust anchors.
- * @param {number} refreshPeriod  The refresh time in milliseconds for the 
+ * @param {number} refreshPeriod  The refresh time in milliseconds for the
  * anchors under path. This must be positive. The relevant trust anchors will
  * only be updated when find is called.
  * @param {boolean} isDirectory (optional) If true, then path is a directory.
@@ -150,7 +150,7 @@ CertificateStorage.prototype.cacheVerifiedCertificate = function(certificate)
  * Remove any cached verified certificates.
  */
 CertificateStorage.prototype.resetVerifiedCertificates = function()
-{ 
+{
   this.verifiedCertificateCache_.clear();
 };
 

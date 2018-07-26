@@ -482,7 +482,7 @@ ChronoSync2013.prototype.onData = function(interest, co)
       }
       else
         applicationInfo = new Blob();
-      
+
       syncStates.push(new ChronoSync2013.SyncState
         (content[i].name, content[i].seqno.session, content[i].seqno.seq,
          applicationInfo));

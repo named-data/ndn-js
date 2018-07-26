@@ -4,10 +4,10 @@ wsproxy
 WebSocket proxy server between NDN javascript stack and ndnd.
 
 
-NOTE - this is legacy; there is a cpp-based wsproxy that has no nodejs dependency. 
+NOTE - this is legacy; there is a cpp-based wsproxy that has no nodejs dependency.
 https://github.com/named-data/wsproxy-cpp
-for new installs, use that instead ! 
-meanwhile, instructions below for node-js version. 
+for new installs, use that instead !
+meanwhile, instructions below for node-js version.
 
 
 

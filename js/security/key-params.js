@@ -26,7 +26,7 @@ var KeyType = require('./security-types.js').KeyType;
 /**
  * KeyParams is a base class for key parameters. This also defines the
  * subclasses which are used to store parameters for key generation.
- * 
+ *
  * Create a key generation parameter. This constructor is protected and used by
  * subclasses.
  * @param {number} keyType: The type for the created key, as an int from the

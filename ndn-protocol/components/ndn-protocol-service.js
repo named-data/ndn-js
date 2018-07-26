@@ -483,7 +483,7 @@ SegmentStore.prototype.storeContent = function(segmentNumber, data)
 };
 
 /*
- * If the min segment number is this.maxRetrievedSegmentNumber + 1 and its value 
+ * If the min segment number is this.maxRetrievedSegmentNumber + 1 and its value
  * is not null, then delete from the store, return the entry with key and value,
  * and update maxRetrievedSegmentNumber. Otherwise return null.
  * @return {object} An object where "key" is the segment number and "value" is
@@ -503,7 +503,7 @@ SegmentStore.prototype.maybeRetrieveNextEntry = function()
 };
 
 /*
- * Return an array of the next segment numbers that need to be requested so that 
+ * Return an array of the next segment numbers that need to be requested so that
  * the total requested segments is totalRequestedSegments. If a segment store
  * entry value is null, it is already requested and is not returned. If a
  * segment number is returned, create a entry in the segment store with a null

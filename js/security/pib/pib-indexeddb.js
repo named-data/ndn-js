@@ -368,7 +368,7 @@ PibIndexedDb.prototype.addKeyPromise = function
   .then(function(hasKey) {
     if (!hasKey)
       return thisPib.database.keys.put
-        ({ keyNameUri: keyName.toUri(), keyDer: key, 
+        ({ keyNameUri: keyName.toUri(), keyDer: key,
            defaultCertificateUri: null });
     else
       // Update the keyDer and keep the defaultCertificateUri.

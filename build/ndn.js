@@ -13574,7 +13574,7 @@ MemoryContentCache.prototype.getStorePendingInterest = function()
  * @return {number} The minimum cache lifetime in milliseconds.
  */
 MemoryContentCache.prototype.getMinimumCacheLifetime = function()
-{ 
+{
   return this.minimumCacheLifetime_;
 };
 
@@ -13688,7 +13688,7 @@ MemoryContentCache.prototype.doCleanup = function(nowMilliseconds)
   if (nowMilliseconds >= this.nextCleanupTime) {
     // staleTimeCache is sorted on cacheRemovalTimeMilliseconds_, so we only need to
     // erase the stale entries at the front, then quit.
-    while (this.staleTimeCache.length > 0 && 
+    while (this.staleTimeCache.length > 0 &&
            this.staleTimeCache[0].isPastRemovalTime(nowMilliseconds))
       this.staleTimeCache.shift();
 
@@ -15183,7 +15183,7 @@ NdnRegexRepeatMatcher.prototype.parseRepetition_ = function()
 };
 
 /**
- * 
+ *
  * @param {number} repeat
  * @param {Name} name
  * @param {number} offset
@@ -16248,7 +16248,7 @@ Name.Component = function NameComponent(value, type, otherTypeCode)
     if (otherTypeCode == undefined)
       throw new Error
         ("To use an other code, call Name.Component(value, ComponentType.OTHER_CODE, otherTypeCode)");
-    
+
     if (otherTypeCode < 0)
       throw new Error("Name.Component other type code must be non-negative");
     this.otherTypeCode_ = otherTypeCode;
@@ -16285,7 +16285,7 @@ Name.Component.prototype.getValueAsBuffer = function()
  * get the unrecognized component type code.
  */
 Name.Component.prototype.getType = function()
-{ 
+{
   return this.type_;
 };
 
@@ -16296,7 +16296,7 @@ Name.Component.prototype.getType = function()
  * @return (Number) The type code.
  */
 Name.Component.prototype.getOtherTypeCode = function()
-{ 
+{
   return this.otherTypeCode_;
 };
 
@@ -17279,7 +17279,7 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
 
 /**
  * Return value as an escaped string according to NDN URI Scheme.
- * We can't use encodeURIComponent because that doesn't encode all the 
+ * We can't use encodeURIComponent because that doesn't encode all the
  * characters we want to.
  * This does not add a type code prefix such as "sha256digest=".
  * @param {Buffer|Name.Component} value The value or Name.Component to escape.
@@ -17323,7 +17323,7 @@ Name.toEscapedString = function(value)
 
 /**
  * Make a blob value by decoding the escapedString according to NDN URI Scheme.
- * If escapedString is "", "." or ".." then return null, which means to skip the 
+ * If escapedString is "", "." or ".." then return null, which means to skip the
  * component in the name.
  * This does not check for a type code prefix such as "sha256digest=".
  * @param {string} escapedString The escaped string to decode.
@@ -17947,7 +17947,7 @@ var ValidityPeriod = require('./security/validity-period.js').ValidityPeriod;
  * another object.
  *
  * @param {Sha256WithEcdsaSignature} value (optional) If value is a
- * Sha256WithEcdsaSignature, copy its values.  If value is omitted, the 
+ * Sha256WithEcdsaSignature, copy its values.  If value is omitted, the
  * keyLocator is the default with unspecified values and the signature is
  * unspecified.
  * @constructor
@@ -18291,7 +18291,7 @@ GenericSignature.prototype.clone = function()
  * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 GenericSignature.prototype.getSignature = function()
-{ 
+{
   return this.signature_;
 };
 
@@ -19171,7 +19171,7 @@ var Blob = require('../util/blob.js').Blob; /** @ignore */
  * documentation:
  * https://redmine.named-data.net/projects/ndn-cxx/wiki/CommandInterest
  *
- * Create a CommandInterestSigner and initialize the timestamp to now.
+ * Create a CommandInterestPreparer and initialize the timestamp to now.
  * @constructor
  */
 var CommandInterestPreparer = function CommandInterestPreparer()
@@ -19439,7 +19439,7 @@ var KeyType = require('./security-types.js').KeyType;
 /**
  * KeyParams is a base class for key parameters. This also defines the
  * subclasses which are used to store parameters for key generation.
- * 
+ *
  * Create a key generation parameter. This constructor is protected and used by
  * subclasses.
  * @param {number} keyType: The type for the created key, as an int from the
@@ -19741,7 +19741,7 @@ exports.SafeBag = SafeBag;
 
 /**
  * Get the certificate data packet.
- * @return {Data} The certificate as a Data packet. If you need to process it 
+ * @return {Data} The certificate as a Data packet. If you need to process it
  * as a certificate object then you must create a new CertificateV2(data).
  */
 SafeBag.prototype.getCertificate = function() { return this.certificate_; };
@@ -20072,7 +20072,7 @@ SigningInfo.prototype.getPibKey = function()
 
 /**
  * Set the digest algorithm for public key operations.
- * @param {number} digestAlgorithm The digest algorithm, as an int from the 
+ * @param {number} digestAlgorithm The digest algorithm, as an int from the
  * DigestAlgorithm enum.
  * @return {SigningInfo} This SigningInfo.
  */
@@ -20138,7 +20138,7 @@ SigningInfo.prototype.toString = function()
 };
 
 /**
- * Get the localhost identity which indicates that the signature is generated 
+ * Get the localhost identity which indicates that the signature is generated
  * using SHA-256.
  * @return {Name} A new Name of the SHA-256 identity.
  */
@@ -20773,13 +20773,16 @@ VerificationHelpers.setVerifyUsesString_ = function()
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
 /** @ignore */
+var constants = require('constants'); /** @ignore */
 var Crypto = require('../../crypto.js'); /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
-var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException; /** @ignore */
 var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
 var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
 var UnrecognizedKeyFormatException = require('../security-exception.js').UnrecognizedKeyFormatException; /** @ignore */
 var KeyType = require('../security-types.js').KeyType; /** @ignore */
+var EncryptAlgorithmType = require('../../encrypt/algo/encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 
 /**
@@ -20870,6 +20873,91 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
 PublicKey.prototype.getKeyDer = function()
 {
   return this.keyDer;
+};
+
+/**
+ * Encrypt the plainData using the keyBits according the encrypt algorithm type.
+ * @param {Blob|Buffer} plainData The data to encrypt.
+ * @param {number} algorithmType The algorithm type from the
+ * EncryptAlgorithmType enum, e.g., RsaOaep.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the encrypted Blob.
+ */
+PublicKey.prototype.encryptPromise = function(plainData, algorithmType, useSync)
+{
+  if (typeof plainData === 'object' && plainData instanceof Blob)
+    plainData = plainData.buf();
+
+  if (UseSubtleCrypto() && !useSync &&
+      // Crypto.subtle doesn't implement PKCS1 padding.
+      algorithmType != EncryptAlgorithmType.RsaPkcs) {
+    if (algorithmType == EncryptAlgorithmType.RsaOaep) {
+      if (this.keyType != KeyType.RSA)
+        return Promise.reject(new Error("The key type must be RSA"));
+
+      return crypto.subtle.importKey
+        ("spki", this.keyDer.buf(), { name: "RSA-OAEP", hash: {name: "SHA-1"} },
+         false, ["encrypt"])
+      .then(function(publicKey) {
+        return crypto.subtle.encrypt({ name: "RSA-OAEP" }, publicKey, plainData);
+      })
+      .then(function(result) {
+        return Promise.resolve(new Blob(new Uint8Array(result), false));
+      });
+    }
+    else
+      return Promise.reject(new Error("unsupported padding scheme"));
+  }
+  else {
+    // Encode the key DER as a PEM public key as needed by Crypto.
+    var keyBase64 = this.keyDer.buf().toString('base64');
+    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END PUBLIC KEY-----";
+
+    var padding;
+    if (algorithmType == EncryptAlgorithmType.RsaPkcs) {
+      if (this.keyType != KeyType.RSA)
+        return SyncPromise.reject(new Error("The key type must be RSA"));
+
+      padding = constants.RSA_PKCS1_PADDING;
+    }
+    else if (algorithmType == EncryptAlgorithmType.RsaOaep) {
+      if (this.keyType != KeyType.RSA)
+        return SyncPromise.reject(new Error("The key type must be RSA"));
+
+      padding = constants.RSA_PKCS1_OAEP_PADDING;
+    }
+    else
+      return SyncPromise.reject(new Error("unsupported padding scheme"));
+
+    try {
+      // In Node.js, publicEncrypt requires version v0.12.
+      return SyncPromise.resolve(new Blob
+        (Crypto.publicEncrypt({ key: keyPem, padding: padding }, plainData),
+         false));
+    } catch (err) {
+      return SyncPromise.reject(err);
+    }
+  }
+};
+
+/**
+ * Encrypt the plainData using the keyBits according the encrypt algorithm type.
+ * @param {Blob|Buffer} plainData The data to encrypt.
+ * @param {number} algorithmType The algorithm type from the
+ * EncryptAlgorithmType enum, e.g., RsaOaep.
+ * @return {Blob} The encrypted data.
+ * @throws Error If encryptPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+PublicKey.prototype.encrypt = function(plainData, algorithmType)
+{
+  return SyncPromise.getValue(this.encryptPromise
+    (plainData, algorithmType, true));
 };
 
 PublicKey.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
@@ -24451,7 +24539,7 @@ var IdentityManager = function IdentityManager
     var thisStorage = this;
     // Make the function that BasicIdentityStorage will call the first time it
     // is used. It has to be an async promise becuase getTpmLocatorPromise is async.
-    function initialCheckPromise() 
+    function initialCheckPromise()
     {
       return thisStorage.checkTpmPromise_(canonicalTpmLocator[0]);
     }
@@ -25234,7 +25322,7 @@ IdentityManager.prototype.addCertificateAsDefault = function
  * Get a certificate which is still valid with the specified name.
  * @param {Name} certificateName The name of the requested certificate.
  * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate. If omitted, the return value is 
+ * with the requested IdentityCertificate. If omitted, the return value is
  * described below. (Some database libraries only use a callback, so onComplete
  * is required to use these.)
  * @param {function} onError (optional) If defined, then onComplete must be
@@ -26313,7 +26401,7 @@ var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
  * A PibIdentity is at the top level in PIB's Identity-Key-Certificate hierarchy.
  * An identity has a Name, and contains zero or more keys, at most one of which
  * is set as the default key of this identity. Properties of a key can be
- * accessed after obtaining a Key object.
+ * accessed after obtaining a PibKey object.
  *
  * Create a PibIdentity which uses the impl backend implementation. This
  * constructor should only be called by PibIdentityContainer.
@@ -26426,7 +26514,7 @@ PibIdentity.prototype.getDefaultKeyPromise = function(useSync)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @return {PibKey} If onComplete is omitted, return the PibKey object of the 
+ * @return {PibKey} If onComplete is omitted, return the PibKey object of the
  * default key. Otherwise, if onComplete is supplied then return undefined and
  * use onComplete as described above.
  * @throws Pib.Error if the default key has not been set, or Error if the
@@ -26441,8 +26529,8 @@ PibIdentity.prototype.getDefaultKey = function(onComplete, onError)
 };
 
 /**
- * Add the key. If a key with the same name already exists, overwrite the key. 
- * If no default key for the identity has been set, then set the added key as 
+ * Add the key. If a key with the same name already exists, overwrite the key.
+ * If no default key for the identity has been set, then set the added key as
  * default for the identity. This should only be called by KeyChain.
  * @param {Buffer} key The public key bits. This copies the buffer.
  * @param {Name} keyName The name of the key. This copies the name.
@@ -26495,7 +26583,7 @@ PibIdentity.prototype.removeKeyPromise_ = function(keyName, useSync)
  * an async Promise.
  * @return {SyncPromise} A promise which returns the PibKey object of the
  * default key, or a promise rejected with Error the name of the key does not
- * match the identity name (or if the backend implementation instance is 
+ * match the identity name (or if the backend implementation instance is
  * invalid), or a promise rejected with Pib.Error if calling
  * setDefaultKey(keyName) and the key does not exist, or if calling
  * setDefaultKey(key, keyName) and a key with the same name already exists.
@@ -27334,7 +27422,7 @@ PibIndexedDb.prototype.addKeyPromise = function
   .then(function(hasKey) {
     if (!hasKey)
       return thisPib.database.keys.put
-        ({ keyNameUri: keyName.toUri(), keyDer: key, 
+        ({ keyNameUri: keyName.toUri(), keyDer: key,
            defaultCertificateUri: null });
     else
       // Update the keyDer and keep the defaultCertificateUri.
@@ -27977,7 +28065,7 @@ var CertificateV2 = require('../v2/certificate-v2.js').CertificateV2; /** @ignor
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
- * A PibKey provides access to a key at the second level in the PIB's 
+ * A PibKey provides access to a key at the second level in the PIB's
  * Identity-Key-Certificate hierarchy. A PibKey object has a Name (identity +
  * "KEY" + keyId), and contains one or more CertificateV2 objects, one of which
  * is set as the default certificate of this key. A certificate can be directly
@@ -27998,7 +28086,7 @@ exports.PibKey = PibKey;
 
 /**
  * Get the key name.
- * @return {Name} The key name. You must not modify the Key object. If you need
+ * @return {Name} The key name. You must not modify the Name object. If you need
  * to modify it, make a copy.
  * @throws Error if the backend implementation instance is invalid.
  */
@@ -28070,8 +28158,8 @@ PibKey.prototype.getCertificatePromise = function(certificateName, useSync)
  * @return {CertificateV2} If onComplete is omitted, return a copy of the
  * CertificateV2. Otherwise, if onComplete is supplied then return undefined and
  * use onComplete as described above.
- * @throws Error if certificateName does not match the key name (or if the 
- * backend implementation instance is invalid), or Pib.Error if the certificate 
+ * @throws Error if certificateName does not match the key name (or if the
+ * backend implementation instance is invalid), or Pib.Error if the certificate
  * does not exist. However, if onComplete and onError are defined, then if there
  * is an exception return undefined and call onError(exception).
  */
@@ -28780,7 +28868,7 @@ PibMemory.prototype.getCertificatesOfKey_ = function(keyName)
  * @param {Name} keyName The name of the key.
  * @param {Name} certificateName The name of the certificate. This copies the
  * name.
- * @return {SyncPromise} A promise which fulfills when the default certificate 
+ * @return {SyncPromise} A promise which fulfills when the default certificate
  * is set, or a promise rejected with Pib.Error if the certificate with name
  * certificateName does not exist.
  */
@@ -28799,7 +28887,7 @@ PibMemory.prototype.setDefaultCertificateOfKeyPromise = function
 /**
  * Get the default certificate for the key with eyName.
  * @param {Name} keyName The name of the key.
- * @return {SyncPromise} A promise which returns a copy of the default 
+ * @return {SyncPromise} A promise which returns a copy of the default
  * CertificateV2, or a promise rejected with Pib.Error if the default
  * certificate does not exist.
  */
@@ -29226,8 +29314,8 @@ Pib.prototype.initializePromise_ = function(useSync)
 };
 
 /**
- * Initialize from initializePibLocator_ and initializeTpmLocator_ in the same 
- * way that the KeyChain constructor would if it could do async operations. Set 
+ * Initialize from initializePibLocator_ and initializeTpmLocator_ in the same
+ * way that the KeyChain constructor would if it could do async operations. Set
  * up initializeTpm_ and set its isInitialized_ true.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
@@ -29358,7 +29446,7 @@ exports.PibIdentityImpl = PibIdentityImpl;
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @param {Promise|SyncPromise} A promise which returns the new PibIdentityImpl, 
+ * @param {Promise|SyncPromise} A promise which returns the new PibIdentityImpl,
  * or a promise which is rejected with Pib.Error if the identity does not exist
  * in the pibImpl back end and needInit is false.
  */
@@ -29464,7 +29552,7 @@ PibIdentityImpl.prototype.getKeyPromise = function(keyName, useSync)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {SyncPromise} A promise which returns the PibKey object of the 
+ * @return {SyncPromise} A promise which returns the PibKey object of the
  * default key, or a promise rejected with Error the name of the key does not
  * match the identity name, or a promise rejected with Pib.Error if calling
  * setDefaultKey(keyName) and the key does not exist, or if calling
@@ -31551,7 +31639,7 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 };
 
 /**
- * Look in the storage for the public key with the name in the KeyLocator (if 
+ * Look in the storage for the public key with the name in the KeyLocator (if
  * available) and use it to verify the data packet.  If the public key can't be
  * found, call onValidationFailed.
  *
@@ -31681,7 +31769,7 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 };
 
 /**
- * Check the type of signatureInfo to get the KeyLocator. Look in the storage 
+ * Check the type of signatureInfo to get the KeyLocator. Look in the storage
  * for the public key with the name in the KeyLocator (if available) and use it
  * to verify the signedBlob. If the public key can't be found, return false.
  * (This is a generalized method which can verify both a Data packet and an
@@ -31739,7 +31827,7 @@ SelfVerifyPolicyManager.prototype.verify = function
  * Look in the storage for the public key with the name in the KeyLocator (if
  * available). If the public key can't be found, return and empty Blob.
  * @param {KeyLocator} keyLocator The KeyLocator.
- * @param {function} onComplete This calls 
+ * @param {function} onComplete This calls
  * onComplete(publicKeyDer, reason) where publicKeyDer is the public key
  * DER Blob or an isNull Blob if not found and reason is the reason
  * string if not found.
@@ -33765,7 +33853,7 @@ ConfigHyperRelationChecker.prototype.checkNames = function
   }
 
   var keyNameMatchExpansion = this.keyNameRegex_.expand(this.keyNameExpansion_);
-  var packetNameMatchExpansion = 
+  var packetNameMatchExpansion =
     this.packetNameRegex_.expand(this.packetNameExpansion_);
   var result = ConfigNameRelation.checkNameRelation
     (this.hyperRelation_, keyNameMatchExpansion, packetNameMatchExpansion);
@@ -34155,7 +34243,7 @@ ConfigRule.prototype.getIsForInterest = function() { return this.isForInterest_;
  * @param {ConfigFilter} filter The ConfigFilter.
  */
 ConfigRule.prototype.addFilter = function(filter)
-{ 
+{
   this.filters_.push(filter);
 };
 
@@ -34164,7 +34252,7 @@ ConfigRule.prototype.addFilter = function(filter)
  * @param {ConfigChecker} checker The ConfigChecker.
  */
 ConfigRule.prototype.addChecker = function(checker)
-{ 
+{
   this.checkers_.push(checker);
 };
 
@@ -34316,7 +34404,7 @@ var CertificateV2 = require('./certificate-v2.js').CertificateV2;
 /**
  * TrustAnchorGroup represents a group of trust anchors which implement the
  * CertificateContainer interface.
- * 
+ *
  * Create a TrustAnchorGroup to use an existing container.
  * @param {CertificateContainer} certificateContainer The existing certificate
  * container which implements the CertificateContainer interface.
@@ -34345,7 +34433,7 @@ TrustAnchorGroup.prototype.getId = function() { return this.id_; };
  * @return {number} The number of certificates.
  */
 TrustAnchorGroup.prototype.size = function()
-{ 
+{
   return Object.keys(this.anchorNameUris_).length;
 };
 
@@ -34447,7 +34535,7 @@ ValidationState.prototype.hasOutcome = function() { return this.hasOutcome_; };
  * validation callbacks have been called or validation success was called.
  */
 ValidationState.prototype.isOutcomeFailed = function()
-{ 
+{
   return this.hasOutcome_ && this.outcome_ == false;
 };
 
@@ -34457,7 +34545,7 @@ ValidationState.prototype.isOutcomeFailed = function()
  * validation callbacks have been called or validation failed was called.
  */
 ValidationState.prototype.isOutcomeSuccess = function()
-{ 
+{
   return this.hasOutcome_ && this.outcome_ == true;
 };
 
@@ -34475,7 +34563,7 @@ ValidationState.prototype.fail = function(error)
  * @return {number} The depth of the certificate chain.
  */
 ValidationState.prototype.getDepth = function()
-{ 
+{
   return this.certificateChain_.length;
 };
 
@@ -34707,7 +34795,7 @@ CertificateCacheV2.prototype.insert = function(certificate)
  * certificate (ordered by name) where the Name is a prefix of the certificate
  * name. If an Interest, return the first certificate (ordered by Name) where
  * interest.matchesData(certificate) .
- * @return {CertificateV2}  The found certificate, or null if not found. You 
+ * @return {CertificateV2}  The found certificate, or null if not found. You
  * must not modify the returned object. If you need to modify it, then make a
  * copy.
  * @note ChildSelector is not supported.
@@ -34939,13 +35027,13 @@ exports.CertificateFetcher = CertificateFetcher;
  * which must be valid for the lifetime of this CertificateFetcher.
  */
 CertificateFetcher.prototype.setCertificateStorage = function(certificateStorage)
-{ 
+{
   this.certificateStorage_ = certificateStorage;
 };
 
 /**
- * Asynchronously fetch certificate a certificate. setCertificateStorage must
- * have been called first.
+ * Asynchronously fetch a certificate. setCertificateStorage must have been
+ * called first.
  * If the requested certificate exists in the storage, then this method will
  * immediately call continueValidation with the certificate. If certificate is
  * not available, then the implementation-specific doFetch will be called to
@@ -35318,7 +35406,7 @@ CertificateStorage.prototype.cacheUnverifiedCertificate = function(certificate)
  * @return {TrustAnchorContainer} The trust anchor container.
  */
 CertificateStorage.prototype.getTrustAnchors = function()
-{ 
+{
   return this.trustAnchors_;
 };
 
@@ -35327,7 +35415,7 @@ CertificateStorage.prototype.getTrustAnchors = function()
  * @return {CertificateCacheV2} The verified certificate cache.
  */
 CertificateStorage.prototype.getVerifiedCertificateCache = function()
-{ 
+{
   return this.verifiedCertificateCache_;
 };
 
@@ -35336,7 +35424,7 @@ CertificateStorage.prototype.getVerifiedCertificateCache = function()
  * @return {CertificateCacheV2} The unverified certificate cache.
  */
 CertificateStorage.prototype.getUnverifiedCertificateCache = function()
-{ 
+{
   return this.unverifiedCertificateCache_;
 };
 
@@ -35351,7 +35439,7 @@ CertificateStorage.prototype.getUnverifiedCertificateCache = function()
  * @param {CertificateV2} certificate The certificate to load as a trust anchor,
  * which is copied.
  * @param {String} path The path to load the trust anchors.
- * @param {number} refreshPeriod  The refresh time in milliseconds for the 
+ * @param {number} refreshPeriod  The refresh time in milliseconds for the
  * anchors under path. This must be positive. The relevant trust anchors will
  * only be updated when find is called.
  * @param {boolean} isDirectory (optional) If true, then path is a directory.
@@ -35385,7 +35473,7 @@ CertificateStorage.prototype.cacheVerifiedCertificate = function(certificate)
  * Remove any cached verified certificates.
  */
 CertificateStorage.prototype.resetVerifiedCertificates = function()
-{ 
+{
   this.verifiedCertificateCache_.clear();
 };
 
@@ -35906,7 +35994,7 @@ var LOG = require('../../log.js').Log.LOG;
 /**
  * The DynamicTrustAnchorGroup class extends TrustAnchorGroup to implement a
  * dynamic trust anchor group.
- * 
+ *
  * Create a DynamicTrustAnchorGroup to use an existing container.
  * @param {CertificateContainer} certificateContainer The existing certificate
  * container which implements the CertificateContainer interface.
@@ -36038,7 +36126,7 @@ var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
  * The InterestValidationState class extends ValidationState to hold the
  * validation state for an Interest packet.
  *
- * Create an InterestValidationState for the Interest packet. The caller must 
+ * Create an InterestValidationState for the Interest packet. The caller must
  * ensure that the state instance is valid until the validation finishes (i.e.,
  * until validateCertificateChain() and validateOriginalPacket() have been
  * called).
@@ -36092,7 +36180,7 @@ InterestValidationState.prototype.fail = function(error)
  * @return {Interest} The original Interest packet.
  */
 InterestValidationState.prototype.getOriginalInterest = function()
-{ 
+{
   return this.interest_;
 };
 
@@ -36183,7 +36271,7 @@ var TrustAnchorGroup = require('./trust-anchor-group.js').TrustAnchorGroup;
 /**
  * The StaticTrustAnchorGroup class extends TrustAnchorGroup to implement a
  * static trust anchor group.
- * 
+ *
  * Create a StaticTrustAnchorGroup to use an existing container.
  * @param {CertificateContainer} certificateContainer The existing certificate
  * container which implements the CertificateContainer interface.
@@ -36271,7 +36359,7 @@ var CertificateContainerInterface = require('./certificate-container-interface.j
  * The returned pointer to Certificate from `find` methods is only guaranteed to
  * be valid until the next invocation of `find` and may be invalidated
  * afterwards.
- * 
+ *
  * Create an empty TrustAnchorContainer.
  * @constructor
  */
@@ -36431,7 +36519,7 @@ TrustAnchorContainer.prototype.getGroup = function(groupId)
  * @return {number} The number of trust anchors.
  */
 TrustAnchorContainer.prototype.size = function()
-{ 
+{
   return this.anchors_.size();
 };
 
@@ -36471,7 +36559,7 @@ TrustAnchorContainer.AnchorContainer_.prototype.add = function(certificate)
 };
 
 /**
- * Remove the certificate with the given name. If the name does not exist, do 
+ * Remove the certificate with the given name. If the name does not exist, do
  * nothing.
  * @param {Name} certificateName The name of the certificate.
  */
@@ -36683,7 +36771,7 @@ exports.ValidationPolicy = ValidationPolicy;
  * @throws Error if the innerPolicy is null.
  */
 ValidationPolicy.prototype.setInnerPolicy = function(innerPolicy)
-{ 
+{
   if (innerPolicy == null)
     throw new Error("The innerPolicy argument cannot be null");
 
@@ -36753,7 +36841,7 @@ ValidationPolicy.prototype.checkPolicy = function
 
 /**
  * Check the certificate against the policy.
- * This base class implementation just calls checkPolicy(certificate, ...). Your 
+ * This base class implementation just calls checkPolicy(certificate, ...). Your
  * derived class may override. Depending on implementation of the policy, this
  * check can be done synchronously or asynchronously. See the checkPolicy(Data)
  * documentation for the semantics.
@@ -37753,7 +37841,7 @@ Validator.prototype.getFetcher = function() { return this.certificateFetcher_; }
  * @param {number} maxDepth The maximum depth.
  */
 Validator.prototype.setMaxDepth = function(maxDepth)
-{ 
+{
   this.maxDepth_ = maxDepth;
 };
 
@@ -37876,7 +37964,7 @@ Validator.prototype.requestCertificate_ = function(certificateRequest, state)
       for (var i = 0; i < state.certificateChain_.length; ++i)
         thisValidator.cacheVerifiedCertificate(state.certificateChain_[i]);
     });
-    
+
     return;
   }
 
@@ -38109,7 +38197,7 @@ KeyChain.prototype.getTpm = function()
   return this.tpm_;
 };
 
-/**                                                                                                                                                
+/**
  * Get the flag set by the constructor if this is a security v1 or v2 KeyChain.
  * @return (boolean} True if this is a security v1 KeyChain, false if this is a
  * security v2 KeyChain.
@@ -38207,7 +38295,7 @@ KeyChain.prototype.createIdentityV2Promise = function
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @return {PibIdentity} If onComplete is omitted, return the created 
+ * @return {PibIdentity} If onComplete is omitted, return the created
  * PibIdentity instance. Otherwise, if onComplete is supplied then return
  * undefined and use onComplete as described above.
  */
@@ -39593,7 +39681,7 @@ KeyChain.prototype.setDefaultCertificateForKey = function
  * Get a certificate which is still valid with the specified name.
  * @param {Name} certificateName The name of the requested certificate.
  * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate. If omitted, the return value is 
+ * with the requested IdentityCertificate. If omitted, the return value is
  * described below. (Some crypto libraries only use a callback, so onComplete is
  * required to use these.)
  * NOTE: The library will log any exceptions thrown by this callback, but for
@@ -41250,6 +41338,17 @@ Interest.prototype.getMaxSuffixComponents = function()
 };
 
 /**
+ * Get the CanBePrefix flag. If not specified, the default is true.
+ * @returns {boolean} The CanBePrefix flag.
+ */
+Interest.prototype.getCanBePrefix = function()
+{
+  // Use the closest v0.2 semantics. CanBePrefix is the opposite of exact
+  // match where MaxSuffixComponents is 1 (for the implicit digest).
+  return this.maxSuffixComponents_ != 1;
+};
+
+/**
  * Get the interest key locator.
  * @return {KeyLocator} The key locator. If its getType() is null,
  * then the key locator is not specified.
@@ -41476,6 +41575,21 @@ Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
   this.maxSuffixComponents_ = maxSuffixComponents;
+  ++this.changeCount_;
+  return this;
+};
+
+/**
+ * Set the CanBePrefix flag.
+ * @param {boolean} canBePrefix True if the Interest name can be a prefix. If
+ * you do not set this flag, the default value is true.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setCanBePrefix = function(canBePrefix)
+{
+  // Use the closest v0.2 semantics. CanBePrefix is the opposite of exact
+  // match where MaxSuffixComponents is 1 (for the implicit digest).
+  this.maxSuffixComponents_ = (canBePrefix ? null : 1);
   ++this.changeCount_;
   return this;
 };
@@ -42654,7 +42768,7 @@ DelegationSet.prototype.remove = function(name)
  * Clear the list of delegations.
  */
 DelegationSet.prototype.clear = function()
-{ 
+{
   this.delegations_ = [];
   ++this.changeCount_;
 };
@@ -42935,13 +43049,13 @@ NetworkNack.prototype.getReason = function() { return this.reason_; };
  * @return {number} The reason code.
  */
 NetworkNack.prototype.getOtherReasonCode = function()
-{ 
+{
   return this.otherReasonCode_;
 };
 
 /**
  * Set the network Nack reason.
- * @param {number} reason The network Nack reason enum value from 
+ * @param {number} reason The network Nack reason enum value from
  * NetworkNack.Reason. If the packet's reason code is not a recognized Reason
  * enum value, use Reason.OTHER_CODE and call setOtherReasonCode().
  */
@@ -44290,7 +44404,7 @@ Tlv0_2WireFormat.decodeControlParameters = function
 /**
  * Encode delegationSet to the encoder as a sequence of NDN-TLV Delegation.
  * Note that the sequence of Delegation does not have an outer TLV type and
- * length because (when used in a Link object) it is intended to use the type 
+ * length because (when used in a Link object) it is intended to use the type
  * and length of a Data packet's Content.
  * @param {DelegationSet} delegationSet The DelegationSet object to encode.
  * @param {TlvEncoder} encoder The TlvEncoder to receive the encoding.
@@ -44368,12 +44482,8 @@ Tlv0_2WireFormat.decodeInterestV03_ = function(interest, input, copy)
   var endOffset = decoder.readNestedTlvsStart(Tlv.Interest);
   var offsets = Tlv0_2WireFormat.decodeName(interest.getName(), decoder, copy);
 
-  if (decoder.readBooleanTlv(Tlv.CanBePrefix, endOffset))
-    // No limit on MaxSuffixComponents.
-    interest.setMaxSuffixComponents(null);
-  else
-    // The one suffix components is for the implicit digest.
-    interest.setMaxSuffixComponents(1);
+  // In v0.2 semantics, this calls setMaxSuffixComponents.
+  interest.setCanBePrefix(decoder.readBooleanTlv(Tlv.CanBePrefix, endOffset));
 
   interest.setMustBeFresh(decoder.readBooleanTlv(Tlv.MustBeFresh, endOffset));
 
@@ -45359,6 +45469,7 @@ var OID = require('../../encoding/oid.js').OID; /** @ignore */
 var PrivateKeyStorage = require('../../security/identity/private-key-storage.js').PrivateKeyStorage; /** @ignore */
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var PublicKey = require('../../security/certificate/public-key.js').PublicKey; /** @ignore */
 var rsaKeygen = null;
 try {
   // This should be installed with: sudo npm install rsa-keygen
@@ -45437,7 +45548,7 @@ RsaAlgorithm.generateKeyPromise = function(params, useSync)
  */
 RsaAlgorithm.generateKey = function(params)
 {
-  return SyncPromise.getValue(this.generateKeyPromise(params, true));
+  return SyncPromise.getValue(RsaAlgorithm.generateKeyPromise(params, true));
 };
 
 /**
@@ -45547,7 +45658,7 @@ RsaAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
  */
 RsaAlgorithm.decrypt = function(keyBits, encryptedData, params)
 {
-  return SyncPromise.getValue(this.decryptPromise
+  return SyncPromise.getValue(RsaAlgorithm.decryptPromise
     (keyBits, encryptedData, params, true));
 };
 
@@ -45564,49 +45675,14 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params)
  */
 RsaAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
 {
-  if (UseSubtleCrypto() && !useSync &&
-      // Crypto.subtle doesn't implement PKCS1 padding.
-      params.getAlgorithmType() != EncryptAlgorithmType.RsaPkcs) {
-    if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep) {
-      return crypto.subtle.importKey
-        ("spki", keyBits.buf(), { name: "RSA-OAEP", hash: {name: "SHA-1"} },
-         false, ["encrypt"])
-      .then(function(publicKey) {
-        return crypto.subtle.encrypt
-          ({ name: "RSA-OAEP" }, publicKey, plainData.buf());
-      })
-      .then(function(result) {
-        return Promise.resolve(new Blob(new Uint8Array(result), false));
-      });
-    }
-    else
-      return Promise.reject(new Error("unsupported padding scheme"));
+  var publicKey;
+  try {
+    publicKey = new PublicKey(keyBits);
+  } catch (ex) {
+    return SyncPromise.reject(ex);
   }
-  else {
-    // Encode the key DER as a PEM public key as needed by Crypto.
-    var keyBase64 = keyBits.buf().toString('base64');
-    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
-    for (var i = 0; i < keyBase64.length; i += 64)
-      keyPem += (keyBase64.substr(i, 64) + "\n");
-    keyPem += "-----END PUBLIC KEY-----";
 
-    var padding;
-    if (params.getAlgorithmType() == EncryptAlgorithmType.RsaPkcs)
-      padding = constants.RSA_PKCS1_PADDING;
-    else if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep)
-      padding = constants.RSA_PKCS1_OAEP_PADDING;
-    else
-      return SyncPromise.reject(new Error("unsupported padding scheme"));
-
-    try {
-      // In Node.js, publicEncrypt requires version v0.12.
-      return SyncPromise.resolve(new Blob
-        (Crypto.publicEncrypt({ key: keyPem, padding: padding }, plainData.buf()),
-         false));
-    } catch (err) {
-      return SyncPromise.reject(err);
-    }
-  }
+  return publicKey.encryptPromise(plainData, params.getAlgorithmType(), useSync);
 };
 
 /**
@@ -45621,7 +45697,7 @@ RsaAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
  */
 RsaAlgorithm.encrypt = function(keyBits, plainData, params)
 {
-  return SyncPromise.getValue(this.encryptPromise
+  return SyncPromise.getValue(RsaAlgorithm.encryptPromise
     (keyBits, plainData, params, true));
 };
 
@@ -50663,7 +50739,7 @@ ChronoSync2013.PrefixAndSessionNo.prototype.getSessionNo = function()
 
 // Private methods for ChronoSync2013 class,
 /**
- * Make a data packet with the syncMessage and with name applicationBroadcastPrefix_ + digest.
+ * Make a data packet with the syncMessage and with name applicationBroadcastPrefix + digest.
  * Sign and send.
  * @param {string} The root digest as a hex string for the data packet name.
  * @param {SyncStateMsg} The syncMessage updates the digest tree state with the given digest.
@@ -50808,7 +50884,7 @@ ChronoSync2013.prototype.onData = function(interest, co)
       }
       else
         applicationInfo = new Blob();
-      
+
       syncStates.push(new ChronoSync2013.SyncState
         (content[i].name, content[i].seqno.session, content[i].seqno.seq,
          applicationInfo));
@@ -51001,7 +51077,8 @@ ChronoSync2013.prototype.syncTimeout = function(interest)
     // Ignore callbacks after the application calls shutdown().
     return;
 
-  var component = interest.getName().get(4).toEscapedString();
+  var component = interest.getName().get
+    (this.applicationBroadcastPrefix.size()).toEscapedString();
   if (component == this.digest_tree.root) {
     var n = new Name(interest.getName());
     var newInterest = new Interest(n);
@@ -51815,7 +51892,7 @@ PendingInterestTable.prototype.extractEntriesForExpressedInterest = function
 /**
  * Find all entries from the pending interest table where the OnNetworkNack
  * callback is not null and the entry's interest is the same as the given
- * interest, remove the entries from the table, and add to the entries list. 
+ * interest, remove the entries from the table, and add to the entries list.
  * (We don't remove the entry if the OnNetworkNack callback is null so that
  * OnTimeout will be called later.) The interests are the same if their default
  * wire encoding is the same (which has everything including the name, nonce,
@@ -52079,7 +52156,7 @@ exports.CongestionMark = CongestionMark;
  * @return {number} The congestion mark value.
  */
 CongestionMark.prototype.getCongestionMark = function()
-{ 
+{
   return this.congestionMark_;
 };
 
@@ -52225,7 +52302,7 @@ LpPacket.prototype.getFragmentWireEncoding = function()
  * @return {number} The number of header fields.
  */
 LpPacket.prototype.countHeaderFields = function()
-{ 
+{
   return this.headerFields_.length;
 };
 
@@ -52236,7 +52313,7 @@ LpPacket.prototype.countHeaderFields = function()
  * @return {object} The header field at the index.
  */
 LpPacket.prototype.getHeaderField = function(index)
-{ 
+{
   return this.headerFields_[index];
 };
 
@@ -52266,7 +52343,7 @@ LpPacket.prototype.setFragmentWireEncoding = function(fragmentWireEncoding)
  * @param {object} headerField The header field to add.
  */
 LpPacket.prototype.addHeaderField = function(headerField)
-{ 
+{
   this.headerFields_.push(headerField);
 };
 /**
@@ -52552,7 +52629,7 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
 };
 
 /**
- * Send the interest through the transport, read the entire response and call 
+ * Send the interest through the transport, read the entire response and call
  * onData, onTimeout or onNetworkNack as described below.
  * There are two forms of expressInterest. The first form takes the exact
  * interest (including lifetime):

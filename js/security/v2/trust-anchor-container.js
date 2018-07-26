@@ -42,7 +42,7 @@ var CertificateContainerInterface = require('./certificate-container-interface.j
  * The returned pointer to Certificate from `find` methods is only guaranteed to
  * be valid until the next invocation of `find` and may be invalidated
  * afterwards.
- * 
+ *
  * Create an empty TrustAnchorContainer.
  * @constructor
  */
@@ -202,7 +202,7 @@ TrustAnchorContainer.prototype.getGroup = function(groupId)
  * @return {number} The number of trust anchors.
  */
 TrustAnchorContainer.prototype.size = function()
-{ 
+{
   return this.anchors_.size();
 };
 
@@ -242,7 +242,7 @@ TrustAnchorContainer.AnchorContainer_.prototype.add = function(certificate)
 };
 
 /**
- * Remove the certificate with the given name. If the name does not exist, do 
+ * Remove the certificate with the given name. If the name does not exist, do
  * nothing.
  * @param {Name} certificateName The name of the certificate.
  */

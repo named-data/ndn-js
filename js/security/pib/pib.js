@@ -411,8 +411,8 @@ Pib.prototype.initializePromise_ = function(useSync)
 };
 
 /**
- * Initialize from initializePibLocator_ and initializeTpmLocator_ in the same 
- * way that the KeyChain constructor would if it could do async operations. Set 
+ * Initialize from initializePibLocator_ and initializeTpmLocator_ in the same
+ * way that the KeyChain constructor would if it could do async operations. Set
  * up initializeTpm_ and set its isInitialized_ true.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or

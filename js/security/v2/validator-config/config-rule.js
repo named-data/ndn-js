@@ -61,7 +61,7 @@ ConfigRule.prototype.getIsForInterest = function() { return this.isForInterest_;
  * @param {ConfigFilter} filter The ConfigFilter.
  */
 ConfigRule.prototype.addFilter = function(filter)
-{ 
+{
   this.filters_.push(filter);
 };
 
@@ -70,7 +70,7 @@ ConfigRule.prototype.addFilter = function(filter)
  * @param {ConfigChecker} checker The ConfigChecker.
  */
 ConfigRule.prototype.addChecker = function(checker)
-{ 
+{
   this.checkers_.push(checker);
 };
 

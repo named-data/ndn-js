@@ -26,7 +26,7 @@ var CertificateV2 = require('./certificate-v2.js').CertificateV2;
 /**
  * TrustAnchorGroup represents a group of trust anchors which implement the
  * CertificateContainer interface.
- * 
+ *
  * Create a TrustAnchorGroup to use an existing container.
  * @param {CertificateContainer} certificateContainer The existing certificate
  * container which implements the CertificateContainer interface.
@@ -55,7 +55,7 @@ TrustAnchorGroup.prototype.getId = function() { return this.id_; };
  * @return {number} The number of certificates.
  */
 TrustAnchorGroup.prototype.size = function()
-{ 
+{
   return Object.keys(this.anchorNameUris_).length;
 };
 

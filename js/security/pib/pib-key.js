@@ -24,7 +24,7 @@ var CertificateV2 = require('../v2/certificate-v2.js').CertificateV2; /** @ignor
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
- * A PibKey provides access to a key at the second level in the PIB's 
+ * A PibKey provides access to a key at the second level in the PIB's
  * Identity-Key-Certificate hierarchy. A PibKey object has a Name (identity +
  * "KEY" + keyId), and contains one or more CertificateV2 objects, one of which
  * is set as the default certificate of this key. A certificate can be directly
@@ -117,8 +117,8 @@ PibKey.prototype.getCertificatePromise = function(certificateName, useSync)
  * @return {CertificateV2} If onComplete is omitted, return a copy of the
  * CertificateV2. Otherwise, if onComplete is supplied then return undefined and
  * use onComplete as described above.
- * @throws Error if certificateName does not match the key name (or if the 
- * backend implementation instance is invalid), or Pib.Error if the certificate 
+ * @throws Error if certificateName does not match the key name (or if the
+ * backend implementation instance is invalid), or Pib.Error if the certificate
  * does not exist. However, if onComplete and onError are defined, then if there
  * is an exception return undefined and call onError(exception).
  */

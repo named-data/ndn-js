@@ -31,7 +31,7 @@ var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
  * The InterestValidationState class extends ValidationState to hold the
  * validation state for an Interest packet.
  *
- * Create an InterestValidationState for the Interest packet. The caller must 
+ * Create an InterestValidationState for the Interest packet. The caller must
  * ensure that the state instance is valid until the validation finishes (i.e.,
  * until validateCertificateChain() and validateOriginalPacket() have been
  * called).
@@ -85,7 +85,7 @@ InterestValidationState.prototype.fail = function(error)
  * @return {Interest} The original Interest packet.
  */
 InterestValidationState.prototype.getOriginalInterest = function()
-{ 
+{
   return this.interest_;
 };
 

@@ -66,7 +66,7 @@ GenericSignature.prototype.clone = function()
  * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 GenericSignature.prototype.getSignature = function()
-{ 
+{
   return this.signature_;
 };
 

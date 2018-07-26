@@ -72,7 +72,7 @@ ValidationState.prototype.hasOutcome = function() { return this.hasOutcome_; };
  * validation callbacks have been called or validation success was called.
  */
 ValidationState.prototype.isOutcomeFailed = function()
-{ 
+{
   return this.hasOutcome_ && this.outcome_ == false;
 };
 
@@ -82,7 +82,7 @@ ValidationState.prototype.isOutcomeFailed = function()
  * validation callbacks have been called or validation failed was called.
  */
 ValidationState.prototype.isOutcomeSuccess = function()
-{ 
+{
   return this.hasOutcome_ && this.outcome_ == true;
 };
 
@@ -100,7 +100,7 @@ ValidationState.prototype.fail = function(error)
  * @return {number} The depth of the certificate chain.
  */
 ValidationState.prototype.getDepth = function()
-{ 
+{
   return this.certificateChain_.length;
 };
 

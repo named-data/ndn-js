@@ -488,7 +488,7 @@ GroupManagerDb.prototype.hasEKeyPromise = function(eKeyName, useSync)
       ("Sqlite3GroupManagerDb.hasEKeyPromise is only supported for async")));
 
   return this.getPromise_
-    ("SELECT ekey_id FROM ekeys where ekey_name=?", 
+    ("SELECT ekey_id FROM ekeys where ekey_name=?",
      eKeyName.wireEncode(TlvWireFormat.get()).buf())
   .then(function(row) {
     if (row)

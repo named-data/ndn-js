@@ -162,7 +162,7 @@ describe ("TestPolicyManagerV2", function() {
     this.identityName = new Name("/TestConfigPolicyManager/temp");
     // To match the anchor cert.
     this.keyName = new Name(this.identityName).append("KEY").append("ksk-1416010123");
-    
+
     var thisTest = this;
     SyncPromise.getValue
       (this.pibImpl.addKeyPromise

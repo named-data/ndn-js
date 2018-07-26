@@ -264,7 +264,7 @@ SigningInfo.prototype.getPibKey = function()
 
 /**
  * Set the digest algorithm for public key operations.
- * @param {number} digestAlgorithm The digest algorithm, as an int from the 
+ * @param {number} digestAlgorithm The digest algorithm, as an int from the
  * DigestAlgorithm enum.
  * @return {SigningInfo} This SigningInfo.
  */
@@ -330,7 +330,7 @@ SigningInfo.prototype.toString = function()
 };
 
 /**
- * Get the localhost identity which indicates that the signature is generated 
+ * Get the localhost identity which indicates that the signature is generated
  * using SHA-256.
  * @return {Name} A new Name of the SHA-256 identity.
  */

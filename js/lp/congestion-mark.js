@@ -35,7 +35,7 @@ exports.CongestionMark = CongestionMark;
  * @return {number} The congestion mark value.
  */
 CongestionMark.prototype.getCongestionMark = function()
-{ 
+{
   return this.congestionMark_;
 };
 

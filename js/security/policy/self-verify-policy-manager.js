@@ -88,7 +88,7 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 };
 
 /**
- * Look in the storage for the public key with the name in the KeyLocator (if 
+ * Look in the storage for the public key with the name in the KeyLocator (if
  * available) and use it to verify the data packet.  If the public key can't be
  * found, call onValidationFailed.
  *
@@ -218,7 +218,7 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 };
 
 /**
- * Check the type of signatureInfo to get the KeyLocator. Look in the storage 
+ * Check the type of signatureInfo to get the KeyLocator. Look in the storage
  * for the public key with the name in the KeyLocator (if available) and use it
  * to verify the signedBlob. If the public key can't be found, return false.
  * (This is a generalized method which can verify both a Data packet and an
@@ -276,7 +276,7 @@ SelfVerifyPolicyManager.prototype.verify = function
  * Look in the storage for the public key with the name in the KeyLocator (if
  * available). If the public key can't be found, return and empty Blob.
  * @param {KeyLocator} keyLocator The KeyLocator.
- * @param {function} onComplete This calls 
+ * @param {function} onComplete This calls
  * onComplete(publicKeyDer, reason) where publicKeyDer is the public key
  * DER Blob or an isNull Blob if not found and reason is the reason
  * string if not found.

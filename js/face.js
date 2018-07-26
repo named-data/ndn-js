@@ -281,7 +281,7 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
 };
 
 /**
- * Send the interest through the transport, read the entire response and call 
+ * Send the interest through the transport, read the entire response and call
  * onData, onTimeout or onNetworkNack as described below.
  * There are two forms of expressInterest. The first form takes the exact
  * interest (including lifetime):

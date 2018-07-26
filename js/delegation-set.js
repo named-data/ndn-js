@@ -166,7 +166,7 @@ DelegationSet.prototype.remove = function(name)
  * Clear the list of delegations.
  */
 DelegationSet.prototype.clear = function()
-{ 
+{
   this.delegations_ = [];
   ++this.changeCount_;
 };

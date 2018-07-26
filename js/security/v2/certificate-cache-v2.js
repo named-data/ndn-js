@@ -102,7 +102,7 @@ CertificateCacheV2.prototype.insert = function(certificate)
  * certificate (ordered by name) where the Name is a prefix of the certificate
  * name. If an Interest, return the first certificate (ordered by Name) where
  * interest.matchesData(certificate) .
- * @return {CertificateV2}  The found certificate, or null if not found. You 
+ * @return {CertificateV2}  The found certificate, or null if not found. You
  * must not modify the returned object. If you need to modify it, then make a
  * copy.
  * @note ChildSelector is not supported.

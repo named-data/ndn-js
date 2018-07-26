@@ -54,7 +54,7 @@ exports.ValidationPolicy = ValidationPolicy;
  * @throws Error if the innerPolicy is null.
  */
 ValidationPolicy.prototype.setInnerPolicy = function(innerPolicy)
-{ 
+{
   if (innerPolicy == null)
     throw new Error("The innerPolicy argument cannot be null");
 
@@ -124,7 +124,7 @@ ValidationPolicy.prototype.checkPolicy = function
 
 /**
  * Check the certificate against the policy.
- * This base class implementation just calls checkPolicy(certificate, ...). Your 
+ * This base class implementation just calls checkPolicy(certificate, ...). Your
  * derived class may override. Depending on implementation of the policy, this
  * check can be done synchronously or asynchronously. See the checkPolicy(Data)
  * documentation for the semantics.

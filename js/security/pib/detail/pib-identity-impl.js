@@ -56,7 +56,7 @@ exports.PibIdentityImpl = PibIdentityImpl;
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @param {Promise|SyncPromise} A promise which returns the new PibIdentityImpl, 
+ * @param {Promise|SyncPromise} A promise which returns the new PibIdentityImpl,
  * or a promise which is rejected with Pib.Error if the identity does not exist
  * in the pibImpl back end and needInit is false.
  */
@@ -162,7 +162,7 @@ PibIdentityImpl.prototype.getKeyPromise = function(keyName, useSync)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {SyncPromise} A promise which returns the PibKey object of the 
+ * @return {SyncPromise} A promise which returns the PibKey object of the
  * default key, or a promise rejected with Error the name of the key does not
  * match the identity name, or a promise rejected with Pib.Error if calling
  * setDefaultKey(keyName) and the key does not exist, or if calling

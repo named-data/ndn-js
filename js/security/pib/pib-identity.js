@@ -138,7 +138,7 @@ PibIdentity.prototype.getDefaultKeyPromise = function(useSync)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @return {PibKey} If onComplete is omitted, return the PibKey object of the 
+ * @return {PibKey} If onComplete is omitted, return the PibKey object of the
  * default key. Otherwise, if onComplete is supplied then return undefined and
  * use onComplete as described above.
  * @throws Pib.Error if the default key has not been set, or Error if the
@@ -153,8 +153,8 @@ PibIdentity.prototype.getDefaultKey = function(onComplete, onError)
 };
 
 /**
- * Add the key. If a key with the same name already exists, overwrite the key. 
- * If no default key for the identity has been set, then set the added key as 
+ * Add the key. If a key with the same name already exists, overwrite the key.
+ * If no default key for the identity has been set, then set the added key as
  * default for the identity. This should only be called by KeyChain.
  * @param {Buffer} key The public key bits. This copies the buffer.
  * @param {Name} keyName The name of the key. This copies the name.
@@ -207,7 +207,7 @@ PibIdentity.prototype.removeKeyPromise_ = function(keyName, useSync)
  * an async Promise.
  * @return {SyncPromise} A promise which returns the PibKey object of the
  * default key, or a promise rejected with Error the name of the key does not
- * match the identity name (or if the backend implementation instance is 
+ * match the identity name (or if the backend implementation instance is
  * invalid), or a promise rejected with Pib.Error if calling
  * setDefaultKey(keyName) and the key does not exist, or if calling
  * setDefaultKey(key, keyName) and a key with the same name already exists.

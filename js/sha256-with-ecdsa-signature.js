@@ -29,7 +29,7 @@ var ValidityPeriod = require('./security/validity-period.js').ValidityPeriod;
  * another object.
  *
  * @param {Sha256WithEcdsaSignature} value (optional) If value is a
- * Sha256WithEcdsaSignature, copy its values.  If value is omitted, the 
+ * Sha256WithEcdsaSignature, copy its values.  If value is omitted, the
  * keyLocator is the default with unspecified values and the signature is
  * unspecified.
  * @constructor

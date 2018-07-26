@@ -222,7 +222,7 @@ KeyChain.prototype.getTpm = function()
   return this.tpm_;
 };
 
-/**                                                                                                                                                
+/**
  * Get the flag set by the constructor if this is a security v1 or v2 KeyChain.
  * @return (boolean} True if this is a security v1 KeyChain, false if this is a
  * security v2 KeyChain.
@@ -320,7 +320,7 @@ KeyChain.prototype.createIdentityV2Promise = function
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @return {PibIdentity} If onComplete is omitted, return the created 
+ * @return {PibIdentity} If onComplete is omitted, return the created
  * PibIdentity instance. Otherwise, if onComplete is supplied then return
  * undefined and use onComplete as described above.
  */
@@ -1706,7 +1706,7 @@ KeyChain.prototype.setDefaultCertificateForKey = function
  * Get a certificate which is still valid with the specified name.
  * @param {Name} certificateName The name of the requested certificate.
  * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate. If omitted, the return value is 
+ * with the requested IdentityCertificate. If omitted, the return value is
  * described below. (Some crypto libraries only use a callback, so onComplete is
  * required to use these.)
  * NOTE: The library will log any exceptions thrown by this callback, but for

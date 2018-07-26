@@ -90,7 +90,7 @@ exports.SafeBag = SafeBag;
 
 /**
  * Get the certificate data packet.
- * @return {Data} The certificate as a Data packet. If you need to process it 
+ * @return {Data} The certificate as a Data packet. If you need to process it
  * as a certificate object then you must create a new CertificateV2(data).
  */
 SafeBag.prototype.getCertificate = function() { return this.certificate_; };

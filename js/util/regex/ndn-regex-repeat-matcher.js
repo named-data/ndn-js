@@ -169,7 +169,7 @@ NdnRegexRepeatMatcher.prototype.parseRepetition_ = function()
 };
 
 /**
- * 
+ *
  * @param {number} repeat
  * @param {Name} name
  * @param {number} offset

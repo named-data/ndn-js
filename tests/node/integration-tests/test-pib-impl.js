@@ -665,7 +665,7 @@ describe ("TestPibImpl", function() {
       })
       .then(function(hasCertificate) {
         assert.equal(false, hasCertificate);
-        
+
         return pib.getCertificatePromise(fixture.id1Key1Cert2.getName())
         .then(function() {
           assert.fail('', '', "Did not throw the expected exception");

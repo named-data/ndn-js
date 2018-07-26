@@ -1310,7 +1310,7 @@ Tlv0_2WireFormat.decodeControlParameters = function
 /**
  * Encode delegationSet to the encoder as a sequence of NDN-TLV Delegation.
  * Note that the sequence of Delegation does not have an outer TLV type and
- * length because (when used in a Link object) it is intended to use the type 
+ * length because (when used in a Link object) it is intended to use the type
  * and length of a Data packet's Content.
  * @param {DelegationSet} delegationSet The DelegationSet object to encode.
  * @param {TlvEncoder} encoder The TlvEncoder to receive the encoding.

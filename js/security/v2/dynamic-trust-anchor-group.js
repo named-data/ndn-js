@@ -28,7 +28,7 @@ var LOG = require('../../log.js').Log.LOG;
 /**
  * The DynamicTrustAnchorGroup class extends TrustAnchorGroup to implement a
  * dynamic trust anchor group.
- * 
+ *
  * Create a DynamicTrustAnchorGroup to use an existing container.
  * @param {CertificateContainer} certificateContainer The existing certificate
  * container which implements the CertificateContainer interface.

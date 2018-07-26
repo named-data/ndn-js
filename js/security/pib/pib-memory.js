@@ -531,7 +531,7 @@ PibMemory.prototype.getCertificatesOfKey_ = function(keyName)
  * @param {Name} keyName The name of the key.
  * @param {Name} certificateName The name of the certificate. This copies the
  * name.
- * @return {SyncPromise} A promise which fulfills when the default certificate 
+ * @return {SyncPromise} A promise which fulfills when the default certificate
  * is set, or a promise rejected with Pib.Error if the certificate with name
  * certificateName does not exist.
  */
@@ -550,7 +550,7 @@ PibMemory.prototype.setDefaultCertificateOfKeyPromise = function
 /**
  * Get the default certificate for the key with eyName.
  * @param {Name} keyName The name of the key.
- * @return {SyncPromise} A promise which returns a copy of the default 
+ * @return {SyncPromise} A promise which returns a copy of the default
  * CertificateV2, or a promise rejected with Pib.Error if the default
  * certificate does not exist.
  */

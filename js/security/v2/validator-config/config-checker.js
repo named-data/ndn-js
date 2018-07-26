@@ -370,7 +370,7 @@ ConfigHyperRelationChecker.prototype.checkNames = function
   }
 
   var keyNameMatchExpansion = this.keyNameRegex_.expand(this.keyNameExpansion_);
-  var packetNameMatchExpansion = 
+  var packetNameMatchExpansion =
     this.packetNameRegex_.expand(this.packetNameExpansion_);
   var result = ConfigNameRelation.checkNameRelation
     (this.hyperRelation_, keyNameMatchExpansion, packetNameMatchExpansion);

@@ -50,7 +50,7 @@ LpPacket.prototype.getFragmentWireEncoding = function()
  * @return {number} The number of header fields.
  */
 LpPacket.prototype.countHeaderFields = function()
-{ 
+{
   return this.headerFields_.length;
 };
 
@@ -61,7 +61,7 @@ LpPacket.prototype.countHeaderFields = function()
  * @return {object} The header field at the index.
  */
 LpPacket.prototype.getHeaderField = function(index)
-{ 
+{
   return this.headerFields_[index];
 };
 
@@ -91,6 +91,6 @@ LpPacket.prototype.setFragmentWireEncoding = function(fragmentWireEncoding)
  * @param {object} headerField The header field to add.
  */
 LpPacket.prototype.addHeaderField = function(headerField)
-{ 
+{
   this.headerFields_.push(headerField);
 };

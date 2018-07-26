@@ -249,7 +249,7 @@ describe ("TestTpmBackEnds", function() {
         var saveSize = Object.keys(keyNameUris).length;
         keyNameUris[keyName.toUri()] = true;
         assert.ok(Object.keys(keyNameUris).length > saveSize)
-        
+
         ++iteration;
         if (iteration >= 50)
           // Done.

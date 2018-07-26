@@ -40,7 +40,7 @@ exports.CertificateFetcher = CertificateFetcher;
  * which must be valid for the lifetime of this CertificateFetcher.
  */
 CertificateFetcher.prototype.setCertificateStorage = function(certificateStorage)
-{ 
+{
   this.certificateStorage_ = certificateStorage;
 };
 

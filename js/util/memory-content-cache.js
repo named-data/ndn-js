@@ -337,7 +337,7 @@ MemoryContentCache.prototype.getStorePendingInterest = function()
  * @return {number} The minimum cache lifetime in milliseconds.
  */
 MemoryContentCache.prototype.getMinimumCacheLifetime = function()
-{ 
+{
   return this.minimumCacheLifetime_;
 };
 
@@ -451,7 +451,7 @@ MemoryContentCache.prototype.doCleanup = function(nowMilliseconds)
   if (nowMilliseconds >= this.nextCleanupTime) {
     // staleTimeCache is sorted on cacheRemovalTimeMilliseconds_, so we only need to
     // erase the stale entries at the front, then quit.
-    while (this.staleTimeCache.length > 0 && 
+    while (this.staleTimeCache.length > 0 &&
            this.staleTimeCache[0].isPastRemovalTime(nowMilliseconds))
       this.staleTimeCache.shift();
 

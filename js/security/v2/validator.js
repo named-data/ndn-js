@@ -103,7 +103,7 @@ Validator.prototype.getFetcher = function() { return this.certificateFetcher_; }
  * @param {number} maxDepth The maximum depth.
  */
 Validator.prototype.setMaxDepth = function(maxDepth)
-{ 
+{
   this.maxDepth_ = maxDepth;
 };
 
@@ -226,7 +226,7 @@ Validator.prototype.requestCertificate_ = function(certificateRequest, state)
       for (var i = 0; i < state.certificateChain_.length; ++i)
         thisValidator.cacheVerifiedCertificate(state.certificateChain_[i]);
     });
-    
+
     return;
   }
 
