@@ -103,7 +103,9 @@ AesAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
     if (params.getAlgorithmType() == EncryptAlgorithmType.AesEcb) {
       try {
         // ECB ignores the initial vector.
-        var cipher = Crypto.createDecipheriv("aes-128-ecb", keyBits.buf(), "");
+        var cipher = Crypto.createDecipheriv
+          (keyBits.size()  == 32 ? "aes-256-ecb" : "aes-128-ecb",
+           keyBits.buf(), "");
         return SyncPromise.resolve(new Blob
           (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
            false));
@@ -114,7 +116,8 @@ AesAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
     else if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
       try {
         var cipher = Crypto.createDecipheriv
-          ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
+          (keyBits.size()  == 32 ? "aes-256-cbc" : "aes-128-cbc",
+           keyBits.buf(), params.getInitialVector().buf());
         return SyncPromise.resolve(new Blob
           (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
            false));
@@ -185,14 +188,16 @@ AesAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
   else {
     if (params.getAlgorithmType() == EncryptAlgorithmType.AesEcb) {
       // ECB ignores the initial vector.
-      var cipher = Crypto.createCipheriv("aes-128-ecb", keyBits.buf(), "");
+      var cipher = Crypto.createCipheriv
+        (keyBits.size()  == 32 ? "aes-256-ecb" : "aes-128-ecb", keyBits.buf(), "");
       return SyncPromise.resolve(new Blob
         (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
          false));
     }
     else if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
       var cipher = Crypto.createCipheriv
-        ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
+        (keyBits.size()  == 32 ? "aes-256-cbc" : "aes-128-cbc",
+         keyBits.buf(), params.getInitialVector().buf());
       return SyncPromise.resolve(new Blob
         (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
          false));
