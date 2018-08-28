@@ -7281,7 +7281,7 @@ module.exports = exports;
 
 /** @ignore */
 var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js').ASN1HEX /** @ignore */
-var KJUR = require('../contrib/securityLib/crypto-1.0.js').KJUR /** @ignore */
+var KJUR = require('../contrib/securityLib/crypto-1.1.js').KJUR /** @ignore */
 var RSAKey = require('../contrib/securityLib/rsasign-1.2.js').RSAKey /** @ignore */
 var b64tohex = require('../contrib/securityLib/base64.js').b64tohex
 
@@ -43680,7 +43680,7 @@ Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input, copy)
       var canIgnore =
         (fieldType >= Tlv.LpPacket_IGNORE_MIN &&
          fieldType <= Tlv.LpPacket_IGNORE_MAX &&
-         (fieldType & 0x01) === 1);
+         (fieldType & 0x03) == 0);
       if  (!canIgnore)
         throw new DecodingException(new Error("Did not get the expected TLV type"));
 
@@ -44973,7 +44973,9 @@ AesAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
     if (params.getAlgorithmType() == EncryptAlgorithmType.AesEcb) {
       try {
         // ECB ignores the initial vector.
-        var cipher = Crypto.createDecipheriv("aes-128-ecb", keyBits.buf(), "");
+        var cipher = Crypto.createDecipheriv
+          (keyBits.size()  == 32 ? "aes-256-ecb" : "aes-128-ecb",
+           keyBits.buf(), "");
         return SyncPromise.resolve(new Blob
           (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
            false));
@@ -44984,7 +44986,8 @@ AesAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
     else if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
       try {
         var cipher = Crypto.createDecipheriv
-          ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
+          (keyBits.size()  == 32 ? "aes-256-cbc" : "aes-128-cbc",
+           keyBits.buf(), params.getInitialVector().buf());
         return SyncPromise.resolve(new Blob
           (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
            false));
@@ -45055,14 +45058,16 @@ AesAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
   else {
     if (params.getAlgorithmType() == EncryptAlgorithmType.AesEcb) {
       // ECB ignores the initial vector.
-      var cipher = Crypto.createCipheriv("aes-128-ecb", keyBits.buf(), "");
+      var cipher = Crypto.createCipheriv
+        (keyBits.size()  == 32 ? "aes-256-ecb" : "aes-128-ecb", keyBits.buf(), "");
       return SyncPromise.resolve(new Blob
         (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
          false));
     }
     else if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
       var cipher = Crypto.createCipheriv
-        ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
+        (keyBits.size()  == 32 ? "aes-256-cbc" : "aes-128-cbc",
+         keyBits.buf(), params.getInitialVector().buf());
       return SyncPromise.resolve(new Blob
         (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
          false));
