@@ -267,7 +267,7 @@ def build (bld):
                  "js/lp/lp-packet.js",
                  "js/face.js",
                  "js/firefly-face.js",
-                 "contrib/dexie/dexie.min.js"]
+                 "contrib/dexie/Dexie.js"]
 
         ndnjs = bld (features="combine",
                      target="ndn",
@@ -349,5 +349,6 @@ class closure_compiler (Task.Task):
     def run(self):
         return self.exec_command(['java',
                                   '-jar', '../tools/compiler.jar',
+                                  '--language_in=ES5',
                                   '--js', self.combine.outputs[0].abspath(),
                                   '--js_output_file', self.outputs[0].abspath()])
