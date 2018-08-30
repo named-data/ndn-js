@@ -66,11 +66,11 @@ var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVe
  * use the PIB and TPM defined by the given locators, which creates a security
  * v2 KeyChain that uses CertificateV2, Pib, Tpm and Validator (instead of v1
  * Certificate, IdentityStorage, PrivateKeyStorage and PolicyManager).
- * KeyChain(identityManager = null, policyManager = null) - Create a security v1
+ * KeyChain(identityManager, policyManager = null) - Create a security v1
  * KeyChain to use the optional identityManager and policyManager.
- * KeyChain(pibImpl, tpmBackEnd, policyManager) - Create a KeyChain using this
- * temporary constructor for the transition to security v2, which creates a
- * security v2 KeyChain but still uses the v1 PolicyManager.
+ * KeyChain(pibImpl, tpmBackEnd, policyManager = null) - Create a security v2
+ * KeyChain with explicitly-created PIB and TPM objects, and that optionally
+ * still uses the v1 PolicyManager.
  * Finally, the default constructor KeyChain() creates a KeyChain with the
  * default PIB and TPM, which are platform-dependent and can be overridden
  * system-wide or individually by the user. The default constructor creates a
@@ -89,10 +89,10 @@ var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVe
  * constructor.
  * @param {PolicyManager} policyManager: (optional) The policy manager as a
  * subclass of PolicyManager. If omitted, use NoVerifyPolicyManager.
- * @param {PibImpl} pibImpl The PibImpl when using the constructor form
- * KeyChain(pibImpl, tpmBackEnd, policyManager).
- * @param {TpmBackEnd} tpmBackEnd: The TpmBackEnd when using the constructor
- * form KeyChain(pibImpl, tpmBackEnd, policyManager).
+ * @param {PibImpl} pibImpl An explicitly-created PIB object of a subclass of
+ * PibImpl.
+ * @param {TpmBackEnd} tpmBackEnd: An explicitly-created TPM object of a
+ * subclass of TpmBackEnd.
  * @throws SecurityException if this is not in Node.js and this uses the default
  * IdentityManager constructor. (See IdentityManager for details.)
  * @constructor
@@ -157,6 +157,8 @@ var KeyChain = function KeyChain(arg1, arg2, arg3)
     var pibImpl = arg1;
     var tpmBackEnd = arg2;
     var policyManager = arg3;
+    if (policyManager == undefined)
+      policyManager = new NoVerifyPolicyManager()
 
     this.isSecurityV1_ = false;
     this.policyManager_ = policyManager;
