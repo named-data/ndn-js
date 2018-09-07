@@ -64,6 +64,7 @@ var Name = function Name(components)
  */
 var ComponentType = {
   IMPLICIT_SHA256_DIGEST: 1,
+  PARAMETERS_SHA256_DIGEST: 2,
   GENERIC: 8,
   OTHER_CODE: 0x7fff
 };
@@ -74,6 +75,7 @@ exports.ComponentType = ComponentType;
 /**
  * Create a new Name.Component with a copy of the given value.
  * (To create an ImplicitSha256Digest component, use fromImplicitSha256Digest.)
+ * (To create a ParametersSha256Digest component, use fromParametersSha256Digest.)
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer} value If the
  * value is a string, encode it as utf8 (but don't unescape).
  * @param (number) type (optional) The component type as an int from the
@@ -180,6 +182,8 @@ Name.Component.prototype.toEscapedString = function()
 {
   if (this.type_ === ComponentType.IMPLICIT_SHA256_DIGEST)
     return "sha256digest=" + this.value_.toHex();
+  if (this.type_ === ComponentType.PARAMETERS_SHA256_DIGEST)
+    return "params-sha256=" + this.value_.toHex();
 
   var typeString;
   if (this.type_ === ComponentType.GENERIC)
@@ -267,6 +271,15 @@ Name.Component.prototype.isGeneric = function()
 Name.Component.prototype.isImplicitSha256Digest = function()
 {
   return this.type_ === ComponentType.IMPLICIT_SHA256_DIGEST;
+};
+
+/**
+ * Check if this component is a ParametersSha256Digest component.
+ * @return {boolean} True if this is a ParametersSha256Digest component.
+ */
+Name.Component.prototype.isParametersSha256Digest = function()
+{
+  return this.type_ === ComponentType.PARAMETERS_SHA256_DIGEST;
 };
 
 /**
@@ -476,6 +489,26 @@ Name.Component.fromImplicitSha256Digest = function(digest)
 };
 
 /**
+ * Create a component of type ParametersSha256DigestComponent, so that
+ * isParametersSha256Digest() is true.
+ * @param {Blob|Buffer} digest The SHA-256 digest value.
+ * @return {Name.Component} The new Component.
+ * @throws DecodingException If the digest length is not 32 bytes.
+ */
+Name.Component.fromParametersSha256Digest = function(digest)
+{
+  digestBlob = typeof digest === 'object' && digest instanceof Blob ?
+    digest : new Blob(digest, true);
+  if (digestBlob.size() !== 32)
+    throw new DecodingException
+      ("Name.Component.fromParametersSha256Digest: The digest length must be 32 bytes");
+
+  var result = new Name.Component(digestBlob);
+  result.type_ = ComponentType.PARAMETERS_SHA256_DIGEST;
+  return result;
+};
+
+/**
  * Get the successor of this component, as described in Name.getSuccessor.
  * @return {Name.Component} A new Name.Component which is the successor of this.
  */
@@ -617,12 +650,18 @@ Name.createNameArray = function(uri)
 
   // Unescape the components.
   var sha256digestPrefix = "sha256digest=";
+  var paramsSha256Prefix = "params-sha256=";
   for (var i = 0; i < array.length; ++i) {
     var componentString = array[i];
     var component;
     if (componentString.substr(0, sha256digestPrefix.length) == sha256digestPrefix) {
       var hexString = componentString.substr(sha256digestPrefix.length).trim();
       component = Name.Component.fromImplicitSha256Digest
+        (new Blob(new Buffer(hexString, 'hex')), false);
+    }
+    else if (componentString.substr(0, paramsSha256Prefix.length) == paramsSha256Prefix) {
+      var hexString = componentString.substr(paramsSha256Prefix.length).trim();
+      component = Name.Component.fromParametersSha256Digest
         (new Blob(new Buffer(hexString, 'hex')), false);
     }
     else {
@@ -638,13 +677,15 @@ Name.createNameArray = function(uri)
           throw new Error
             ("Can't parse decimal Name Component type: " + typeString +
              " in URI " + uri);
-
+        // Allow for a decimal value of recognized component types.
         if (otherTypeCode == ComponentType.GENERIC ||
-            otherTypeCode == ComponentType.IMPLICIT_SHA256_DIGEST)
-          throw new Error("Unexpected Name Component type: " + typeString +
-             " in URI " + uri);
+            otherTypeCode == ComponentType.IMPLICIT_SHA256_DIGEST ||
+            otherTypeCode == ComponentType.PARAMETERS_SHA256_DIGEST)
+          // The enum values are the same as the TLV type codes.
+          type = otherTypeCode;
+        else
+          type = ComponentType.OTHER_CODE;
 
-        type = ComponentType.OTHER_CODE;
         componentString = componentString.substring(iTypeCodeEnd + 1);
       }
 
@@ -678,6 +719,8 @@ Name.prototype.set = function(uri)
 
 /**
  * Convert the component to a Buffer and append a component to this Name.
+ * (To append an ImplicitSha256Digest component, use appendImplicitSha256Digest.)
+ * (To append a ParametersSha256Digest component, use appendParametersSha256Digest.)
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer|Name} component
  * If a component is a string, encode as utf8 (but don't unescape).
  * @param (number) type (optional) The component type as an int from the
@@ -835,6 +878,18 @@ Name.prototype.appendSequenceNumber = function(sequenceNumber)
 Name.prototype.appendImplicitSha256Digest = function(digest)
 {
   return this.append(Name.Component.fromImplicitSha256Digest(digest));
+};
+
+/**
+ * Append a component of type ParametersSha256DigestComponent, so that
+ * isParametersSha256Digest() is true.
+ * @param {Blob|Buffer} digest The SHA-256 digest value.
+ * @return This name so that you can chain calls to append.
+ * @throws DecodingException If the digest length is not 32 bytes.
+ */
+Name.prototype.appendParametersSha256Digest = function(digest)
+{
+  return this.append(Name.Component.fromParametersSha256Digest(digest));
 };
 
 /**
