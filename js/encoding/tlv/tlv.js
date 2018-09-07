@@ -31,6 +31,7 @@ Tlv.Interest =         5;
 Tlv.Data =             6;
 Tlv.Name =             7;
 Tlv.ImplicitSha256DigestComponent = 1;
+Tlv.ParametersSha256DigestComponent = 2;
 Tlv.NameComponent =    8;
 Tlv.Selectors =        9;
 Tlv.Nonce =            10;
