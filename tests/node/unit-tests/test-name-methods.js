@@ -237,7 +237,7 @@ describe('TestNameMethods', function() {
     assert.ok(new Name("ndn:/%00%01/%01%03").equals(new Name("ndn:/%00%01/%01%02").getSuccessor()));
     assert.ok(new Name("ndn:/%00%01/%02%00").equals(new Name("ndn:/%00%01/%01%FF").getSuccessor()));
     assert.ok(new Name("ndn:/%00%01/%00%00%00").equals(new Name("ndn:/%00%01/%FF%FF").getSuccessor()));
-    assert.ok(new Name("/%00").equals(new Name().getSuccessor()));
+    assert.ok(new Name("/sha256digest=0000000000000000000000000000000000000000000000000000000000000000").equals(new Name().getSuccessor()));
     assert.ok(new Name("/%00%01/%00").equals(new Name("/%00%01/...").getSuccessor()));
   });
 
