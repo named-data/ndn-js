@@ -17426,7 +17426,7 @@ Name.fromEscapedStringAsBuffer = function(escapedString)
  *
  * Examples:
  *
- * - The successor of / is /%00
+ * - The successor of / is /sha256digest=0000000000000000000000000000000000000000000000000000000000000000
  * - The successor of /%00%01/%01%02 is /%00%01/%01%03
  * - The successor of /%00%01/%01%FF is /%00%01/%02%00
  * - The successor of /%00%01/%FF%FF is /%00%01/%00%00%00
@@ -17435,12 +17435,8 @@ Name.fromEscapedStringAsBuffer = function(escapedString)
  */
 Name.prototype.getSuccessor = function()
 {
-  if (this.size() == 0) {
-    // Return "/%00".
-    var result = new Name();
-    result.append(new Blob(new Buffer([0]), false));
-    return result;
-  }
+  if (this.size() == 0)
+    return new Name("/sha256digest=0000000000000000000000000000000000000000000000000000000000000000");
   else
     return this.getPrefix(-1).append(this.get(-1).getSuccessor());
 };
