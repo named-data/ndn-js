@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.16.0 (2018-09-07)
+Interim changes since NDN-JS v0.16.0 (2018-09-10)
 -------------------------------------------------
 
 Changes
@@ -8,6 +8,8 @@ Changes
 * examples: Added firefly-chat which uses FireflyFace.
 * https://redmine.named-data.net/issues/4701 Added ComponentType.PARAMETERS_SHA256_DIGEST,
   and support params-sha256=<hex-value> in the name URI.
+* https://github.com/named-data/ndn-js/pull/63 Removed obsolete wsproxy. If you
+  want to use the code, see previous release versions.
 
 Bug fixes
 * In ChronoSync2013 timeout, get the digest component based on the broadcast
