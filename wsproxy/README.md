@@ -1,41 +1,5 @@
 wsproxy
 =======
 
-WebSocket proxy server between NDN javascript stack and ndnd.
-
-
-NOTE - this is legacy; there is a cpp-based wsproxy that has no nodejs dependency.
-https://github.com/named-data/wsproxy-cpp
-for new installs, use that instead !
-meanwhile, instructions below for node-js version.
-
-
-
-This proxy runs on top of 'node.js'. 'ws' and 'node-getopt' packages are required. It listens for WebSocket connection request on port number 9696. Once it receives a incoming connection, it issues a TCP connection to the specified 'ndnd' router (port number 6363). It then translates packet frames from WebSocket to pure TCP byte streams and vice versa.
-
-Installation guide:
-
-1) node.js: go to http://nodejs.org/ to download and install node.js;
-
-2) ws package: use command 'npm install ws' or go to https://github.com/einaros/ws for more information;
-
-3) node-getopt package: use command 'npm install node-getopt' or go to https://npmjs.org/package/node-getopt for more information.
-
-
-To run the proxy, simply use the command 'node wsproxy-tcp.js' or 'node wsproxy-udp.js'.
-
-To specify remote ndnd router's hostname or ip address, use option '-c x.x.x.x'. Default is 'localhost'.
-
-To specify the port number of the remote ndnd, use option '-n xxxx'. Default is 6363.
-
-To specify the port number on which the proxy will listen, use option '-p xxxx'. Default is 9696.
-
-To specify maximum number of concurrent clients, use option '-m N'. Default is 40.
-
-To specify the level of log info display, use option '-L x'. x=0 means no output; x=1 will log connection startup and close; x=2 will log contents of all messages that flow across the proxy. Default is 1.
-
-Example: to setup UDP connection to ndnd router 192.168.1.51 with max client number 50 and log level 2, use the command:
-
-node wsproxy-udp.js -c 192.168.1.51 -m 50 -L 2
-
-Acknowledgement: this code is extended from Junxiao's WebSocket proxy implementation (https://gist.github.com/3835425).
+wsproxy was a program that provides a proxy server between NDN JavaScript stack and NDN forwarder.
+This program is no longer necessary because [NDN Forwarding Daemon (NFD)](https://github.com/named-data/NFD/) has built-in WebSockets support that is enabled by default.
