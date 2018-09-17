@@ -140,7 +140,8 @@ TlvDecoder.prototype.readNestedTlvsStart = function(expectedType)
  * unrecognized type code to skip is critical, throw an exception. If true, then
  * skip the unrecognized type code without error.
  * @throws DecodingException if the TLV length does not equal the total length
- * of the nested TLVs.
+ * of the nested TLVs, or if skipCritical is false and the unrecognized type
+ * code to skip is critical.
  */
 TlvDecoder.prototype.finishNestedTlvs = function(endOffset, skipCritical)
 {
