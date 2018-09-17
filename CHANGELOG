@@ -1,5 +1,5 @@
-Interim changes since NDN-JS v0.16.0 (2018-09-17)
--------------------------------------------------
+NDN-JS v0.17.0 (2018-09-17)
+---------------------------
 
 Changes
 * https://redmine.named-data.net/issues/4591 Accept Interests encoded with
