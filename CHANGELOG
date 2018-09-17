@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.16.0 (2018-09-10)
+Interim changes since NDN-JS v0.16.0 (2018-09-17)
 -------------------------------------------------
 
 Changes
@@ -16,6 +16,8 @@ Bug fixes
   prefix size instead of a hard-coded value.
 * https://github.com/named-data/jndn/pull/22 In decodeLpPacket, fix the check for
   ignoring an unrecognized field type.
+* In examples/browser/test-encode-decode-data and -interest, need to use Log.LOG
+  instead of LOG.
 
 NDN-JS v0.16.0 (2018-04-17)
 ---------------------------
