@@ -16,6 +16,8 @@ Bug fixes
   prefix size instead of a hard-coded value.
 * https://github.com/named-data/jndn/pull/22 In decodeLpPacket, fix the check for
   ignoring an unrecognized field type.
+* https://redmine.named-data.net/issues/4736 In MemoryContentCache, use a default
+  InterestLifetime and removed support for infinite lifetime.
 * In examples/browser/test-encode-decode-data and -interest, need to use Log.LOG
   instead of LOG.
 
