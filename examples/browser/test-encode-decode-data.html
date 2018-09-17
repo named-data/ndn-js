@@ -163,8 +163,8 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
 
             var data = EncodingUtils.decodeHexData(input);
 
-            if(LOG>3)console.log('DATA PACKET DECODED');
-            if(LOG>3)console.log(data);
+            if (Log.LOG>3) console.log('DATA PACKET DECODED');
+            if (Log.LOG>3) console.log(data);
 
             var output = EncodingUtils.dataToHtml(data);
             // Verify with the same KeyChain used to sign.  Set the document
