@@ -552,11 +552,13 @@ MemoryContentCache.PendingInterest = function MemoryContentCachePendingInterest
   this.interest = interest;
   this.face = face;
 
-  if (this.interest.getInterestLifetimeMilliseconds() >= 0.0)
-    this.timeoutMilliseconds = (new Date()).getTime() +
-      this.interest.getInterestLifetimeMilliseconds();
-  else
-    this.timeoutMilliseconds = -1.0;
+  // Set up timeoutMilliseconds.
+  var interestLifetime = this.interest.getInterestLifetimeMilliseconds();
+  if (interestLifetime == null || interestLifetime < 0.0)
+    // The InterestLifetime is omitted, so use a default.
+    interestLifetime = 4000.0;
+
+  this.timeoutMilliseconds = (new Date()).getTime() + interestLifetime;
 };
 
 /**
@@ -583,6 +585,5 @@ MemoryContentCache.PendingInterest.prototype.getFace = function()
  */
 MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMilliseconds)
 {
-  return this.timeoutTimeMilliseconds >= 0.0 &&
-         nowMilliseconds >= this.timeoutTimeMilliseconds;
+  return nowMilliseconds >= this.timeoutTimeMilliseconds;
 };
