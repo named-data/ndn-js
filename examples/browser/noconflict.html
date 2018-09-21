@@ -1,0 +1,32 @@
+<!doctype html>
+<title>ndn.noConflict() example</title>
+<h1>ndn.noConflict() example</h1>
+<p><span id="nBeforeImport"></span> identifiers in global namespace before importing ndn-js.</p>
+<p><span id="nAfterImport"></span> identifiers in global namespace after importing ndn-js.</p>
+<p><span id="nNoConflict"></span> identifiers in global namespace after <code>ndn.noConflict()</code>. New identifiers: <code id="listConflict"></code></p>
+<script>
+let identifiersBeforeImport, identifiersAfterImport;
+identifiersBeforeImport = new Set(Object.keys(this));
+document.getElementById("nBeforeImport").innerText = identifiersBeforeImport.size;
+</script>
+<script src="../../build/ndn.js"></script>
+<script>
+identifiersAfterImport = new Set(Object.keys(this));
+document.getElementById("nAfterImport").innerText = identifiersAfterImport.size;
+ndn.noConflict();
+const identifiersNoConflict = new Set(Object.keys(this));
+document.getElementById("nNoConflict").innerText = identifiersNoConflict.size;
+const conflicts = new Set(identifiersNoConflict);
+identifiersBeforeImport.forEach(k => conflicts.delete(k));
+document.getElementById("listConflict").innerText = Array.from(conflicts.values()).join(" ");
+</script>
+
+<p>Express Interest test: <span id="tInterestReply"></span></p>
+<script>
+const face = new ndn.Face({host: "wss://hobo.cs.arizona.edu/ws/"});
+const interest = new ndn.Interest(new ndn.Name("/ndn/edu/arizona/ping/" + Math.floor(Math.random() * 100000000)));
+face.expressInterest(interest,
+  (interest, data) => document.getElementById("tInterestReply").innerText = "Data " + data.getName().toUri(),
+  (interest) => document.getElementById("tInterestReply").innerText = "timeout",
+  (interest, nack) => document.getElementById("tInterestReply").innerText = "Nack");
+</script>
