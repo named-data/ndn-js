@@ -90,6 +90,7 @@ def build (bld):
 
                  # Include stacktrace.js before browserify so that it's defined globally.
         ndnjs = ["contrib/stacktrace/stacktrace.js",
+                 "js/browserify-header.js",
                  "js/browserify-require.js",
                  "js/browserify-stacktrace.js",
                  "js/use-subtle-crypto.js"] + securityLib + [
@@ -267,6 +268,7 @@ def build (bld):
                  "js/lp/lp-packet.js",
                  "js/face.js",
                  "js/firefly-face.js",
+                 "js/browserify-footer.js",
                  "contrib/dexie/Dexie.js"]
 
         ndnjs = bld (features="combine",
