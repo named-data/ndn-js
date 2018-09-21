@@ -1,3 +1,16 @@
+Interim changes since NDN-JS v0.17.0 (2018-09-21)
+-------------------------------------------------
+
+Changes
+* https://redmine.named-data.net/issues/4111 In the browser, put the classes in
+  the ndn namespace, and by default also add the classes to the global
+  namespace (for backward compatibility). If a class in the global namespace
+  conflicts with a different API (for example, the Blob class) then your
+  application can call ndn.noConflict() and explicitly use the ndn namespace
+  (for example, ndn.Blob). In your browser, try running
+  examples/browser/noconflict.html .
+
+
 NDN-JS v0.17.0 (2018-09-17)
 ---------------------------
 
