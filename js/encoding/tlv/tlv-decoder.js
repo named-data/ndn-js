@@ -341,6 +341,33 @@ TlvDecoder.prototype.readBooleanTlv = function(expectedType, endOffset)
 };
 
 /**
+ * Decode the type and length from the input starting at the input buffer
+ * position, expecting the type to be expectedType, then skip (and ignore) the
+ * value. Update offset.
+ * @param {number} expectedType The expected type.
+ * @throws DecodingException if did not get the expected TLV type.
+ */
+TlvDecoder.prototype.skipTlv = function(expectedType)
+{
+  var length = this.readTypeAndLength(expectedType);
+  // readTypeAndLength already checked if length exceeds the input buffer.
+  this.offset += length;
+};
+
+/**
+ * Peek at the next TLV, and if it has the expectedType then call skipTlv to
+ * skip (and ignore) it.
+ * @param {number} expectedType The expected type.
+ * @param {number} endOffset The offset of the end of the parent TLV, returned
+ * by readNestedTlvsStart.
+ */
+TlvDecoder.prototype.skipOptionalTlv = function(expectedType, endOffset)
+{
+  if (this.peekType(expectedType, endOffset))
+    this.skipTlv(expectedType);
+};
+
+/**
  * Get the offset into the input, used for the next read.
  * @return {number} The offset.
  */
