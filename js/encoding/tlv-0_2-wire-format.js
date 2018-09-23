@@ -1276,6 +1276,8 @@ Tlv0_2WireFormat.decodeControlParameters = function
     controlParameters.setUri(uri.toString());
   }
 
+  decoder.skipOptionalTlv(Tlv.ControlParameters_LocalUri, endOffset);
+
   // decode integers
   controlParameters.setLocalControlFeature(decoder.
     readOptionalNonNegativeIntegerTlv(
@@ -1286,6 +1288,14 @@ Tlv0_2WireFormat.decodeControlParameters = function
   controlParameters.setCost(decoder.readOptionalNonNegativeIntegerTlv(
     Tlv.ControlParameters_Cost, endOffset));
 
+  decoder.skipOptionalTlv(Tlv.ControlParameters_Capacity, endOffset);
+  decoder.skipOptionalTlv(Tlv.ControlParameters_Count, endOffset);
+  decoder.skipOptionalTlv
+    (Tlv.ControlParameters_BaseCongestionMarkingInterval, endOffset);
+  decoder.skipOptionalTlv
+    (Tlv.ControlParameters_DefaultCongestionThreshold, endOffset);
+  decoder.skipOptionalTlv(Tlv.ControlParameters_Mtu, endOffset);
+
   // set forwarding flags
   if (decoder.peekType(Tlv.ControlParameters_Flags, endOffset)) {
     var flags = new ForwardingFlags();
@@ -1293,6 +1303,8 @@ Tlv0_2WireFormat.decodeControlParameters = function
       readNonNegativeIntegerTlv(Tlv.ControlParameters_Flags, endOffset));
     controlParameters.setForwardingFlags(flags);
   }
+
+  decoder.skipOptionalTlv(Tlv.ControlParameters_Mask, endOffset);
 
   // decode strategy
   if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
