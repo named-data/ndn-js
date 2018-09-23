@@ -10209,10 +10209,17 @@ Tlv.NfdCommand_StatusText =      103;
 Tlv.ControlParameters_ControlParameters =   104;
 Tlv.ControlParameters_FaceId =              105;
 Tlv.ControlParameters_Uri =                 114;
+Tlv.ControlParameters_LocalUri =            129;
 Tlv.ControlParameters_LocalControlFeature = 110;
 Tlv.ControlParameters_Origin =              111;
 Tlv.ControlParameters_Cost =                106;
+Tlv.ControlParameters_Capacity =            131;
+Tlv.ControlParameters_Count =               132;
+Tlv.ControlParameters_BaseCongestionMarkingInterval = 135;
+Tlv.ControlParameters_DefaultCongestionThreshold = 136;
+Tlv.ControlParameters_Mtu =                 137;
 Tlv.ControlParameters_Flags =               108;
+Tlv.ControlParameters_Mask =                112;
 Tlv.ControlParameters_Strategy =            107;
 Tlv.ControlParameters_ExpirationPeriod =    109;
 
@@ -10856,6 +10863,33 @@ TlvDecoder.prototype.readBooleanTlv = function(expectedType, endOffset)
   }
   else
     return false;
+};
+
+/**
+ * Decode the type and length from the input starting at the input buffer
+ * position, expecting the type to be expectedType, then skip (and ignore) the
+ * value. Update offset.
+ * @param {number} expectedType The expected type.
+ * @throws DecodingException if did not get the expected TLV type.
+ */
+TlvDecoder.prototype.skipTlv = function(expectedType)
+{
+  var length = this.readTypeAndLength(expectedType);
+  // readTypeAndLength already checked if length exceeds the input buffer.
+  this.offset += length;
+};
+
+/**
+ * Peek at the next TLV, and if it has the expectedType then call skipTlv to
+ * skip (and ignore) it.
+ * @param {number} expectedType The expected type.
+ * @param {number} endOffset The offset of the end of the parent TLV, returned
+ * by readNestedTlvsStart.
+ */
+TlvDecoder.prototype.skipOptionalTlv = function(expectedType, endOffset)
+{
+  if (this.peekType(expectedType, endOffset))
+    this.skipTlv(expectedType);
 };
 
 /**
@@ -44427,6 +44461,8 @@ Tlv0_2WireFormat.decodeControlParameters = function
     controlParameters.setUri(uri.toString());
   }
 
+  decoder.skipOptionalTlv(Tlv.ControlParameters_LocalUri, endOffset);
+
   // decode integers
   controlParameters.setLocalControlFeature(decoder.
     readOptionalNonNegativeIntegerTlv(
@@ -44437,6 +44473,14 @@ Tlv0_2WireFormat.decodeControlParameters = function
   controlParameters.setCost(decoder.readOptionalNonNegativeIntegerTlv(
     Tlv.ControlParameters_Cost, endOffset));
 
+  decoder.skipOptionalTlv(Tlv.ControlParameters_Capacity, endOffset);
+  decoder.skipOptionalTlv(Tlv.ControlParameters_Count, endOffset);
+  decoder.skipOptionalTlv
+    (Tlv.ControlParameters_BaseCongestionMarkingInterval, endOffset);
+  decoder.skipOptionalTlv
+    (Tlv.ControlParameters_DefaultCongestionThreshold, endOffset);
+  decoder.skipOptionalTlv(Tlv.ControlParameters_Mtu, endOffset);
+
   // set forwarding flags
   if (decoder.peekType(Tlv.ControlParameters_Flags, endOffset)) {
     var flags = new ForwardingFlags();
@@ -44444,6 +44488,8 @@ Tlv0_2WireFormat.decodeControlParameters = function
       readNonNegativeIntegerTlv(Tlv.ControlParameters_Flags, endOffset));
     controlParameters.setForwardingFlags(flags);
   }
+
+  decoder.skipOptionalTlv(Tlv.ControlParameters_Mask, endOffset);
 
   // decode strategy
   if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
