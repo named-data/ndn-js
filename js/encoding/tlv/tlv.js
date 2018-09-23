@@ -89,10 +89,17 @@ Tlv.NfdCommand_StatusText =      103;
 Tlv.ControlParameters_ControlParameters =   104;
 Tlv.ControlParameters_FaceId =              105;
 Tlv.ControlParameters_Uri =                 114;
+Tlv.ControlParameters_LocalUri =            129;
 Tlv.ControlParameters_LocalControlFeature = 110;
 Tlv.ControlParameters_Origin =              111;
 Tlv.ControlParameters_Cost =                106;
+Tlv.ControlParameters_Capacity =            131;
+Tlv.ControlParameters_Count =               132;
+Tlv.ControlParameters_BaseCongestionMarkingInterval = 135;
+Tlv.ControlParameters_DefaultCongestionThreshold = 136;
+Tlv.ControlParameters_Mtu =                 137;
 Tlv.ControlParameters_Flags =               108;
+Tlv.ControlParameters_Mask =                112;
 Tlv.ControlParameters_Strategy =            107;
 Tlv.ControlParameters_ExpirationPeriod =    109;
 
