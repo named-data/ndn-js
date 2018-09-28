@@ -20,4 +20,4 @@
 // This is included after stacktrace.js and browserify-require.js so that
 // require().printStackTrace works.
 
-exports.printStackTrace = printStackTrace;
+exports.printStackTrace = globals.printStackTrace;
