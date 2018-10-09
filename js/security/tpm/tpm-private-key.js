@@ -378,7 +378,7 @@ TpmPrivateKey.prototype.toPkcs1 = function()
       ("toPkcs1: The private key is not loaded"));
 
   // this.privateKey_ is already the base64-encoded PKCS #1 key.
-  return DataUtils.privateKeyPemToDer(this.privateKey_);
+  return new Blob(DataUtils.privateKeyPemToDer(this.privateKey_), false);
 };
 
 /**
