@@ -420,29 +420,54 @@ TpmPrivateKey.prototype.toPkcs8 = function()
  */
 TpmPrivateKey.generatePrivateKeyPromise = function(keyParams, useSync)
 {
-  // TODO: Check for UseSubtleCrypto.
   // TODO: Check for RSAKey in the browser.
 
-  // Assume we are in Node.js.
-  var privateKeyPem;
+  if (UseSubtleCrypto() && !useSync) {
+    if (keyParams.getKeyType() === KeyType.RSA) {
+      var privateKey = null;
 
-  if (keyParams.getKeyType() === KeyType.RSA) {
-    if (!rsaKeygen)
-      return SyncPromise.reject(new TpmPrivateKey.Error(new Error
-        ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
+      return crypto.subtle.generateKey
+        ({ name: "RSASSA-PKCS1-v1_5", modulusLength: keyParams.getKeySize(),
+           publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+           hash: {name: "SHA-256"} },
+         true, ["sign", "verify"])
+      .then(function(key) {
+        // Export the private key to DER.
+        return crypto.subtle.exportKey("pkcs8", key.privateKey);
+      })
+      .then(function(pkcs8Der) {
+        var result = new TpmPrivateKey();
+        result.loadPkcs8(new Blob(new Uint8Array(pkcs8Der), false), KeyType.RSA);
 
-    var keyPair = rsaKeygen.generate(keyParams.getKeySize());
-    privateKeyPem = keyPair.private_key.toString();
+        return SyncPromise.resolve(result);
+      });
+    }
+    else
+      return Promise.reject(new Error
+        ("Cannot generate a key pair of type " + keyParams.getKeyType()));
   }
-  else
-    return SyncPromise.reject(new Error
-      ("Cannot generate a key pair of type " + keyParams.getKeyType()));
+  else {
+    // Assume we are in Node.js.
+    var privateKeyPem;
 
-  var result = new TpmPrivateKey();
-  result.privateKey_ = privateKeyPem;
-  result.keyType_ = keyParams.getKeyType();
+    if (keyParams.getKeyType() === KeyType.RSA) {
+      if (!rsaKeygen)
+        return SyncPromise.reject(new TpmPrivateKey.Error(new Error
+          ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
 
-  return SyncPromise.resolve(result);
+      var keyPair = rsaKeygen.generate(keyParams.getKeySize());
+      privateKeyPem = keyPair.private_key.toString();
+    }
+    else
+      return SyncPromise.reject(new Error
+        ("Cannot generate a key pair of type " + keyParams.getKeyType()));
+
+    var result = new TpmPrivateKey();
+    result.privateKey_ = privateKeyPem;
+    result.keyType_ = keyParams.getKeyType();
+
+    return SyncPromise.resolve(result);
+  }
 };
 
 /**
