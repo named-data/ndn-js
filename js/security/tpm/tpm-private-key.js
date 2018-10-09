@@ -307,17 +307,21 @@ TpmPrivateKey.prototype.decryptPromise = function
 TpmPrivateKey.prototype.signPromise = function(data, digestAlgorithm, useSync)
 {
   if (this.keyType_ == null)
-    return SyncPromise.reject(new TpmPrivateKey.Error(new Error
-      ("sign: The private key is not loaded")));
+    return SyncPromise.resolve(new Blob());
 
   if (digestAlgorithm != DigestAlgorithm.SHA256)
     return SyncPromise.reject(new TpmPrivateKey.Error(new Error
       ("TpmPrivateKey.sign: Unsupported digest algorithm")));
 
   if (UseSubtleCrypto() && !useSync) {
-    var algorithm = {name:"RSASSA-PKCS1-v1_5", hash:{name:"SHA-256"}};
+    var algorithm;
+    if (this.keyType_ === KeyType.RSA)
+      algorithm = { name: "RSASSA-PKCS1-v1_5", hash: { name: "SHA-256" }};
+    else
+      return SyncPromise.reject(new TpmPrivateKey.Error(new Error
+        ("signPromise: Unrecognized key type " + this.keyType_)));
 
-    return this.getSubtleKeyPromise_(algorithm)
+    return this.getSubtleKeyPromise_()
     .then(function(subtleKey) {
       return crypto.subtle.sign(algorithm, subtleKey, data);
     })
@@ -334,7 +338,8 @@ TpmPrivateKey.prototype.signPromise = function(data, digestAlgorithm, useSync)
       // Just create a "sha256". The Crypto library will infer ECDSA from the key.
       signer = Crypto.createSign("sha256");
     else
-      return SyncPromise.resolve(new Blob());
+      return SyncPromise.reject(new TpmPrivateKey.Error(new Error
+        ("signPromise: Unrecognized key type " + this.keyType_)));
 
     signer.update(data);
     var signature = new Buffer
@@ -550,30 +555,35 @@ TpmPrivateKey.bigIntegerToBuffer = function(bigInteger)
 };
 
 /**
- * A private method to get the cached crypto.subtle key, importing it from
- * this.privateKey_ if needed. This means we only have to do this once per
+ * A private method to get the cached crypto.subtle key (for signing), importing
+ * it from this.privateKey_ if needed. This means we only have to do this once per
  * session, giving us a small but not insignificant performance boost.
- * @param {object} The crypto.subtle associative array for the key algorithm, e.g.
- * {name:"RSASSA-PKCS1-v1_5", hash:{name:"SHA-256"}}.
  * @return {Promise} A promise which returns the cached crypto.subtle key.
  */
-TpmPrivateKey.prototype.getSubtleKeyPromise_ = function(algorithm)
+TpmPrivateKey.prototype.getSubtleKeyPromise_ = function()
 {
   if (!this.subtleKey_) {
     // This is the first time in the session that we're using crypto subtle
     // with this key so we have to convert to pkcs8 and import it.
-    var privateDER = DataUtils.privateKeyPemToDer(this.privateKey_);
-    var pkcs8 = TpmPrivateKey.encodePkcs8PrivateKey
-      (privateDER, new OID(TpmPrivateKey.RSA_ENCRYPTION_OID),
-       new DerNode.DerNull()).buf();
-    var thisKey = this;
+    if (this.keyType_ === KeyType.RSA) {
+      var algorithm = { name: "RSASSA-PKCS1-v1_5", hash: { name: "SHA-256" }};
+      var privateDER = DataUtils.privateKeyPemToDer(this.privateKey_);
+      var pkcs8 = TpmPrivateKey.encodePkcs8PrivateKey
+        (privateDER, new OID(TpmPrivateKey.RSA_ENCRYPTION_OID),
+         new DerNode.DerNull()).buf();
+      var thisKey = this;
 
-    return crypto.subtle.importKey("pkcs8", pkcs8, algorithm, true, ["sign"])
-    .then(function(subtleKey) {
-      // Cache the crypto.subtle key object.
-      thisKey.subtleKey_ = subtleKey;
-      return Promise.resolve(thisKey.subtleKey_);
-    });
+      return crypto.subtle.importKey
+        ("pkcs8", pkcs8, algorithm, true, ["sign"])
+      .then(function(subtleKey) {
+        // Cache the crypto.subtle key object.
+        thisKey.subtleKey_ = subtleKey;
+        return Promise.resolve(thisKey.subtleKey_);
+      });
+    }
+    else
+      return SyncPromise.reject(new TpmPrivateKey.Error(new Error
+        ("Unrecognized key type " + this.keyType_)));
   }
   else
     // The crypto.subtle key has been cached on a previous call or from keygen.
