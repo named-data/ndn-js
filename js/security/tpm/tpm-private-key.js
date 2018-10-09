@@ -411,12 +411,15 @@ TpmPrivateKey.generatePrivateKeyPromise = function(keyParams, useSync)
            hash: {name: "SHA-256"} },
          true, ["sign", "verify"])
       .then(function(key) {
+        privateKey = key.privateKey;
         // Export the private key to DER.
         return crypto.subtle.exportKey("pkcs8", key.privateKey);
       })
       .then(function(pkcs8Der) {
         var result = new TpmPrivateKey();
         result.loadPkcs8(new Blob(new Uint8Array(pkcs8Der), false), KeyType.RSA);
+        // Cache the crypto.subtle private key.
+        result.subtleKey_ = privateKey;
 
         return SyncPromise.resolve(result);
       });
