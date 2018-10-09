@@ -315,33 +315,12 @@ TpmPrivateKey.prototype.signPromise = function(data, digestAlgorithm, useSync)
       ("TpmPrivateKey.sign: Unsupported digest algorithm")));
 
   if (UseSubtleCrypto() && !useSync) {
-    var algo = {name:"RSASSA-PKCS1-v1_5", hash:{name:"SHA-256"}};
+    var algorithm = {name:"RSASSA-PKCS1-v1_5", hash:{name:"SHA-256"}};
 
-    var promise;
-    if (!this.subtleKey_) {
-      // This is the first time in the session that we're using crypto subtle
-      // with this key so we have to convert to pkcs8 and import it. Assigning
-      // it to this.privateKey_.subtleKey means we only have to do this once per
-      // session, giving us a small but not insignificant, performance boost.
-      var privateDER = DataUtils.privateKeyPemToDer(this.privateKey_);
-      var pkcs8 = TpmPrivateKey.encodePkcs8PrivateKey
-        (privateDER, new OID(TpmPrivateKey.RSA_ENCRYPTION_OID),
-         new DerNode.DerNull()).buf();
-      var thisKey = this;
-
-      promise = crypto.subtle.importKey
-        ("pkcs8", pkcs8.buffer, algo, true, ["sign"])
-      .then(function(subtleKey) {
-        // Cache the crypto.subtle key object.
-        thisKey.subtleKey_ = subtleKey;
-        return crypto.subtle.sign(algo, subtleKey, data);
-      });
-    }
-    else
-      // The crypto.subtle key has been cached on a previous sign or from keygen.
-      promise = crypto.subtle.sign(algo, this.subtleKey_, data);
-
-    return promise
+    return this.getSubtleKeyPromise_(algorithm)
+    .then(function(subtleKey) {
+      return crypto.subtle.sign(algorithm, subtleKey, data);
+    })
     .then(function(signature) {
       var result = new Blob(new Uint8Array(signature), true);
       return Promise.resolve(result);
@@ -565,6 +544,37 @@ TpmPrivateKey.bigIntegerToBuffer = function(bigInteger)
   }
 
   return new Buffer(hex, 'hex');
+};
+
+/**
+ * A private method to get the cached crypto.subtle key, importing it from
+ * this.privateKey_ if needed. This means we only have to do this once per
+ * session, giving us a small but not insignificant performance boost.
+ * @param {object} The crypto.subtle associative array for the key algorithm, e.g.
+ * {name:"RSASSA-PKCS1-v1_5", hash:{name:"SHA-256"}}.
+ * @return {Promise} A promise which returns the cached crypto.subtle key.
+ */
+TpmPrivateKey.prototype.getSubtleKeyPromise_ = function(algorithm)
+{
+  if (!this.subtleKey_) {
+    // This is the first time in the session that we're using crypto subtle
+    // with this key so we have to convert to pkcs8 and import it.
+    var privateDER = DataUtils.privateKeyPemToDer(this.privateKey_);
+    var pkcs8 = TpmPrivateKey.encodePkcs8PrivateKey
+      (privateDER, new OID(TpmPrivateKey.RSA_ENCRYPTION_OID),
+       new DerNode.DerNull()).buf();
+    var thisKey = this;
+
+    return crypto.subtle.importKey("pkcs8", pkcs8, algorithm, true, ["sign"])
+    .then(function(subtleKey) {
+      // Cache the crypto.subtle key object.
+      thisKey.subtleKey_ = subtleKey;
+      return Promise.resolve(thisKey.subtleKey_);
+    });
+  }
+  else
+    // The crypto.subtle key has been cached on a previous call or from keygen.
+    return Promise.resolve(this.subtleKey_);
 };
 
 TpmPrivateKey.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
