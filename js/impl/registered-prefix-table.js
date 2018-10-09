@@ -135,7 +135,7 @@ RegisteredPrefixTable._Entry = function RegisteredPrefixTableEntry
  */
 RegisteredPrefixTable._Entry.prototype.getRegisteredPrefixId = function()
 {
-  return this.registeredPrefixId;
+  return this.registeredPrefixId_;
 };
 
 /**
@@ -144,7 +144,7 @@ RegisteredPrefixTable._Entry.prototype.getRegisteredPrefixId = function()
  */
 RegisteredPrefixTable._Entry.prototype.getPrefix = function()
 {
-  return this.prefix;
+  return this.prefix_;
 };
 
 /**
@@ -153,5 +153,5 @@ RegisteredPrefixTable._Entry.prototype.getPrefix = function()
  */
 RegisteredPrefixTable._Entry.prototype.getRelatedInterestFilterId = function()
 {
-  return this.relatedInterestFilterId;
+  return this.relatedInterestFilterId_;
 };
