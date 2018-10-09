@@ -32747,6 +32747,7 @@ var TpmPrivateKey = function TpmPrivateKey()
 {
   this.keyType_ = null;    // number from KeyType
   this.privateKey_ = null; // The PEM-encoded private key.
+  this.subtleKey_ = null;  // The internal Crypto.subtle form of the key.
 };
 
 exports.TpmPrivateKey = TpmPrivateKey;
@@ -32835,6 +32836,7 @@ TpmPrivateKey.prototype.loadPkcs1 = function(encoding, keyType)
       ("loadPkcs1: Unrecognized keyType: " + keyType));
 
   this.keyType_ = keyType;
+  this.subtleKey_ = null;
 };
 
 /**
@@ -32851,6 +32853,7 @@ TpmPrivateKey.prototype.loadPkcs8 = function(encoding, keyType)
   if (encoding instanceof Blob)
     encoding = encoding.buf();
 
+  var privateKeyDer;
   if (keyType == undefined) {
     // Decode the PKCS #8 private key to find the algorithm OID and the inner
     // private key DER.
@@ -32883,6 +32886,12 @@ TpmPrivateKey.prototype.loadPkcs8 = function(encoding, keyType)
       throw new TpmPrivateKey.Error(new Error
         ("loadPkcs8: Unrecognized private key OID: " + oidString));
   }
+  else {
+    // Decode the PKCS #8 key to get the inner private key DER.
+    var parsedNode = DerNode.parse(encoding);
+    // Get the value of the 3rd child which is the octet string.
+    privateKeyDer = parsedNode.getChildren()[2].toVal();
+  }
 
   this.loadPkcs1(privateKeyDer, keyType);
 };
@@ -32900,10 +32909,7 @@ TpmPrivateKey.prototype.derivePublicKey = function()
       ("derivePublicKey: The private key is not loaded"));
 
   try {
-    var privateKeyBase64 = this.privateKey_.toString().replace
-      ("-----BEGIN RSA PRIVATE KEY-----", "").replace
-      ("-----END RSA PRIVATE KEY-----", "");
-    var rsaPrivateKeyDer = new Buffer(privateKeyBase64, 'base64');
+    var rsaPrivateKeyDer = DataUtils.privateKeyPemToDer(this.privateKey_);
 
     // Decode the PKCS #1 RSAPrivateKey.
     var parsedNode = DerNode.parse(rsaPrivateKeyDer, 0);
@@ -33008,7 +33014,7 @@ TpmPrivateKey.prototype.signPromise = function(data, digestAlgorithm, useSync)
     var algo = {name:"RSASSA-PKCS1-v1_5", hash:{name:"SHA-256"}};
 
     var promise;
-    if (!this.privateKey_.subtleKey) {
+    if (!this.subtleKey_) {
       // This is the first time in the session that we're using crypto subtle
       // with this key so we have to convert to pkcs8 and import it. Assigning
       // it to this.privateKey_.subtleKey means we only have to do this once per
@@ -33023,13 +33029,13 @@ TpmPrivateKey.prototype.signPromise = function(data, digestAlgorithm, useSync)
         ("pkcs8", pkcs8.buffer, algo, true, ["sign"])
       .then(function(subtleKey) {
         // Cache the crypto.subtle key object.
-        thisKey.privateKey_.subtleKey = subtleKey;
+        thisKey.subtleKey_ = subtleKey;
         return crypto.subtle.sign(algo, subtleKey, data);
       });
     }
     else
       // The crypto.subtle key has been cached on a previous sign or from keygen.
-      promise = crypto.subtle.sign(algo, this.privateKey_.subtleKey, data);
+      promise = crypto.subtle.sign(algo, this.subtleKey_, data);
 
     return promise
     .then(function(signature) {
@@ -33068,10 +33074,7 @@ TpmPrivateKey.prototype.toPkcs1 = function()
       ("toPkcs1: The private key is not loaded"));
 
   // this.privateKey_ is already the base64-encoded PKCS #1 key.
-  var privateKeyBase64 = this.privateKey_.replace
-    ("-----BEGIN RSA PRIVATE KEY-----", "").replace
-    ("-----END RSA PRIVATE KEY-----", "");
-  return new Blob(new Buffer(privateKeyBase64, 'base64'));
+  return DataUtils.privateKeyPemToDer(this.privateKey_);
 };
 
 /**
@@ -33113,29 +33116,54 @@ TpmPrivateKey.prototype.toPkcs8 = function()
  */
 TpmPrivateKey.generatePrivateKeyPromise = function(keyParams, useSync)
 {
-  // TODO: Check for UseSubtleCrypto.
   // TODO: Check for RSAKey in the browser.
 
-  // Assume we are in Node.js.
-  var privateKeyPem;
+  if (UseSubtleCrypto() && !useSync) {
+    if (keyParams.getKeyType() === KeyType.RSA) {
+      var privateKey = null;
 
-  if (keyParams.getKeyType() === KeyType.RSA) {
-    if (!rsaKeygen)
-      return SyncPromise.reject(new TpmPrivateKey.Error(new Error
-        ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
+      return crypto.subtle.generateKey
+        ({ name: "RSASSA-PKCS1-v1_5", modulusLength: keyParams.getKeySize(),
+           publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+           hash: {name: "SHA-256"} },
+         true, ["sign", "verify"])
+      .then(function(key) {
+        // Export the private key to DER.
+        return crypto.subtle.exportKey("pkcs8", key.privateKey);
+      })
+      .then(function(pkcs8Der) {
+        var result = new TpmPrivateKey();
+        result.loadPkcs8(new Blob(new Uint8Array(pkcs8Der), false), KeyType.RSA);
 
-    var keyPair = rsaKeygen.generate(keyParams.getKeySize());
-    privateKeyPem = keyPair.private_key.toString();
+        return SyncPromise.resolve(result);
+      });
+    }
+    else
+      return Promise.reject(new Error
+        ("Cannot generate a key pair of type " + keyParams.getKeyType()));
   }
-  else
-    return SyncPromise.reject(new Error
-      ("Cannot generate a key pair of type " + keyParams.getKeyType()));
+  else {
+    // Assume we are in Node.js.
+    var privateKeyPem;
 
-  var result = new TpmPrivateKey();
-  result.privateKey_ = privateKeyPem;
-  result.keyType_ = keyParams.getKeyType();
+    if (keyParams.getKeyType() === KeyType.RSA) {
+      if (!rsaKeygen)
+        return SyncPromise.reject(new TpmPrivateKey.Error(new Error
+          ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
 
-  return SyncPromise.resolve(result);
+      var keyPair = rsaKeygen.generate(keyParams.getKeySize());
+      privateKeyPem = keyPair.private_key.toString();
+    }
+    else
+      return SyncPromise.reject(new Error
+        ("Cannot generate a key pair of type " + keyParams.getKeyType()));
+
+    var result = new TpmPrivateKey();
+    result.privateKey_ = privateKeyPem;
+    result.keyType_ = keyParams.getKeyType();
+
+    return SyncPromise.resolve(result);
+  }
 };
 
 /**
