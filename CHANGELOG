@@ -10,6 +10,9 @@ Changes
   (for example, ndn.Blob). In your browser, try running
   examples/browser/noconflict.html .
 
+Bug fixes
+* https://github.com/named-data/ndn-js/pull/67 Fix checking against NaN.
+
 
 NDN-JS v0.17.0 (2018-09-17)
 ---------------------------
