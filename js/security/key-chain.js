@@ -100,7 +100,7 @@ var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVe
 var KeyChain = function KeyChain(arg1, arg2, arg3)
 {
   this.identityManager_ = null;  // for security v1
-  this.policyManager_ = null;    // for security v1
+  this.policyManager_ = new NoVerifyPolicyManager(); // for security v1
   this.face_ = null;             // for security v1
 
   this.pib_ = null;
