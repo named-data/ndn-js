@@ -16847,7 +16847,7 @@ Name.createNameArray = function(uri)
       if (iTypeCodeEnd >= 0) {
         var typeString = componentString.substring(0, iTypeCodeEnd);
         otherTypeCode = parseInt(typeString);
-        if (otherTypeCode === NaN)
+        if (isNaN(otherTypeCode))
           throw new Error
             ("Can't parse decimal Name Component type: " + typeString +
              " in URI " + uri);
