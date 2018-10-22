@@ -20,7 +20,7 @@
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
 /** @ignore */
-var constants = require('constants'); /** @ignore */
+var cryptoConstants = require('crypto').constants; /** @ignore */
 var Crypto = require('../../crypto.js'); /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
@@ -170,13 +170,13 @@ PublicKey.prototype.encryptPromise = function(plainData, algorithmType, useSync)
       if (this.keyType != KeyType.RSA)
         return SyncPromise.reject(new Error("The key type must be RSA"));
 
-      padding = constants.RSA_PKCS1_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_PADDING;
     }
     else if (algorithmType == EncryptAlgorithmType.RsaOaep) {
       if (this.keyType != KeyType.RSA)
         return SyncPromise.reject(new Error("The key type must be RSA"));
 
-      padding = constants.RSA_PKCS1_OAEP_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_OAEP_PADDING;
     }
     else
       return SyncPromise.reject(new Error("unsupported padding scheme"));

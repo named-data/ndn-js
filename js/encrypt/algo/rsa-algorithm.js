@@ -22,7 +22,7 @@
 // "Rsa" is very short and not all the Common Client Libraries have namespaces.)
 
 /** @ignore */
-var constants = require('constants'); /** @ignore */
+var cryptoConstants = require('crypto').constants; /** @ignore */
 var Crypto = require('../../crypto.js'); /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var DecryptKey = require('../decrypt-key.js').DecryptKey; /** @ignore */
@@ -193,9 +193,9 @@ RsaAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
 
     var padding;
     if (params.getAlgorithmType() == EncryptAlgorithmType.RsaPkcs)
-      padding = constants.RSA_PKCS1_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_PADDING;
     else if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep)
-      padding = constants.RSA_PKCS1_OAEP_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_OAEP_PADDING;
     else
       return SyncPromise.reject(new Error("unsupported padding scheme"));
 

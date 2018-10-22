@@ -20,7 +20,7 @@
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
 /** @ignore */
-var constants = require('constants'); /** @ignore */
+var cryptoConstants = require('crypto').constants; /** @ignore */
 var Crypto = require('../../crypto.js'); /** @ignore */
 var KeyType = require('../security-types').KeyType; /** @ignore */
 var EncryptAlgorithmType = require('../../encrypt/algo/encrypt-params.js').EncryptAlgorithmType; /** @ignore */
@@ -296,9 +296,9 @@ TpmPrivateKey.prototype.decryptPromise = function
   else {
     var padding;
     if (algorithmType == EncryptAlgorithmType.RsaPkcs)
-      padding = constants.RSA_PKCS1_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_PADDING;
     else if (algorithmType == EncryptAlgorithmType.RsaOaep)
-      padding = constants.RSA_PKCS1_OAEP_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_OAEP_PADDING;
     else
       return SyncPromise.reject(new TpmPrivateKey.Error(new Error
         ("Unsupported padding scheme")));
@@ -615,7 +615,7 @@ TpmPrivateKey.prototype.getSubtleKeyPromise_ = function()
 };
 
 /**
- * A private method to get the cached crypto.subtle key for decrypting, 
+ * A private method to get the cached crypto.subtle key for decrypting,
  * importing it from this.privateKey_ if needed. This means we only have to do
  * this once per session, giving us a small but not insignificant performance
  * boost. This is separate from getSubtleKeyPromise_ because the import
