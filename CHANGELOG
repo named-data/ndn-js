@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.17.0 (2018-09-21)
+Interim changes since NDN-JS v0.17.0 (2018-10-22)
 -------------------------------------------------
 
 Changes
@@ -9,6 +9,8 @@ Changes
   application can call ndn.noConflict() and explicitly use the ndn namespace
   (for example, ndn.Blob). In your browser, try running
   examples/browser/noconflict.html .
+* https://github.com/named-data/ndn-js/pull/68 security (Node.js): Don't use
+  deprecated 'constant' module.
 
 Bug fixes
 * https://github.com/named-data/ndn-js/pull/67 Fix checking against NaN.
