@@ -36,8 +36,9 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * Create a new Interest with the optional values.
  *
  * @constructor
- * @param {Name|Interest} nameOrInterest (optional) If this is an Interest, copy
- * values from the Interest. If this is a Name, create an Interest with the Name.
+ * @param {Name|Interest|string} nameOrInterest (optional) If this is an
+ * Interest, copy values from the Interest. If this is a Name, create an
+ * Interest with a copy of the Name. If this is a create a Name from the URI.
  */
 var Interest = function Interest
    (nameOrInterest, minSuffixComponents, maxSuffixComponents,
@@ -92,9 +93,7 @@ var Interest = function Interest
     this.defaultWireEncodingFormat_ = interest.defaultWireEncodingFormat_;
   }
   else {
-    this.name_ = new ChangeCounter(typeof nameOrInterest === 'object' &&
-                                   nameOrInterest instanceof Name ?
-      new Name(nameOrInterest) : new Name());
+    this.name_ = new ChangeCounter(new Name(nameOrInterest));
     this.maxSuffixComponents_ = maxSuffixComponents;
     this.minSuffixComponents_ = minSuffixComponents;
 
