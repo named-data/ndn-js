@@ -52,9 +52,10 @@ var PublicKey = require('./certificate/public-key.js').PublicKey;
  * PKCS #8 EncryptedPrivateKeyInfo. If not encrypted, this is an unencrypted
  * PKCS #8 PrivateKeyInfo.
  * @param {Buffer} password (optional) The password for decrypting the private
- * key in order to sign the self-signed certificate. If the password is supplied,
- * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
- * omitted or null, privateKeyBag is an unencrypted PKCS #8 PrivateKeyInfo.
+ * key in order to sign the self-signed certificate, which should have
+ * characters in the range of 1 to 127. If the password is supplied, use it to
+ * decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is omitted or
+ * null, privateKeyBag is an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {number} digestAlgorithm: (optional) The digest algorithm for signing
  * the self-signed certificate (as an int from the DigestAlgorithm enum). If
  * omitted, use DigestAlgorithm.SHA256 .

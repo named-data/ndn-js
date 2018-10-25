@@ -1224,9 +1224,9 @@ KeyChain.prototype.selfSign = function(key, wireFormat, onComplete, onError)
  * @param {SafeBag} safeBag The SafeBag containing the certificate and private
  * key. This copies the values from the SafeBag.
  * @param {Buffer} password (optional) The password for decrypting the private
- * key. If the password is supplied, use it to decrypt the PKCS #8
- * EncryptedPrivateKeyInfo. If the password is omitted or null, import an
- * unencrypted PKCS #8 PrivateKeyInfo.
+ * key, which should have characters in the range of 1 to 127. If the password
+ * is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the
+ * password is omitted or null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -1342,9 +1342,9 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password, useSync)
  * @param {SafeBag} safeBag The SafeBag containing the certificate and private
  * key. This copies the values from the SafeBag.
  * @param {Buffer} password (optional) The password for decrypting the private
- * key. If the password is supplied, use it to decrypt the PKCS #8
- * EncryptedPrivateKeyInfo. If the password is omitted or null, import an
- * unencrypted PKCS #8 PrivateKeyInfo.
+ * key, which should have characters in the range of 1 to 127. If the password
+ * is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the
+ * password is omitted or null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {function} onComplete (optional) This calls onComplete() when finished.
  * If omitted, just return when finished. (Some crypto libraries only use a
  * callback, so onComplete is required to use these.)

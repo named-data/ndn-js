@@ -180,9 +180,10 @@ TpmBackEnd.prototype.deleteKeyPromise = function(keyName, useSync)
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
  * an unencrypted PKCS #8 PrivateKeyInfo.
- * @param {Buffer} password The password for decrypting the private key. If the
- * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
+ * null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -311,9 +312,10 @@ TpmBackEnd.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
  * an unencrypted PKCS #8 PrivateKeyInfo.
- * @param {Buffer} password The password for decrypting the private key. If the
- * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
+ * null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
