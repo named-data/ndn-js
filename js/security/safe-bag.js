@@ -34,6 +34,11 @@ var CertificateV2 = require('./v2/certificate-v2.js').CertificateV2; /** @ignore
 var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var Tpm = require('./tpm/tpm.js').Tpm; /** @ignore */
 var TpmBackEndMemory = require('./tpm/tpm-back-end-memory.js').TpmBackEndMemory; /** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var Tlv = require('../encoding/tlv/tlv.js').Tlv; /** @ignore */
+var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
+var TlvDecoder = require('../encoding/tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
+var TlvWireFormat = require('../encoding/tlv-wire-format.js').TlvWireFormat; /** @ignore */
 var PublicKey = require('./certificate/public-key.js').PublicKey;
 
 /**
@@ -41,11 +46,13 @@ var PublicKey = require('./certificate/public-key.js').PublicKey;
  * certificate and private key.
  *
  * There are two forms of the SafeBag constructor:
+ * There are three forms of the SafeBag constructor:
  * SafeBag(certificate, privateKeyBag) - Create a SafeBag with the given
  * certificate and private key.
  * SafeBag(keyName, privateKeyBag, publicKeyEncoding [, password,
  *         digestAlgorithm, wireFormat]) - Create a SafeBag with given private
  * key and a new self-signed certificate for the given public key.
+ * SafeBag(input) - Create a SafeBag by decoding the input as an NDN-TLV SafeBag.
  * @param {Data} certificate The certificate data packet (used only for
  * SafeBag(certificate, privateKeyBag)). This copies the object.
  * @param {Blob) privateKeyBag The encoded private key. If encrypted, this is a
@@ -62,14 +69,14 @@ var PublicKey = require('./certificate/public-key.js').PublicKey;
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the self-signed certificate in order to sign it. If omitted, use
  * WireFormat.getDefaultWireFormat().
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
  * @constructor
  */
 var SafeBag = function SafeBag
-  (keyNameOrCertificate, privateKeyBag, publicKeyEncoding, password,
-   digestAlgorithm, wireFormat)
+  (arg1, privateKeyBag, publicKeyEncoding, password, digestAlgorithm, wireFormat)
 {
-  if (keyNameOrCertificate instanceof Name) {
-    var keyName = keyNameOrCertificate;
+  if (arg1 instanceof Name) {
+    var keyName = arg1;
     if (digestAlgorithm == undefined)
       digestAlgorithm = DigestAlgorithm.SHA256;
     if (wireFormat == undefined)
@@ -80,11 +87,14 @@ var SafeBag = function SafeBag
        digestAlgorithm, wireFormat);
     this.privateKeyBag_ = privateKeyBag;
   }
-  else {
+  else if (arg1 instanceof Data) {
     // The certificate is supplied.
-    this.certificate_ = new Data(keyNameOrCertificate);
+    this.certificate_ = new Data(arg1);
     this.privateKeyBag_ = privateKeyBag;
   }
+  else
+    // Assume the first argument is the encoded SafeBag.
+    this.wireDecode(arg1);
 };
 
 exports.SafeBag = SafeBag;
@@ -103,6 +113,57 @@ SafeBag.prototype.getCertificate = function() { return this.certificate_; };
  * PrivateKeyInfo.
  */
 SafeBag.prototype.getPrivateKeyBag = function() { return this.privateKeyBag_; };
+
+/**
+ * Decode the input as an NDN-TLV SafeBag and update this object.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ */
+SafeBag.prototype.wireDecode = function(input)
+{
+  if (typeof input === 'object' && input instanceof Blob)
+    input = input.buf();
+
+  // Decode directly as TLV. We don't support the WireFormat abstraction
+  // because this isn't meant to go directly on the wire.
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.readNestedTlvsStart(Tlv.SafeBag_SafeBag);
+
+  // Get the bytes of the certificate and decode.
+  var certificateBeginOffset = decoder.getOffset();
+  var certificateEndOffset = decoder.readNestedTlvsStart(Tlv.Data);
+  decoder.seek(certificateEndOffset);
+  this.certificate_ = new Data();
+  this.certificate_.wireDecode
+    (decoder.getSlice(certificateBeginOffset, certificateEndOffset),
+     TlvWireFormat.get());
+
+  this.privateKeyBag_ = new Blob
+    (decoder.readBlobTlv(Tlv.SafeBag_EncryptedKeyBag), true);
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+/**
+ * Encode this as an NDN-TLV SafeBag.
+ * @return {Blob} The encoded buffer in a Blob object.
+ */
+SafeBag.prototype.wireEncode = function()
+{
+  // Encode directly as TLV. We don't support the WireFormat abstraction
+  // because this isn't meant to go directly on the wire.
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeBlobTlv(Tlv.SafeBag_EncryptedKeyBag, this.privateKeyBag_.buf());
+  // Add the entire Data packet encoding as is.
+  encoder.writeBuffer(this.certificate_.wireEncode(TlvWireFormat.get()).buf());
+
+  encoder.writeTypeAndLength
+    (Tlv.SafeBag_SafeBag, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
 
 SafeBag.makeSelfSignedCertificate_ = function
   (keyName, privateKeyBag, publicKeyEncoding, password, digestAlgorithm,

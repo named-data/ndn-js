@@ -126,6 +126,9 @@ Tlv.Encrypt_EncryptionAlgorithm = 131;
 Tlv.Encrypt_EncryptedPayload = 132;
 Tlv.Encrypt_InitialVector = 133;
 
+Tlv.SafeBag_SafeBag = 128;
+Tlv.SafeBag_EncryptedKeyBag = 129;
+
 // For RepetitiveInterval.
 Tlv.Encrypt_StartDate = 134;
 Tlv.Encrypt_EndDate = 135;
