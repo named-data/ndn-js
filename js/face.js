@@ -1029,39 +1029,64 @@ Face.prototype.onReceivedElement = function(element)
   // Now process as Interest or Data.
   if (interest !== null) {
     if (LOG > 3) console.log('Interest packet received.');
-
-    // Call all interest filter callbacks which match.
-    var matchedFilters = [];
-    this.interestFilterTable_.getMatchedFilters(interest, matchedFilters);
-    for (var i = 0; i < matchedFilters.length; ++i) {
-      var entry = matchedFilters[i];
-      if (LOG > 3)
-        console.log("Found interest filter for " + interest.getName().toUri());
-      try {
-        entry.getOnInterest()
-          (entry.getFilter().getPrefix(), interest, this,
-           entry.getInterestFilterId(), entry.getFilter());
-      } catch (ex) {
-        console.log("Error in onInterest: " + NdnCommon.getErrorWithStackTrace(ex));
-      }
-    }
+    this.dispatchInterest_(interest);
   }
   else if (data !== null) {
     if (LOG > 3) console.log('Data packet received.');
+    this.satisfyPendingInterests_(data);
+  }
+};
 
-    var pendingInterests = [];
-    this.pendingInterestTable_.extractEntriesForExpressedInterest
-      (data, pendingInterests);
-    // Process each matching PIT entry (if any).
-    for (var i = 0; i < pendingInterests.length; ++i) {
-      var pendingInterest = pendingInterests[i];
-      try {
-        pendingInterest.getOnData()(pendingInterest.getInterest(), data);
-      } catch (ex) {
-        console.log("Error in onData: " + NdnCommon.getErrorWithStackTrace(ex));
-      }
+/**
+ * Call the OnInterest callback for all entries in the interestFilterTable_
+ * that match the interest.
+ * @param {Interest} interest The Interest to match.
+ */
+Face.prototype.dispatchInterest_ = function(interest)
+{
+  // Call all interest filter callbacks which match.
+  var matchedFilters = [];
+  this.interestFilterTable_.getMatchedFilters(interest, matchedFilters);
+  for (var i = 0; i < matchedFilters.length; ++i) {
+    var entry = matchedFilters[i];
+    if (LOG > 3)
+      console.log("Found interest filter for " + interest.getName().toUri());
+    try {
+      entry.getOnInterest()
+        (entry.getFilter().getPrefix(), interest, this,
+         entry.getInterestFilterId(), entry.getFilter());
+    } catch (ex) {
+      console.log("Error in onInterest: " + NdnCommon.getErrorWithStackTrace(ex));
     }
   }
+};
+
+/**
+ * Extract entries from the pendingInterestTable_ which match data, and call
+ * each OnData callback.
+ * @param {Data} data The Data packet to match.
+ * @return {boolean} True if the data matched an entry in the
+ * pendingInterestTable_.
+ */
+Face.prototype.satisfyPendingInterests_ = function(data)
+{
+  var hasMatch = false;
+
+  var pendingInterests = [];
+  this.pendingInterestTable_.extractEntriesForExpressedInterest
+    (data, pendingInterests);
+  // Process each matching PIT entry (if any).
+  for (var i = 0; i < pendingInterests.length; ++i) {
+    var pendingInterest = pendingInterests[i];
+    hasMatch = true;
+    try {
+      pendingInterest.getOnData()(pendingInterest.getInterest(), data);
+    } catch (ex) {
+      console.log("Error in onData: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
+
+  return hasMatch;
 };
 
 /**
