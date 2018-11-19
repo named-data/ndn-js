@@ -8,9 +8,6 @@
 ndn-protocol/modules/ndn-js.jsm
 tools/micro-forwarder/extension/ndn.js
 
-# JSDoc output
-/doc
-
 # Mac OSX
 .DS_Store
 

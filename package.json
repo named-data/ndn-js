@@ -8,6 +8,7 @@
     "test": "tests"
   },
   "scripts": {
+    "doc": "jsdoc -c doc/conf.json",
     "test": "cd tests/node/unit-tests ; mocha . --timeout 10000 ; cd ../../.."
   },
   "repository": {
@@ -19,7 +20,7 @@
   ],
   "browser": {
     "./js/crypto.js": "./js/browserify.js",
-    "./js/use-subtle-crypto-node.js":"./js/use-subtle-crypto.js",
+    "./js/use-subtle-crypto-node.js": "./js/use-subtle-crypto.js",
     "./js/transport/tcp-transport.js": "./js/browserify-tcp-transport.js"
   },
   "author": "UCLA",
@@ -32,6 +33,7 @@
     "protobufjs": "*"
   },
   "devDependencies": {
+    "jsdoc": "*",
     "mocha": "*"
   }
 }
