@@ -1,0 +1,10 @@
+{
+  "source": {
+    "include": ["js", "README.md"],
+    "exclude": ["js/browserify-header.js", "js/browserify-footer.js"]
+  },
+  "opts": {
+    "destination": "doc",
+    "recurse": true
+  }
+}
