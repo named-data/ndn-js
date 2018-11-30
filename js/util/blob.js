@@ -136,6 +136,9 @@ Blob.prototype.equals = function(other)
     return other.isNull();
   else if (other.isNull())
     return false;
+  else if (this.buffer === other.buffer)
+    // The other is the same Blob.
+    return true;
   else {
     if (this.buffer.length != other.buffer.length)
       return false;
