@@ -9194,6 +9194,9 @@ Blob.prototype.equals = function(other)
     return other.isNull();
   else if (other.isNull())
     return false;
+  else if (this.buffer === other.buffer)
+    // The other is the same Blob.
+    return true;
   else {
     if (this.buffer.length != other.buffer.length)
       return false;
@@ -10245,6 +10248,9 @@ Tlv.Encrypt_EncryptedContent = 130;
 Tlv.Encrypt_EncryptionAlgorithm = 131;
 Tlv.Encrypt_EncryptedPayload = 132;
 Tlv.Encrypt_InitialVector = 133;
+
+Tlv.SafeBag_SafeBag = 128;
+Tlv.SafeBag_EncryptedKeyBag = 129;
 
 // For RepetitiveInterval.
 Tlv.Encrypt_StartDate = 134;
@@ -13883,116 +13889,13 @@ MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMillisecon
 
 /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
-var Blob = require('./blob.js').Blob; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon;
+var PipelineFixed = require('./pipeline-fixed.js').PipelineFixed;
 
-/**
- * SegmentFetcher is a utility class to fetch the latest version of segmented data.
- *
- * SegmentFetcher assumes that the data is named /<prefix>/<version>/<segment>,
- * where:
- * - <prefix> is the specified name prefix,
- * - <version> is an unknown version that needs to be discovered, and
- * - <segment> is a segment number. (The number of segments is unknown and is
- *   controlled by the `FinalBlockId` field in at least the last Data packet.
- *
- * The following logic is implemented in SegmentFetcher:
- *
- * 1. Express the first Interest to discover the version:
- *
- *    >> Interest: /<prefix>?ChildSelector=1&MustBeFresh=true
- *
- * 2. Infer the latest version of the Data: <version> = Data.getName().get(-2)
- *
- * 3. If the segment number in the retrieved packet == 0, go to step 5.
- *
- * 4. Send an Interest for segment 0:
- *
- *    >> Interest: /<prefix>/<version>/<segment=0>
- *
- * 5. Keep sending Interests for the next segment while the retrieved Data does
- *    not have a FinalBlockId or the FinalBlockId != Data.getName().get(-1).
- *
- *    >> Interest: /<prefix>/<version>/<segment=(N+1))>
- *
- * 6. Call the onComplete callback with a Blob that concatenates the content
- *    from all the segmented objects.
- *
- * If an error occurs during the fetching process, the onError callback is called
- * with a proper error code.  The following errors are possible:
- *
- * - `INTEREST_TIMEOUT`: if any of the Interests times out
- * - `DATA_HAS_NO_SEGMENT`: if any of the retrieved Data packets don't have a segment
- *   as the last component of the name (not counting the implicit digest)
- * - `SEGMENT_VERIFICATION_FAILED`: if any retrieved segment fails
- *   the user-provided VerifySegment callback or KeyChain verifyData.
- * - `IO_ERROR`: for I/O errors when sending an Interest.
- *
- * In order to validate individual segments, a KeyChain needs to be supplied.
- * If verifyData fails, the fetching process is aborted with
- * SEGMENT_VERIFICATION_FAILED. If data validation is not required, pass null.
- *
- * Example:
- *     var onComplete = function(content) { ... }
- *
- *     var onError = function(errorCode, message) { ... }
- *
- *     var interest = new Interest(new Name("/data/prefix"));
- *     interest.setInterestLifetimeMilliseconds(1000);
- *
- *     SegmentFetcher.fetch(face, interest, null, onComplete, onError);
- *
- * This is a private constructor to create a new SegmentFetcher to use the Face.
- * An application should use SegmentFetcher.fetch. If validatorKeyChain is not
- * null, use it and ignore verifySegment. After creating the SegmentFetcher,
- * call fetchFirstSegment.
- * @param {Face} face This calls face.expressInterest to fetch more segments.
- * @param validatorKeyChain {KeyChain} If this is not null, use its verifyData
- * instead of the verifySegment callback.
- * @param {function} verifySegment When a Data packet is received this calls
- * verifySegment(data) where data is a Data object. If it returns False then
- * abort fetching and call onError with
- * SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED.
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onComplete When all segments are received, call
- * onComplete(content) where content is a Blob which has the concatenation of
- * the content of all the segments.
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onError Call onError.onError(errorCode, message) for
- * timeout or an error processing segments. errorCode is a value from
- * SegmentFetcher.ErrorCode and message is a related string.
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @constructor
- */
-var SegmentFetcher = function SegmentFetcher
-  (face, validatorKeyChain, verifySegment, onComplete, onError)
-{
-  this.face = face;
-  this.validatorKeyChain = validatorKeyChain;
-  this.verifySegment = verifySegment;
-  this.onComplete = onComplete;
-  this.onError = onError;
-
-  this.contentParts = []; // of Buffer
-};
+var SegmentFetcher = function SegmentFetcher() { };
 
 exports.SegmentFetcher = SegmentFetcher;
-
-/**
- * An ErrorCode value is passed in the onError callback.
- */
-SegmentFetcher.ErrorCode = {
-  INTEREST_TIMEOUT: 1,
-  DATA_HAS_NO_SEGMENT: 2,
-  SEGMENT_VERIFICATION_FAILED: 3
-};
 
 /**
  * DontVerifySegment may be used in fetch to skip validation of Data packets.
@@ -14003,8 +13906,16 @@ SegmentFetcher.DontVerifySegment = function(data)
 };
 
 /**
- * Initiate segment fetching. For more details, see the documentation for the
- * class. There are two forms of fetch:
+ * SegmentFetcher is a utility class to fetch the segmented data with the latest
+ * version by using a pipeline.
+ *
+ * The avaialble pipelines are:
+ * - Pipeline Fixed [default]
+ * - [TODO] Pipeline Aimd
+ *
+ * Initiate segment fetching.
+ * 
+ * There are two forms of fetch:
  * fetch(face, baseInterest, validatorKeyChain, onComplete, onError)
  * and
  * fetch(face, baseInterest, verifySegment, onComplete, onError)
@@ -14036,65 +13947,276 @@ SegmentFetcher.DontVerifySegment = function(data)
  * exceptions.
  * @param {function} onError Call onError.onError(errorCode, message) for
  * timeout or an error processing segments. errorCode is a value from
- * SegmentFetcher.ErrorCode and message is a related string.
+ * PipelineFixed.ErrorCode and message is a related string.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
+ *
+ * Example:
+ *     var onComplete = function(content) { ... }
+ *
+ *     var onError = function(errorCode, message) { ... }
+ *
+ *     var interest = new Interest(new Name("/data/prefix"));
+ *     interest.setInterestLifetimeMilliseconds(1000);
+ *     SegmentFetcher.fetch(face, interest, null, onComplete, onError);
  */
 SegmentFetcher.fetch = function
   (face, baseInterest, validatorKeyChainOrVerifySegment, onComplete, onError)
 {
+  var basePrefix = baseInterest.getName().toUri();
+
   if (validatorKeyChainOrVerifySegment == null ||
       validatorKeyChainOrVerifySegment instanceof KeyChain)
-    new SegmentFetcher
-      (face, validatorKeyChainOrVerifySegment, SegmentFetcher.DontVerifySegment,
+    new PipelineFixed
+      (basePrefix, face, validatorKeyChainOrVerifySegment, SegmentFetcher.DontVerifySegment,
        onComplete, onError)
       .fetchFirstSegment(baseInterest);
   else
-    new SegmentFetcher
+    new PipelineFixed
       (face, null, validatorKeyChainOrVerifySegment, onComplete, onError)
       .fetchFirstSegment(baseInterest);
 };
+/**
+ * Copyright (C) 2013 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
 
-SegmentFetcher.prototype.fetchFirstSegment = function(baseInterest)
+/** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var Blob = require('./blob.js').Blob; /** @ignore */
+var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
+var NdnCommon = require('./ndn-common.js').NdnCommon;
+var DataFetcher = require('./data-fetcher.js').DataFetcher;
+
+
+
+/**
+ * Retrieve the segments of solicited data by keeping a fixed-size window of N
+ * of on fly Interests at any given time.
+ *
+ * To handle timeout and nack we use DataFetcher class which upon facing
+ * timeout or nack will try to resolve the corresponded segment by retransmitting
+ * the Interest a few times.
+ *
+ * PipelineFixed assumes that the data is named /<prefix>/<version>/<segment>,
+ * where:
+ * - <prefix> is the specified name prefix,
+ * - <version> is an unknown version that needs to be discovered, and
+ * - <segment> is a segment number. (The number of segments is unknown and is
+ *   controlled by the `FinalBlockId` field in at least the last Data packet.
+ * 
+ * The following logic is implemented in PipelineFixed:
+ *
+ * 1. Express the first Interest to discover the version:
+ *
+ *    >> Interest: /<prefix>?ChildSelector=1&MustBeFresh=true
+ *
+ * 2. Infer the latest version of the Data: <version> = Data.getName().get(-2)
+ *
+ * 3. If the segment number in the retrieved packet == 0, go to step 5.
+ *
+ * 4. Pipeline the Interets starting from segment 0:
+ *
+ *    >> Interest: /<prefix>/<version>/<segment=0>
+ *    >> Interest: /<prefix>/<version>/<segment=1>
+ *    ...
+ *    >> Interest: /<prefix>/<version>/<segment=this.windowSize-1>
+ *
+ * At any given time the number of on the fly Interests should be equal
+ * to this.windowSize.
+ *
+ * 5. Pipeline the Interests startging from segment 1.
+ *
+ *    >> Interest: /<prefix>/<version>/<segment=1>
+ *    >> Interest: /<prefix>/<version>/<segment=2>
+ *    ...
+ *    >> Interest: /<prefix>/<version>/<segment=this.windowSize>
+ *
+ * 6. Upon receving a valid Data back we pipeline an Interest for the
+ * next expected segment.
+ *
+ *    >> Interest: /<prefix>/<version>/<segment=(N+1))>
+ *  
+ * We repeat step 6 until the retrieved Data does not have a FinalBlockId
+ * or the FinalBlockId != Data.getName().get(-1).
+ *
+ * 7. Call the onComplete callback with a Blob that concatenates the content
+ *    from all the segmented objects.
+ *
+ * If an error occurs during the fetching process, the onError callback is called
+ * with a proper error code.  The following errors are possible:
+ *
+ * - `INTEREST_TIMEOUT`: if any of the Interests times out (probably after a number of retries)
+ * - `DATA_HAS_NO_SEGMENT`: if any of the retrieved Data packets don't have a segment
+ *   as the last component of the name (not counting the implicit digest)
+ * - `SEGMENT_VERIFICATION_FAILED`: if any retrieved segment fails
+ *   the user-provided VerifySegment callback or KeyChain verifyData.
+ * - `IO_ERROR`: for I/O errors when sending an Interest.
+ * -`DUPLICATE_SEGMENT_RECEIVED`: if any duplicate segment is receveid during
+ *   fetching the data (we do not ask for a segment that is already retrieved,
+ *   again)
+ *
+ * In order to validate individual segments, a KeyChain needs to be supplied.
+ * If verifyData fails, the fetching process is aborted with
+ * SEGMENT_VERIFICATION_FAILED. If data validation is not required, pass null.
+ *
+ *
+ * This is a public constructor to create a new PipelineFixed.
+ * If validatorKeyChain is not null, use it and ignore verifySegment.
+ * @param {string} basePrefix This is the prefix of the data we want to retreive
+ * its segments (excluding <version> and <segment> components).
+ * @param {Face} face The segments will be fetched through this face.
+ * @param validatorKeyChain {KeyChain} If this is not null, use its verifyData
+ * instead of the verifySegment callback.
+ * @param {function} verifySegment When a Data packet is received this calls
+ * verifySegment(data) where data is a Data object. If it returns False then
+ * abort fetching and call onError with
+ * PipelineFixed.ErrorCode.SEGMENT_VERIFICATION_FAILED.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onComplete When all segments are received, call
+ * onComplete(content) where content is a Blob which has the concatenation of
+ * the content of all the segments.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError Call onError.onError(errorCode, message) for
+ * timeout or an error processing segments. errorCode is a value from
+ * SegmentFetcher.ErrorCode and message is a related string.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @constructor
+ */
+var PipelineFixed = function PipelineFixed
+  (basePrefix, face, validatorKeyChain, verifySegment, onComplete, onError)
+{
+  this.contentPrefix = basePrefix;
+  this.face = face;
+  this.validatorKeyChain = validatorKeyChain;
+  this.verifySegment = verifySegment;
+  this.onComplete = onComplete;
+  this.onError = onError;
+  
+  this.contentParts = []; // of Buffer
+
+  this.satisfiedSegments = new Set(); // no duplicate entry
+  this.nextSegmentToRequest = 0;
+  this.firstSegmentIsReceived = false;
+  this.finalBlockNo = -1;
+
+  // Options
+  this.windowSize = 10;
+  this.maxTimeoutRetries = 3;
+  this.maxNackRetries = 3;
+
+  this.segmentsOnFly = 0;
+
+  // Stats 
+  this.onVerifiedDelay = 0;
+  this.sendInterestDelay = 0;
+  this.onDataDelay = 0;
+  this.pipelineDelay = 0;
+  
+  this.pipelineStartTime = Date.now();
+};
+
+exports.PipelineFixed = PipelineFixed;
+
+/**
+ * An ErrorCode value is passed in the onError callback.
+ */
+PipelineFixed.ErrorCode = {
+  INTEREST_TIMEOUT: 1,
+  DATA_HAS_NO_SEGMENT: 2,
+  SEGMENT_VERIFICATION_FAILED: 3,
+  DUPLICATE_SEGMENT_RECEIVED: 4,
+  NACK_RECEIVED: 5
+};
+
+/**
+ * Use DataFetcher to fetch the solicited segment. Timeouts and Nacks will be
+ * handled by DataFetcher class.
+ */
+PipelineFixed.prototype.fetchSegment = function(interest)
+{
+  var df = new DataFetcher
+    (this, this.face, interest, this.maxNackRetries, this.maxTimeoutRetries, this.onData, this.onNack, this.onTimeout);
+  df.fetch();
+};
+
+PipelineFixed.prototype.fetchFirstSegment = function(baseInterest)
 {
   var interest = new Interest(baseInterest);
   interest.setChildSelector(1);
   interest.setMustBeFresh(true);
-  var thisSegmentFetcher = this;
-  this.face.expressInterest
-    (interest,
-     function(originalInterest, data)
-       { thisSegmentFetcher.onData(originalInterest, data); },
-     function(interest) { thisSegmentFetcher.onTimeout(interest); });
+  var thisPipeline = this;
+
+  this.fetchSegment(interest);
 };
 
-SegmentFetcher.prototype.fetchNextSegment = function
-  (originalInterest, dataName, segment)
+/**
+ * Pipeline interests
+ * 
+ * @param {Interest} originalInterest The original Interest based on we 
+ * can construct the next Interest packets. 
+ */
+PipelineFixed.prototype.fetchNextSegments = function
+  (originalInterest, dataName)
 {
-  // Start with the original Interest to preserve any special selectors.
+  var sTime = Date.now();
+  // Changing a field clears the nonce so that a new none will be generated
+  if (this.firstSegmentIsReceived == false) {
+    console.log("First segment is not received yet");
+    return;
+  }
+  
   var interest = new Interest(originalInterest);
-  // Changing a field clears the nonce so that the library will generate a new
-  // one.
   interest.setChildSelector(0);
   interest.setMustBeFresh(false);
-  interest.setName(dataName.getPrefix(-1).appendSegment(segment));
-  var thisSegmentFetcher = this;
-  this.face.expressInterest
-    (interest, function(originalInterest, data)
-       { thisSegmentFetcher.onData(originalInterest, data); },
-     function(interest) { thisSegmentFetcher.onTimeout(interest); });
+
+  while (this.nextSegmentToRequest <= this.finalBlockNo && this.segmentsOnFly <= this.windowSize) {
+    // Start with the original Interest to preserve any special selectors.
+    interest.setName(dataName.getPrefix(-1).appendSegment(this.nextSegmentToRequest));
+    interest.refreshNonce();
+
+    var thisPipeline = this;
+
+    this.fetchSegment(interest);
+
+    this.nextSegmentToRequest += 1;
+    this.increaseNumberOfSegmentsOnFly;
+  }
+  this.sendInterestDelay += ((Date.now() - sTime)/1000);
 };
 
-SegmentFetcher.prototype.onData = function(originalInterest, data)
+PipelineFixed.prototype.onData = function(originalInterest, data)
 {
+  var sTime = Date.now();
+
   if (this.validatorKeyChain != null) {
     try {
-      var thisSegmentFetcher = this;
+      var thisPipeline = this;
       this.validatorKeyChain.verifyData
         (data,
          function(localData) {
-           thisSegmentFetcher.onVerified(localData, originalInterest);
+           thisPipeline.onVerified(localData, originalInterest);
          },
          this.onValidationFailed.bind(this));
     } catch (ex) {
@@ -14105,7 +14227,7 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
     if (!this.verifySegment(data)) {
       try {
         this.onError
-          (SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED,
+          (PipelineFixed.ErrorCode.SEGMENT_VERIFICATION_FAILED,
            "Segment verification failed");
       } catch (ex) {
         console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
@@ -14113,17 +14235,21 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
       return;
     }
 
+    this.onDataDelay += ((Date.now() - sTime)/1000);
     this.onVerified(data, originalInterest);
   }
 };
 
-SegmentFetcher.prototype.onVerified = function(data, originalInterest)
+PipelineFixed.prototype.onVerified = function(data, originalInterest)
 {
-  if (!SegmentFetcher.endsWithSegmentNumber(data.getName())) {
+  var sTime = Date.now();
+  var currentSegment = 0;
+
+  if (!PipelineFixed.endsWithSegmentNumber(data.getName())) {
     // We don't expect a name without a segment number.  Treat it as a bad packet.
     try {
       this.onError
-        (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
+        (PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
          "Got an unexpected packet without a segment number: " +
           data.getName().toUri());
     } catch (ex) {
@@ -14131,14 +14257,13 @@ SegmentFetcher.prototype.onVerified = function(data, originalInterest)
     }
   }
   else {
-    var currentSegment = 0;
     try {
       currentSegment = data.getName().get(-1).toSegment();
     }
     catch (ex) {
       try {
         this.onError
-          (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
+          (PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
            "Error decoding the name segment number " +
            data.getName().get(-1).toEscapedString() + ": " + ex);
       } catch (ex) {
@@ -14146,61 +14271,74 @@ SegmentFetcher.prototype.onVerified = function(data, originalInterest)
       }
       return;
     }
+  }
 
-    var expectedSegmentNumber = this.contentParts.length;
-    if (currentSegment != expectedSegmentNumber)
-      // Try again to get the expected segment.  This also includes the case
-      // where the first segment is not segment 0.
-      this.fetchNextSegment
-        (originalInterest, data.getName(), expectedSegmentNumber);
-    else {
-      // Save the content and check if we are finished.
-      this.contentParts.push(data.getContent().buf());
-
-      if (data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
-        var finalSegmentNumber = 0;
-        try {
-          finalSegmentNumber = (data.getMetaInfo().getFinalBlockId().toSegment());
-        }
-        catch (ex) {
-          try {
-            this.onError
-              (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
-               "Error decoding the FinalBlockId segment number " +
-               data.getMetaInfo().getFinalBlockId().toEscapedString() +
-               ": " + ex);
-          } catch (ex) {
-            console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-          }
-          return;
-        }
-
-        if (currentSegment == finalSegmentNumber) {
-          // We are finished.
-
-          // Concatenate to get content.
-          var content = Buffer.concat(this.contentParts);
-          try {
-            this.onComplete(new Blob(content, false));
-          } catch (ex) {
-            console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
-          }
-          return;
-        }
-      }
-
-      // Fetch the next segment.
-      this.fetchNextSegment
-        (originalInterest, data.getName(), expectedSegmentNumber + 1);
+  // Check for first segment 
+  if (this.firstSegmentIsReceived == false) {
+    this.firstSegmentIsReceived = true;
+    if (currentSegment == 0) {
+      this.nextSegmentToRequest += 1;
     }
   }
-}
+ 
+  if (data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
+    try {
+      this.finalBlockNo = (data.getMetaInfo().getFinalBlockId().toSegment());
+    }
+    catch (ex) {
+      try {
+        this.onError
+          (PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
+           "Error decoding the FinalBlockId segment number " +
+            data.getMetaInfo().getFinalBlockId().toEscapedString() +
+            ": " + ex);
+       } catch (ex) {
+         console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+       }
+       return;
+    }
+  }
 
-SegmentFetcher.prototype.onValidationFailed = function(data, reason)
+  if (this.satisfiedSegments.has(currentSegment)) {
+    console.log('Error: duplicate satisfied segment [' + currentSegment + ']');
+    return;
+  }
+  this.satisfiedSegments.add(currentSegment);
+
+  // Save the content
+  this.contentParts[currentSegment] = data.getContent().buf();
+
+  // Check whether we are finished
+  if (this.satisfiedSegments.size >= this.finalBlockNo + 1) {
+    // Concatenate to get content.
+    var content = Buffer.concat(this.contentParts);
+    try {
+      this.onComplete(new Blob(content, false));
+    } catch (ex) {
+      console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+    this.pipelineDelay = (Date.now() - this.pipelineStartTime)/1000;
+
+    console.log('Pipeline retrieval delay:  ',  this.pipelineDelay);
+    console.log('Total sending Interests delay: ', this.sendInterestDelay);
+    console.log('Total Data verification delay: ', this.onVerifiedDelay);
+    console.log('Total handling Data delay: ', this.onDataDelay);
+    return;
+  }
+
+  this.decreaseNumberOfSegmentsOnFly();
+  this.onVerifiedDelay += (Date.now() - sTime)/1000;
+
+  // Fetch the next segments
+  this.fetchNextSegments
+    (originalInterest, data.getName());
+};
+
+PipelineFixed.prototype.onValidationFailed = function(data, reason)
 {
   try {
     this.onError
-      (SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED,
+      (PipelineFixed.ErrorCode.SEGMENT_VERIFICATION_FAILED,
        "Segment verification failed for " + data.getName().toUri() +
        " . Reason: " + reason);
   } catch (ex) {
@@ -14208,25 +14346,156 @@ SegmentFetcher.prototype.onValidationFailed = function(data, reason)
   }
 };
 
-SegmentFetcher.prototype.onTimeout = function(interest)
+PipelineFixed.prototype.onTimeout = function(interest)
 {
   try {
     this.onError
-      (SegmentFetcher.ErrorCode.INTEREST_TIMEOUT,
+      (PipelineFixed.ErrorCode.INTEREST_TIMEOUT,
        "Time out for interest " + interest.getName().toUri());
   } catch (ex) {
     console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
   }
 };
 
+PipelineFixed.prototype.onNack = function(interest)
+{
+  try {
+    this.onError
+      (PipelineFixed.ErrorCode.NACK_RECEIVED,
+       "Received Nack for interest " + interest.getName().toUri());
+  } catch (ex) {
+    console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
+};
+
+PipelineFixed.prototype.increaseNumberOfSegmentsOnFly = function()
+{
+  this.segmentsOnFly++;
+};
+
+PipelineFixed.prototype.decreaseNumberOfSegmentsOnFly = function()
+{
+  this.segmentsOnFly = (this.segmentsOnFly <= 0) ? 0 
+    : this.segmentsOnFly - 1;
+};
+
+
 /**
  * Check if the last component in the name is a segment number.
  * @param {Name} name The name to check.
  * @return {boolean} True if the name ends with a segment number, otherwise false.
  */
-SegmentFetcher.endsWithSegmentNumber = function(name)
+PipelineFixed.endsWithSegmentNumber = function(name)
 {
   return name.size() >= 1 && name.get(-1).isSegment();
+};
+/**
+ * Copyright (C) 2015-2018 Regents of the University of California.
+ * @author: Chavoosh Ghasemi <chghasemi@cs.arizona.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var NdnCommon = require('./ndn-common.js').NdnCommon;
+
+/**
+ * DataFetcher is a utility class to resolve a given segment.
+ *
+ * This is a public constructor to create a new DataFetcher object.
+ * @param {PipelineFixed} pipe This is the pipeline that is in charge of retrieving
+ * the segmented data. We need this pointer for callbacks.
+ * @param {Face} face The segment will be fetched through this face.
+ * @param {Interest} interest Use this as the basis of the future issued Interest(s) to fetch
+ * the solicited segment.
+ * @param {int} maxNackRetries The max number of retries upon facing Nack.
+ * @param {int} maxTimeoutRetries The max number of retries upon facing Timeout.
+ * @param {function} onData Call this function upon receiving the Data packet for the
+ * solicited segment.
+ * @param {function} onNack Call this function after receiving Nack for more than
+ * maxNackRetries times.
+ * @param {function} onNack Call this function after receiving Timeout for more than
+ * maxTimeoutRetries times.
+ * @constructor
+ */
+var DataFetcher = function DataFetcher
+  (pipe, face, interest, maxNackRetries, maxTimeoutRetries, onData, onNack, onTimeout)
+{
+  this.pipe = pipe;
+  this.face = face;
+  this.interest = interest;
+  this.maxNackRetries = maxNackRetries;
+  this.maxTimeoutRetries = maxTimeoutRetries;
+  this.onData = onData;
+  this.onNack = onNack;
+  this.onTimeout = onTimeout;
+
+  this.numberOfTimeoutRetries = 0;
+};
+
+exports.DataFetcher = DataFetcher;
+
+DataFetcher.prototype.fetch = function()
+{
+  var thisFetcher = this;
+
+  this.face.expressInterest
+    (this.interest,
+     function(originalInterest, data)
+       { thisFetcher.handleData(originalInterest, data); },
+     function(interest) { thisFetcher.handleTimeout(interest); });
+};
+
+DataFetcher.prototype.handleData = function(originalInterest, data)
+{
+  this.pipe.onData(originalInterest, data);
+};
+
+DataFetcher.prototype.handleTimeout = function(interest)
+{
+  this.numberOfTimeoutRetries++;
+  if(this.numberOfTimeoutRetries <= this.maxTimeoutRetries) {
+    var newInterest = new Interest(interest);
+    newInterest.setChildSelector(1);
+    newInterest.setMustBeFresh(true);
+    newInterest.refreshNonce();
+    this.interest = newInterest;
+    console.log('handle timeout for interest ' + interest.getName());
+    this.fetch();
+  }
+  else {
+    this.pipe.onTimeout(interest);
+  }
+};
+
+DataFetcher.prototype.handleNack = function(interest)
+{
+  this.numberOfNackRetries += 1;
+  if(this.numberOfNackRetries <= this.maxNackRetries) {
+    var newInterest = new Interest(interest);
+    newInterest.setChildSelector(1);
+    newInterest.setMustBeFresh(true);
+    newInterest.refreshNonce();
+    this.interest = newInterest;
+    console.log('handle nack for interest ' + interest.getName());
+    this.fetch();
+  }
+  else {
+    this.pipe.onNack(interest);
+  }
 };
 /**
  * Copyright (C) 2017-2018 Regents of the University of California.
@@ -19774,6 +20043,11 @@ var CertificateV2 = require('./v2/certificate-v2.js').CertificateV2; /** @ignore
 var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var Tpm = require('./tpm/tpm.js').Tpm; /** @ignore */
 var TpmBackEndMemory = require('./tpm/tpm-back-end-memory.js').TpmBackEndMemory; /** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var Tlv = require('../encoding/tlv/tlv.js').Tlv; /** @ignore */
+var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
+var TlvDecoder = require('../encoding/tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
+var TlvWireFormat = require('../encoding/tlv-wire-format.js').TlvWireFormat; /** @ignore */
 var PublicKey = require('./certificate/public-key.js').PublicKey;
 
 /**
@@ -19781,34 +20055,37 @@ var PublicKey = require('./certificate/public-key.js').PublicKey;
  * certificate and private key.
  *
  * There are two forms of the SafeBag constructor:
+ * There are three forms of the SafeBag constructor:
  * SafeBag(certificate, privateKeyBag) - Create a SafeBag with the given
  * certificate and private key.
  * SafeBag(keyName, privateKeyBag, publicKeyEncoding [, password,
  *         digestAlgorithm, wireFormat]) - Create a SafeBag with given private
  * key and a new self-signed certificate for the given public key.
+ * SafeBag(input) - Create a SafeBag by decoding the input as an NDN-TLV SafeBag.
  * @param {Data} certificate The certificate data packet (used only for
  * SafeBag(certificate, privateKeyBag)). This copies the object.
  * @param {Blob) privateKeyBag The encoded private key. If encrypted, this is a
  * PKCS #8 EncryptedPrivateKeyInfo. If not encrypted, this is an unencrypted
  * PKCS #8 PrivateKeyInfo.
  * @param {Buffer} password (optional) The password for decrypting the private
- * key in order to sign the self-signed certificate. If the password is supplied,
- * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
- * omitted or null, privateKeyBag is an unencrypted PKCS #8 PrivateKeyInfo.
+ * key in order to sign the self-signed certificate, which should have
+ * characters in the range of 1 to 127. If the password is supplied, use it to
+ * decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is omitted or
+ * null, privateKeyBag is an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {number} digestAlgorithm: (optional) The digest algorithm for signing
  * the self-signed certificate (as an int from the DigestAlgorithm enum). If
  * omitted, use DigestAlgorithm.SHA256 .
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the self-signed certificate in order to sign it. If omitted, use
  * WireFormat.getDefaultWireFormat().
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
  * @constructor
  */
 var SafeBag = function SafeBag
-  (keyNameOrCertificate, privateKeyBag, publicKeyEncoding, password,
-   digestAlgorithm, wireFormat)
+  (arg1, privateKeyBag, publicKeyEncoding, password, digestAlgorithm, wireFormat)
 {
-  if (keyNameOrCertificate instanceof Name) {
-    var keyName = keyNameOrCertificate;
+  if (arg1 instanceof Name) {
+    var keyName = arg1;
     if (digestAlgorithm == undefined)
       digestAlgorithm = DigestAlgorithm.SHA256;
     if (wireFormat == undefined)
@@ -19819,11 +20096,14 @@ var SafeBag = function SafeBag
        digestAlgorithm, wireFormat);
     this.privateKeyBag_ = privateKeyBag;
   }
-  else {
+  else if (arg1 instanceof Data) {
     // The certificate is supplied.
-    this.certificate_ = new Data(keyNameOrCertificate);
+    this.certificate_ = new Data(arg1);
     this.privateKeyBag_ = privateKeyBag;
   }
+  else
+    // Assume the first argument is the encoded SafeBag.
+    this.wireDecode(arg1);
 };
 
 exports.SafeBag = SafeBag;
@@ -19842,6 +20122,57 @@ SafeBag.prototype.getCertificate = function() { return this.certificate_; };
  * PrivateKeyInfo.
  */
 SafeBag.prototype.getPrivateKeyBag = function() { return this.privateKeyBag_; };
+
+/**
+ * Decode the input as an NDN-TLV SafeBag and update this object.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ */
+SafeBag.prototype.wireDecode = function(input)
+{
+  if (typeof input === 'object' && input instanceof Blob)
+    input = input.buf();
+
+  // Decode directly as TLV. We don't support the WireFormat abstraction
+  // because this isn't meant to go directly on the wire.
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.readNestedTlvsStart(Tlv.SafeBag_SafeBag);
+
+  // Get the bytes of the certificate and decode.
+  var certificateBeginOffset = decoder.getOffset();
+  var certificateEndOffset = decoder.readNestedTlvsStart(Tlv.Data);
+  decoder.seek(certificateEndOffset);
+  this.certificate_ = new Data();
+  this.certificate_.wireDecode
+    (decoder.getSlice(certificateBeginOffset, certificateEndOffset),
+     TlvWireFormat.get());
+
+  this.privateKeyBag_ = new Blob
+    (decoder.readBlobTlv(Tlv.SafeBag_EncryptedKeyBag), true);
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+/**
+ * Encode this as an NDN-TLV SafeBag.
+ * @return {Blob} The encoded buffer in a Blob object.
+ */
+SafeBag.prototype.wireEncode = function()
+{
+  // Encode directly as TLV. We don't support the WireFormat abstraction
+  // because this isn't meant to go directly on the wire.
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeBlobTlv(Tlv.SafeBag_EncryptedKeyBag, this.privateKeyBag_.buf());
+  // Add the entire Data packet encoding as is.
+  encoder.writeBuffer(this.certificate_.wireEncode(TlvWireFormat.get()).buf());
+
+  encoder.writeTypeAndLength
+    (Tlv.SafeBag_SafeBag, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
 
 SafeBag.makeSelfSignedCertificate_ = function
   (keyName, privateKeyBag, publicKeyEncoding, password, digestAlgorithm,
@@ -20862,7 +21193,7 @@ VerificationHelpers.setVerifyUsesString_ = function()
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
 /** @ignore */
-var constants = require('constants'); /** @ignore */
+var cryptoConstants = require('crypto').constants; /** @ignore */
 var Crypto = require('../../crypto.js'); /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
@@ -21012,13 +21343,13 @@ PublicKey.prototype.encryptPromise = function(plainData, algorithmType, useSync)
       if (this.keyType != KeyType.RSA)
         return SyncPromise.reject(new Error("The key type must be RSA"));
 
-      padding = constants.RSA_PKCS1_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_PADDING;
     }
     else if (algorithmType == EncryptAlgorithmType.RsaOaep) {
       if (this.keyType != KeyType.RSA)
         return SyncPromise.reject(new Error("The key type must be RSA"));
 
-      padding = constants.RSA_PKCS1_OAEP_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_OAEP_PADDING;
     }
     else
       return SyncPromise.reject(new Error("unsupported padding scheme"));
@@ -32145,9 +32476,10 @@ TpmBackEnd.prototype.deleteKeyPromise = function(keyName, useSync)
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
  * an unencrypted PKCS #8 PrivateKeyInfo.
- * @param {Buffer} password The password for decrypting the private key. If the
- * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
+ * null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -32276,9 +32608,10 @@ TpmBackEnd.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
  * an unencrypted PKCS #8 PrivateKeyInfo.
- * @param {Buffer} password The password for decrypting the private key. If the
- * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
+ * null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -32427,9 +32760,10 @@ TpmBackEndMemory.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
  * an unencrypted PKCS #8 PrivateKeyInfo.
- * @param {Buffer} password The password for decrypting the private key. If the
- * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
+ * null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -32716,7 +33050,7 @@ TpmKeyHandle.prototype.doDerivePublicKey_ = function()
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
 /** @ignore */
-var constants = require('constants'); /** @ignore */
+var cryptoConstants = require('crypto').constants; /** @ignore */
 var Crypto = require('../../crypto.js'); /** @ignore */
 var KeyType = require('../security-types').KeyType; /** @ignore */
 var EncryptAlgorithmType = require('../../encrypt/algo/encrypt-params.js').EncryptAlgorithmType; /** @ignore */
@@ -32992,9 +33326,9 @@ TpmPrivateKey.prototype.decryptPromise = function
   else {
     var padding;
     if (algorithmType == EncryptAlgorithmType.RsaPkcs)
-      padding = constants.RSA_PKCS1_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_PADDING;
     else if (algorithmType == EncryptAlgorithmType.RsaOaep)
-      padding = constants.RSA_PKCS1_OAEP_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_OAEP_PADDING;
     else
       return SyncPromise.reject(new TpmPrivateKey.Error(new Error
         ("Unsupported padding scheme")));
@@ -33311,7 +33645,7 @@ TpmPrivateKey.prototype.getSubtleKeyPromise_ = function()
 };
 
 /**
- * A private method to get the cached crypto.subtle key for decrypting, 
+ * A private method to get the cached crypto.subtle key for decrypting,
  * importing it from this.privateKey_ if needed. This means we only have to do
  * this once per session, giving us a small but not insignificant performance
  * boost. This is separate from getSubtleKeyPromise_ because the import
@@ -33607,9 +33941,10 @@ Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
  * an unencrypted PKCS #8 PrivateKeyInfo.
- * @param {Buffer} password The password for decrypting the private key. If the
- * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
+ * null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -38278,7 +38613,7 @@ var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVe
 var KeyChain = function KeyChain(arg1, arg2, arg3)
 {
   this.identityManager_ = null;  // for security v1
-  this.policyManager_ = null;    // for security v1
+  this.policyManager_ = new NoVerifyPolicyManager(); // for security v1
   this.face_ = null;             // for security v1
 
   this.pib_ = null;
@@ -39402,9 +39737,9 @@ KeyChain.prototype.selfSign = function(key, wireFormat, onComplete, onError)
  * @param {SafeBag} safeBag The SafeBag containing the certificate and private
  * key. This copies the values from the SafeBag.
  * @param {Buffer} password (optional) The password for decrypting the private
- * key. If the password is supplied, use it to decrypt the PKCS #8
- * EncryptedPrivateKeyInfo. If the password is omitted or null, import an
- * unencrypted PKCS #8 PrivateKeyInfo.
+ * key, which should have characters in the range of 1 to 127. If the password
+ * is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the
+ * password is omitted or null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -39520,9 +39855,9 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password, useSync)
  * @param {SafeBag} safeBag The SafeBag containing the certificate and private
  * key. This copies the values from the SafeBag.
  * @param {Buffer} password (optional) The password for decrypting the private
- * key. If the password is supplied, use it to decrypt the PKCS #8
- * EncryptedPrivateKeyInfo. If the password is omitted or null, import an
- * unencrypted PKCS #8 PrivateKeyInfo.
+ * key, which should have characters in the range of 1 to 127. If the password
+ * is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the
+ * password is omitted or null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {function} onComplete (optional) This calls onComplete() when finished.
  * If omitted, just return when finished. (Some crypto libraries only use a
  * callback, so onComplete is required to use these.)
@@ -41302,8 +41637,9 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * Create a new Interest with the optional values.
  *
  * @constructor
- * @param {Name|Interest} nameOrInterest (optional) If this is an Interest, copy
- * values from the Interest. If this is a Name, create an Interest with the Name.
+ * @param {Name|Interest|string} nameOrInterest (optional) If this is an
+ * Interest, copy values from the Interest. If this is a Name, create an
+ * Interest with a copy of the Name. If this is a create a Name from the URI.
  */
 var Interest = function Interest
    (nameOrInterest, minSuffixComponents, maxSuffixComponents,
@@ -41358,9 +41694,7 @@ var Interest = function Interest
     this.defaultWireEncodingFormat_ = interest.defaultWireEncodingFormat_;
   }
   else {
-    this.name_ = new ChangeCounter(typeof nameOrInterest === 'object' &&
-                                   nameOrInterest instanceof Name ?
-      new Name(nameOrInterest) : new Name());
+    this.name_ = new ChangeCounter(new Name(nameOrInterest));
     this.maxSuffixComponents_ = maxSuffixComponents;
     this.minSuffixComponents_ = minSuffixComponents;
 
@@ -45682,7 +46016,7 @@ Encryptor.encryptAsymmetricPromise_ = function
 // "Rsa" is very short and not all the Common Client Libraries have namespaces.)
 
 /** @ignore */
-var constants = require('constants'); /** @ignore */
+var cryptoConstants = require('crypto').constants; /** @ignore */
 var Crypto = require('../../crypto.js'); /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var DecryptKey = require('../decrypt-key.js').DecryptKey; /** @ignore */
@@ -45853,9 +46187,9 @@ RsaAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
 
     var padding;
     if (params.getAlgorithmType() == EncryptAlgorithmType.RsaPkcs)
-      padding = constants.RSA_PKCS1_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_PADDING;
     else if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep)
-      padding = constants.RSA_PKCS1_OAEP_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_OAEP_PADDING;
     else
       return SyncPromise.reject(new Error("unsupported padding scheme"));
 
@@ -53601,39 +53935,64 @@ Face.prototype.onReceivedElement = function(element)
   // Now process as Interest or Data.
   if (interest !== null) {
     if (LOG > 3) console.log('Interest packet received.');
-
-    // Call all interest filter callbacks which match.
-    var matchedFilters = [];
-    this.interestFilterTable_.getMatchedFilters(interest, matchedFilters);
-    for (var i = 0; i < matchedFilters.length; ++i) {
-      var entry = matchedFilters[i];
-      if (LOG > 3)
-        console.log("Found interest filter for " + interest.getName().toUri());
-      try {
-        entry.getOnInterest()
-          (entry.getFilter().getPrefix(), interest, this,
-           entry.getInterestFilterId(), entry.getFilter());
-      } catch (ex) {
-        console.log("Error in onInterest: " + NdnCommon.getErrorWithStackTrace(ex));
-      }
-    }
+    this.dispatchInterest_(interest);
   }
   else if (data !== null) {
     if (LOG > 3) console.log('Data packet received.');
+    this.satisfyPendingInterests_(data);
+  }
+};
 
-    var pendingInterests = [];
-    this.pendingInterestTable_.extractEntriesForExpressedInterest
-      (data, pendingInterests);
-    // Process each matching PIT entry (if any).
-    for (var i = 0; i < pendingInterests.length; ++i) {
-      var pendingInterest = pendingInterests[i];
-      try {
-        pendingInterest.getOnData()(pendingInterest.getInterest(), data);
-      } catch (ex) {
-        console.log("Error in onData: " + NdnCommon.getErrorWithStackTrace(ex));
-      }
+/**
+ * Call the OnInterest callback for all entries in the interestFilterTable_
+ * that match the interest.
+ * @param {Interest} interest The Interest to match.
+ */
+Face.prototype.dispatchInterest_ = function(interest)
+{
+  // Call all interest filter callbacks which match.
+  var matchedFilters = [];
+  this.interestFilterTable_.getMatchedFilters(interest, matchedFilters);
+  for (var i = 0; i < matchedFilters.length; ++i) {
+    var entry = matchedFilters[i];
+    if (LOG > 3)
+      console.log("Found interest filter for " + interest.getName().toUri());
+    try {
+      entry.getOnInterest()
+        (entry.getFilter().getPrefix(), interest, this,
+         entry.getInterestFilterId(), entry.getFilter());
+    } catch (ex) {
+      console.log("Error in onInterest: " + NdnCommon.getErrorWithStackTrace(ex));
     }
   }
+};
+
+/**
+ * Extract entries from the pendingInterestTable_ which match data, and call
+ * each OnData callback.
+ * @param {Data} data The Data packet to match.
+ * @return {boolean} True if the data matched an entry in the
+ * pendingInterestTable_.
+ */
+Face.prototype.satisfyPendingInterests_ = function(data)
+{
+  var hasMatch = false;
+
+  var pendingInterests = [];
+  this.pendingInterestTable_.extractEntriesForExpressedInterest
+    (data, pendingInterests);
+  // Process each matching PIT entry (if any).
+  for (var i = 0; i < pendingInterests.length; ++i) {
+    var pendingInterest = pendingInterests[i];
+    hasMatch = true;
+    try {
+      pendingInterest.getOnData()(pendingInterest.getInterest(), data);
+    } catch (ex) {
+      console.log("Error in onData: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
+
+  return hasMatch;
 };
 
 /**
