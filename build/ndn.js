@@ -9194,6 +9194,9 @@ Blob.prototype.equals = function(other)
     return other.isNull();
   else if (other.isNull())
     return false;
+  else if (this.buffer === other.buffer)
+    // The other is the same Blob.
+    return true;
   else {
     if (this.buffer.length != other.buffer.length)
       return false;
@@ -10245,6 +10248,9 @@ Tlv.Encrypt_EncryptedContent = 130;
 Tlv.Encrypt_EncryptionAlgorithm = 131;
 Tlv.Encrypt_EncryptedPayload = 132;
 Tlv.Encrypt_InitialVector = 133;
+
+Tlv.SafeBag_SafeBag = 128;
+Tlv.SafeBag_EncryptedKeyBag = 129;
 
 // For RepetitiveInterval.
 Tlv.Encrypt_StartDate = 134;
@@ -19774,6 +19780,11 @@ var CertificateV2 = require('./v2/certificate-v2.js').CertificateV2; /** @ignore
 var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var Tpm = require('./tpm/tpm.js').Tpm; /** @ignore */
 var TpmBackEndMemory = require('./tpm/tpm-back-end-memory.js').TpmBackEndMemory; /** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var Tlv = require('../encoding/tlv/tlv.js').Tlv; /** @ignore */
+var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
+var TlvDecoder = require('../encoding/tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
+var TlvWireFormat = require('../encoding/tlv-wire-format.js').TlvWireFormat; /** @ignore */
 var PublicKey = require('./certificate/public-key.js').PublicKey;
 
 /**
@@ -19781,34 +19792,37 @@ var PublicKey = require('./certificate/public-key.js').PublicKey;
  * certificate and private key.
  *
  * There are two forms of the SafeBag constructor:
+ * There are three forms of the SafeBag constructor:
  * SafeBag(certificate, privateKeyBag) - Create a SafeBag with the given
  * certificate and private key.
  * SafeBag(keyName, privateKeyBag, publicKeyEncoding [, password,
  *         digestAlgorithm, wireFormat]) - Create a SafeBag with given private
  * key and a new self-signed certificate for the given public key.
+ * SafeBag(input) - Create a SafeBag by decoding the input as an NDN-TLV SafeBag.
  * @param {Data} certificate The certificate data packet (used only for
  * SafeBag(certificate, privateKeyBag)). This copies the object.
  * @param {Blob) privateKeyBag The encoded private key. If encrypted, this is a
  * PKCS #8 EncryptedPrivateKeyInfo. If not encrypted, this is an unencrypted
  * PKCS #8 PrivateKeyInfo.
  * @param {Buffer} password (optional) The password for decrypting the private
- * key in order to sign the self-signed certificate. If the password is supplied,
- * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
- * omitted or null, privateKeyBag is an unencrypted PKCS #8 PrivateKeyInfo.
+ * key in order to sign the self-signed certificate, which should have
+ * characters in the range of 1 to 127. If the password is supplied, use it to
+ * decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is omitted or
+ * null, privateKeyBag is an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {number} digestAlgorithm: (optional) The digest algorithm for signing
  * the self-signed certificate (as an int from the DigestAlgorithm enum). If
  * omitted, use DigestAlgorithm.SHA256 .
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the self-signed certificate in order to sign it. If omitted, use
  * WireFormat.getDefaultWireFormat().
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
  * @constructor
  */
 var SafeBag = function SafeBag
-  (keyNameOrCertificate, privateKeyBag, publicKeyEncoding, password,
-   digestAlgorithm, wireFormat)
+  (arg1, privateKeyBag, publicKeyEncoding, password, digestAlgorithm, wireFormat)
 {
-  if (keyNameOrCertificate instanceof Name) {
-    var keyName = keyNameOrCertificate;
+  if (arg1 instanceof Name) {
+    var keyName = arg1;
     if (digestAlgorithm == undefined)
       digestAlgorithm = DigestAlgorithm.SHA256;
     if (wireFormat == undefined)
@@ -19819,11 +19833,14 @@ var SafeBag = function SafeBag
        digestAlgorithm, wireFormat);
     this.privateKeyBag_ = privateKeyBag;
   }
-  else {
+  else if (arg1 instanceof Data) {
     // The certificate is supplied.
-    this.certificate_ = new Data(keyNameOrCertificate);
+    this.certificate_ = new Data(arg1);
     this.privateKeyBag_ = privateKeyBag;
   }
+  else
+    // Assume the first argument is the encoded SafeBag.
+    this.wireDecode(arg1);
 };
 
 exports.SafeBag = SafeBag;
@@ -19842,6 +19859,57 @@ SafeBag.prototype.getCertificate = function() { return this.certificate_; };
  * PrivateKeyInfo.
  */
 SafeBag.prototype.getPrivateKeyBag = function() { return this.privateKeyBag_; };
+
+/**
+ * Decode the input as an NDN-TLV SafeBag and update this object.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ */
+SafeBag.prototype.wireDecode = function(input)
+{
+  if (typeof input === 'object' && input instanceof Blob)
+    input = input.buf();
+
+  // Decode directly as TLV. We don't support the WireFormat abstraction
+  // because this isn't meant to go directly on the wire.
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.readNestedTlvsStart(Tlv.SafeBag_SafeBag);
+
+  // Get the bytes of the certificate and decode.
+  var certificateBeginOffset = decoder.getOffset();
+  var certificateEndOffset = decoder.readNestedTlvsStart(Tlv.Data);
+  decoder.seek(certificateEndOffset);
+  this.certificate_ = new Data();
+  this.certificate_.wireDecode
+    (decoder.getSlice(certificateBeginOffset, certificateEndOffset),
+     TlvWireFormat.get());
+
+  this.privateKeyBag_ = new Blob
+    (decoder.readBlobTlv(Tlv.SafeBag_EncryptedKeyBag), true);
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+/**
+ * Encode this as an NDN-TLV SafeBag.
+ * @return {Blob} The encoded buffer in a Blob object.
+ */
+SafeBag.prototype.wireEncode = function()
+{
+  // Encode directly as TLV. We don't support the WireFormat abstraction
+  // because this isn't meant to go directly on the wire.
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeBlobTlv(Tlv.SafeBag_EncryptedKeyBag, this.privateKeyBag_.buf());
+  // Add the entire Data packet encoding as is.
+  encoder.writeBuffer(this.certificate_.wireEncode(TlvWireFormat.get()).buf());
+
+  encoder.writeTypeAndLength
+    (Tlv.SafeBag_SafeBag, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
 
 SafeBag.makeSelfSignedCertificate_ = function
   (keyName, privateKeyBag, publicKeyEncoding, password, digestAlgorithm,
@@ -20862,7 +20930,7 @@ VerificationHelpers.setVerifyUsesString_ = function()
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
 /** @ignore */
-var constants = require('constants'); /** @ignore */
+var cryptoConstants = require('crypto').constants; /** @ignore */
 var Crypto = require('../../crypto.js'); /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
@@ -21012,13 +21080,13 @@ PublicKey.prototype.encryptPromise = function(plainData, algorithmType, useSync)
       if (this.keyType != KeyType.RSA)
         return SyncPromise.reject(new Error("The key type must be RSA"));
 
-      padding = constants.RSA_PKCS1_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_PADDING;
     }
     else if (algorithmType == EncryptAlgorithmType.RsaOaep) {
       if (this.keyType != KeyType.RSA)
         return SyncPromise.reject(new Error("The key type must be RSA"));
 
-      padding = constants.RSA_PKCS1_OAEP_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_OAEP_PADDING;
     }
     else
       return SyncPromise.reject(new Error("unsupported padding scheme"));
@@ -32145,9 +32213,10 @@ TpmBackEnd.prototype.deleteKeyPromise = function(keyName, useSync)
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
  * an unencrypted PKCS #8 PrivateKeyInfo.
- * @param {Buffer} password The password for decrypting the private key. If the
- * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
+ * null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -32276,9 +32345,10 @@ TpmBackEnd.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
  * an unencrypted PKCS #8 PrivateKeyInfo.
- * @param {Buffer} password The password for decrypting the private key. If the
- * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
+ * null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -32427,9 +32497,10 @@ TpmBackEndMemory.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
  * an unencrypted PKCS #8 PrivateKeyInfo.
- * @param {Buffer} password The password for decrypting the private key. If the
- * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
+ * null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -32716,7 +32787,7 @@ TpmKeyHandle.prototype.doDerivePublicKey_ = function()
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
 /** @ignore */
-var constants = require('constants'); /** @ignore */
+var cryptoConstants = require('crypto').constants; /** @ignore */
 var Crypto = require('../../crypto.js'); /** @ignore */
 var KeyType = require('../security-types').KeyType; /** @ignore */
 var EncryptAlgorithmType = require('../../encrypt/algo/encrypt-params.js').EncryptAlgorithmType; /** @ignore */
@@ -32992,9 +33063,9 @@ TpmPrivateKey.prototype.decryptPromise = function
   else {
     var padding;
     if (algorithmType == EncryptAlgorithmType.RsaPkcs)
-      padding = constants.RSA_PKCS1_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_PADDING;
     else if (algorithmType == EncryptAlgorithmType.RsaOaep)
-      padding = constants.RSA_PKCS1_OAEP_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_OAEP_PADDING;
     else
       return SyncPromise.reject(new TpmPrivateKey.Error(new Error
         ("Unsupported padding scheme")));
@@ -33311,7 +33382,7 @@ TpmPrivateKey.prototype.getSubtleKeyPromise_ = function()
 };
 
 /**
- * A private method to get the cached crypto.subtle key for decrypting, 
+ * A private method to get the cached crypto.subtle key for decrypting,
  * importing it from this.privateKey_ if needed. This means we only have to do
  * this once per session, giving us a small but not insignificant performance
  * boost. This is separate from getSubtleKeyPromise_ because the import
@@ -33607,9 +33678,10 @@ Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
  * @param {Buffer} pkcs8 The input byte buffer. If the password is supplied,
  * this is a PKCS #8 EncryptedPrivateKeyInfo. If the password is none, this is
  * an unencrypted PKCS #8 PrivateKeyInfo.
- * @param {Buffer} password The password for decrypting the private key. If the
- * password is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo.
- * If the password is null, import an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {Buffer} password The password for decrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the password is
+ * null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -38278,7 +38350,7 @@ var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVe
 var KeyChain = function KeyChain(arg1, arg2, arg3)
 {
   this.identityManager_ = null;  // for security v1
-  this.policyManager_ = null;    // for security v1
+  this.policyManager_ = new NoVerifyPolicyManager(); // for security v1
   this.face_ = null;             // for security v1
 
   this.pib_ = null;
@@ -39402,9 +39474,9 @@ KeyChain.prototype.selfSign = function(key, wireFormat, onComplete, onError)
  * @param {SafeBag} safeBag The SafeBag containing the certificate and private
  * key. This copies the values from the SafeBag.
  * @param {Buffer} password (optional) The password for decrypting the private
- * key. If the password is supplied, use it to decrypt the PKCS #8
- * EncryptedPrivateKeyInfo. If the password is omitted or null, import an
- * unencrypted PKCS #8 PrivateKeyInfo.
+ * key, which should have characters in the range of 1 to 127. If the password
+ * is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the
+ * password is omitted or null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -39520,9 +39592,9 @@ KeyChain.prototype.importSafeBagPromise = function(safeBag, password, useSync)
  * @param {SafeBag} safeBag The SafeBag containing the certificate and private
  * key. This copies the values from the SafeBag.
  * @param {Buffer} password (optional) The password for decrypting the private
- * key. If the password is supplied, use it to decrypt the PKCS #8
- * EncryptedPrivateKeyInfo. If the password is omitted or null, import an
- * unencrypted PKCS #8 PrivateKeyInfo.
+ * key, which should have characters in the range of 1 to 127. If the password
+ * is supplied, use it to decrypt the PKCS #8 EncryptedPrivateKeyInfo. If the
+ * password is omitted or null, import an unencrypted PKCS #8 PrivateKeyInfo.
  * @param {function} onComplete (optional) This calls onComplete() when finished.
  * If omitted, just return when finished. (Some crypto libraries only use a
  * callback, so onComplete is required to use these.)
@@ -41302,8 +41374,9 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * Create a new Interest with the optional values.
  *
  * @constructor
- * @param {Name|Interest} nameOrInterest (optional) If this is an Interest, copy
- * values from the Interest. If this is a Name, create an Interest with the Name.
+ * @param {Name|Interest|string} nameOrInterest (optional) If this is an
+ * Interest, copy values from the Interest. If this is a Name, create an
+ * Interest with a copy of the Name. If this is a create a Name from the URI.
  */
 var Interest = function Interest
    (nameOrInterest, minSuffixComponents, maxSuffixComponents,
@@ -41358,9 +41431,7 @@ var Interest = function Interest
     this.defaultWireEncodingFormat_ = interest.defaultWireEncodingFormat_;
   }
   else {
-    this.name_ = new ChangeCounter(typeof nameOrInterest === 'object' &&
-                                   nameOrInterest instanceof Name ?
-      new Name(nameOrInterest) : new Name());
+    this.name_ = new ChangeCounter(new Name(nameOrInterest));
     this.maxSuffixComponents_ = maxSuffixComponents;
     this.minSuffixComponents_ = minSuffixComponents;
 
@@ -45682,7 +45753,7 @@ Encryptor.encryptAsymmetricPromise_ = function
 // "Rsa" is very short and not all the Common Client Libraries have namespaces.)
 
 /** @ignore */
-var constants = require('constants'); /** @ignore */
+var cryptoConstants = require('crypto').constants; /** @ignore */
 var Crypto = require('../../crypto.js'); /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var DecryptKey = require('../decrypt-key.js').DecryptKey; /** @ignore */
@@ -45853,9 +45924,9 @@ RsaAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
 
     var padding;
     if (params.getAlgorithmType() == EncryptAlgorithmType.RsaPkcs)
-      padding = constants.RSA_PKCS1_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_PADDING;
     else if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep)
-      padding = constants.RSA_PKCS1_OAEP_PADDING;
+      padding = cryptoConstants.RSA_PKCS1_OAEP_PADDING;
     else
       return SyncPromise.reject(new Error("unsupported padding scheme"));
 
@@ -53601,39 +53672,64 @@ Face.prototype.onReceivedElement = function(element)
   // Now process as Interest or Data.
   if (interest !== null) {
     if (LOG > 3) console.log('Interest packet received.');
-
-    // Call all interest filter callbacks which match.
-    var matchedFilters = [];
-    this.interestFilterTable_.getMatchedFilters(interest, matchedFilters);
-    for (var i = 0; i < matchedFilters.length; ++i) {
-      var entry = matchedFilters[i];
-      if (LOG > 3)
-        console.log("Found interest filter for " + interest.getName().toUri());
-      try {
-        entry.getOnInterest()
-          (entry.getFilter().getPrefix(), interest, this,
-           entry.getInterestFilterId(), entry.getFilter());
-      } catch (ex) {
-        console.log("Error in onInterest: " + NdnCommon.getErrorWithStackTrace(ex));
-      }
-    }
+    this.dispatchInterest_(interest);
   }
   else if (data !== null) {
     if (LOG > 3) console.log('Data packet received.');
+    this.satisfyPendingInterests_(data);
+  }
+};
 
-    var pendingInterests = [];
-    this.pendingInterestTable_.extractEntriesForExpressedInterest
-      (data, pendingInterests);
-    // Process each matching PIT entry (if any).
-    for (var i = 0; i < pendingInterests.length; ++i) {
-      var pendingInterest = pendingInterests[i];
-      try {
-        pendingInterest.getOnData()(pendingInterest.getInterest(), data);
-      } catch (ex) {
-        console.log("Error in onData: " + NdnCommon.getErrorWithStackTrace(ex));
-      }
+/**
+ * Call the OnInterest callback for all entries in the interestFilterTable_
+ * that match the interest.
+ * @param {Interest} interest The Interest to match.
+ */
+Face.prototype.dispatchInterest_ = function(interest)
+{
+  // Call all interest filter callbacks which match.
+  var matchedFilters = [];
+  this.interestFilterTable_.getMatchedFilters(interest, matchedFilters);
+  for (var i = 0; i < matchedFilters.length; ++i) {
+    var entry = matchedFilters[i];
+    if (LOG > 3)
+      console.log("Found interest filter for " + interest.getName().toUri());
+    try {
+      entry.getOnInterest()
+        (entry.getFilter().getPrefix(), interest, this,
+         entry.getInterestFilterId(), entry.getFilter());
+    } catch (ex) {
+      console.log("Error in onInterest: " + NdnCommon.getErrorWithStackTrace(ex));
     }
   }
+};
+
+/**
+ * Extract entries from the pendingInterestTable_ which match data, and call
+ * each OnData callback.
+ * @param {Data} data The Data packet to match.
+ * @return {boolean} True if the data matched an entry in the
+ * pendingInterestTable_.
+ */
+Face.prototype.satisfyPendingInterests_ = function(data)
+{
+  var hasMatch = false;
+
+  var pendingInterests = [];
+  this.pendingInterestTable_.extractEntriesForExpressedInterest
+    (data, pendingInterests);
+  // Process each matching PIT entry (if any).
+  for (var i = 0; i < pendingInterests.length; ++i) {
+    var pendingInterest = pendingInterests[i];
+    hasMatch = true;
+    try {
+      pendingInterest.getOnData()(pendingInterest.getInterest(), data);
+    } catch (ex) {
+      console.log("Error in onData: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
+
+  return hasMatch;
 };
 
 /**
