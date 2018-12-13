@@ -13870,6 +13870,7 @@ MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMillisecon
 /**
  * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: Chavoosh Ghasemi <chghasemi@cs.arizona.edu>
  * @author: From ndn-cxx util/segment-fetcher https://github.com/named-data/ndn-cxx
  *
  * This program is free software: you can redistribute it and/or modify
@@ -13898,6 +13899,16 @@ var SegmentFetcher = function SegmentFetcher() { };
 exports.SegmentFetcher = SegmentFetcher;
 
 /**
+ * An ErrorCode value is passed in the onError callback.
+ */
+SegmentFetcher.ErrorCode = {
+  INTEREST_TIMEOUT: 1,
+  DATA_HAS_NO_SEGMENT: 2,
+  SEGMENT_VERIFICATION_FAILED: 3
+};
+
+
+/**
  * DontVerifySegment may be used in fetch to skip validation of Data packets.
  */
 SegmentFetcher.DontVerifySegment = function(data)
@@ -13914,27 +13925,25 @@ SegmentFetcher.DontVerifySegment = function(data)
  * - [TODO] Pipeline Aimd
  *
  * Initiate segment fetching.
- * 
+ *
  * There are two forms of fetch:
  * fetch(face, baseInterest, validatorKeyChain, onComplete, onError)
  * and
  * fetch(face, baseInterest, verifySegment, onComplete, onError)
- * @param {Face} face This calls face.expressInterest to fetch more segments.
+ * @param {Face} face This face is used by pipeline to express Interests and fetch segments.
  * @param {Interest} baseInterest An Interest for the initial segment of the
  * requested data, where baseInterest.getName() has the name prefix. This
  * interest may include a custom InterestLifetime and selectors that will
  * propagate to all subsequent Interests. The only exception is that the initial
- * Interest will be forced to include selectors "ChildSelector=1" and
- * "MustBeFresh=true" which will be turned off in subsequent Interests.
- * @param validatorKeyChain {KeyChain} When a Data packet is received this calls
- * validatorKeyChain.verifyData(data). If validation fails then abortfetching
- * and call onError with SEGMENT_VERIFICATION_FAILED. This does not make a copy
- * of the KeyChain; the object must remain valid while fetching.
+ * Interest will be forced to include selector "MustBeFresh=true" which will
+ * be turned off in subsequent Interests.
+ * @param validatorKeyChain {KeyChain} This is used by ValidatorKeyChain.verifyData(data).
+ * If validation fails then abort fetching and call onError with SEGMENT_VERIFICATION_FAILED.
+ * This does not make a copy of the KeyChain; the object must remain valid while fetching.
  * If validatorKeyChain is null, this does not validate the data packet.
- * @param {function} verifySegment When a Data packet is received this calls
- * verifySegment(data) where data is a Data object. If it returns False then
- * abort fetching and call onError with
- * SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED. If data validation is
+ * @param {function} verifySegment This is used by verifySegment(data) method in pipeline
+ * class when a Data packet is received. If it returns False then abort fetching and call
+ * onError with ErrorCode.SEGMENT_VERIFICATION_FAILED. If data validation is
  * not required, use SegmentFetcher.DontVerifySegment.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
@@ -13974,11 +13983,12 @@ SegmentFetcher.fetch = function
       .fetchFirstSegment(baseInterest);
   else
     new PipelineFixed
-      (face, null, validatorKeyChainOrVerifySegment, onComplete, onError)
+      (basePrefix, face, null, validatorKeyChainOrVerifySegment, onComplete, onError)
       .fetchFirstSegment(baseInterest);
 };
 /**
  * Copyright (C) 2013 Regents of the University of California.
+ * @author: Chavoosh Ghasemi <chghasemi@cs.arizona.edu>
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14019,12 +14029,12 @@ var DataFetcher = require('./data-fetcher.js').DataFetcher;
  * - <version> is an unknown version that needs to be discovered, and
  * - <segment> is a segment number. (The number of segments is unknown and is
  *   controlled by the `FinalBlockId` field in at least the last Data packet.
- * 
+ *
  * The following logic is implemented in PipelineFixed:
  *
  * 1. Express the first Interest to discover the version:
  *
- *    >> Interest: /<prefix>?ChildSelector=1&MustBeFresh=true
+ *    >> Interest: /<prefix>?MustBeFresh=true
  *
  * 2. Infer the latest version of the Data: <version> = Data.getName().get(-2)
  *
@@ -14051,7 +14061,7 @@ var DataFetcher = require('./data-fetcher.js').DataFetcher;
  * next expected segment.
  *
  *    >> Interest: /<prefix>/<version>/<segment=(N+1))>
- *  
+ *
  * We repeat step 6 until the retrieved Data does not have a FinalBlockId
  * or the FinalBlockId != Data.getName().get(-1).
  *
@@ -14098,7 +14108,7 @@ var DataFetcher = require('./data-fetcher.js').DataFetcher;
  * exceptions.
  * @param {function} onError Call onError.onError(errorCode, message) for
  * timeout or an error processing segments. errorCode is a value from
- * SegmentFetcher.ErrorCode and message is a related string.
+ * PipelieFixed.ErrorCode and message is a related string.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -14113,7 +14123,7 @@ var PipelineFixed = function PipelineFixed
   this.verifySegment = verifySegment;
   this.onComplete = onComplete;
   this.onError = onError;
-  
+
   this.contentParts = []; // of Buffer
 
   this.satisfiedSegments = new Set(); // no duplicate entry
@@ -14128,12 +14138,12 @@ var PipelineFixed = function PipelineFixed
 
   this.segmentsOnFly = 0;
 
-  // Stats 
+  // Stats
   this.onVerifiedDelay = 0;
   this.sendInterestDelay = 0;
   this.onDataDelay = 0;
   this.pipelineDelay = 0;
-  
+
   this.pipelineStartTime = Date.now();
 };
 
@@ -14164,31 +14174,23 @@ PipelineFixed.prototype.fetchSegment = function(interest)
 PipelineFixed.prototype.fetchFirstSegment = function(baseInterest)
 {
   var interest = new Interest(baseInterest);
-  interest.setChildSelector(1);
   interest.setMustBeFresh(true);
   var thisPipeline = this;
 
   this.fetchSegment(interest);
 };
 
-/**
- * Pipeline interests
- * 
- * @param {Interest} originalInterest The original Interest based on we 
- * can construct the next Interest packets. 
- */
 PipelineFixed.prototype.fetchNextSegments = function
   (originalInterest, dataName)
 {
   var sTime = Date.now();
   // Changing a field clears the nonce so that a new none will be generated
-  if (this.firstSegmentIsReceived == false) {
+  if (this.firstSegmentIsReceived === false) {
     console.log("First segment is not received yet");
     return;
   }
-  
+
   var interest = new Interest(originalInterest);
-  interest.setChildSelector(0);
   interest.setMustBeFresh(false);
 
   while (this.nextSegmentToRequest <= this.finalBlockNo && this.segmentsOnFly <= this.windowSize) {
@@ -14225,14 +14227,8 @@ PipelineFixed.prototype.onData = function(originalInterest, data)
   }
   else {
     if (!this.verifySegment(data)) {
-      try {
-        this.onError
-          (PipelineFixed.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-           "Segment verification failed");
-      } catch (ex) {
-        console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-      }
-      return;
+      this.reportError(PipelineFixed.ErrorCode.SEGMENT_VERFIFICATION_FAILED,
+                       "Segment verification failed");
     }
 
     this.onDataDelay += ((Date.now() - sTime)/1000);
@@ -14247,55 +14243,40 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
 
   if (!PipelineFixed.endsWithSegmentNumber(data.getName())) {
     // We don't expect a name without a segment number.  Treat it as a bad packet.
-    try {
-      this.onError
-        (PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
-         "Got an unexpected packet without a segment number: " +
-          data.getName().toUri());
-    } catch (ex) {
-      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-    }
+    this.reportError(PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
+                     "Got an unexpected packet without a segment number: " +
+                      data.getName().toUri());
   }
   else {
     try {
       currentSegment = data.getName().get(-1).toSegment();
     }
     catch (ex) {
-      try {
-        this.onError
-          (PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
-           "Error decoding the name segment number " +
-           data.getName().get(-1).toEscapedString() + ": " + ex);
-      } catch (ex) {
-        console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-      }
+      this.reportError(PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
+                       "Error decoding the name segment number " +
+                       data.getName().get(-1).toEscapedString() + ": " + ex);
       return;
     }
   }
 
-  // Check for first segment 
-  if (this.firstSegmentIsReceived == false) {
+  // Check for first segment
+  if (this.firstSegmentIsReceived === false) {
     this.firstSegmentIsReceived = true;
-    if (currentSegment == 0) {
+    if (currentSegment === 0) {
       this.nextSegmentToRequest += 1;
     }
   }
- 
+
   if (data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
     try {
       this.finalBlockNo = (data.getMetaInfo().getFinalBlockId().toSegment());
     }
     catch (ex) {
-      try {
-        this.onError
-          (PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
+      this.reportError(PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
            "Error decoding the FinalBlockId segment number " +
             data.getMetaInfo().getFinalBlockId().toEscapedString() +
             ": " + ex);
-       } catch (ex) {
-         console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-       }
-       return;
+      return;
     }
   }
 
@@ -14336,36 +14317,21 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
 
 PipelineFixed.prototype.onValidationFailed = function(data, reason)
 {
-  try {
-    this.onError
-      (PipelineFixed.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-       "Segment verification failed for " + data.getName().toUri() +
-       " . Reason: " + reason);
-  } catch (ex) {
-    console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-  }
+  this.reportError(PipelineFixed.ErrorCode.SEGMENT_VERIFICATION_FAILED,
+                   "Segment verification failed for " + data.getName().toUri() +
+                   " . Reason: " + reason);
 };
 
 PipelineFixed.prototype.onTimeout = function(interest)
 {
-  try {
-    this.onError
-      (PipelineFixed.ErrorCode.INTEREST_TIMEOUT,
-       "Time out for interest " + interest.getName().toUri());
-  } catch (ex) {
-    console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-  }
+  this.reportError(PipelineFixed.ErrorCode.INTEREST_TIMEOUT,
+                   "Time out for interest " + interest.getName().toUri());
 };
 
 PipelineFixed.prototype.onNack = function(interest)
 {
-  try {
-    this.onError
-      (PipelineFixed.ErrorCode.NACK_RECEIVED,
-       "Received Nack for interest " + interest.getName().toUri());
-  } catch (ex) {
-    console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-  }
+  this.reportError(PipelineFixed.ErrorCode.NACK_RECEIVED,
+                   "Received Nack for interest " + interest.getName().toUri());
 };
 
 PipelineFixed.prototype.increaseNumberOfSegmentsOnFly = function()
@@ -14375,10 +14341,19 @@ PipelineFixed.prototype.increaseNumberOfSegmentsOnFly = function()
 
 PipelineFixed.prototype.decreaseNumberOfSegmentsOnFly = function()
 {
-  this.segmentsOnFly = (this.segmentsOnFly <= 0) ? 0 
+  this.segmentsOnFly = (this.segmentsOnFly <= 0) ? 0
     : this.segmentsOnFly - 1;
 };
 
+PipelineFixed.prototype.reportError = function(errCode, msg)
+{
+  try {
+    this.onError
+      (errCode, msg);
+  } catch (ex) {
+    console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
+};
 
 /**
  * Check if the last component in the name is a segment number.
@@ -14469,7 +14444,6 @@ DataFetcher.prototype.handleTimeout = function(interest)
   this.numberOfTimeoutRetries++;
   if(this.numberOfTimeoutRetries <= this.maxTimeoutRetries) {
     var newInterest = new Interest(interest);
-    newInterest.setChildSelector(1);
     newInterest.setMustBeFresh(true);
     newInterest.refreshNonce();
     this.interest = newInterest;
@@ -14486,7 +14460,6 @@ DataFetcher.prototype.handleNack = function(interest)
   this.numberOfNackRetries += 1;
   if(this.numberOfNackRetries <= this.maxNackRetries) {
     var newInterest = new Interest(interest);
-    newInterest.setChildSelector(1);
     newInterest.setMustBeFresh(true);
     newInterest.refreshNonce();
     this.interest = newInterest;

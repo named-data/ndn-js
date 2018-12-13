@@ -78,7 +78,6 @@ DataFetcher.prototype.handleTimeout = function(interest)
   this.numberOfTimeoutRetries++;
   if(this.numberOfTimeoutRetries <= this.maxTimeoutRetries) {
     var newInterest = new Interest(interest);
-    newInterest.setChildSelector(1);
     newInterest.setMustBeFresh(true);
     newInterest.refreshNonce();
     this.interest = newInterest;
@@ -95,7 +94,6 @@ DataFetcher.prototype.handleNack = function(interest)
   this.numberOfNackRetries += 1;
   if(this.numberOfNackRetries <= this.maxNackRetries) {
     var newInterest = new Interest(interest);
-    newInterest.setChildSelector(1);
     newInterest.setMustBeFresh(true);
     newInterest.refreshNonce();
     this.interest = newInterest;

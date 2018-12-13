@@ -1,6 +1,7 @@
 /**
  * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: Chavoosh Ghasemi <chghasemi@cs.arizona.edu>
  * @author: From ndn-cxx util/segment-fetcher https://github.com/named-data/ndn-cxx
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,6 +30,16 @@ var SegmentFetcher = function SegmentFetcher() { };
 exports.SegmentFetcher = SegmentFetcher;
 
 /**
+ * An ErrorCode value is passed in the onError callback.
+ */
+SegmentFetcher.ErrorCode = {
+  INTEREST_TIMEOUT: 1,
+  DATA_HAS_NO_SEGMENT: 2,
+  SEGMENT_VERIFICATION_FAILED: 3
+};
+
+
+/**
  * DontVerifySegment may be used in fetch to skip validation of Data packets.
  */
 SegmentFetcher.DontVerifySegment = function(data)
@@ -45,27 +56,25 @@ SegmentFetcher.DontVerifySegment = function(data)
  * - [TODO] Pipeline Aimd
  *
  * Initiate segment fetching.
- * 
+ *
  * There are two forms of fetch:
  * fetch(face, baseInterest, validatorKeyChain, onComplete, onError)
  * and
  * fetch(face, baseInterest, verifySegment, onComplete, onError)
- * @param {Face} face This calls face.expressInterest to fetch more segments.
+ * @param {Face} face This face is used by pipeline to express Interests and fetch segments.
  * @param {Interest} baseInterest An Interest for the initial segment of the
  * requested data, where baseInterest.getName() has the name prefix. This
  * interest may include a custom InterestLifetime and selectors that will
  * propagate to all subsequent Interests. The only exception is that the initial
- * Interest will be forced to include selectors "ChildSelector=1" and
- * "MustBeFresh=true" which will be turned off in subsequent Interests.
- * @param validatorKeyChain {KeyChain} When a Data packet is received this calls
- * validatorKeyChain.verifyData(data). If validation fails then abortfetching
- * and call onError with SEGMENT_VERIFICATION_FAILED. This does not make a copy
- * of the KeyChain; the object must remain valid while fetching.
+ * Interest will be forced to include selector "MustBeFresh=true" which will
+ * be turned off in subsequent Interests.
+ * @param validatorKeyChain {KeyChain} This is used by ValidatorKeyChain.verifyData(data).
+ * If validation fails then abort fetching and call onError with SEGMENT_VERIFICATION_FAILED.
+ * This does not make a copy of the KeyChain; the object must remain valid while fetching.
  * If validatorKeyChain is null, this does not validate the data packet.
- * @param {function} verifySegment When a Data packet is received this calls
- * verifySegment(data) where data is a Data object. If it returns False then
- * abort fetching and call onError with
- * SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED. If data validation is
+ * @param {function} verifySegment This is used by verifySegment(data) method in pipeline
+ * class when a Data packet is received. If it returns False then abort fetching and call
+ * onError with ErrorCode.SEGMENT_VERIFICATION_FAILED. If data validation is
  * not required, use SegmentFetcher.DontVerifySegment.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
@@ -105,6 +114,6 @@ SegmentFetcher.fetch = function
       .fetchFirstSegment(baseInterest);
   else
     new PipelineFixed
-      (face, null, validatorKeyChainOrVerifySegment, onComplete, onError)
+      (basePrefix, face, null, validatorKeyChainOrVerifySegment, onComplete, onError)
       .fetchFirstSegment(baseInterest);
 };
