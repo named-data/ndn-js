@@ -48,10 +48,10 @@ SegmentFetcher.DontVerifySegment = function(data)
 };
 
 /**
- * SegmentFetcher is a utility class to fetch the segmented data with the latest
+ * SegmentFetcher is a utility class to fetch segmented data with the latest
  * version by using a pipeline.
  *
- * The avaialble pipelines are:
+ * The available pipelines are:
  * - Pipeline Fixed [default]
  * - [TODO] Pipeline Aimd
  *
@@ -73,7 +73,7 @@ SegmentFetcher.DontVerifySegment = function(data)
  * This does not make a copy of the KeyChain; the object must remain valid while fetching.
  * If validatorKeyChain is null, this does not validate the data packet.
  * @param {function} verifySegment This is used by verifySegment(data) method in pipeline
- * class when a Data packet is received. If it returns False then abort fetching and call
+ * class when a Data packet is received. If it returns false then abort fetching and call
  * onError with ErrorCode.SEGMENT_VERIFICATION_FAILED. If data validation is
  * not required, use SegmentFetcher.DontVerifySegment.
  * NOTE: The library will log any exceptions thrown by this callback, but for

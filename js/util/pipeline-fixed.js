@@ -24,7 +24,7 @@ var Blob = require('./blob.js').Blob; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon;
 var DataFetcher = require('./data-fetcher.js').DataFetcher;
-
+var LOG = require('../log.js').Log.LOG;
 
 
 /**
@@ -103,10 +103,10 @@ var DataFetcher = require('./data-fetcher.js').DataFetcher;
  * @param {string} basePrefix This is the prefix of the data we want to retreive
  * its segments (excluding <version> and <segment> components).
  * @param {Face} face The segments will be fetched through this face.
- * @param validatorKeyChain {KeyChain} If this is not null, use its verifyData
+ * @param {KeyChain} validatorKeyChain If this is not null, use its verifyData
  * instead of the verifySegment callback.
  * @param {function} verifySegment When a Data packet is received this calls
- * verifySegment(data) where data is a Data object. If it returns False then
+ * verifySegment(data) where data is a Data object. If it returns false then
  * abort fetching and call onError with
  * PipelineFixed.ErrorCode.SEGMENT_VERIFICATION_FAILED.
  * NOTE: The library will log any exceptions thrown by this callback, but for
@@ -120,7 +120,7 @@ var DataFetcher = require('./data-fetcher.js').DataFetcher;
  * exceptions.
  * @param {function} onError Call onError.onError(errorCode, message) for
  * timeout or an error processing segments. errorCode is a value from
- * PipelieFixed.ErrorCode and message is a related string.
+ * PipelineFixed.ErrorCode and message is a related string.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -138,7 +138,7 @@ var PipelineFixed = function PipelineFixed
 
   this.contentParts = []; // of Buffer
 
-  this.satisfiedSegments = new Set(); // no duplicate entry
+  this.satisfiedSegments = []; // no duplicate entry
   this.nextSegmentToRequest = 0;
   this.firstSegmentIsReceived = false;
   this.finalBlockNo = -1;
@@ -292,17 +292,17 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
     }
   }
 
-  if (this.satisfiedSegments.has(currentSegment)) {
+  if (this.isDuplicateSegment(currentSegment)) {
     console.log('Error: duplicate satisfied segment [' + currentSegment + ']');
     return;
   }
-  this.satisfiedSegments.add(currentSegment);
+  this.satisfiedSegments.push(currentSegment);
 
   // Save the content
   this.contentParts[currentSegment] = data.getContent().buf();
 
   // Check whether we are finished
-  if (this.satisfiedSegments.size >= this.finalBlockNo + 1) {
+  if (this.satisfiedSegments.length >= this.finalBlockNo + 1) {
     // Concatenate to get content.
     var content = Buffer.concat(this.contentParts);
     try {
@@ -312,10 +312,12 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
     }
     this.pipelineDelay = (Date.now() - this.pipelineStartTime)/1000;
 
-    console.log('Pipeline retrieval delay:  ',  this.pipelineDelay);
-    console.log('Total sending Interests delay: ', this.sendInterestDelay);
-    console.log('Total Data verification delay: ', this.onVerifiedDelay);
-    console.log('Total handling Data delay: ', this.onDataDelay);
+    if (LOG > 3) {
+      console.log('Pipeline retrieval delay:  ',  this.pipelineDelay);
+      console.log('Total sending Interests delay: ', this.sendInterestDelay);
+      console.log('Total Data verification delay: ', this.onVerifiedDelay);
+      console.log('Total handling Data delay: ', this.onDataDelay);
+    }
     return;
   }
 
@@ -360,11 +362,19 @@ PipelineFixed.prototype.decreaseNumberOfSegmentsOnFly = function()
 PipelineFixed.prototype.reportError = function(errCode, msg)
 {
   try {
-    this.onError
-      (errCode, msg);
+    this.onError(errCode, msg);
   } catch (ex) {
     console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
   }
+};
+
+PipelineFixed.prototype.isDuplicateSegment = function (segment)
+{
+  for (var i = 0, len = this.satisfiedSegments.length; i < len; i++) {
+    if (segment === this.satisfiedSegments[i])
+      return true;
+  }
+  return false;
 };
 
 /**

@@ -20,6 +20,7 @@
 /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * DataFetcher is a utility class to resolve a given segment.
@@ -81,7 +82,8 @@ DataFetcher.prototype.handleTimeout = function(interest)
     newInterest.setMustBeFresh(true);
     newInterest.refreshNonce();
     this.interest = newInterest;
-    console.log('handle timeout for interest ' + interest.getName());
+    if (LOG > 3)
+      console.log('handle timeout for interest ' + interest.getName());
     this.fetch();
   }
   else {
@@ -97,7 +99,8 @@ DataFetcher.prototype.handleNack = function(interest)
     newInterest.setMustBeFresh(true);
     newInterest.refreshNonce();
     this.interest = newInterest;
-    console.log('handle nack for interest ' + interest.getName());
+    if (LOG > 3)
+      console.log('handle nack for interest ' + interest.getName());
     this.fetch();
   }
   else {
