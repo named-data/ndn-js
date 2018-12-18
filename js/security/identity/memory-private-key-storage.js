@@ -33,10 +33,10 @@ var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
 var OID = require('../../encoding/oid.js').OID; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
-var rsaKeygen = null;
+var RsaKeypair = null;
 try {
-  // This should be installed with: sudo npm install rsa-keygen
-  rsaKeygen = require('rsa-keygen');
+  // This should be installed with: sudo npm install rsa-keypair
+  RsaKeypair = require('rsa-keypair');
 }
 catch (e) {}
 
@@ -213,19 +213,19 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
         var privateKeyPem;
 
         if (params.getKeyType() === KeyType.RSA) {
-          if (!rsaKeygen)
+          if (!RsaKeypair)
             return SyncPromise.reject(new SecurityException(new Error
-              ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
+              ("Need to install rsa-keypair: sudo npm install rsa-keypair")));
 
-          var keyPair = rsaKeygen.generate(params.getKeySize());
+          var keyPair = RsaKeypair.generate(params.getKeySize());
 
           // Get the public key DER from the PEM string.
-          var publicKeyBase64 = keyPair.public_key.toString().replace
+          var publicKeyBase64 = keyPair.publicKey.toString().replace
             ("-----BEGIN PUBLIC KEY-----", "").replace
             ("-----END PUBLIC KEY-----", "");
           publicKeyDer = new Buffer(publicKeyBase64, 'base64');
 
-          privateKeyPem = keyPair.private_key.toString();
+          privateKeyPem = keyPair.privateKey.toString();
         }
         else
           return SyncPromise.reject(new SecurityException(new Error

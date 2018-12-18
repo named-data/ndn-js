@@ -32,10 +32,10 @@ var DerInteger = require('../../encoding/der/der-node.js').DerNode.DerInteger; /
 var OID = require('../../encoding/oid.js').OID; /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
-var rsaKeygen = null;
+var RsaKeypair = null;
 try {
-  // This should be installed with: sudo npm install rsa-keygen
-  rsaKeygen = require('rsa-keygen');
+  // This should be installed with: sudo npm install rsa-keypair
+  RsaKeypair = require('rsa-keypair');
 }
 catch (e) {}
 
@@ -462,12 +462,12 @@ TpmPrivateKey.generatePrivateKeyPromise = function(keyParams, useSync)
     var privateKeyPem;
 
     if (keyParams.getKeyType() === KeyType.RSA) {
-      if (!rsaKeygen)
+      if (!RsaKeypair)
         return SyncPromise.reject(new TpmPrivateKey.Error(new Error
-          ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
+          ("Need to install rsa-keypair: sudo npm install rsa-keypair")));
 
-      var keyPair = rsaKeygen.generate(keyParams.getKeySize());
-      privateKeyPem = keyPair.private_key.toString();
+      var keyPair = RsaKeypair.generate(keyParams.getKeySize());
+      privateKeyPem = keyPair.privateKey.toString();
     }
     else
       return SyncPromise.reject(new Error

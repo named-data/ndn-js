@@ -37,10 +37,10 @@ var util = require('util');
 var Crypto = require('../../crypto.js'); /** @ignore */
 var fs = require('fs'); /** @ignore */
 var path = require('path'); /** @ignore */
-var rsaKeygen = null;
+var RsaKeypair = null;
 try {
-  // This should be installed with: sudo npm install rsa-keygen
-  rsaKeygen = require('rsa-keygen');
+  // This should be installed with: sudo npm install rsa-keypair
+  RsaKeypair = require('rsa-keypair');
 }
 catch (e) {}
 
@@ -95,20 +95,20 @@ FilePrivateKeyStorage.prototype.generateKeyPairPromise = function
 
   // build keys
   if (params.getKeyType() === KeyType.RSA) {
-    if (!rsaKeygen)
+    if (!RsaKeypair)
       return SyncPromise.reject(new SecurityException(new Error
-        ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
+        ("Need to install rsa-keypair: sudo npm install rsa-keypair")));
 
-    var keyPair = rsaKeygen.generate(params.getKeySize());
+    var keyPair = RsaKeypair.generate(params.getKeySize());
 
     // Get the public key DER from the PEM string.
-    var publicKeyBase64 = keyPair.public_key.toString().replace
+    var publicKeyBase64 = keyPair.publicKey.toString().replace
       ("-----BEGIN PUBLIC KEY-----", "").replace
       ("-----END PUBLIC KEY-----", "");
     var publicKey = new Buffer(publicKeyBase64, 'base64');
 
     // Get the PKCS1 private key DER from the PEM string and encode as PKCS8.
-    var privateKeyBase64 = keyPair.private_key.toString().replace
+    var privateKeyBase64 = keyPair.privateKey.toString().replace
       ("-----BEGIN RSA PRIVATE KEY-----", "").replace
       ("-----END RSA PRIVATE KEY-----", "");
     var pkcs1PrivateKeyDer = new Buffer(privateKeyBase64, 'base64');
