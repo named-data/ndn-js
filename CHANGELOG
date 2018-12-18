@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.17.0 (2018-10-22)
+Interim changes since NDN-JS v0.17.0 (2018-12-18)
 -------------------------------------------------
 
 Changes
@@ -11,6 +11,8 @@ Changes
   examples/browser/noconflict.html .
 * https://github.com/named-data/ndn-js/pull/68 security (Node.js): Don't use
   deprecated 'constant' module.
+* https://github.com/named-data/ndn-js/pull/71 security (Node.js): Replace
+  rsa-keygen with rsa-keypair.
 
 Bug fixes
 * https://github.com/named-data/ndn-js/pull/67 Fix checking against NaN.
