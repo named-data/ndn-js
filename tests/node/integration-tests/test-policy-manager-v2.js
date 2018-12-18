@@ -276,8 +276,7 @@ describe ("TestPolicyManagerV2", function() {
     this.keyChain.sign(cert, signingInfo);
     var signedCertBlob = cert.wireEncode();
     var encodedCert = signedCertBlob.buf().toString('base64');
-    fs.write
-      (fs.openSync(this.testCertFile, 'w'), encodedCert);
+    fs.writeSync(fs.openSync(this.testCertFile, 'w'), encodedCert);
 
     failureCount = 0;
     successCount = 0;

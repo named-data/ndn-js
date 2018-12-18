@@ -343,7 +343,7 @@ describe ("TestPolicyMatching", function() {
 
     var signedCertBlob = cert.wireEncode();
     var encodedCert = signedCertBlob.buf().toString('base64');
-    fs.write
+    fs.writeSync
       (fs.openSync('policy_config/certs/testData.cert', 'w'), encodedCert);
 
     failureCount = 0;
