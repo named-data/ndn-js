@@ -105,6 +105,13 @@ Tlv0_2WireFormat.prototype.decodeName = function(name, input, copy)
  */
 Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
 {
+  if (interest.hasParameters())
+    // The application has specified a format v0.3 field. As we transition to
+    // format v0.3, encode as format v0.3 even though the application default is
+    // Tlv0_2WireFormat.
+    return Tlv0_2WireFormat.encodeInterestV03_
+      (interest, signedPortionBeginOffset, signedPortionEndOffset);
+
   var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
 
@@ -257,6 +264,9 @@ Tlv0_2WireFormat.prototype.decodeInterestV02_ = function(interest, input, copy)
   if (interest.getSelectedDelegationIndex() != null &&
       interest.getSelectedDelegationIndex() >= 0 && !interest.hasLink())
     throw new Error("Interest has a selected delegation, but no link object");
+
+  // Format v0.2 doesn't have Interest parameters.
+  interest.setParameters(new Blob());
 
   // Set the nonce last because setting other interest fields clears it.
   interest.setNonce(new Blob(nonce, copy));
@@ -1375,10 +1385,93 @@ Tlv0_2WireFormat.decodeDelegationSet_ = function
 };
 
 /**
+ * Encode interest in NDN-TLV format v0.3 and return the encoding.
+ * @param {Interest} interest The Interest object to encode.
+ * @return {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
+ */
+Tlv0_2WireFormat.encodeInterestV03_ = function(interest)
+{
+  // TODO: Throw an exception if the interest speficies V02 fields.
+
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeOptionalBlobTlv(Tlv.Parameters, interest.getParameters().buf());
+  // TODO: HopLimit.
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
+
+  // Encode the Nonce as 4 bytes.
+  if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
+    // This is the most common case. Generate a nonce.
+    encoder.writeBlobTlv(Tlv.Nonce, Crypto.randomBytes(4));
+  else if (interest.getNonce().size() < 4) {
+    var nonce = Buffer(4);
+    // Copy existing nonce bytes.
+    interest.getNonce().buf().copy(nonce);
+
+    // Generate random bytes for remaining bytes in the nonce.
+    for (var i = interest.getNonce().size(); i < 4; ++i)
+      nonce[i] = Crypto.randomBytes(1)[0];
+
+    encoder.writeBlobTlv(Tlv.Nonce, nonce);
+  }
+  else if (interest.getNonce().size() == 4)
+    // Use the nonce as-is.
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf());
+  else
+    // Truncate.
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
+
+  if (interest.getForwardingHint().size() > 0) {
+    if (interest.getSelectedDelegationIndex() != null)
+      throw new Error
+        ("An Interest may not have a selected delegation when encoding a forwarding hint");
+    if (interest.hasLink())
+      throw new Error
+        ("An Interest may not have a link object when encoding a forwarding hint");
+
+    var forwardingHintSaveLength = encoder.getLength();
+    Tlv0_2WireFormat.encodeDelegationSet_(interest.getForwardingHint(), encoder);
+    encoder.writeTypeAndLength(
+      Tlv.ForwardingHint, encoder.getLength() - forwardingHintSaveLength);
+  }
+
+  if (interest.getMustBeFresh())
+    encoder.writeTypeAndLength(Tlv.MustBeFresh, 0);
+  if (interest.getCanBePrefix())
+    encoder.writeTypeAndLength(Tlv.CanBePrefix, 0);
+
+  var tempOffsets = Tlv0_2WireFormat.encodeName(interest.getName(), encoder);
+  var signedPortionBeginOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionBeginOffset;
+  var signedPortionEndOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionEndOffset;
+
+  encoder.writeTypeAndLength(Tlv.Interest, encoder.getLength() - saveLength);
+  var signedPortionBeginOffset =
+    encoder.getLength() - signedPortionBeginOffsetFromBack;
+  var signedPortionEndOffset =
+    encoder.getLength() - signedPortionEndOffsetFromBack;
+
+  return { encoding: new Blob(encoder.getOutput(), false),
+           signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
+};
+
+/**
  * Decode input as an Interest in NDN-TLV format v0.3 and set the fields of
  * the Interest object. This private method is called if the main decodeInterest
- * fails to decode as v0.2. This ignores HopLimit and Parameters, and interprets
- * CanBePrefix using MaxSuffixComponents.
+ * fails to decode as v0.2. This ignores HopLimit and interprets CanBePrefix
+ * using MaxSuffixComponents.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
  * @param {boolean} copy (optional) If true, copy from the input when making new
@@ -1429,9 +1522,11 @@ Tlv0_2WireFormat.decodeInterestV03_ = function(interest, input, copy)
   interest.unsetLink();
   interest.setSelectedDelegationIndex(null);
 
-  // Ignore the HopLimit and Parameters.
+  // Ignore the HopLimit.
   decoder.readOptionalBlobTlv(Tlv.HopLimit, endOffset);
-  decoder.readOptionalBlobTlv(Tlv.Parameters, endOffset);
+
+  interest.setParameters(new Blob(decoder.readOptionalBlobTlv
+    (Tlv.Parameters, endOffset), copy));
 
   // Set the nonce last because setting other interest fields clears it.
   interest.setNonce(nonce == null ? new Blob() : new Blob(nonce, copy));
