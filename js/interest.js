@@ -82,6 +82,7 @@ var Interest = function Interest
     this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
     this.forwardingHint_ = new ChangeCounter
       (new DelegationSet(interest.getForwardingHint()));
+    this.parameters_ = interest.parameters_;
     this.nonce_ = interest.nonce_;
     this.linkWireEncoding_ = interest.linkWireEncoding_;
     this.linkWireEncodingFormat_ = interest.linkWireEncodingFormat_;
@@ -104,6 +105,7 @@ var Interest = function Interest
     this.mustBeFresh_ = true;
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
     this.forwardingHint_ = new ChangeCounter(new DelegationSet());
+    this.parameters_ = new Blob();
     this.nonce_ = new Blob();
     this.linkWireEncoding_ = new Blob();
     this.linkWireEncodingFormat_ = null;
@@ -348,6 +350,24 @@ Interest.prototype.getForwardingHint = function()
 };
 
 /**
+ * Check if the Interest parameters are specified.
+ * @returns {boolean} True if the Interest parameters are specified, false if not.
+ */
+Interest.prototype.hasParameters = function()
+{
+  return this.parameters_.size() > 0;
+};
+
+/**
+ * Get the Interest parameters.
+ * @returns {Blob} The parameters as a Blob, which isNull() if unspecified.
+ */
+Interest.prototype.getParameters = function()
+{
+  return this.parameters_;
+};
+
+/**
  * @deprecated Use getNonce. This method returns a Buffer which is the former
  * behavior of getNonce, and should only be used while updating your code.
  */
@@ -581,6 +601,40 @@ Interest.prototype.setForwardingHint = function(forwardingHint)
     (typeof forwardingHint === 'object' && forwardingHint instanceof DelegationSet ?
      new DelegationSet(forwardingHint) : new DelegationSet());
   ++this.changeCount_;
+  return this;
+};
+
+/**
+ * Set the content to the given value.
+ * @param {Blob|Buffer} parameters The Interest parameters bytes. If parameters
+ * is not a Blob, then create a new Blob to copy the bytes (otherwise take
+ * another pointer to the same Blob).
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setParameters = function(parameters)
+{
+  this.parameters_ = typeof parameters === 'object' && parameters instanceof Blob ?
+    parameters : new Blob(parameters, true);
+  ++this.changeCount_;
+  return this;
+};
+
+/**
+ * Append the digest of the Interest parameters to the Name as a
+ * ParametersSha256DigestComponent. However, if the Interest parameters is
+ * unspecified, do nothing. This does not check if the Name already has a
+ * parameters digest component, so calling again will append another component.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.appendParametersDigestToName = function()
+{
+  if (!this.hasParameters())
+    return this;
+
+  var hash = Crypto.createHash('sha256');
+  hash.update(this.parameters_.buf());
+  this.getName().appendParametersSha256Digest(new Blob(hash.digest(), false));
+
   return this;
 };
 
