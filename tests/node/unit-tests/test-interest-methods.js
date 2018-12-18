@@ -301,7 +301,6 @@ describe('TestInterestDump', function() {
   });
 });
 
-
 describe('TestInterestMethods', function() {
   beforeEach(function() {
     referenceInterest = new Interest();
@@ -490,5 +489,43 @@ describe('TestInterestMethods', function() {
     assert.equal(true,  new InterestFilter("/a", "<b><>*").doesMatch(new Name("/a/b")));
     assert.equal(false, new InterestFilter("/a", "<b><>+").doesMatch(new Name("/a/b")));
     assert.equal(true,  new InterestFilter("/a", "<b><>+").doesMatch(new Name("/a/b/c")));
+  });
+
+  it('SetParameters', function() {
+    var interest = new Interest("/ndn");
+    assert.ok(!interest.hasParameters());
+    var parameters = new Blob(new Buffer([ 0x23, 0x00 ]));
+    interest.setParameters(parameters);
+    assert.ok(interest.hasParameters());
+    assert.ok(interest.getParameters().equals(parameters));
+
+    var decodedInterest = new Interest();
+    decodedInterest.wireDecode(interest.wireEncode());
+    assert.ok(decodedInterest.getParameters().equals(parameters));
+
+    interest.setParameters(new Blob());
+    assert.ok(!interest.hasParameters());
+  });
+
+  it('AppendParametersDigest', function() {
+    var name = new Name("/local/ndn/prefix");
+    var interest = new Interest(name);
+
+    assert.ok(!interest.hasParameters());
+    // No parameters yet, so it should do nothing.
+    interest.appendParametersDigestToName();
+    assert.equal("/local/ndn/prefix", interest.getName().toUri());
+
+    var parameters = new Blob(new Buffer([ 0x23, 0x01, 0xC0 ]));
+    interest.setParameters(parameters);
+    assert.ok(interest.hasParameters());
+    interest.appendParametersDigestToName();
+    assert.equal(name.size() + 1, interest.getName().size());
+    assert.ok(interest.getName().getPrefix(-1).equals(name));
+    var SHA256_LENGTH = 32;
+    assert.equal(SHA256_LENGTH, interest.getName().get(-1).getValue().size());
+
+    assert.equal(interest.getName().toUri(), "/local/ndn/prefix/" +
+      "params-sha256=a16cc669b4c9ef6801e1569488513f9523ffb28a39e53aa6e11add8d00a413fc");
   });
 });
