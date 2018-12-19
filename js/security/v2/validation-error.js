@@ -53,7 +53,7 @@ ValidationError.USER_MIN =                    256;
 
 /**
  * Get the error code given to the constructor.
- * @return The error code which is one of the standard error codes such as
+ * @return {number} The error code which is one of the standard error codes such as
  * ValidationError.INVALID_SIGNATURE, or a custom code if greater than or equal
  * to ValidationError.USER_MIN.
  */
@@ -61,7 +61,7 @@ ValidationError.prototype.getCode = function() { return this.code_; };
 
 /**
  * Get the error message given to the constructor.
- * @return The error message, or "" if none.
+ * @return {string} The error message, or "" if none.
  */
 ValidationError.prototype.getInfo = function() { return this.info_; };
 
