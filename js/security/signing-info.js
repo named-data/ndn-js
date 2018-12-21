@@ -33,6 +33,9 @@ var ValidityPeriod = require('./validity-period.js').ValidityPeriod;
  * The SigningInfo constructor has multiple forms:
  * SigningInfo() - Create a default SigningInfo with
  * SigningInfo.SignerType.NULL and an empty Name.
+ * SigningInfo(signingInfo) - Create a SigningInfo as a copy of the given
+ *   signingInfo (taking a pointer to the given signingInfo PibIdentity and
+ *   PibKey without copying).
  * SigningInfo(signerType, signerName) - Create a SigningInfo with the
  * signerType and optional signer Name.
  * Signinginfo(identity) - Create a SigningInfo of type
@@ -43,7 +46,8 @@ var ValidityPeriod = require('./validity-period.js').ValidityPeriod;
  * DigestAlgorithm.SHA256.
  * SigningInfo(signingString) - Create a SigningInfo from its string
  * representation, where the digest algorithm is set to DigestAlgorithm.SHA256.
-
+ *
+ * @param {SigningInfo} signingInfo The SigningInfo to copy.
  * @param {number} signerType The type of signer as an int from the
  * SigningInfo.SignerType enum.
  * @param {Name} signerName The name of signer. The interpretation of the
@@ -71,6 +75,17 @@ var SigningInfo = function SigningInfo(arg1, arg2)
   if (arg1 == undefined) {
     this.reset(SigningInfo.SignerType.NULL);
     this.digestAlgorithm_ = DigestAlgorithm.SHA256;
+  }
+  else if (arg1 instanceof SigningInfo) {
+    // The copy constructor.
+    var signingInfo = arg1;
+
+    this.type_ = signingInfo.type_;
+    this.name_ = new Name(signingInfo.name_);
+    this.identity_ = signingInfo.identity_;
+    this.key_ = signingInfo.key_;
+    this.digestAlgorithm_ = signingInfo.digestAlgorithm_;
+    this.validityPeriod_ = new ValidityPeriod(signingInfo.validityPeriod_);
   }
   else if (typeof arg1 === 'number') {
     var signerType = arg1;
