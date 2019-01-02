@@ -26,8 +26,9 @@ var LOG = require('../log.js').Log.LOG;
  * DataFetcher is a utility class to resolve a given segment.
  *
  * This is a public constructor to create a new DataFetcher object.
- * @param {PipelineFixed} pipe This is the pipeline that is in charge of retrieving
+ * @param {Pipeline} pipe This is a pipeline that is in charge of retrieving
  * the segmented data. We need this pointer for callbacks.
+ * NOTE: All pipelines MUST implement onData, onNack, and onTimeout methods.
  * @param {Face} face The segment will be fetched through this face.
  * @param {Interest} interest Use this as the basis of the future issued Interest(s) to fetch
  * the solicited segment.
@@ -49,9 +50,6 @@ var DataFetcher = function DataFetcher
   this.interest = interest;
   this.maxNackRetries = maxNackRetries;
   this.maxTimeoutRetries = maxTimeoutRetries;
-  this.onData = onData;
-  this.onNack = onNack;
-  this.onTimeout = onTimeout;
 
   this.numberOfTimeoutRetries = 0;
 };
@@ -60,13 +58,11 @@ exports.DataFetcher = DataFetcher;
 
 DataFetcher.prototype.fetch = function()
 {
-  var thisFetcher = this;
-
   this.face.expressInterest
     (this.interest,
-     function(originalInterest, data)
-       { thisFetcher.handleData(originalInterest, data); },
-     function(interest) { thisFetcher.handleTimeout(interest); });
+     this.handleData.bind(this),
+     this.handleTimeout.bind(this),
+     this.handleNack.bind(this));
 };
 
 DataFetcher.prototype.handleData = function(originalInterest, data)

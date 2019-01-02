@@ -35,6 +35,9 @@ var LOG = require('../log.js').Log.LOG;
  * timeout or nack will try to resolve the corresponded segment by retransmitting
  * the Interest a few times.
  *
+ * NOTE: Any pipeline that employs DataFetcher class MUST implement onData, onNack,
+ * and onTimeout methods.
+ *
  * PipelineFixed assumes that the data is named /<prefix>/<version>/<segment>,
  * where:
  * - <prefix> is the specified name prefix,
@@ -118,7 +121,7 @@ var LOG = require('../log.js').Log.LOG;
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onError Call onError.onError(errorCode, message) for
+ * @param {function} onError Call onError(errorCode, message) for
  * timeout or an error processing segments. errorCode is a value from
  * PipelineFixed.ErrorCode and message is a related string.
  * NOTE: The library will log any exceptions thrown by this callback, but for
@@ -187,7 +190,6 @@ PipelineFixed.prototype.fetchFirstSegment = function(baseInterest)
 {
   var interest = new Interest(baseInterest);
   interest.setMustBeFresh(true);
-  var thisPipeline = this;
 
   this.fetchSegment(interest);
 };
@@ -196,21 +198,19 @@ PipelineFixed.prototype.fetchNextSegments = function
   (originalInterest, dataName)
 {
   var sTime = Date.now();
-  // Changing a field clears the nonce so that a new none will be generated
   if (this.firstSegmentIsReceived === false) {
     console.log("First segment is not received yet");
     return;
   }
 
   var interest = new Interest(originalInterest);
+  // Changing a field clears the nonce so that a new nonce will be generated
   interest.setMustBeFresh(false);
 
   while (this.nextSegmentToRequest <= this.finalBlockNo && this.segmentsOnFly <= this.windowSize) {
     // Start with the original Interest to preserve any special selectors.
     interest.setName(dataName.getPrefix(-1).appendSegment(this.nextSegmentToRequest));
     interest.refreshNonce();
-
-    var thisPipeline = this;
 
     this.fetchSegment(interest);
 
@@ -293,7 +293,8 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
   }
 
   if (this.isDuplicateSegment(currentSegment)) {
-    console.log('Error: duplicate satisfied segment [' + currentSegment + ']');
+    if (LOG > 3)
+      console.log('Error: duplicate satisfied segment [' + currentSegment + ']');
     return;
   }
   this.satisfiedSegments.push(currentSegment);
