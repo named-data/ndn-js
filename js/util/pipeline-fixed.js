@@ -35,9 +35,6 @@ var LOG = require('../log.js').Log.LOG;
  * timeout or nack will try to resolve the corresponded segment by retransmitting
  * the Interest a few times.
  *
- * NOTE: Any pipeline that employs DataFetcher class MUST implement onData, onNack,
- * and onTimeout methods.
- *
  * PipelineFixed assumes that the data is named /<prefix>/<version>/<segment>,
  * where:
  * - <prefix> is the specified name prefix,
@@ -182,7 +179,8 @@ PipelineFixed.ErrorCode = {
 PipelineFixed.prototype.fetchSegment = function(interest)
 {
   var df = new DataFetcher
-    (this, this.face, interest, this.maxNackRetries, this.maxTimeoutRetries, this.onData, this.onNack, this.onTimeout);
+    (this.face, interest, this.maxTimeoutRetries, this.maxNackRetries,
+     this.onData.bind(this), this.onTimeout.bind(this), this.onNack.bind(this));
   df.fetch();
 };
 

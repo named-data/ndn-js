@@ -14023,9 +14023,6 @@ var LOG = require('../log.js').Log.LOG;
  * timeout or nack will try to resolve the corresponded segment by retransmitting
  * the Interest a few times.
  *
- * NOTE: Any pipeline that employs DataFetcher class MUST implement onData, onNack,
- * and onTimeout methods.
- *
  * PipelineFixed assumes that the data is named /<prefix>/<version>/<segment>,
  * where:
  * - <prefix> is the specified name prefix,
@@ -14170,7 +14167,8 @@ PipelineFixed.ErrorCode = {
 PipelineFixed.prototype.fetchSegment = function(interest)
 {
   var df = new DataFetcher
-    (this, this.face, interest, this.maxNackRetries, this.maxTimeoutRetries, this.onData, this.onNack, this.onTimeout);
+    (this.face, interest, this.maxTimeoutRetries, this.maxNackRetries,
+     this.onData.bind(this), this.onTimeout.bind(this), this.onNack.bind(this));
   df.fetch();
 };
 
@@ -14409,24 +14407,28 @@ var LOG = require('../log.js').Log.LOG;
  * @param {Face} face The segment will be fetched through this face.
  * @param {Interest} interest Use this as the basis of the future issued Interest(s) to fetch
  * the solicited segment.
- * @param {int} maxNackRetries The max number of retries upon facing Nack.
  * @param {int} maxTimeoutRetries The max number of retries upon facing Timeout.
+ * @param {int} maxNackRetries The max number of retries upon facing Nack.
  * @param {function} onData Call this function upon receiving the Data packet for the
  * solicited segment.
+ * @param {function} onTimeout Call this function after receiving Timeout for more than
+ * maxTimeoutRetries times. 
  * @param {function} onNack Call this function after receiving Nack for more than
  * maxNackRetries times.
- * @param {function} onNack Call this function after receiving Timeout for more than
- * maxTimeoutRetries times.
  * @constructor
+ *
  */
 var DataFetcher = function DataFetcher
-  (pipe, face, interest, maxNackRetries, maxTimeoutRetries, onData, onNack, onTimeout)
+  (face, interest, maxTimeoutRetries, maxNackRetries, onData, onTimeout, onNack)
 {
-  this.pipe = pipe;
   this.face = face;
   this.interest = interest;
   this.maxNackRetries = maxNackRetries;
   this.maxTimeoutRetries = maxTimeoutRetries;
+
+  this.onData = onData;
+  this.onTimeout = onTimeout;
+  this.onNack = onNack;
 
   this.numberOfTimeoutRetries = 0;
 };
@@ -14444,7 +14446,7 @@ DataFetcher.prototype.fetch = function()
 
 DataFetcher.prototype.handleData = function(originalInterest, data)
 {
-  this.pipe.onData(originalInterest, data);
+  this.onData(originalInterest, data);
 };
 
 DataFetcher.prototype.handleTimeout = function(interest)
@@ -14460,7 +14462,7 @@ DataFetcher.prototype.handleTimeout = function(interest)
     this.fetch();
   }
   else {
-    this.pipe.onTimeout(interest);
+    this.onTimeout(interest);
   }
 };
 
@@ -14477,7 +14479,7 @@ DataFetcher.prototype.handleNack = function(interest)
     this.fetch();
   }
   else {
-    this.pipe.onNack(interest);
+    this.onNack(interest);
   }
 };
 /**
