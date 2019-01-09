@@ -14027,8 +14027,10 @@ var LOG = require('../log.js').Log.LOG;
  * where:
  * - <prefix> is the specified name prefix,
  * - <version> is an unknown version that needs to be discovered, and
- * - <segment> is a segment number. (The number of segments is unknown and is
- *   controlled by the `FinalBlockId` field in at least the last Data packet.
+ * - <segment> is a segment number. 
+ * Note: The number of segments is unknown and is controlled by the
+ *       `FinalBlockId` field in the first retrieved Data packet. So, the
+ *       very first Data packet MUST contain the `FinalBlockId` field.
  *
  * The following logic is implemented in PipelineFixed:
  *
@@ -14038,7 +14040,8 @@ var LOG = require('../log.js').Log.LOG;
  *
  * 2. Infer the latest version of the Data: <version> = Data.getName().get(-2)
  *
- * 3. If the segment number in the retrieved packet == 0, go to step 5.
+ * 3. If the segment number in the retrieved packet == 0, go to step 5, while the
+ *    next expected segment to fetch will be 1.
  *
  * 4. Pipeline the Interets starting from segment 0:
  *
@@ -14048,22 +14051,21 @@ var LOG = require('../log.js').Log.LOG;
  *    >> Interest: /<prefix>/<version>/<segment=this.windowSize-1>
  *
  * At any given time the number of on the fly Interests should be equal
- * to this.windowSize.
+ * to this.windowSize. The next expected segment to fetch will be this.windowSize
  *
- * 5. Pipeline the Interests startging from segment 1.
+ * 5. Pipeline the Interests starting from the next expected segment (i.e. M).
  *
- *    >> Interest: /<prefix>/<version>/<segment=1>
- *    >> Interest: /<prefix>/<version>/<segment=2>
+ *    >> Interest: /<prefix>/<version>/<segment=M>
+ *    >> Interest: /<prefix>/<version>/<segment=M+1>
  *    ...
- *    >> Interest: /<prefix>/<version>/<segment=this.windowSize>
+ *    >> Interest: /<prefix>/<version>/<segment=M+this.windowSize-1>
  *
- * 6. Upon receving a valid Data back we pipeline an Interest for the
- * next expected segment.
+ * 6. Upon receiving a valid Data back we pipeline an Interest for the
+ *    next expected segment.
  *
  *    >> Interest: /<prefix>/<version>/<segment=(N+1))>
  *
- * We repeat step 6 until the retrieved Data does not have a FinalBlockId
- * or the FinalBlockId != Data.getName().get(-1).
+ * We repeat step 6 until the FinalBlockId >= Data.getName().get(-1).
  *
  * 7. Call the onComplete callback with a Blob that concatenates the content
  *    from all the segmented objects.
@@ -14124,27 +14126,20 @@ var PipelineFixed = function PipelineFixed
   this.onComplete = onComplete;
   this.onError = onError;
 
-  this.contentParts = []; // of Buffer
-
   this.satisfiedSegments = []; // no duplicate entry
+  this.numberOfSatisfiedSegments = 0;
   this.nextSegmentToRequest = 0;
   this.firstSegmentIsReceived = false;
-  this.finalBlockNo = -1;
+  this.segmentsOnFly = 0;
+  this.finalBlockId = Number.MAX_SAFE_INTEGER;
 
   // Options
   this.windowSize = 10;
   this.maxTimeoutRetries = 3;
   this.maxNackRetries = 3;
 
-  this.segmentsOnFly = 0;
-
-  // Stats
-  this.onVerifiedDelay = 0;
-  this.sendInterestDelay = 0;
-  this.onDataDelay = 0;
-  this.pipelineDelay = 0;
-
-  this.pipelineStartTime = Date.now();
+  this.contentParts = []; // of Buffer
+  this.dataFetchersContainer = []; // if we need to cancel pending interests
 };
 
 exports.PipelineFixed = PipelineFixed;
@@ -14166,10 +14161,20 @@ PipelineFixed.ErrorCode = {
  */
 PipelineFixed.prototype.fetchSegment = function(interest)
 {
-  var df = new DataFetcher
-    (this.face, interest, this.maxTimeoutRetries, this.maxNackRetries,
-     this.onData.bind(this), this.onTimeout.bind(this), this.onNack.bind(this));
-  df.fetch();
+  if (interest.getName().get(-1).isSegment() === true) {
+    var segmentNo = interest.getName().get(-1).toSegment();
+    this.dataFetchersContainer[segmentNo] = new DataFetcher
+      (this.face, interest, this.maxTimeoutRetries, this.maxNackRetries,
+       this.onData.bind(this), this.onTimeout.bind(this), this.onNack.bind(this));
+       this.dataFetchersContainer[segmentNo].fetch();
+  } 
+  else { // do not keep track of very first interest
+    (new DataFetcher
+      (this.face, interest, this.maxTimeoutRetries, this.maxNackRetries,
+       this.onData.bind(this), this.onTimeout.bind(this), this.onNack.bind(this)))
+       .fetch();
+ 
+  } 
 };
 
 PipelineFixed.prototype.fetchFirstSegment = function(baseInterest)
@@ -14183,7 +14188,6 @@ PipelineFixed.prototype.fetchFirstSegment = function(baseInterest)
 PipelineFixed.prototype.fetchNextSegments = function
   (originalInterest, dataName)
 {
-  var sTime = Date.now();
   if (this.firstSegmentIsReceived === false) {
     console.log("First segment is not received yet");
     return;
@@ -14193,7 +14197,7 @@ PipelineFixed.prototype.fetchNextSegments = function
   // Changing a field clears the nonce so that a new nonce will be generated
   interest.setMustBeFresh(false);
 
-  while (this.nextSegmentToRequest <= this.finalBlockNo && this.segmentsOnFly <= this.windowSize) {
+  while (this.nextSegmentToRequest <= this.finalBlockId && this.segmentsOnFly <= this.windowSize) {
     // Start with the original Interest to preserve any special selectors.
     interest.setName(dataName.getPrefix(-1).appendSegment(this.nextSegmentToRequest));
     interest.refreshNonce();
@@ -14201,15 +14205,24 @@ PipelineFixed.prototype.fetchNextSegments = function
     this.fetchSegment(interest);
 
     this.nextSegmentToRequest += 1;
-    this.increaseNumberOfSegmentsOnFly;
+    this.increaseNumberOfSegmentsOnFly();
   }
-  this.sendInterestDelay += ((Date.now() - sTime)/1000);
+};
+
+PipelineFixed.prototype.cancelPendingInterestsAboveFinalBlockId = function ()
+{
+  var len = this.dataFetchersContainer.length;
+  var i = this.finalBlockId;
+
+  for (var i = this.finalBlockId; i < len; i++) {
+    if (this.dataFetchersContainer[i] !== null) {
+      this.dataFetchersContainer[i].cancelPendingInterest();
+    }
+  }
 };
 
 PipelineFixed.prototype.onData = function(originalInterest, data)
 {
-  var sTime = Date.now();
-
   if (this.validatorKeyChain != null) {
     try {
       var thisPipeline = this;
@@ -14229,14 +14242,12 @@ PipelineFixed.prototype.onData = function(originalInterest, data)
                        "Segment verification failed");
     }
 
-    this.onDataDelay += ((Date.now() - sTime)/1000);
     this.onVerified(data, originalInterest);
   }
 };
 
 PipelineFixed.prototype.onVerified = function(data, originalInterest)
 {
-  var sTime = Date.now();
   var currentSegment = 0;
 
   if (!PipelineFixed.endsWithSegmentNumber(data.getName())) {
@@ -14257,7 +14268,8 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
     }
   }
 
-  // Check for first segment
+  // if segment number of the very first Data packet does not start
+  // with zero, we have to start asking from segment zero
   if (this.firstSegmentIsReceived === false) {
     this.firstSegmentIsReceived = true;
     if (currentSegment === 0) {
@@ -14265,9 +14277,11 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
     }
   }
 
-  if (data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
+  // set finalBlockId only once
+  if ((this.finalBlockId === Number.MAX_SAFE_INTEGER) && (data.getMetaInfo().getFinalBlockId().getValue().size() > 0)) {
     try {
-      this.finalBlockNo = (data.getMetaInfo().getFinalBlockId().toSegment());
+      this.finalBlockId = (data.getMetaInfo().getFinalBlockId().toSegment());
+      this.cancelPendingInterestsAboveFinalBlockId();
     }
     catch (ex) {
       this.reportError(PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
@@ -14278,18 +14292,19 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
     }
   }
 
-  if (this.isDuplicateSegment(currentSegment)) {
-    if (LOG > 3)
+  if (this.satisfiedSegments[currentSegment] === true) {
+    if (LOG > 1)
       console.log('Error: duplicate satisfied segment [' + currentSegment + ']');
     return;
   }
-  this.satisfiedSegments.push(currentSegment);
+  this.satisfiedSegments[currentSegment] = true;
+  this.numberOfSatisfiedSegments += 1;
 
   // Save the content
   this.contentParts[currentSegment] = data.getContent().buf();
 
   // Check whether we are finished
-  if (this.satisfiedSegments.length >= this.finalBlockNo + 1) {
+  if (this.numberOfSatisfiedSegments > this.finalBlockId) {
     // Concatenate to get content.
     var content = Buffer.concat(this.contentParts);
     try {
@@ -14297,19 +14312,11 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
     } catch (ex) {
       console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
     }
-    this.pipelineDelay = (Date.now() - this.pipelineStartTime)/1000;
 
-    if (LOG > 3) {
-      console.log('Pipeline retrieval delay:  ',  this.pipelineDelay);
-      console.log('Total sending Interests delay: ', this.sendInterestDelay);
-      console.log('Total Data verification delay: ', this.onVerifiedDelay);
-      console.log('Total handling Data delay: ', this.onDataDelay);
-    }
     return;
   }
 
   this.decreaseNumberOfSegmentsOnFly();
-  this.onVerifiedDelay += (Date.now() - sTime)/1000;
 
   // Fetch the next segments
   this.fetchNextSegments
@@ -14337,7 +14344,7 @@ PipelineFixed.prototype.onNack = function(interest)
 
 PipelineFixed.prototype.increaseNumberOfSegmentsOnFly = function()
 {
-  this.segmentsOnFly++;
+  this.segmentsOnFly += 1;
 };
 
 PipelineFixed.prototype.decreaseNumberOfSegmentsOnFly = function()
@@ -14353,15 +14360,6 @@ PipelineFixed.prototype.reportError = function(errCode, msg)
   } catch (ex) {
     console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
   }
-};
-
-PipelineFixed.prototype.isDuplicateSegment = function (segment)
-{
-  for (var i = 0, len = this.satisfiedSegments.length; i < len; i++) {
-    if (segment === this.satisfiedSegments[i])
-      return true;
-  }
-  return false;
 };
 
 /**
@@ -14394,16 +14392,12 @@ PipelineFixed.endsWithSegmentNumber = function(name)
 
 /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
-var NdnCommon = require('./ndn-common.js').NdnCommon;
 var LOG = require('../log.js').Log.LOG;
 
 /**
  * DataFetcher is a utility class to resolve a given segment.
  *
  * This is a public constructor to create a new DataFetcher object.
- * @param {Pipeline} pipe This is a pipeline that is in charge of retrieving
- * the segmented data. We need this pointer for callbacks.
- * NOTE: All pipelines MUST implement onData, onNack, and onTimeout methods.
  * @param {Face} face The segment will be fetched through this face.
  * @param {Interest} interest Use this as the basis of the future issued Interest(s) to fetch
  * the solicited segment.
@@ -14431,17 +14425,23 @@ var DataFetcher = function DataFetcher
   this.onNack = onNack;
 
   this.numberOfTimeoutRetries = 0;
+  this.pendingInterestId = null;
 };
 
 exports.DataFetcher = DataFetcher;
 
 DataFetcher.prototype.fetch = function()
 {
-  this.face.expressInterest
+  this.pendingInterestId = this.face.expressInterest
     (this.interest,
      this.handleData.bind(this),
      this.handleTimeout.bind(this),
      this.handleNack.bind(this));
+};
+
+DataFetcher.prototype.cancelPendingInterest = function()
+{
+  this.face.removePendingInterest(this.pendingInterestId);
 };
 
 DataFetcher.prototype.handleData = function(originalInterest, data)
@@ -14454,8 +14454,8 @@ DataFetcher.prototype.handleTimeout = function(interest)
   this.numberOfTimeoutRetries++;
   if(this.numberOfTimeoutRetries <= this.maxTimeoutRetries) {
     var newInterest = new Interest(interest);
-    newInterest.setMustBeFresh(true);
-    newInterest.refreshNonce();
+    // Changing a field clears the nonce so that a new nonce will be generated
+    newInterest.setMustBeFresh(false);
     this.interest = newInterest;
     if (LOG > 3)
       console.log('handle timeout for interest ' + interest.getName());
@@ -14471,8 +14471,8 @@ DataFetcher.prototype.handleNack = function(interest)
   this.numberOfNackRetries += 1;
   if(this.numberOfNackRetries <= this.maxNackRetries) {
     var newInterest = new Interest(interest);
-    newInterest.setMustBeFresh(true);
-    newInterest.refreshNonce();
+    // Changing a field clears the nonce so that a new nonce will be generated
+    newInterest.setMustBeFresh(false);
     this.interest = newInterest;
     if (LOG > 3)
       console.log('handle nack for interest ' + interest.getName());

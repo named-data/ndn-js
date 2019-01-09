@@ -19,16 +19,12 @@
 
 /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
-var NdnCommon = require('./ndn-common.js').NdnCommon;
 var LOG = require('../log.js').Log.LOG;
 
 /**
  * DataFetcher is a utility class to resolve a given segment.
  *
  * This is a public constructor to create a new DataFetcher object.
- * @param {Pipeline} pipe This is a pipeline that is in charge of retrieving
- * the segmented data. We need this pointer for callbacks.
- * NOTE: All pipelines MUST implement onData, onNack, and onTimeout methods.
  * @param {Face} face The segment will be fetched through this face.
  * @param {Interest} interest Use this as the basis of the future issued Interest(s) to fetch
  * the solicited segment.
@@ -56,17 +52,23 @@ var DataFetcher = function DataFetcher
   this.onNack = onNack;
 
   this.numberOfTimeoutRetries = 0;
+  this.pendingInterestId = null;
 };
 
 exports.DataFetcher = DataFetcher;
 
 DataFetcher.prototype.fetch = function()
 {
-  this.face.expressInterest
+  this.pendingInterestId = this.face.expressInterest
     (this.interest,
      this.handleData.bind(this),
      this.handleTimeout.bind(this),
      this.handleNack.bind(this));
+};
+
+DataFetcher.prototype.cancelPendingInterest = function()
+{
+  this.face.removePendingInterest(this.pendingInterestId);
 };
 
 DataFetcher.prototype.handleData = function(originalInterest, data)
@@ -79,8 +81,8 @@ DataFetcher.prototype.handleTimeout = function(interest)
   this.numberOfTimeoutRetries++;
   if(this.numberOfTimeoutRetries <= this.maxTimeoutRetries) {
     var newInterest = new Interest(interest);
-    newInterest.setMustBeFresh(true);
-    newInterest.refreshNonce();
+    // Changing a field clears the nonce so that a new nonce will be generated
+    newInterest.setMustBeFresh(false);
     this.interest = newInterest;
     if (LOG > 3)
       console.log('handle timeout for interest ' + interest.getName());
@@ -96,8 +98,8 @@ DataFetcher.prototype.handleNack = function(interest)
   this.numberOfNackRetries += 1;
   if(this.numberOfNackRetries <= this.maxNackRetries) {
     var newInterest = new Interest(interest);
-    newInterest.setMustBeFresh(true);
-    newInterest.refreshNonce();
+    // Changing a field clears the nonce so that a new nonce will be generated
+    newInterest.setMustBeFresh(false);
     this.interest = newInterest;
     if (LOG > 3)
       console.log('handle nack for interest ' + interest.getName());
