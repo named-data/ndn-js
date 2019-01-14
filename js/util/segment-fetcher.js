@@ -109,11 +109,11 @@ SegmentFetcher.fetch = function
   if (validatorKeyChainOrVerifySegment == null ||
       validatorKeyChainOrVerifySegment instanceof KeyChain)
     new PipelineFixed
-      (basePrefix, face, validatorKeyChainOrVerifySegment, SegmentFetcher.DontVerifySegment,
+      (basePrefix, face, validatorKeyChainOrVerifySegment,
        onComplete, onError)
       .fetchFirstSegment(baseInterest);
   else
     new PipelineFixed
-      (basePrefix, face, null, validatorKeyChainOrVerifySegment, onComplete, onError)
+      (basePrefix, face, null, onComplete, onError)
       .fetchFirstSegment(baseInterest);
 };

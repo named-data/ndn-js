@@ -54,7 +54,6 @@ This page uses Fixed Pipeline to fetch any NDN segmented content.
     function run() {
       new PipelineFixed
         (document.getElementById('interest').value, face, null,
-         SegmentFetcher.DontVerifySegment,
          onComplete, function(errorCode, message) {
              console.log("Error " + errorCode + ": " + message);
            })
