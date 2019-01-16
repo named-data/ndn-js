@@ -13933,10 +13933,9 @@ SegmentFetcher.DontVerifySegment = function(data)
  * @param {Face} face This face is used by pipeline to express Interests and fetch segments.
  * @param {Interest} baseInterest An Interest for the initial segment of the
  * requested data, where baseInterest.getName() has the name prefix. This
- * interest may include a custom InterestLifetime and selectors that will
- * propagate to all subsequent Interests. The only exception is that the initial
- * Interest will be forced to include selector "MustBeFresh=true" which will
- * be turned off in subsequent Interests.
+ * interest may include a custom InterestLifetime that will propagate to all subsequent
+ * Interests. The only exception is that the initial Interest will be forced to include
+ * "MustBeFresh=true" which will be turned off in subsequent Interests.
  * @param validatorKeyChain {KeyChain} This is used by ValidatorKeyChain.verifyData(data).
  * If validation fails then abort fetching and call onError with SEGMENT_VERIFICATION_FAILED.
  * This does not make a copy of the KeyChain; the object must remain valid while fetching.
@@ -14054,7 +14053,7 @@ var LOG = require('../log.js').Log.LOG;
  * 4. Upon receiving a valid Data back we pipeline an Interest for the
  *    next expected segment.
  *
- * We repeat step 6 until the FinalBlockId === Data.getName().get(-1).
+ * We repeat step 4 until the FinalBlockId === Data.getName().get(-1).
  *
  * 5. Call the onComplete callback with a Blob that concatenates the content
  *    from all segments.
@@ -14068,7 +14067,7 @@ var LOG = require('../log.js').Log.LOG;
  * - `SEGMENT_VERIFICATION_FAILED`: if any retrieved segment fails
  *   the KeyChain verifyData.
  * - `IO_ERROR`: for I/O errors when sending an Interest.
- * -`DUPLICATE_SEGMENT_RECEIVED`: if any duplicate segment is receveid during
+ * - `DUPLICATE_SEGMENT_RECEIVED`: if any duplicate segment is receeved during
  *   fetching the data (we do not ask for a segment that is already retrieved,
  *   again)
  *
@@ -14108,7 +14107,6 @@ var PipelineFixed = function PipelineFixed
 
   this.numberOfSatisfiedSegments = 0;
   this.nextSegmentToRequest = 0;
-  this.firstSegmentIsReceived = false;
   this.segmentsOnFly = 0;
   this.finalBlockId = Number.MAX_SAFE_INTEGER;
 
@@ -14130,8 +14128,9 @@ PipelineFixed.ErrorCode = {
   INTEREST_TIMEOUT: 1,
   DATA_HAS_NO_SEGMENT: 2,
   SEGMENT_VERIFICATION_FAILED: 3,
-  DUPLICATE_SEGMENT_RECEIVED: 4,
-  NACK_RECEIVED: 5
+  IO_ERROR: 4,
+  DUPLICATE_SEGMENT_RECEIVED: 5,
+  NACK_RECEIVED: 6
 };
 
 /**
@@ -14166,11 +14165,6 @@ PipelineFixed.prototype.fetchFirstSegment = function(baseInterest)
 
 PipelineFixed.prototype.fetchNextSegments = function (originalInterest, dataName)
 {
-  if (this.firstSegmentIsReceived === false) {
-    console.log("First segment is not received yet");
-    return;
-  }
-
   var interest = new Interest(originalInterest);
   // Changing a field clears the nonce so that a new nonce will be generated
   interest.setMustBeFresh(false);
@@ -14234,15 +14228,6 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
                      "Error decoding the name segment number " +
                      data.getName().get(-1).toEscapedString() + ": " + ex);
     return;
-  }
-
-  // if segment number of the very first Data packet does not start
-  // with zero, we have to start asking from segment zero
-  if (this.firstSegmentIsReceived === false) {
-    this.firstSegmentIsReceived = true;
-    if (currentSegment === 0) {
-      this.nextSegmentToRequest += 1;
-    }
   }
 
   // set finalBlockId
