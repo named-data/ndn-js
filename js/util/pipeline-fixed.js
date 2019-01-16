@@ -52,34 +52,23 @@ var LOG = require('../log.js').Log.LOG;
  *
  * 2. Infer the latest version of the Data: <version> = Data.getName().get(-2)
  *
- * 3. If the segment number in the retrieved packet === 0, go to step 5, while the
- *    next expected segment to fetch will be 1.
- *
- * 4. Pipeline the Interets starting from segment 0:
+ * 3. Pipeline the Interets starting from segment 0:
  *
  *    >> Interest: /<prefix>/<version>/<segment=0>
  *    >> Interest: /<prefix>/<version>/<segment=1>
  *    ...
  *    >> Interest: /<prefix>/<version>/<segment=this.windowSize-1>
- *
+ * 
+ * We do not issue interest for segments that are already received.
  * At any given time the number of on the fly Interests should be equal
  * to this.windowSize. The next expected segment to fetch will be this.windowSize
  *
- * 5. Pipeline the Interests starting from the next expected segment (i.e. M).
- *
- *    >> Interest: /<prefix>/<version>/<segment=M>
- *    >> Interest: /<prefix>/<version>/<segment=M+1>
- *    ...
- *    >> Interest: /<prefix>/<version>/<segment=M+this.windowSize-1>
- *
- * 6. Upon receiving a valid Data back we pipeline an Interest for the
+ * 4. Upon receiving a valid Data back we pipeline an Interest for the
  *    next expected segment.
- *
- *    >> Interest: /<prefix>/<version>/<segment=(N+1))>
  *
  * We repeat step 6 until the FinalBlockId === Data.getName().get(-1).
  *
- * 7. Call the onComplete callback with a Blob that concatenates the content
+ * 5. Call the onComplete callback with a Blob that concatenates the content
  *    from all segments.
  *
  * If an error occurs during the fetching process, the onError callback is called
@@ -163,7 +152,7 @@ PipelineFixed.ErrorCode = {
  */
 PipelineFixed.prototype.fetchSegment = function(interest)
 {
-  if (interest.getName().get(-1).isSegment() === true) {
+  if (interest.getName().get(-1).isSegment()) {
     var segmentNo = interest.getName().get(-1).toSegment();
     this.dataFetchersContainer[segmentNo] = new DataFetcher
       (this.face, interest, this.maxTimeoutRetries, this.maxNackRetries,
@@ -187,8 +176,7 @@ PipelineFixed.prototype.fetchFirstSegment = function(baseInterest)
   this.fetchSegment(interest);
 };
 
-PipelineFixed.prototype.fetchNextSegments = function
-  (originalInterest, dataName)
+PipelineFixed.prototype.fetchNextSegments = function (originalInterest, dataName)
 {
   if (this.firstSegmentIsReceived === false) {
     console.log("First segment is not received yet");
@@ -206,7 +194,6 @@ PipelineFixed.prototype.fetchNextSegments = function
       continue;
     }
 
-    // Start with the original Interest to preserve any special selectors.
     interest.setName(dataName.getPrefix(-1).appendSegment(this.nextSegmentToRequest));
     interest.refreshNonce();
 
@@ -273,7 +260,7 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
   // set finalBlockId
   if (data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
     try {
-      this.finalBlockId = (data.getMetaInfo().getFinalBlockId().toSegment());
+      this.finalBlockId = data.getMetaInfo().getFinalBlockId().toSegment();
       this.cancelPendingInterestsAboveFinalBlockId();
     }
     catch (ex) {
@@ -306,8 +293,7 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
   this.decreaseNumberOfSegmentsOnFly();
 
   // Fetch the next segments
-  this.fetchNextSegments
-    (originalInterest, data.getName());
+  this.fetchNextSegments(originalInterest, data.getName());
 };
 
 PipelineFixed.prototype.onValidationFailed = function(data, reason)
@@ -331,13 +317,12 @@ PipelineFixed.prototype.onNack = function(interest)
 
 PipelineFixed.prototype.increaseNumberOfSegmentsOnFly = function()
 {
-  this.segmentsOnFly += 1;
+  this.segmentsOnFly++;
 };
 
 PipelineFixed.prototype.decreaseNumberOfSegmentsOnFly = function()
 {
-  this.segmentsOnFly = (this.segmentsOnFly <= 0) ? 0
-    : this.segmentsOnFly - 1;
+  this.segmentsOnFly = Math.max(this.segmentsOnFly - 1, 0);
 };
 
 PipelineFixed.prototype.reportError = function(errCode, msg)
