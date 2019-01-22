@@ -1,6 +1,6 @@
 <?xml version = "1.0" encoding="utf-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"DTD/xhtml1-strict.dtd">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
 <!--
  * Copyright (C) 2014-2018 Regents of the University of California.
  *
@@ -24,9 +24,6 @@
 This page uses Fixed Pipeline to fetch any NDN segmented content.
 -->
 
-<html xmlns = "http://www.w3.org/1999/xhtml">
-<meta charset="UTF-8">
-
 <head>
   <title>Use Fixed Pipeline to fetch data via WebSocket</title>
 
@@ -40,7 +37,7 @@ This page uses Fixed Pipeline to fetch any NDN segmented content.
       console.log("onComplete called.");
       console.log("Host: " + face.connectionInfo.toString());
       document.getElementById('content').innerHTML += 
-        "<p style='font-weight:bold; color:green;'>Successfuly received the content</p>";
+        "<p style='font-weight:bold; color:green;'>Successfully received the content";
       document.getElementById('content').innerHTML += content.buf().toString('binary');
     }
 
@@ -63,16 +60,14 @@ This page uses Fixed Pipeline to fetch any NDN segmented content.
   </script>
 
 </head>
-<body >
+<body>
 
-  <form>
-    <div style="font-size:15px; font-family:monospace; color:slateblue;">Please Enter the Interest name:<br /></div>
-    <input id="interest" style="border-radius: 3px" type="text" name="INTEREST" size="50" value="/" />
-  </form>
+  <div style="font-size:15px; font-family:monospace; color:slateblue;">Please Enter the Interest name:<br /></div>
+  <input id="interest" style="border-radius: 3px" type="text" name="INTEREST" size="50" value="/" />
 
   <button style="margin-top:7px; font-style:italic; border-radius: 7px;" id="testBtn" onclick="run()">Fetch Content</button>
 
-  <p id="content">Content: <br/></p>
+  <div id="content"><p>Content: </p></div>
 
 </body>
 </html>

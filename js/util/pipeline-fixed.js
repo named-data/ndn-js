@@ -24,8 +24,6 @@ var Blob = require('./blob.js').Blob; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon;
 var DataFetcher = require('./data-fetcher.js').DataFetcher;
-var LOG = require('../log.js').Log.LOG;
-
 
 /**
  * Retrieve the segments of solicited data by keeping a fixed-size window of N
@@ -52,7 +50,7 @@ var LOG = require('../log.js').Log.LOG;
  *
  * 2. Infer the latest version of the Data: <version> = Data.getName().get(-2)
  *
- * 3. Pipeline the Interets starting from segment 0:
+ * 3. Pipeline the Interests starting from segment 0:
  *
  *    >> Interest: /<prefix>/<version>/<segment=0>
  *    >> Interest: /<prefix>/<version>/<segment=1>
@@ -79,10 +77,6 @@ var LOG = require('../log.js').Log.LOG;
  *   as the last component of the name (not counting the implicit digest)
  * - `SEGMENT_VERIFICATION_FAILED`: if any retrieved segment fails
  *   the KeyChain verifyData.
- * - `IO_ERROR`: for I/O errors when sending an Interest.
- * - `DUPLICATE_SEGMENT_RECEIVED`: if any duplicate segment is receeved during
- *   fetching the data (we do not ask for a segment that is already retrieved,
- *   again)
  *
  * In order to validate individual segments, a KeyChain needs to be supplied.
  * If verifyData fails, the fetching process is aborted with
@@ -90,7 +84,7 @@ var LOG = require('../log.js').Log.LOG;
  *
  *
  * This is a public constructor to create a new PipelineFixed.
- * @param {string} basePrefix This is the prefix of the data we want to retreive
+ * @param {string} basePrefix This is the prefix of the data we want to retrieve
  * its segments (excluding <version> and <segment> components).
  * @param {Face} face The segments will be fetched through this face.
  * @param {KeyChain} validatorKeyChain If this is not null, use its verifyData
@@ -141,9 +135,7 @@ PipelineFixed.ErrorCode = {
   INTEREST_TIMEOUT: 1,
   DATA_HAS_NO_SEGMENT: 2,
   SEGMENT_VERIFICATION_FAILED: 3,
-  IO_ERROR: 4,
-  DUPLICATE_SEGMENT_RECEIVED: 5,
-  NACK_RECEIVED: 6
+  NACK_RECEIVED: 4
 };
 
 /**

@@ -22,7 +22,6 @@
 /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
-var NdnCommon = require('./ndn-common.js').NdnCommon;
 var PipelineFixed = require('./pipeline-fixed.js').PipelineFixed;
 
 var SegmentFetcher = function SegmentFetcher() { };
@@ -35,7 +34,8 @@ exports.SegmentFetcher = SegmentFetcher;
 SegmentFetcher.ErrorCode = {
   INTEREST_TIMEOUT: 1,
   DATA_HAS_NO_SEGMENT: 2,
-  SEGMENT_VERIFICATION_FAILED: 3
+  SEGMENT_VERIFICATION_FAILED: 3,
+  INVALID_KEYCHAIN: 4
 };
 
 
@@ -112,7 +112,6 @@ SegmentFetcher.fetch = function
        onComplete, onError)
       .fetchFirstSegment(baseInterest);
   else
-    new PipelineFixed
-      (basePrefix, face, null, onComplete, onError)
-      .fetchFirstSegment(baseInterest);
+    onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,
+            "validatorKeyChain should be either a KeyChain instance or null.");
 };

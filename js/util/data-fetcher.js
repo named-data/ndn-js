@@ -22,7 +22,7 @@ var Interest = require('../interest.js').Interest; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
 
 /**
- * DataFetcher is a utility class to resolve a given segment.
+ * DataFetcher is a utility class to fetch Data with automatic retries.
  *
  * This is a public constructor to create a new DataFetcher object.
  * @param {Face} face The segment will be fetched through this face.
