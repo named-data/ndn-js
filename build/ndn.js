@@ -13925,9 +13925,6 @@ SegmentFetcher.DontVerifySegment = function(data)
  * - [TODO] Pipeline Aimd
  *
  * Initiate segment fetching.
- *
- * Here is how to fetch a segmented data:
- *   fetch(face, baseInterest, validatorKeyChain, onComplete, onError)
  * 
  * @param {Face} face This face is used by pipeline to express Interests and fetch segments.
  * @param {Interest} baseInterest An Interest for the initial segment of the
@@ -13969,11 +13966,9 @@ SegmentFetcher.fetch = function
 {
   var basePrefix = baseInterest.getName().toUri();
 
-  if (validatorKeyChain == null ||
-      validatorKeyChain instanceof KeyChain)
+  if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
     new PipelineFixed
-      (basePrefix, face, validatorKeyChain,
-       onComplete, onError)
+      (basePrefix, face, validatorKeyChain, onComplete, onError)
       .fetchFirstSegment(baseInterest);
   else
     onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,
@@ -14397,7 +14392,6 @@ DataFetcher.prototype.handleNack = function(interest)
       console.log('handle nack for interest ' + interest.getName());
     // wait 40 - 60 ms before issuing a new Interest after receiving a Nack
     setTimeout(this.fetch.bind(this), 40 + Math.random() * 20);
-    this.fetch();
   }
   else {
     this.onNack(interest);

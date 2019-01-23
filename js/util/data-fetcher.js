@@ -103,7 +103,6 @@ DataFetcher.prototype.handleNack = function(interest)
       console.log('handle nack for interest ' + interest.getName());
     // wait 40 - 60 ms before issuing a new Interest after receiving a Nack
     setTimeout(this.fetch.bind(this), 40 + Math.random() * 20);
-    this.fetch();
   }
   else {
     this.onNack(interest);
