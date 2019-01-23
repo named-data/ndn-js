@@ -13870,7 +13870,114 @@ MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMillisecon
 /**
  * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: Chavoosh Ghasemi <chghasemi@cs.arizona.edu>
  * @author: From ndn-cxx util/segment-fetcher https://github.com/named-data/ndn-cxx
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
+var PipelineFixed = require('./pipeline-fixed.js').PipelineFixed;
+
+var SegmentFetcher = function SegmentFetcher() { };
+
+exports.SegmentFetcher = SegmentFetcher;
+
+/**
+ * An ErrorCode value is passed in the onError callback.
+ */
+SegmentFetcher.ErrorCode = {
+  INTEREST_TIMEOUT: 1,
+  DATA_HAS_NO_SEGMENT: 2,
+  SEGMENT_VERIFICATION_FAILED: 3,
+  INVALID_KEYCHAIN: 4
+};
+
+
+/**
+ * DontVerifySegment may be used in fetch to skip validation of Data packets.
+ */
+SegmentFetcher.DontVerifySegment = function(data)
+{
+  return true;
+};
+
+/**
+ * SegmentFetcher is a utility class to fetch segmented data with the latest
+ * version by using a pipeline.
+ *
+ * The available pipelines are:
+ * - Pipeline Fixed [default]
+ * - [TODO] Pipeline Aimd
+ *
+ * Initiate segment fetching.
+ * 
+ * @param {Face} face This face is used by pipeline to express Interests and fetch segments.
+ * @param {Interest} baseInterest An Interest for the initial segment of the
+ * requested data, where baseInterest.getName() has the name prefix. This
+ * interest may include a custom InterestLifetime that will propagate to all subsequent
+ * Interests. The only exception is that the initial Interest will be forced to include
+ * "MustBeFresh=true" which will be turned off in subsequent Interests.
+ * @param validatorKeyChain {KeyChain} This is used by ValidatorKeyChain.verifyData(data).
+ * If validation fails then abort fetching and call onError with SEGMENT_VERIFICATION_FAILED.
+ * This does not make a copy of the KeyChain; the object must remain valid while fetching.
+ * If validatorKeyChain is null, this does not validate the data packet.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onComplete When all segments are received, call
+ * onComplete(content) where content is a Blob which has the concatenation of
+ * the content of all the segments.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError Call onError.onError(errorCode, message) for
+ * timeout or an error processing segments. errorCode is a value from
+ * PipelineFixed.ErrorCode and message is a related string.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ *
+ * Example:
+ *     var onComplete = function(content) { ... }
+ *
+ *     var onError = function(errorCode, message) { ... }
+ *
+ *     var interest = new Interest(new Name("/data/prefix"));
+ *     interest.setInterestLifetimeMilliseconds(1000);
+ *     SegmentFetcher.fetch(face, interest, null, onComplete, onError);
+ */
+SegmentFetcher.fetch = function
+  (face, baseInterest, validatorKeyChain, onComplete, onError)
+{
+  var basePrefix = baseInterest.getName().toUri();
+
+  if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
+    new PipelineFixed
+      (basePrefix, face, validatorKeyChain, onComplete, onError)
+      .fetchFirstSegment(baseInterest);
+  else
+    onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,
+            "validatorKeyChain should be either a KeyChain instance or null.");
+};
+/**
+ * Copyright (C) 2013 Regents of the University of California.
+ * @author: Chavoosh Ghasemi <chghasemi@cs.arizona.edu>
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -13892,347 +13999,403 @@ var Interest = require('../interest.js').Interest; /** @ignore */
 var Blob = require('./blob.js').Blob; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon;
+var DataFetcher = require('./data-fetcher.js').DataFetcher;
 
 /**
- * SegmentFetcher is a utility class to fetch the latest version of segmented data.
+ * Retrieve the segments of solicited data by keeping a fixed-size window of N
+ * of on fly Interests at any given time.
  *
- * SegmentFetcher assumes that the data is named /<prefix>/<version>/<segment>,
+ * To handle timeout and nack we use DataFetcher class which upon facing
+ * timeout or nack will try to resolve the corresponded segment by retransmitting
+ * the Interest a few times.
+ *
+ * PipelineFixed assumes that the data is named /<prefix>/<version>/<segment>,
  * where:
  * - <prefix> is the specified name prefix,
  * - <version> is an unknown version that needs to be discovered, and
- * - <segment> is a segment number. (The number of segments is unknown and is
- *   controlled by the `FinalBlockId` field in at least the last Data packet.
+ * - <segment> is a segment number. 
+ * Note: The number of segments is unknown and is controlled by the
+ *       `FinalBlockId` field in the first retrieved Data packet. So, the
+ *       very first Data packet MUST contain the `FinalBlockId` field.
  *
- * The following logic is implemented in SegmentFetcher:
+ * The following logic is implemented in PipelineFixed:
  *
  * 1. Express the first Interest to discover the version:
  *
- *    >> Interest: /<prefix>?ChildSelector=1&MustBeFresh=true
+ *    >> Interest: /<prefix>?MustBeFresh=true
  *
  * 2. Infer the latest version of the Data: <version> = Data.getName().get(-2)
  *
- * 3. If the segment number in the retrieved packet == 0, go to step 5.
- *
- * 4. Send an Interest for segment 0:
+ * 3. Pipeline the Interests starting from segment 0:
  *
  *    >> Interest: /<prefix>/<version>/<segment=0>
+ *    >> Interest: /<prefix>/<version>/<segment=1>
+ *    ...
+ *    >> Interest: /<prefix>/<version>/<segment=this.windowSize-1>
+ * 
+ * We do not issue interest for segments that are already received.
+ * At any given time the number of on the fly Interests should be equal
+ * to this.windowSize. The next expected segment to fetch will be this.windowSize
  *
- * 5. Keep sending Interests for the next segment while the retrieved Data does
- *    not have a FinalBlockId or the FinalBlockId != Data.getName().get(-1).
+ * 4. Upon receiving a valid Data back we pipeline an Interest for the
+ *    next expected segment.
  *
- *    >> Interest: /<prefix>/<version>/<segment=(N+1))>
+ * We repeat step 4 until the FinalBlockId === Data.getName().get(-1).
  *
- * 6. Call the onComplete callback with a Blob that concatenates the content
- *    from all the segmented objects.
+ * 5. Call the onComplete callback with a Blob that concatenates the content
+ *    from all segments.
  *
  * If an error occurs during the fetching process, the onError callback is called
  * with a proper error code.  The following errors are possible:
  *
- * - `INTEREST_TIMEOUT`: if any of the Interests times out
- * - `DATA_HAS_NO_SEGMENT`: if any of the retrieved Data packets don't have a segment
+ * - `INTEREST_TIMEOUT`: if any of the Interests times out (probably after a number of retries)
+ * - `DATA_HAS_NO_SEGMENT`: if any of the retrieved Data packets does not have a segment
  *   as the last component of the name (not counting the implicit digest)
  * - `SEGMENT_VERIFICATION_FAILED`: if any retrieved segment fails
- *   the user-provided VerifySegment callback or KeyChain verifyData.
- * - `IO_ERROR`: for I/O errors when sending an Interest.
+ *   the KeyChain verifyData.
  *
  * In order to validate individual segments, a KeyChain needs to be supplied.
  * If verifyData fails, the fetching process is aborted with
  * SEGMENT_VERIFICATION_FAILED. If data validation is not required, pass null.
  *
- * Example:
- *     var onComplete = function(content) { ... }
  *
- *     var onError = function(errorCode, message) { ... }
- *
- *     var interest = new Interest(new Name("/data/prefix"));
- *     interest.setInterestLifetimeMilliseconds(1000);
- *
- *     SegmentFetcher.fetch(face, interest, null, onComplete, onError);
- *
- * This is a private constructor to create a new SegmentFetcher to use the Face.
- * An application should use SegmentFetcher.fetch. If validatorKeyChain is not
- * null, use it and ignore verifySegment. After creating the SegmentFetcher,
- * call fetchFirstSegment.
- * @param {Face} face This calls face.expressInterest to fetch more segments.
- * @param validatorKeyChain {KeyChain} If this is not null, use its verifyData
- * instead of the verifySegment callback.
- * @param {function} verifySegment When a Data packet is received this calls
- * verifySegment(data) where data is a Data object. If it returns False then
- * abort fetching and call onError with
- * SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED.
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
+ * This is a public constructor to create a new PipelineFixed.
+ * @param {string} basePrefix This is the prefix of the data we want to retrieve
+ * its segments (excluding <version> and <segment> components).
+ * @param {Face} face The segments will be fetched through this face.
+ * @param {KeyChain} validatorKeyChain If this is not null, use its verifyData
+ * otherwise skip Data validation.
  * @param {function} onComplete When all segments are received, call
  * onComplete(content) where content is a Blob which has the concatenation of
  * the content of all the segments.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onError Call onError.onError(errorCode, message) for
+ * @param {function} onError Call onError(errorCode, message) for
  * timeout or an error processing segments. errorCode is a value from
- * SegmentFetcher.ErrorCode and message is a related string.
+ * PipelineFixed.ErrorCode and message is a related string.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @constructor
  */
-var SegmentFetcher = function SegmentFetcher
-  (face, validatorKeyChain, verifySegment, onComplete, onError)
+var PipelineFixed = function PipelineFixed
+  (basePrefix, face, validatorKeyChain, onComplete, onError)
 {
+  this.contentPrefix = basePrefix;
   this.face = face;
   this.validatorKeyChain = validatorKeyChain;
-  this.verifySegment = verifySegment;
   this.onComplete = onComplete;
   this.onError = onError;
 
-  this.contentParts = []; // of Buffer
+  this.numberOfSatisfiedSegments = 0;
+  this.nextSegmentToRequest = 0;
+  this.segmentsOnFly = 0;
+  this.finalBlockId = Number.MAX_SAFE_INTEGER;
+
+  // Options
+  this.windowSize = 10;
+  this.maxTimeoutRetries = 3;
+  this.maxNackRetries = 3;
+
+  this.contentParts = []; // of Buffer (no duplicate entry)
+  this.dataFetchersContainer = []; // if we need to cancel pending interests
 };
 
-exports.SegmentFetcher = SegmentFetcher;
+exports.PipelineFixed = PipelineFixed;
 
 /**
  * An ErrorCode value is passed in the onError callback.
  */
-SegmentFetcher.ErrorCode = {
+PipelineFixed.ErrorCode = {
   INTEREST_TIMEOUT: 1,
   DATA_HAS_NO_SEGMENT: 2,
-  SEGMENT_VERIFICATION_FAILED: 3
+  SEGMENT_VERIFICATION_FAILED: 3,
+  NACK_RECEIVED: 4
 };
 
 /**
- * DontVerifySegment may be used in fetch to skip validation of Data packets.
+ * Use DataFetcher to fetch the solicited segment. Timeouts and Nacks will be
+ * handled by DataFetcher class.
  */
-SegmentFetcher.DontVerifySegment = function(data)
+PipelineFixed.prototype.fetchSegment = function(interest)
 {
-  return true;
+  if (interest.getName().get(-1).isSegment()) {
+    var segmentNo = interest.getName().get(-1).toSegment();
+    this.dataFetchersContainer[segmentNo] = new DataFetcher
+      (this.face, interest, this.maxTimeoutRetries, this.maxNackRetries,
+       this.onData.bind(this), this.onTimeout.bind(this), this.onNack.bind(this));
+       this.dataFetchersContainer[segmentNo].fetch();
+  } 
+  else { // do not keep track of very first interest
+    (new DataFetcher
+      (this.face, interest, this.maxTimeoutRetries, this.maxNackRetries,
+       this.onData.bind(this), this.onTimeout.bind(this), this.onNack.bind(this)))
+       .fetch();
+ 
+  } 
 };
 
-/**
- * Initiate segment fetching. For more details, see the documentation for the
- * class. There are two forms of fetch:
- * fetch(face, baseInterest, validatorKeyChain, onComplete, onError)
- * and
- * fetch(face, baseInterest, verifySegment, onComplete, onError)
- * @param {Face} face This calls face.expressInterest to fetch more segments.
- * @param {Interest} baseInterest An Interest for the initial segment of the
- * requested data, where baseInterest.getName() has the name prefix. This
- * interest may include a custom InterestLifetime and selectors that will
- * propagate to all subsequent Interests. The only exception is that the initial
- * Interest will be forced to include selectors "ChildSelector=1" and
- * "MustBeFresh=true" which will be turned off in subsequent Interests.
- * @param validatorKeyChain {KeyChain} When a Data packet is received this calls
- * validatorKeyChain.verifyData(data). If validation fails then abortfetching
- * and call onError with SEGMENT_VERIFICATION_FAILED. This does not make a copy
- * of the KeyChain; the object must remain valid while fetching.
- * If validatorKeyChain is null, this does not validate the data packet.
- * @param {function} verifySegment When a Data packet is received this calls
- * verifySegment(data) where data is a Data object. If it returns False then
- * abort fetching and call onError with
- * SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED. If data validation is
- * not required, use SegmentFetcher.DontVerifySegment.
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onComplete When all segments are received, call
- * onComplete(content) where content is a Blob which has the concatenation of
- * the content of all the segments.
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onError Call onError.onError(errorCode, message) for
- * timeout or an error processing segments. errorCode is a value from
- * SegmentFetcher.ErrorCode and message is a related string.
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- */
-SegmentFetcher.fetch = function
-  (face, baseInterest, validatorKeyChainOrVerifySegment, onComplete, onError)
-{
-  if (validatorKeyChainOrVerifySegment == null ||
-      validatorKeyChainOrVerifySegment instanceof KeyChain)
-    new SegmentFetcher
-      (face, validatorKeyChainOrVerifySegment, SegmentFetcher.DontVerifySegment,
-       onComplete, onError)
-      .fetchFirstSegment(baseInterest);
-  else
-    new SegmentFetcher
-      (face, null, validatorKeyChainOrVerifySegment, onComplete, onError)
-      .fetchFirstSegment(baseInterest);
-};
-
-SegmentFetcher.prototype.fetchFirstSegment = function(baseInterest)
+PipelineFixed.prototype.fetchFirstSegment = function(baseInterest)
 {
   var interest = new Interest(baseInterest);
-  interest.setChildSelector(1);
   interest.setMustBeFresh(true);
-  var thisSegmentFetcher = this;
-  this.face.expressInterest
-    (interest,
-     function(originalInterest, data)
-       { thisSegmentFetcher.onData(originalInterest, data); },
-     function(interest) { thisSegmentFetcher.onTimeout(interest); });
+
+  this.fetchSegment(interest);
 };
 
-SegmentFetcher.prototype.fetchNextSegment = function
-  (originalInterest, dataName, segment)
+PipelineFixed.prototype.fetchNextSegments = function (originalInterest, dataName)
 {
-  // Start with the original Interest to preserve any special selectors.
   var interest = new Interest(originalInterest);
-  // Changing a field clears the nonce so that the library will generate a new
-  // one.
-  interest.setChildSelector(0);
+  // Changing a field clears the nonce so that a new nonce will be generated
   interest.setMustBeFresh(false);
-  interest.setName(dataName.getPrefix(-1).appendSegment(segment));
-  var thisSegmentFetcher = this;
-  this.face.expressInterest
-    (interest, function(originalInterest, data)
-       { thisSegmentFetcher.onData(originalInterest, data); },
-     function(interest) { thisSegmentFetcher.onTimeout(interest); });
+
+  while (this.nextSegmentToRequest <= this.finalBlockId && this.segmentsOnFly <= this.windowSize) {
+    // do not re-send an interest for existing segments
+    if (this.contentParts[this.nextSegmentToRequest] !== undefined) {
+      this.nextSegmentToRequest += 1;
+      continue;
+    }
+
+    interest.setName(dataName.getPrefix(-1).appendSegment(this.nextSegmentToRequest));
+    interest.refreshNonce();
+
+    this.fetchSegment(interest);
+
+    this.nextSegmentToRequest += 1;
+    this.increaseNumberOfSegmentsOnFly();
+  }
 };
 
-SegmentFetcher.prototype.onData = function(originalInterest, data)
+PipelineFixed.prototype.cancelPendingInterestsAboveFinalBlockId = function ()
 {
-  if (this.validatorKeyChain != null) {
+  var len = this.dataFetchersContainer.length;
+
+  for (var i = this.finalBlockId + 1; i < len; i++) {
+    if (this.dataFetchersContainer[i] !== null) {
+      this.dataFetchersContainer[i].cancelPendingInterest();
+    }
+  }
+};
+
+PipelineFixed.prototype.onData = function(originalInterest, data)
+{
+  if (this.validatorKeyChain !== null) {
     try {
-      var thisSegmentFetcher = this;
+      var thisPipeline = this;
       this.validatorKeyChain.verifyData
         (data,
          function(localData) {
-           thisSegmentFetcher.onVerified(localData, originalInterest);
+           thisPipeline.onVerified(localData, originalInterest);
          },
          this.onValidationFailed.bind(this));
     } catch (ex) {
-      console.log("Error in KeyChain.verifyData: " + ex);
+      this.reportError(PipelineFixed.ErrorCode.SEGMENT_VERIFICATION_FAILED,
+                       "Error in KeyChain.verifyData: " + ex);
     }
   }
   else {
-    if (!this.verifySegment(data)) {
-      try {
-        this.onError
-          (SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-           "Segment verification failed");
-      } catch (ex) {
-        console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-      }
-      return;
-    }
-
     this.onVerified(data, originalInterest);
   }
 };
 
-SegmentFetcher.prototype.onVerified = function(data, originalInterest)
+PipelineFixed.prototype.onVerified = function(data, originalInterest)
 {
-  if (!SegmentFetcher.endsWithSegmentNumber(data.getName())) {
-    // We don't expect a name without a segment number.  Treat it as a bad packet.
-    try {
-      this.onError
-        (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
-         "Got an unexpected packet without a segment number: " +
-          data.getName().toUri());
-    } catch (ex) {
-      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-    }
+  var currentSegment = 0;
+  try {
+    currentSegment = data.getName().get(-1).toSegment();
   }
-  else {
-    var currentSegment = 0;
+  catch (ex) {
+    this.reportError(PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
+                     "Error decoding the name segment number " +
+                     data.getName().get(-1).toEscapedString() + ": " + ex);
+    return;
+  }
+
+  // set finalBlockId
+  if (data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
     try {
-      currentSegment = data.getName().get(-1).toSegment();
+      this.finalBlockId = data.getMetaInfo().getFinalBlockId().toSegment();
+      this.cancelPendingInterestsAboveFinalBlockId();
     }
     catch (ex) {
-      try {
-        this.onError
-          (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
-           "Error decoding the name segment number " +
-           data.getName().get(-1).toEscapedString() + ": " + ex);
-      } catch (ex) {
-        console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-      }
+      this.reportError(PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
+           "Error decoding the FinalBlockId segment number " +
+            data.getMetaInfo().getFinalBlockId().toEscapedString() +
+            ": " + ex);
       return;
     }
+  }
 
-    var expectedSegmentNumber = this.contentParts.length;
-    if (currentSegment != expectedSegmentNumber)
-      // Try again to get the expected segment.  This also includes the case
-      // where the first segment is not segment 0.
-      this.fetchNextSegment
-        (originalInterest, data.getName(), expectedSegmentNumber);
-    else {
-      // Save the content and check if we are finished.
-      this.contentParts.push(data.getContent().buf());
+  this.numberOfSatisfiedSegments += 1;
 
-      if (data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
-        var finalSegmentNumber = 0;
-        try {
-          finalSegmentNumber = (data.getMetaInfo().getFinalBlockId().toSegment());
-        }
-        catch (ex) {
-          try {
-            this.onError
-              (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
-               "Error decoding the FinalBlockId segment number " +
-               data.getMetaInfo().getFinalBlockId().toEscapedString() +
-               ": " + ex);
-          } catch (ex) {
-            console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-          }
-          return;
-        }
+  // Save the content
+  this.contentParts[currentSegment] = data.getContent().buf();
 
-        if (currentSegment == finalSegmentNumber) {
-          // We are finished.
-
-          // Concatenate to get content.
-          var content = Buffer.concat(this.contentParts);
-          try {
-            this.onComplete(new Blob(content, false));
-          } catch (ex) {
-            console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
-          }
-          return;
-        }
-      }
-
-      // Fetch the next segment.
-      this.fetchNextSegment
-        (originalInterest, data.getName(), expectedSegmentNumber + 1);
+  // Check whether we are finished
+  if (this.numberOfSatisfiedSegments > this.finalBlockId) {
+    // Concatenate to get content.
+    var content = Buffer.concat(this.contentParts);
+    try {
+      this.onComplete(new Blob(content, false));
+    } catch (ex) {
+      console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
     }
-  }
-}
 
-SegmentFetcher.prototype.onValidationFailed = function(data, reason)
+    return;
+  }
+
+  this.decreaseNumberOfSegmentsOnFly();
+
+  // Fetch the next segments
+  this.fetchNextSegments(originalInterest, data.getName());
+};
+
+PipelineFixed.prototype.onValidationFailed = function(data, reason)
+{
+  this.reportError(PipelineFixed.ErrorCode.SEGMENT_VERIFICATION_FAILED,
+                   "Segment verification failed for " + data.getName().toUri() +
+                   " . Reason: " + reason);
+};
+
+PipelineFixed.prototype.onTimeout = function(interest)
+{
+  this.reportError(PipelineFixed.ErrorCode.INTEREST_TIMEOUT,
+                   "Time out for interest " + interest.getName().toUri());
+};
+
+PipelineFixed.prototype.onNack = function(interest)
+{
+  this.reportError(PipelineFixed.ErrorCode.NACK_RECEIVED,
+                   "Received Nack for interest " + interest.getName().toUri());
+};
+
+PipelineFixed.prototype.increaseNumberOfSegmentsOnFly = function()
+{
+  this.segmentsOnFly++;
+};
+
+PipelineFixed.prototype.decreaseNumberOfSegmentsOnFly = function()
+{
+  this.segmentsOnFly = Math.max(this.segmentsOnFly - 1, 0);
+};
+
+PipelineFixed.prototype.reportError = function(errCode, msg)
 {
   try {
-    this.onError
-      (SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-       "Segment verification failed for " + data.getName().toUri() +
-       " . Reason: " + reason);
+    this.onError(errCode, msg);
   } catch (ex) {
     console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
   }
-};
+};/**
+ * Copyright (C) 2015-2018 Regents of the University of California.
+ * @author: Chavoosh Ghasemi <chghasemi@cs.arizona.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
 
-SegmentFetcher.prototype.onTimeout = function(interest)
-{
-  try {
-    this.onError
-      (SegmentFetcher.ErrorCode.INTEREST_TIMEOUT,
-       "Time out for interest " + interest.getName().toUri());
-  } catch (ex) {
-    console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-  }
-};
+/** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var LOG = require('../log.js').Log.LOG;
 
 /**
- * Check if the last component in the name is a segment number.
- * @param {Name} name The name to check.
- * @return {boolean} True if the name ends with a segment number, otherwise false.
+ * DataFetcher is a utility class to fetch Data with automatic retries.
+ *
+ * This is a public constructor to create a new DataFetcher object.
+ * @param {Face} face The segment will be fetched through this face.
+ * @param {Interest} interest Use this as the basis of the future issued Interest(s) to fetch
+ * the solicited segment.
+ * @param {int} maxTimeoutRetries The max number of retries upon facing Timeout.
+ * @param {int} maxNackRetries The max number of retries upon facing Nack.
+ * @param {function} onData Call this function upon receiving the Data packet for the
+ * solicited segment.
+ * @param {function} onTimeout Call this function after receiving Timeout for more than
+ * maxTimeoutRetries times. 
+ * @param {function} onNack Call this function after receiving Nack for more than
+ * maxNackRetries times.
+ * @constructor
+ *
  */
-SegmentFetcher.endsWithSegmentNumber = function(name)
+var DataFetcher = function DataFetcher
+  (face, interest, maxTimeoutRetries, maxNackRetries, onData, onTimeout, onNack)
 {
-  return name.size() >= 1 && name.get(-1).isSegment();
+  this.face = face;
+  this.interest = interest;
+  this.maxNackRetries = maxNackRetries;
+  this.maxTimeoutRetries = maxTimeoutRetries;
+
+  this.onData = onData;
+  this.onTimeout = onTimeout;
+  this.onNack = onNack;
+
+  this.numberOfTimeoutRetries = 0;
+  this.pendingInterestId = null;
+};
+
+exports.DataFetcher = DataFetcher;
+
+DataFetcher.prototype.fetch = function()
+{
+  this.pendingInterestId = this.face.expressInterest
+    (this.interest,
+     this.handleData.bind(this),
+     this.handleTimeout.bind(this),
+     this.handleNack.bind(this));
+};
+
+DataFetcher.prototype.cancelPendingInterest = function()
+{
+  this.face.removePendingInterest(this.pendingInterestId);
+};
+
+DataFetcher.prototype.handleData = function(originalInterest, data)
+{
+  this.onData(originalInterest, data);
+};
+
+DataFetcher.prototype.handleTimeout = function(interest)
+{
+  this.numberOfTimeoutRetries++;
+  if (this.numberOfTimeoutRetries <= this.maxTimeoutRetries) {
+    var newInterest = new Interest(interest);
+    newInterest.refreshNonce();
+    this.interest = newInterest;
+    if (LOG > 3)
+      console.log('handle timeout for interest ' + interest.getName());
+    this.fetch();
+  }
+  else {
+    this.onTimeout(interest);
+  }
+};
+
+DataFetcher.prototype.handleNack = function(interest)
+{
+  this.numberOfNackRetries += 1;
+  if (this.numberOfNackRetries <= this.maxNackRetries) {
+    var newInterest = new Interest(interest);
+    newInterest.refreshNonce();
+    this.interest = newInterest;
+    if (LOG > 3)
+      console.log('handle nack for interest ' + interest.getName());
+    // wait 40 - 60 ms before issuing a new Interest after receiving a Nack
+    setTimeout(this.fetch.bind(this), 40 + Math.random() * 20);
+  }
+  else {
+    this.onNack(interest);
+  }
 };
 /**
  * Copyright (C) 2017-2018 Regents of the University of California.
