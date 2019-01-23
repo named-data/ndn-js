@@ -79,10 +79,9 @@ DataFetcher.prototype.handleData = function(originalInterest, data)
 DataFetcher.prototype.handleTimeout = function(interest)
 {
   this.numberOfTimeoutRetries++;
-  if(this.numberOfTimeoutRetries <= this.maxTimeoutRetries) {
+  if (this.numberOfTimeoutRetries <= this.maxTimeoutRetries) {
     var newInterest = new Interest(interest);
-    // Changing a field clears the nonce so that a new nonce will be generated
-    newInterest.setMustBeFresh(false);
+    newInterest.refreshNonce();
     this.interest = newInterest;
     if (LOG > 3)
       console.log('handle timeout for interest ' + interest.getName());
@@ -96,13 +95,14 @@ DataFetcher.prototype.handleTimeout = function(interest)
 DataFetcher.prototype.handleNack = function(interest)
 {
   this.numberOfNackRetries += 1;
-  if(this.numberOfNackRetries <= this.maxNackRetries) {
+  if (this.numberOfNackRetries <= this.maxNackRetries) {
     var newInterest = new Interest(interest);
-    // Changing a field clears the nonce so that a new nonce will be generated
-    newInterest.setMustBeFresh(false);
+    newInterest.refreshNonce();
     this.interest = newInterest;
     if (LOG > 3)
       console.log('handle nack for interest ' + interest.getName());
+    // wait 40 - 60 ms before issuing a new Interest after receiving a Nack
+    setTimeout(this.fetch.bind(this), 40 + Math.random() * 20);
     this.fetch();
   }
   else {

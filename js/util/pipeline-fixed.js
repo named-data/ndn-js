@@ -73,7 +73,7 @@ var DataFetcher = require('./data-fetcher.js').DataFetcher;
  * with a proper error code.  The following errors are possible:
  *
  * - `INTEREST_TIMEOUT`: if any of the Interests times out (probably after a number of retries)
- * - `DATA_HAS_NO_SEGMENT`: if any of the retrieved Data packets don't have a segment
+ * - `DATA_HAS_NO_SEGMENT`: if any of the retrieved Data packets does not have a segment
  *   as the last component of the name (not counting the implicit digest)
  * - `SEGMENT_VERIFICATION_FAILED`: if any retrieved segment fails
  *   the KeyChain verifyData.
@@ -214,7 +214,8 @@ PipelineFixed.prototype.onData = function(originalInterest, data)
          },
          this.onValidationFailed.bind(this));
     } catch (ex) {
-      console.log("Error in KeyChain.verifyData: " + ex);
+      this.reportError(PipelineFixed.ErrorCode.SEGMENT_VERIFICATION_FAILED,
+                       "Error in KeyChain.verifyData: " + ex);
     }
   }
   else {

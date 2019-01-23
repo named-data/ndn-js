@@ -13926,10 +13926,9 @@ SegmentFetcher.DontVerifySegment = function(data)
  *
  * Initiate segment fetching.
  *
- * There are two forms of fetch:
- * fetch(face, baseInterest, validatorKeyChain, onComplete, onError)
- * and
- * fetch(face, baseInterest, verifySegment, onComplete, onError)
+ * Here is how to fetch a segmented data:
+ *   fetch(face, baseInterest, validatorKeyChain, onComplete, onError)
+ * 
  * @param {Face} face This face is used by pipeline to express Interests and fetch segments.
  * @param {Interest} baseInterest An Interest for the initial segment of the
  * requested data, where baseInterest.getName() has the name prefix. This
@@ -13940,10 +13939,6 @@ SegmentFetcher.DontVerifySegment = function(data)
  * If validation fails then abort fetching and call onError with SEGMENT_VERIFICATION_FAILED.
  * This does not make a copy of the KeyChain; the object must remain valid while fetching.
  * If validatorKeyChain is null, this does not validate the data packet.
- * @param {function} verifySegment This is used by verifySegment(data) method in pipeline
- * class when a Data packet is received. If it returns false then abort fetching and call
- * onError with ErrorCode.SEGMENT_VERIFICATION_FAILED. If data validation is
- * not required, use SegmentFetcher.DontVerifySegment.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -13970,14 +13965,14 @@ SegmentFetcher.DontVerifySegment = function(data)
  *     SegmentFetcher.fetch(face, interest, null, onComplete, onError);
  */
 SegmentFetcher.fetch = function
-  (face, baseInterest, validatorKeyChainOrVerifySegment, onComplete, onError)
+  (face, baseInterest, validatorKeyChain, onComplete, onError)
 {
   var basePrefix = baseInterest.getName().toUri();
 
-  if (validatorKeyChainOrVerifySegment == null ||
-      validatorKeyChainOrVerifySegment instanceof KeyChain)
+  if (validatorKeyChain == null ||
+      validatorKeyChain instanceof KeyChain)
     new PipelineFixed
-      (basePrefix, face, validatorKeyChainOrVerifySegment,
+      (basePrefix, face, validatorKeyChain,
        onComplete, onError)
       .fetchFirstSegment(baseInterest);
   else
@@ -14059,7 +14054,7 @@ var DataFetcher = require('./data-fetcher.js').DataFetcher;
  * with a proper error code.  The following errors are possible:
  *
  * - `INTEREST_TIMEOUT`: if any of the Interests times out (probably after a number of retries)
- * - `DATA_HAS_NO_SEGMENT`: if any of the retrieved Data packets don't have a segment
+ * - `DATA_HAS_NO_SEGMENT`: if any of the retrieved Data packets does not have a segment
  *   as the last component of the name (not counting the implicit digest)
  * - `SEGMENT_VERIFICATION_FAILED`: if any retrieved segment fails
  *   the KeyChain verifyData.
@@ -14200,7 +14195,8 @@ PipelineFixed.prototype.onData = function(originalInterest, data)
          },
          this.onValidationFailed.bind(this));
     } catch (ex) {
-      console.log("Error in KeyChain.verifyData: " + ex);
+      this.reportError(PipelineFixed.ErrorCode.SEGMENT_VERIFICATION_FAILED,
+                       "Error in KeyChain.verifyData: " + ex);
     }
   }
   else {
@@ -14377,10 +14373,9 @@ DataFetcher.prototype.handleData = function(originalInterest, data)
 DataFetcher.prototype.handleTimeout = function(interest)
 {
   this.numberOfTimeoutRetries++;
-  if(this.numberOfTimeoutRetries <= this.maxTimeoutRetries) {
+  if (this.numberOfTimeoutRetries <= this.maxTimeoutRetries) {
     var newInterest = new Interest(interest);
-    // Changing a field clears the nonce so that a new nonce will be generated
-    newInterest.setMustBeFresh(false);
+    newInterest.refreshNonce();
     this.interest = newInterest;
     if (LOG > 3)
       console.log('handle timeout for interest ' + interest.getName());
@@ -14394,13 +14389,14 @@ DataFetcher.prototype.handleTimeout = function(interest)
 DataFetcher.prototype.handleNack = function(interest)
 {
   this.numberOfNackRetries += 1;
-  if(this.numberOfNackRetries <= this.maxNackRetries) {
+  if (this.numberOfNackRetries <= this.maxNackRetries) {
     var newInterest = new Interest(interest);
-    // Changing a field clears the nonce so that a new nonce will be generated
-    newInterest.setMustBeFresh(false);
+    newInterest.refreshNonce();
     this.interest = newInterest;
     if (LOG > 3)
       console.log('handle nack for interest ' + interest.getName());
+    // wait 40 - 60 ms before issuing a new Interest after receiving a Nack
+    setTimeout(this.fetch.bind(this), 40 + Math.random() * 20);
     this.fetch();
   }
   else {

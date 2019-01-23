@@ -57,10 +57,9 @@ SegmentFetcher.DontVerifySegment = function(data)
  *
  * Initiate segment fetching.
  *
- * There are two forms of fetch:
- * fetch(face, baseInterest, validatorKeyChain, onComplete, onError)
- * and
- * fetch(face, baseInterest, verifySegment, onComplete, onError)
+ * Here is how to fetch a segmented data:
+ *   fetch(face, baseInterest, validatorKeyChain, onComplete, onError)
+ * 
  * @param {Face} face This face is used by pipeline to express Interests and fetch segments.
  * @param {Interest} baseInterest An Interest for the initial segment of the
  * requested data, where baseInterest.getName() has the name prefix. This
@@ -71,10 +70,6 @@ SegmentFetcher.DontVerifySegment = function(data)
  * If validation fails then abort fetching and call onError with SEGMENT_VERIFICATION_FAILED.
  * This does not make a copy of the KeyChain; the object must remain valid while fetching.
  * If validatorKeyChain is null, this does not validate the data packet.
- * @param {function} verifySegment This is used by verifySegment(data) method in pipeline
- * class when a Data packet is received. If it returns false then abort fetching and call
- * onError with ErrorCode.SEGMENT_VERIFICATION_FAILED. If data validation is
- * not required, use SegmentFetcher.DontVerifySegment.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -101,14 +96,14 @@ SegmentFetcher.DontVerifySegment = function(data)
  *     SegmentFetcher.fetch(face, interest, null, onComplete, onError);
  */
 SegmentFetcher.fetch = function
-  (face, baseInterest, validatorKeyChainOrVerifySegment, onComplete, onError)
+  (face, baseInterest, validatorKeyChain, onComplete, onError)
 {
   var basePrefix = baseInterest.getName().toUri();
 
-  if (validatorKeyChainOrVerifySegment == null ||
-      validatorKeyChainOrVerifySegment instanceof KeyChain)
+  if (validatorKeyChain == null ||
+      validatorKeyChain instanceof KeyChain)
     new PipelineFixed
-      (basePrefix, face, validatorKeyChainOrVerifySegment,
+      (basePrefix, face, validatorKeyChain,
        onComplete, onError)
       .fetchFirstSegment(baseInterest);
   else
