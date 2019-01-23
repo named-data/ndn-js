@@ -290,6 +290,8 @@ MemoryContentCache.prototype.add = function(data)
       try {
         // Send to the same face from the original call to onInterest.
         // wireEncode returns the cached encoding if available.
+        if (LOG > 3) console.log
+          ("MemoryContentCache:  Reply w/ add Data " + data.getName().toUri());
         this.pendingInterestTable[i].getFace().send(data.wireEncode().buf());
       }
       catch (ex) {
@@ -368,6 +370,9 @@ MemoryContentCache.prototype.setMinimumCacheLifetime = function
 MemoryContentCache.prototype.onInterest = function
   (prefix, interest, face, interestFilterId, filter)
 {
+  if (LOG > 3) console.log
+    ("MemoryContentCache:  Received Interest " + interest.toUri());
+
   var nowMilliseconds = new Date().getTime();
   this.doCleanup(nowMilliseconds);
 
@@ -390,6 +395,8 @@ MemoryContentCache.prototype.onInterest = function
         !(interest.getMustBeFresh() && !isFresh)) {
       if (interest.getChildSelector() == null) {
         // No child selector, so send the first match that we have found.
+        if (LOG > 3) console.log
+          ("MemoryContentCache:         Reply Data " + content.getName().toUri());
         face.send(content.getDataEncoding());
         return;
       }
@@ -426,10 +433,15 @@ MemoryContentCache.prototype.onInterest = function
     }
   }
 
-  if (selectedEncoding !== null)
+  if (selectedEncoding !== null) {
+    if (LOG > 3) console.log
+      ("MemoryContentCache: Reply Data to Interest " + interest.toUri());
     // We found the leftmost or rightmost child.
     face.send(selectedEncoding);
+  }
   else {
+    if (LOG > 3) console.log
+      ("MemoryContentCache: onDataNotFound for " + interest.toUri());
     // Call the onDataNotFound callback (if defined).
     var onDataNotFound = this.onDataNotFoundForPrefix[prefix.toUri()];
     if (onDataNotFound)
