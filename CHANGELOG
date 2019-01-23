@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.17.0 (2018-12-18)
+Interim changes since NDN-JS v0.17.0 (2019-01-23)
 -------------------------------------------------
 
 Changes
@@ -13,6 +13,8 @@ Changes
   deprecated 'constant' module.
 * https://github.com/named-data/ndn-js/pull/71 security (Node.js): Replace
   rsa-keygen with rsa-keypair.
+* https://github.com/named-data/ndn-js/pull/70 Change SegmentFetcher to use new
+  PipelineFixed & DataFetcher classes. (Thanks to Chavoosh and Junxiao.)
 
 Bug fixes
 * https://github.com/named-data/ndn-js/pull/67 Fix checking against NaN.
