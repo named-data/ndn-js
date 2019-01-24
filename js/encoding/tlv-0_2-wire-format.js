@@ -651,7 +651,7 @@ Tlv0_2WireFormat.prototype.decodeDelegationSet = function
 };
 
 /**
- * Encode the EncryptedContent in NDN-TLV and return the encoding.
+ * Encode the EncryptedContent v1 in NDN-TLV and return the encoding.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object to
  * encode.
  * @return {Blob} A Blob containing the encoding.
@@ -679,7 +679,7 @@ Tlv0_2WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
 };
 
 /**
- * Decode input as an EncryptedContent in NDN-TLV and set the fields of the
+ * Decode input as an EncryptedContent v1 in NDN-TLV and set the fields of the
  * encryptedContent object.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object
  * whose fields are updated.
@@ -698,6 +698,7 @@ Tlv0_2WireFormat.prototype.decodeEncryptedContent = function
   var endOffset = decoder.
     readNestedTlvsStart(Tlv.Encrypt_EncryptedContent);
 
+  encryptedContent.clear();
   Tlv0_2WireFormat.decodeKeyLocator
     (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder, copy);
   encryptedContent.setAlgorithmType
@@ -707,6 +708,75 @@ Tlv0_2WireFormat.prototype.decodeEncryptedContent = function
      (Tlv.Encrypt_InitialVector, endOffset), copy));
   encryptedContent.setPayload
     (new Blob(decoder.readBlobTlv(Tlv.Encrypt_EncryptedPayload), copy));
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+/**
+ * Encode the EncryptedContent v2 (used in Name-based Access Control v2) in
+ * NDN-TLV and return the encoding.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object to
+ * encode.
+ * @return {Blob} A Blob containing the encoding.
+ */
+Tlv0_2WireFormat.prototype.encodeEncryptedContentV2 = function(encryptedContent)
+{
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  if (encryptedContent.getKeyLocator().getType() == KeyLocatorType.KEYNAME)
+    Tlv0_2WireFormat.encodeName
+      (encryptedContent.getKeyLocator().getKeyName(), encoder);
+  encoder.writeOptionalBlobTlv
+    (Tlv.Encrypt_EncryptedPayloadKey, encryptedContent.getPayloadKey().buf());
+  encoder.writeOptionalBlobTlv
+    (Tlv.Encrypt_InitialVector, encryptedContent.getInitialVector().buf());
+  encoder.writeBlobTlv
+    (Tlv.Encrypt_EncryptedPayload, encryptedContent.getPayload().buf());
+
+  encoder.writeTypeAndLength
+    (Tlv.Encrypt_EncryptedContent, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Decode input as an EncryptedContent v2 (used in Name-based Access Control
+ * v2) in NDN-TLV and set the fields of the encryptedContent object.
+ * See https://github.com/named-data/name-based-access-control/blob/new/docs/spec.rst .
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ */
+Tlv0_2WireFormat.prototype.decodeEncryptedContentV2 = function
+  (encryptedContent, input, copy)
+{
+  if (copy == null)
+    copy = true;
+
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.
+    readNestedTlvsStart(Tlv.Encrypt_EncryptedContent);
+
+  encryptedContent.clear();
+  encryptedContent.setPayload
+    (new Blob(decoder.readBlobTlv(Tlv.Encrypt_EncryptedPayload), copy));
+  encryptedContent.setInitialVector
+    (new Blob(decoder.readOptionalBlobTlv
+     (Tlv.Encrypt_InitialVector, endOffset), copy));
+  encryptedContent.setPayloadKey
+    (new Blob(decoder.readOptionalBlobTlv
+     (Tlv.Encrypt_EncryptedPayloadKey, endOffset), copy));
+
+  if (decoder.peekType(Tlv.Name, endOffset)) {
+    Tlv0_2WireFormat.decodeName
+      (encryptedContent.getKeyLocator().getKeyName(), decoder, copy);
+    encryptedContent.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+  }
 
   decoder.finishNestedTlvs(endOffset);
 };

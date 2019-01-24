@@ -284,7 +284,7 @@ WireFormat.prototype.decodeDelegationSet = function(delegationSet, input, copy)
 };
 
 /**
- * Encode the EncryptedContent and return the encoding.  Your derived class
+ * Encode the EncryptedContent v1 and return the encoding.  Your derived class
  * should override.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object to
  * encode.
@@ -299,7 +299,7 @@ WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
 };
 
 /**
- * Decode input as an EncryptedContent and set the fields of the
+ * Decode input as an EncryptedContent v1 and set the fields of the
  * encryptedContent object. Your derived class should override.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object
  * whose fields are updated.
@@ -315,6 +315,44 @@ WireFormat.prototype.decodeEncryptedContent = function
 {
   throw new Error
     ("decodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
+};
+
+/**
+ * Encode the EncryptedContent v2 (used in Name-based Access Control v2) and
+ * return the encoding.
+ * See https://github.com/named-data/name-based-access-control/blob/new/docs/spec.rst .
+ * Your derived class should override.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object to
+ * encode.
+ * @return {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.encodeEncryptedContentV2 = function(encryptedContent)
+{
+  throw new Error
+    ("encodeEncryptedContentV2 is unimplemented in the base WireFormat class. You should use a derived class.");
+};
+
+/**
+ * Decode input as an EncryptedContent v2 (used in Name-based Access Control v2)
+ * and set the fields of the encryptedContent object.
+ * See https://github.com/named-data/name-based-access-control/blob/new/docs/spec.rst .
+ * Your derived class should override.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.decodeEncryptedContentV2 = function
+  (encryptedContent, input, copy)
+{
+  throw new Error
+    ("decodeEncryptedContentV2 is unimplemented in the base WireFormat class. You should use a derived class.");
 };
 
 /**

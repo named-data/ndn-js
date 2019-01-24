@@ -125,6 +125,7 @@ Tlv.Encrypt_EncryptedContent = 130;
 Tlv.Encrypt_EncryptionAlgorithm = 131;
 Tlv.Encrypt_EncryptedPayload = 132;
 Tlv.Encrypt_InitialVector = 133;
+Tlv.Encrypt_EncryptedPayloadKey = 134;
 
 Tlv.SafeBag_SafeBag = 128;
 Tlv.SafeBag_EncryptedKeyBag = 129;
