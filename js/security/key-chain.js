@@ -51,6 +51,7 @@ var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
 var DigestAlgorithm = require('./security-types.js').DigestAlgorithm; /** @ignore */
 var KeyType = require('./security-types.js').KeyType; /** @ignore */
 var ValidityPeriod = require('./validity-period.js').ValidityPeriod; /** @ignore */
+var SafeBag = require('./safe-bag.js').SafeBag; /** @ignore */
 var VerificationHelpers = require('./verification-helpers.js').VerificationHelpers; /** @ignore */
 var PublicKey = require('./certificate/public-key.js').PublicKey; /** @ignore */
 var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVerifyPolicyManager;
@@ -1215,6 +1216,84 @@ KeyChain.prototype.selfSign = function(key, wireFormat, onComplete, onError)
 };
 
 // Import and export
+
+/**
+ * Export a certificate and its corresponding private key in a SafeBag.
+ * @param {CertificateV2} certificate The certificate to export. This gets the
+ * key from the TPM using certificate.getKeyName().
+ * @param {Buffer} password (optional) The password for encrypting the private
+ * key, which should have characters in the range of 1 to 127. If the password
+ * is supplied, use it to put a PKCS #8 EncryptedPrivateKeyInfo in the SafeBag.
+ * If the password is null, put an unencrypted PKCS #8 PrivateKeyInfo in the
+ * SafeBag.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a SafeBag carrying the
+ * certificate and private key, or a promise rejected with KeyChain.Error if
+ * certificate.getKeyName() key does not exist, if the password is null and the
+ * TPM does not support exporting an unencrypted private key, or for other
+ * errors exporting the private key.
+ */
+KeyChain.prototype.exportSafeBagPromise = function
+  (certificate, password, useSync)
+{
+  if (typeof password === 'boolean') {
+    // password is omitted, so shift.
+    useSync = password;
+    password = undefined;
+  }
+
+  var keyName = certificate.getKeyName();
+  
+  var thisKeyChain = this;
+  return SyncPromise.resolve()
+  .then(function() {
+    return thisKeyChain.tpm_.exportPrivateKeyPromise_(keyName, password, useSync);
+  }, function(err) {
+    return SyncPromise.reject(new KeyChain.Error(new Error
+      ("Failed to export private key `" + keyName.toUri() + "`: " + err)));
+  })
+  .then(function(encryptedKey) {
+    return SyncPromise.resolve(new SafeBag(certificate, encryptedKey));
+  });
+};
+
+/**
+ * Export a certificate and its corresponding private key in a SafeBag.
+ * @param {CertificateV2} certificate The certificate to export. This gets the
+ * key from the TPM using certificate.getKeyName().
+ * @param {Buffer} password (optional) The password for encrypting the private
+ * key, which should have characters in the range of 1 to 127. If the password
+ * is supplied, use it to put a PKCS #8 EncryptedPrivateKeyInfo in the SafeBag.
+ * If the password is null, put an unencrypted PKCS #8 PrivateKeyInfo in the
+ * SafeBag.
+ * @param {function} onComplete (optional) This calls onComplete(safeBag) with a
+ * SafeBag carrying the certificate and private key. If omitted, the return
+ * value is described below. (Some crypto libraries only use a callback, so
+ * onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some crypto libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {SafeBag} If onComplete is omitted, return a SafeBag carrying the
+ * certificate and private key. Otherwise, if onComplete is supplied then return
+ * undefined and use onComplete as described above.
+ */
+KeyChain.prototype.exportSafeBag = function
+  (certificate, password, onComplete, onError)
+{
+  onError = (typeof password === "function") ? onComplete : onError;
+  onComplete = (typeof password === "function") ? password : onComplete;
+  password = (typeof password === "function") ? null : password;
+
+  return SyncPromise.complete(onComplete, onError,
+    this.exportSafeBagPromise(certificate, password, !onComplete));
+};
 
 /**
  * Import a certificate and its corresponding private key encapsulated in a
