@@ -245,7 +245,29 @@ Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
   });
 };
 
-// TODO: exportPrivateKeyPromise_
+/**
+ * Get the encoded private key with name keyName in PKCS #8 format, possibly
+ * encrypted. This should only be called by KeyChain.
+ * @param {Name} keyName The name of the key in the TPM.
+ * @param {Buffer} password The password for encrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to return a PKCS #8 EncryptedPrivateKeyInfo. If the password is null,
+ * return an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the private key encoded 
+ * in PKCS #8 format, or a promise rejected with TpmBackEnd.Error if the key
+ * does not exist or if the key cannot be exported, e.g., insufficient privileges.
+ */
+Tpm.prototype.exportPrivateKeyPromise_ = function(keyName, password, useSync)
+{
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisTpm.backEnd_.exportKeyPromise(keyName, password, useSync);
+  });
+};
 
 /**
  * Import an encoded private key with name keyName in PKCS #8 format, possibly

@@ -171,7 +171,34 @@ TpmBackEnd.prototype.deleteKeyPromise = function(keyName, useSync)
   return this.doDeleteKeyPromise_(keyName, useSync);
 };
 
-// TODO: exportKey
+/**
+ * Get the encoded private key with name keyName in PKCS #8 format, possibly
+ * encrypted.
+ * @param {Name} keyName The name of the key in the TPM.
+ * @param {Buffer} password The password for encrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to return a PKCS #8 EncryptedPrivateKeyInfo. If the password is null,
+ * return an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the encoded private key,
+ * or a promise rejected with TpmBackEnd.Error if the key does not exist or if
+ * the key cannot be exported, e.g., insufficient privileges.
+ */
+TpmBackEnd.prototype.exportKeyPromise = function(keyName, password, useSync)
+{
+  var thisTpm = this;
+
+  return this.hasKeyPromise(keyName, useSync)
+  .then(function(hasKey) {
+    if (!hasKey)
+      return SyncPromise.reject(new TpmBackEnd.Error(new Error
+        ("Key `" + keyName.toUri() + "` does not exist")));
+    else
+      return thisTpm.doExportKeyPromise_(keyName, password, useSync);
+  });
+};
 
 /**
  * Import an encoded private key with name keyName in PKCS #8 format, possibly
@@ -303,7 +330,26 @@ TpmBackEnd.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
     ("TpmBackEnd.doDeleteKeyPromise_ is not implemented"));
 };
 
-// TODO: doExportKeyPromise_
+/**
+ * Get the encoded private key with name keyName in PKCS #8 format, possibly
+ * encrypted.
+ * @param {Name} keyName The name of the key in the TPM.
+ * @param {Buffer} password The password for encrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to return a PKCS #8 EncryptedPrivateKeyInfo. If the password is null,
+ * return an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the encoded private key,
+ * or a promise rejected with TpmBackEnd.Error if the key does not exist or if
+ * the key cannot be exported, e.g., insufficient privileges.
+ */
+TpmBackEnd.prototype.doExportKeyPromise_ = function(keyName, password, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("TpmBackEnd.doExportKeyPromise_ is not implemented"));
+};
 
 /**
  * A protected method to import an encoded private key with name keyName in

@@ -125,7 +125,39 @@ TpmBackEndMemory.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
   return SyncPromise.resolve();
 };
 
-// TODO: doExportKeyPromise_
+/**
+ * Get the encoded private key with name keyName in PKCS #8 format, possibly
+ * encrypted.
+ * @param {Name} keyName The name of the key in the TPM.
+ * @param {Buffer} password The password for encrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to return a PKCS #8 EncryptedPrivateKeyInfo. If the password is null,
+ * return an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the encoded private key,
+ * or a promise rejected with TpmBackEnd.Error if the key does not exist or if
+ * the key cannot be exported, e.g., insufficient privileges.
+ */
+TpmBackEnd.prototype.doExportKeyPromise_ = function(keyName, password, useSync)
+{
+  var keyNameUri = keyName.toUri();
+  if (!(keyNameUri in this.keys_))
+    return SyncPromise.reject(new TpmBackEnd.Error(new Error
+      ("exportKey: The key does not exist")));
+
+  try {
+    if (password != null)
+      // TODO: Use a Promise.
+      return SyncPromise.resolve(this.keys_[keyNameUri].toEncryptedPkcs8(password));
+    else
+      return SyncPromise.resolve(this.keys_[keyNameUri].toPkcs8());
+  } catch (ex) {
+    return SyncPromise.reject(new TpmBackEnd.Error(new Error
+      ("Error in toPkcs8: " + ex)));
+  }
+};
 
 /**
  * A protected method to import an encoded private key with name keyName in
@@ -147,13 +179,13 @@ TpmBackEndMemory.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
 TpmBackEndMemory.prototype.doImportKeyPromise_ = function
   (keyName, pkcs8, password, useSync)
 {
-  if (password != null)
-    return SyncPromise.reject(new TpmBackEnd.Error(new Error
-      ("Private key password-encryption is not implemented")));
-
   try {
     var key = new TpmPrivateKey();
-    key.loadPkcs8(pkcs8);
+    if (password != null)
+      // TODO: Use a Promise.
+      key.loadEncryptedPkcs8(pkcs8, password);
+    else
+      key.loadPkcs8(pkcs8);
     this.keys_[keyName.toUri()] = key;
     return SyncPromise.resolve();
   } catch (ex) {
