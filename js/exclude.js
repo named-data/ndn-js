@@ -1,6 +1,6 @@
 /**
  * This class represents an Interest Exclude.
- * Copyright (C) 2014-2018 Regents of the University of California.
+ * Copyright (C) 2014-2019 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *

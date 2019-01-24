@@ -1,6 +1,6 @@
 /**
  * This file contains utilities to help encode and decode NDN objects.
- * Copyright (C) 2013-2018 Regents of the University of California.
+ * Copyright (C) 2013-2019 Regents of the University of California.
  * author: Meki Cheraoui
  *
  * This program is free software: you can redistribute it and/or modify

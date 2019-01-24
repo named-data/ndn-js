@@ -1,6 +1,6 @@
 /**
  * This class represents a Name as an array of components where each is a byte array.
- * Copyright (C) 2013-2018 Regents of the University of California.
+ * Copyright (C) 2013-2019 Regents of the University of California.
  * @author: Meki Cheraoui, Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify

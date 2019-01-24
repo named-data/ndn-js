@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014-2018 Regents of the University of California.
+ * Copyright (C) 2014-2019 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From PyNDN certificate_cache.py by Adeola Bannis.
  * Originally from Yingdi Yu <http://irl.cs.ucla.edu/~yingdi/>.

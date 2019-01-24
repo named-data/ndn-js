@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2018-2019 Regents of the University of California.
  * @author: Chavoosh Ghasemi <chghasemi@cs.arizona.edu>
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *

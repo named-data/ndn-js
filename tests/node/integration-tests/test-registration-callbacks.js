@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015 Regents of the University of California.
+ * Copyright (C) 2015-2019 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From jNDN TestRegistrationCallbacks by Andrew Brown <andrew.brown@intel.com>
  *

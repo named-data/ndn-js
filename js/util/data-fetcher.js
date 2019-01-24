@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015-2018 Regents of the University of California.
+ * Copyright (C) 2018-2019 Regents of the University of California.
  * @author: Chavoosh Ghasemi <chghasemi@cs.arizona.edu>
  *
  * This program is free software: you can redistribute it and/or modify

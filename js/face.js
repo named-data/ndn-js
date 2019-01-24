@@ -1,6 +1,6 @@
 /**
  * This class represents the top-level object for communicating with an NDN host.
- * Copyright (C) 2013-2018 Regents of the University of California.
+ * Copyright (C) 2013-2019 Regents of the University of California.
  * @author: Meki Cherkaoui, Jeff Thompson <jefft0@remap.ucla.edu>, Wentao Shang
  *
  * This program is free software: you can redistribute it and/or modify

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014-2018 Regents of the University of California.
+ * Copyright (C) 2014-2019 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/encrypt-params https://github.com/named-data/ndn-group-encrypt
  *

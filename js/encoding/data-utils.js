@@ -1,7 +1,7 @@
 /**
  * This class contains utilities to help parse the data
  *
- * Copyright (C) 2013-2018 Regents of the University of California.
+ * Copyright (C) 2013-2019 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
