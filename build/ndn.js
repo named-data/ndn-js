@@ -10248,6 +10248,7 @@ Tlv.Encrypt_EncryptedContent = 130;
 Tlv.Encrypt_EncryptionAlgorithm = 131;
 Tlv.Encrypt_EncryptedPayload = 132;
 Tlv.Encrypt_InitialVector = 133;
+Tlv.Encrypt_EncryptedPayloadKey = 134;
 
 Tlv.SafeBag_SafeBag = 128;
 Tlv.SafeBag_EncryptedKeyBag = 129;
@@ -11767,7 +11768,7 @@ WireFormat.prototype.decodeDelegationSet = function(delegationSet, input, copy)
 };
 
 /**
- * Encode the EncryptedContent and return the encoding.  Your derived class
+ * Encode the EncryptedContent v1 and return the encoding.  Your derived class
  * should override.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object to
  * encode.
@@ -11782,7 +11783,7 @@ WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
 };
 
 /**
- * Decode input as an EncryptedContent and set the fields of the
+ * Decode input as an EncryptedContent v1 and set the fields of the
  * encryptedContent object. Your derived class should override.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object
  * whose fields are updated.
@@ -11798,6 +11799,44 @@ WireFormat.prototype.decodeEncryptedContent = function
 {
   throw new Error
     ("decodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
+};
+
+/**
+ * Encode the EncryptedContent v2 (used in Name-based Access Control v2) and
+ * return the encoding.
+ * See https://github.com/named-data/name-based-access-control/blob/new/docs/spec.rst .
+ * Your derived class should override.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object to
+ * encode.
+ * @return {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.encodeEncryptedContentV2 = function(encryptedContent)
+{
+  throw new Error
+    ("encodeEncryptedContentV2 is unimplemented in the base WireFormat class. You should use a derived class.");
+};
+
+/**
+ * Decode input as an EncryptedContent v2 (used in Name-based Access Control v2)
+ * and set the fields of the encryptedContent object.
+ * See https://github.com/named-data/name-based-access-control/blob/new/docs/spec.rst .
+ * Your derived class should override.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.decodeEncryptedContentV2 = function
+  (encryptedContent, input, copy)
+{
+  throw new Error
+    ("decodeEncryptedContentV2 is unimplemented in the base WireFormat class. You should use a derived class.");
 };
 
 /**
@@ -13570,6 +13609,8 @@ MemoryContentCache.prototype.add = function(data)
       try {
         // Send to the same face from the original call to onInterest.
         // wireEncode returns the cached encoding if available.
+        if (LOG > 3) console.log
+          ("MemoryContentCache:  Reply w/ add Data " + data.getName().toUri());
         this.pendingInterestTable[i].getFace().send(data.wireEncode().buf());
       }
       catch (ex) {
@@ -13648,6 +13689,9 @@ MemoryContentCache.prototype.setMinimumCacheLifetime = function
 MemoryContentCache.prototype.onInterest = function
   (prefix, interest, face, interestFilterId, filter)
 {
+  if (LOG > 3) console.log
+    ("MemoryContentCache:  Received Interest " + interest.toUri());
+
   var nowMilliseconds = new Date().getTime();
   this.doCleanup(nowMilliseconds);
 
@@ -13670,6 +13714,8 @@ MemoryContentCache.prototype.onInterest = function
         !(interest.getMustBeFresh() && !isFresh)) {
       if (interest.getChildSelector() == null) {
         // No child selector, so send the first match that we have found.
+        if (LOG > 3) console.log
+          ("MemoryContentCache:         Reply Data " + content.getName().toUri());
         face.send(content.getDataEncoding());
         return;
       }
@@ -13706,10 +13752,15 @@ MemoryContentCache.prototype.onInterest = function
     }
   }
 
-  if (selectedEncoding !== null)
+  if (selectedEncoding !== null) {
+    if (LOG > 3) console.log
+      ("MemoryContentCache: Reply Data to Interest " + interest.toUri());
     // We found the leftmost or rightmost child.
     face.send(selectedEncoding);
+  }
   else {
+    if (LOG > 3) console.log
+      ("MemoryContentCache: onDataNotFound for " + interest.toUri());
     // Call the onDataNotFound callback (if defined).
     var onDataNotFound = this.onDataNotFoundForPrefix[prefix.toUri()];
     if (onDataNotFound)
@@ -19954,7 +20005,6 @@ var PublicKey = require('./certificate/public-key.js').PublicKey;
  * A SafeBag represents a container for sensitive related information such as a
  * certificate and private key.
  *
- * There are two forms of the SafeBag constructor:
  * There are three forms of the SafeBag constructor:
  * SafeBag(certificate, privateKeyBag) - Create a SafeBag with the given
  * certificate and private key.
@@ -20161,6 +20211,9 @@ var ValidityPeriod = require('./validity-period.js').ValidityPeriod;
  * The SigningInfo constructor has multiple forms:
  * SigningInfo() - Create a default SigningInfo with
  * SigningInfo.SignerType.NULL and an empty Name.
+ * SigningInfo(signingInfo) - Create a SigningInfo as a copy of the given
+ *   signingInfo (taking a pointer to the given signingInfo PibIdentity and
+ *   PibKey without copying).
  * SigningInfo(signerType, signerName) - Create a SigningInfo with the
  * signerType and optional signer Name.
  * Signinginfo(identity) - Create a SigningInfo of type
@@ -20171,7 +20224,8 @@ var ValidityPeriod = require('./validity-period.js').ValidityPeriod;
  * DigestAlgorithm.SHA256.
  * SigningInfo(signingString) - Create a SigningInfo from its string
  * representation, where the digest algorithm is set to DigestAlgorithm.SHA256.
-
+ *
+ * @param {SigningInfo} signingInfo The SigningInfo to copy.
  * @param {number} signerType The type of signer as an int from the
  * SigningInfo.SignerType enum.
  * @param {Name} signerName The name of signer. The interpretation of the
@@ -20199,6 +20253,17 @@ var SigningInfo = function SigningInfo(arg1, arg2)
   if (arg1 == undefined) {
     this.reset(SigningInfo.SignerType.NULL);
     this.digestAlgorithm_ = DigestAlgorithm.SHA256;
+  }
+  else if (arg1 instanceof SigningInfo) {
+    // The copy constructor.
+    var signingInfo = arg1;
+
+    this.type_ = signingInfo.type_;
+    this.name_ = new Name(signingInfo.name_);
+    this.identity_ = signingInfo.identity_;
+    this.key_ = signingInfo.key_;
+    this.digestAlgorithm_ = signingInfo.digestAlgorithm_;
+    this.validityPeriod_ = new ValidityPeriod(signingInfo.validityPeriod_);
   }
   else if (typeof arg1 === 'number') {
     var signerType = arg1;
@@ -24191,10 +24256,10 @@ var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
 var OID = require('../../encoding/oid.js').OID; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
-var rsaKeygen = null;
+var RsaKeypair = null;
 try {
-  // This should be installed with: sudo npm install rsa-keygen
-  rsaKeygen = require('rsa-keygen');
+  // This should be installed with: sudo npm install rsa-keypair
+  RsaKeypair = require('rsa-keypair');
 }
 catch (e) {}
 
@@ -24371,19 +24436,19 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
         var privateKeyPem;
 
         if (params.getKeyType() === KeyType.RSA) {
-          if (!rsaKeygen)
+          if (!RsaKeypair)
             return SyncPromise.reject(new SecurityException(new Error
-              ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
+              ("Need to install rsa-keypair: sudo npm install rsa-keypair")));
 
-          var keyPair = rsaKeygen.generate(params.getKeySize());
+          var keyPair = RsaKeypair.generate(params.getKeySize());
 
           // Get the public key DER from the PEM string.
-          var publicKeyBase64 = keyPair.public_key.toString().replace
+          var publicKeyBase64 = keyPair.publicKey.toString().replace
             ("-----BEGIN PUBLIC KEY-----", "").replace
             ("-----END PUBLIC KEY-----", "");
           publicKeyDer = new Buffer(publicKeyBase64, 'base64');
 
-          privateKeyPem = keyPair.private_key.toString();
+          privateKeyPem = keyPair.privateKey.toString();
         }
         else
           return SyncPromise.reject(new SecurityException(new Error
@@ -32367,7 +32432,34 @@ TpmBackEnd.prototype.deleteKeyPromise = function(keyName, useSync)
   return this.doDeleteKeyPromise_(keyName, useSync);
 };
 
-// TODO: exportKey
+/**
+ * Get the encoded private key with name keyName in PKCS #8 format, possibly
+ * encrypted.
+ * @param {Name} keyName The name of the key in the TPM.
+ * @param {Buffer} password The password for encrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to return a PKCS #8 EncryptedPrivateKeyInfo. If the password is null,
+ * return an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the encoded private key,
+ * or a promise rejected with TpmBackEnd.Error if the key does not exist or if
+ * the key cannot be exported, e.g., insufficient privileges.
+ */
+TpmBackEnd.prototype.exportKeyPromise = function(keyName, password, useSync)
+{
+  var thisTpm = this;
+
+  return this.hasKeyPromise(keyName, useSync)
+  .then(function(hasKey) {
+    if (!hasKey)
+      return SyncPromise.reject(new TpmBackEnd.Error(new Error
+        ("Key `" + keyName.toUri() + "` does not exist")));
+    else
+      return thisTpm.doExportKeyPromise_(keyName, password, useSync);
+  });
+};
 
 /**
  * Import an encoded private key with name keyName in PKCS #8 format, possibly
@@ -32499,7 +32591,26 @@ TpmBackEnd.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
     ("TpmBackEnd.doDeleteKeyPromise_ is not implemented"));
 };
 
-// TODO: doExportKeyPromise_
+/**
+ * Get the encoded private key with name keyName in PKCS #8 format, possibly
+ * encrypted.
+ * @param {Name} keyName The name of the key in the TPM.
+ * @param {Buffer} password The password for encrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to return a PKCS #8 EncryptedPrivateKeyInfo. If the password is null,
+ * return an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the encoded private key,
+ * or a promise rejected with TpmBackEnd.Error if the key does not exist or if
+ * the key cannot be exported, e.g., insufficient privileges.
+ */
+TpmBackEnd.prototype.doExportKeyPromise_ = function(keyName, password, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("TpmBackEnd.doExportKeyPromise_ is not implemented"));
+};
 
 /**
  * A protected method to import an encoded private key with name keyName in
@@ -32651,7 +32762,39 @@ TpmBackEndMemory.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
   return SyncPromise.resolve();
 };
 
-// TODO: doExportKeyPromise_
+/**
+ * Get the encoded private key with name keyName in PKCS #8 format, possibly
+ * encrypted.
+ * @param {Name} keyName The name of the key in the TPM.
+ * @param {Buffer} password The password for encrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to return a PKCS #8 EncryptedPrivateKeyInfo. If the password is null,
+ * return an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the encoded private key,
+ * or a promise rejected with TpmBackEnd.Error if the key does not exist or if
+ * the key cannot be exported, e.g., insufficient privileges.
+ */
+TpmBackEnd.prototype.doExportKeyPromise_ = function(keyName, password, useSync)
+{
+  var keyNameUri = keyName.toUri();
+  if (!(keyNameUri in this.keys_))
+    return SyncPromise.reject(new TpmBackEnd.Error(new Error
+      ("exportKey: The key does not exist")));
+
+  try {
+    if (password != null)
+      // TODO: Use a Promise.
+      return SyncPromise.resolve(this.keys_[keyNameUri].toEncryptedPkcs8(password));
+    else
+      return SyncPromise.resolve(this.keys_[keyNameUri].toPkcs8());
+  } catch (ex) {
+    return SyncPromise.reject(new TpmBackEnd.Error(new Error
+      ("Error in toPkcs8: " + ex)));
+  }
+};
 
 /**
  * A protected method to import an encoded private key with name keyName in
@@ -32673,13 +32816,13 @@ TpmBackEndMemory.prototype.doDeleteKeyPromise_ = function(keyName, useSync)
 TpmBackEndMemory.prototype.doImportKeyPromise_ = function
   (keyName, pkcs8, password, useSync)
 {
-  if (password != null)
-    return SyncPromise.reject(new TpmBackEnd.Error(new Error
-      ("Private key password-encryption is not implemented")));
-
   try {
     var key = new TpmPrivateKey();
-    key.loadPkcs8(pkcs8);
+    if (password != null)
+      // TODO: Use a Promise.
+      key.loadEncryptedPkcs8(pkcs8, password);
+    else
+      key.loadPkcs8(pkcs8);
     this.keys_[keyName.toUri()] = key;
     return SyncPromise.resolve();
   } catch (ex) {
@@ -32958,14 +33101,15 @@ var DigestAlgorithm = require('../security-types.js').DigestAlgorithm; /** @igno
 var DataUtils = require('../../encoding/data-utils.js').DataUtils; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
+var DerSequence = require('../../encoding/der/der-node.js').DerNode.DerSequence; /** @ignore */
 var DerInteger = require('../../encoding/der/der-node.js').DerNode.DerInteger; /** @ignore */
 var OID = require('../../encoding/oid.js').OID; /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
-var rsaKeygen = null;
+var RsaKeypair = null;
 try {
-  // This should be installed with: sudo npm install rsa-keygen
-  rsaKeygen = require('rsa-keygen');
+  // This should be installed with: sudo npm install rsa-keypair
+  RsaKeypair = require('rsa-keypair');
 }
 catch (e) {}
 
@@ -33130,6 +33274,144 @@ TpmPrivateKey.prototype.loadPkcs8 = function(encoding, keyType)
   }
 
   this.loadPkcs1(privateKeyDer, keyType);
+};
+
+/**
+ * Load the encrypted private key from a buffer with the PKCS #8 encoding of
+ * the EncryptedPrivateKeyInfo.
+ * This replaces any existing private key in this object. This partially
+ * decodes the private key to determine the key type.
+ * @param {Buffer} encoding The byte buffer with the private key encoding.
+ * @param {Buffer} password The password for decrypting the private key, which
+ * should have characters in the range of 1 to 127.
+ * @throws TpmPrivateKey.Error for errors decoding the key.
+ */
+TpmPrivateKey.prototype.loadEncryptedPkcs8 = function(encoding, password)
+{
+  if (encoding instanceof Blob)
+    encoding = encoding.buf();
+  if (password instanceof Blob)
+    password = password.buf();
+
+  // Decode the PKCS #8 EncryptedPrivateKeyInfo.
+  // See https://tools.ietf.org/html/rfc5208.
+  var oidString;
+  var parameters;
+  var encryptedKey;
+  try {
+    var parsedNode = DerNode.parse(encoding, 0);
+    var encryptedPkcs8Children = parsedNode.getChildren();
+    var algorithmIdChildren = DerNode.getSequence
+      (encryptedPkcs8Children, 0).getChildren();
+    oidString = algorithmIdChildren[0].toVal();
+    parameters = algorithmIdChildren[1];
+
+    encryptedKey = encryptedPkcs8Children[1].toVal();
+  }
+  catch (ex) {
+    throw new TpmPrivateKey.Error(new Error
+      ("Cannot decode the PKCS #8 EncryptedPrivateKeyInfo: " + ex));
+  }
+
+  // Use the password to get the unencrypted pkcs8Encoding.
+  var pkcs8Encoding;
+  if (oidString == TpmPrivateKey.PBES2_OID) {
+    // Decode the PBES2 parameters. See https://www.ietf.org/rfc/rfc2898.txt .
+    var keyDerivationOidString;
+    var keyDerivationParameters;
+    var encryptionSchemeOidString;
+    var encryptionSchemeParameters;
+    try {
+      var parametersChildren = parameters.getChildren();
+
+      var keyDerivationAlgorithmIdChildren = DerNode.getSequence
+        (parametersChildren, 0).getChildren();
+      keyDerivationOidString = keyDerivationAlgorithmIdChildren[0].toVal();
+      keyDerivationParameters = keyDerivationAlgorithmIdChildren[1];
+
+      var encryptionSchemeAlgorithmIdChildren = DerNode.getSequence
+        (parametersChildren, 1).getChildren();
+      encryptionSchemeOidString = encryptionSchemeAlgorithmIdChildren[0].toVal();
+      encryptionSchemeParameters = encryptionSchemeAlgorithmIdChildren[1];
+    }
+    catch (ex) {
+      throw new TpmPrivateKey.Error(new Error
+        ("Cannot decode the PBES2 parameters: " + ex));
+    }
+
+    // Get the derived key from the password.
+    var derivedKey = null;
+    if (keyDerivationOidString == TpmPrivateKey.PBKDF2_OID) {
+      // Decode the PBKDF2 parameters.
+      var salt;
+      var nIterations;
+      try {
+        var pbkdf2ParametersChildren = keyDerivationParameters.getChildren();
+        salt = pbkdf2ParametersChildren[0].toVal();
+        nIterations = pbkdf2ParametersChildren[1].toVal();
+      }
+      catch (ex) {
+        throw new TpmPrivateKey.Error(new Error
+          ("Cannot decode the PBES2 parameters: " + ex));
+      }
+
+      // Check the encryption scheme here to get the needed result length.
+      var resultLength;
+      if (encryptionSchemeOidString == TpmPrivateKey.DES_EDE3_CBC_OID)
+        resultLength = TpmPrivateKey.DES_EDE3_KEY_LENGTH;
+      else
+        throw new TpmPrivateKey.Error(new Error
+          ("Unrecognized PBES2 encryption scheme OID: " +
+           encryptionSchemeOidString));
+
+      try {
+        // TODO: Support Crypto.subtle.
+        derivedKey = Crypto.pbkdf2Sync
+          (password, salt.buf(), nIterations, resultLength, 'sha1');
+      }
+      catch (ex) {
+        throw new TpmPrivateKey.Error(new Error
+          ("Error computing the derived key using PBKDF2 with HMAC SHA1: " + ex));
+      }
+    }
+    else
+      throw new TpmPrivateKey.Error(new Error
+        ("Unrecognized PBES2 key derivation OID: " + keyDerivationOidString));
+
+    // Use the derived key to get the unencrypted pkcs8Encoding.
+    if (encryptionSchemeOidString == TpmPrivateKey.DES_EDE3_CBC_OID) {
+      // Decode the DES-EDE3-CBC parameters.
+      var initialVector;
+      try {
+        initialVector = encryptionSchemeParameters.toVal();
+      }
+      catch (ex) {
+        throw new TpmPrivateKey.Error(new Error
+          ("Cannot decode the DES-EDE3-CBC parameters: " + ex));
+      }
+
+      try {
+        // TODO: Support Crypto.subtle.
+        var cipher = Crypto.createDecipheriv
+          ("des-ede3-cbc", derivedKey, initialVector.buf());
+        pkcs8Encoding = Buffer.concat
+          ([cipher.update(encryptedKey.buf()), cipher.final()]);
+      }
+      catch (ex) {
+        throw new TpmPrivateKey.Error(new Error
+          ("Error decrypting PKCS #8 key with DES-EDE3-CBC: " + ex));
+      }
+    }
+    else
+      throw new TpmPrivateKey.Error(new Error
+        ("Unrecognized PBES2 encryption scheme OID: " +
+         encryptionSchemeOidString));
+  }
+  else
+    throw new TpmPrivateKey.Error(new Error
+      ("Unrecognized PKCS #8 EncryptedPrivateKeyInfo OID: " + oidString));
+
+  this.loadPkcs8(pkcs8Encoding);
 };
 
 /**
@@ -33345,6 +33627,88 @@ TpmPrivateKey.prototype.toPkcs8 = function()
 };
 
 /**
+ * Get the encoded encrypted private key in PKCS #8.
+ * @param {Buffer} password The password for encrypting the private key, which
+ * should have characters in the range of 1 to 127.
+ * @return {Blob} The encoding Blob of the EncryptedPrivateKeyInfo.
+ * @throws {TpmPrivateKey.Error} If no private key is loaded, or error encoding.
+ */
+TpmPrivateKey.prototype.toEncryptedPkcs8 = function(password)
+{
+  if (this.keyType_ == null)
+    throw new TpmPrivateKey.Error(new Error
+      ("toPkcs8: The private key is not loaded"));
+
+  if (password instanceof Blob)
+    password = password.buf();
+
+  // Create the derivedKey from the password.
+  var nIterations = 2048;
+  var salt = Crypto.randomBytes(8);
+  var derivedKey;
+  try {
+    // TODO: Support Crypto.subtle.
+    derivedKey = Crypto.pbkdf2Sync
+      (password, salt, nIterations, TpmPrivateKey.DES_EDE3_KEY_LENGTH, 'sha1');
+  }
+  catch (ex) {
+    throw new TpmPrivateKey.Error(new Error
+      ("Error computing the derived key using PBKDF2 with HMAC SHA1: " + ex));
+  }
+
+  // Use the derived key to get the encrypted pkcs8Encoding.
+  var encryptedEncoding;
+  var initialVector = Crypto.randomBytes(8);
+  try {
+    // TODO: Support Crypto.subtle.
+    var cipher = Crypto.createCipheriv
+      ("des-ede3-cbc", derivedKey, initialVector);
+    encryptedEncoding = Buffer.concat
+      ([cipher.update(this.toPkcs8().buf()), cipher.final()]);
+  }
+  catch (ex) {
+    throw new TpmPrivateKey.Error(new Error
+      ("Error encrypting PKCS #8 key with DES-EDE3-CBC: " + ex));
+  }
+
+  try {
+    // Encode the PBES2 parameters. See https://www.ietf.org/rfc/rfc2898.txt .
+    var keyDerivationParameters = new DerSequence();
+    keyDerivationParameters.addChild(new DerNode.DerOctetString(salt));
+    keyDerivationParameters.addChild(new DerNode.DerInteger(nIterations));
+    var keyDerivationAlgorithmIdentifier = new DerSequence();
+    keyDerivationAlgorithmIdentifier.addChild(new DerNode.DerOid
+      (TpmPrivateKey.PBKDF2_OID));
+    keyDerivationAlgorithmIdentifier.addChild(keyDerivationParameters);
+
+    var encryptionSchemeAlgorithmIdentifier = new DerSequence();
+    encryptionSchemeAlgorithmIdentifier.addChild(new DerNode.DerOid
+      (TpmPrivateKey.DES_EDE3_CBC_OID));
+    encryptionSchemeAlgorithmIdentifier.addChild(new DerNode.DerOctetString
+      (initialVector));
+
+    var encryptedKeyParameters = new DerSequence();
+    encryptedKeyParameters.addChild(keyDerivationAlgorithmIdentifier);
+    encryptedKeyParameters.addChild(encryptionSchemeAlgorithmIdentifier);
+    var encryptedKeyAlgorithmIdentifier = new DerSequence();
+    encryptedKeyAlgorithmIdentifier.addChild(new DerNode.DerOid
+      (TpmPrivateKey.PBES2_OID));
+    encryptedKeyAlgorithmIdentifier.addChild(encryptedKeyParameters);
+
+    // Encode the PKCS #8 EncryptedPrivateKeyInfo.
+    // See https://tools.ietf.org/html/rfc5208.
+    var encryptedKey = new DerSequence();
+    encryptedKey.addChild(encryptedKeyAlgorithmIdentifier);
+    encryptedKey.addChild(new DerNode.DerOctetString(encryptedEncoding));
+
+    return encryptedKey.encode();
+  } catch (ex) {
+    throw new TpmPrivateKey.Error(new Error
+      ("Error encoding the encryped PKCS #8 private key: " + ex));
+  }
+};
+
+/**
  * Generate a key pair according to keyParams and return a new TpmPrivateKey
  * with the private key. You can get the public key with derivePublicKey.
  * @param {KeyParams} keyParams The parameters of the key.
@@ -33392,12 +33756,12 @@ TpmPrivateKey.generatePrivateKeyPromise = function(keyParams, useSync)
     var privateKeyPem;
 
     if (keyParams.getKeyType() === KeyType.RSA) {
-      if (!rsaKeygen)
+      if (!RsaKeypair)
         return SyncPromise.reject(new TpmPrivateKey.Error(new Error
-          ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
+          ("Need to install rsa-keypair: sudo npm install rsa-keypair")));
 
-      var keyPair = rsaKeygen.generate(keyParams.getKeySize());
-      privateKeyPem = keyPair.private_key.toString();
+      var keyPair = RsaKeypair.generate(keyParams.getKeySize());
+      privateKeyPem = keyPair.privateKey.toString();
     }
     else
       return SyncPromise.reject(new Error
@@ -33585,6 +33949,10 @@ TpmPrivateKey.prototype.getDecryptSubtleKeyPromise_ = function()
 
 TpmPrivateKey.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
 TpmPrivateKey.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
+TpmPrivateKey.PBES2_OID = "1.2.840.113549.1.5.13";
+TpmPrivateKey.PBKDF2_OID = "1.2.840.113549.1.5.12";
+TpmPrivateKey.DES_EDE3_CBC_OID = "1.2.840.113549.3.7";
+TpmPrivateKey.DES_EDE3_KEY_LENGTH = 24;
 /**
  * Copyright (C) 2017-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -33832,7 +34200,29 @@ Tpm.prototype.deleteKeyPromise_ = function(keyName, useSync)
   });
 };
 
-// TODO: exportPrivateKeyPromise_
+/**
+ * Get the encoded private key with name keyName in PKCS #8 format, possibly
+ * encrypted. This should only be called by KeyChain.
+ * @param {Name} keyName The name of the key in the TPM.
+ * @param {Buffer} password The password for encrypting the private key, which
+ * should have characters in the range of 1 to 127. If the password is supplied,
+ * use it to return a PKCS #8 EncryptedPrivateKeyInfo. If the password is null,
+ * return an unencrypted PKCS #8 PrivateKeyInfo.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the private key encoded 
+ * in PKCS #8 format, or a promise rejected with TpmBackEnd.Error if the key
+ * does not exist or if the key cannot be exported, e.g., insufficient privileges.
+ */
+Tpm.prototype.exportPrivateKeyPromise_ = function(keyName, password, useSync)
+{
+  var thisTpm = this;
+  return this.initializePromise_(useSync)
+  .then(function() {
+    return thisTpm.backEnd_.exportKeyPromise(keyName, password, useSync);
+  });
+};
 
 /**
  * Import an encoded private key with name keyName in PKCS #8 format, possibly
@@ -37101,7 +37491,7 @@ ValidationError.USER_MIN =                    256;
 
 /**
  * Get the error code given to the constructor.
- * @return The error code which is one of the standard error codes such as
+ * @return {number} The error code which is one of the standard error codes such as
  * ValidationError.INVALID_SIGNATURE, or a custom code if greater than or equal
  * to ValidationError.USER_MIN.
  */
@@ -37109,7 +37499,7 @@ ValidationError.prototype.getCode = function() { return this.code_; };
 
 /**
  * Get the error message given to the constructor.
- * @return The error message, or "" if none.
+ * @return {string} The error message, or "" if none.
  */
 ValidationError.prototype.getInfo = function() { return this.info_; };
 
@@ -38464,6 +38854,7 @@ var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
 var DigestAlgorithm = require('./security-types.js').DigestAlgorithm; /** @ignore */
 var KeyType = require('./security-types.js').KeyType; /** @ignore */
 var ValidityPeriod = require('./validity-period.js').ValidityPeriod; /** @ignore */
+var SafeBag = require('./safe-bag.js').SafeBag; /** @ignore */
 var VerificationHelpers = require('./verification-helpers.js').VerificationHelpers; /** @ignore */
 var PublicKey = require('./certificate/public-key.js').PublicKey; /** @ignore */
 var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVerifyPolicyManager;
@@ -39628,6 +40019,84 @@ KeyChain.prototype.selfSign = function(key, wireFormat, onComplete, onError)
 };
 
 // Import and export
+
+/**
+ * Export a certificate and its corresponding private key in a SafeBag.
+ * @param {CertificateV2} certificate The certificate to export. This gets the
+ * key from the TPM using certificate.getKeyName().
+ * @param {Buffer} password (optional) The password for encrypting the private
+ * key, which should have characters in the range of 1 to 127. If the password
+ * is supplied, use it to put a PKCS #8 EncryptedPrivateKeyInfo in the SafeBag.
+ * If the password is null, put an unencrypted PKCS #8 PrivateKeyInfo in the
+ * SafeBag.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a SafeBag carrying the
+ * certificate and private key, or a promise rejected with KeyChain.Error if
+ * certificate.getKeyName() key does not exist, if the password is null and the
+ * TPM does not support exporting an unencrypted private key, or for other
+ * errors exporting the private key.
+ */
+KeyChain.prototype.exportSafeBagPromise = function
+  (certificate, password, useSync)
+{
+  if (typeof password === 'boolean') {
+    // password is omitted, so shift.
+    useSync = password;
+    password = undefined;
+  }
+
+  var keyName = certificate.getKeyName();
+  
+  var thisKeyChain = this;
+  return SyncPromise.resolve()
+  .then(function() {
+    return thisKeyChain.tpm_.exportPrivateKeyPromise_(keyName, password, useSync);
+  }, function(err) {
+    return SyncPromise.reject(new KeyChain.Error(new Error
+      ("Failed to export private key `" + keyName.toUri() + "`: " + err)));
+  })
+  .then(function(encryptedKey) {
+    return SyncPromise.resolve(new SafeBag(certificate, encryptedKey));
+  });
+};
+
+/**
+ * Export a certificate and its corresponding private key in a SafeBag.
+ * @param {CertificateV2} certificate The certificate to export. This gets the
+ * key from the TPM using certificate.getKeyName().
+ * @param {Buffer} password (optional) The password for encrypting the private
+ * key, which should have characters in the range of 1 to 127. If the password
+ * is supplied, use it to put a PKCS #8 EncryptedPrivateKeyInfo in the SafeBag.
+ * If the password is null, put an unencrypted PKCS #8 PrivateKeyInfo in the
+ * SafeBag.
+ * @param {function} onComplete (optional) This calls onComplete(safeBag) with a
+ * SafeBag carrying the certificate and private key. If omitted, the return
+ * value is described below. (Some crypto libraries only use a callback, so
+ * onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some crypto libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @return {SafeBag} If onComplete is omitted, return a SafeBag carrying the
+ * certificate and private key. Otherwise, if onComplete is supplied then return
+ * undefined and use onComplete as described above.
+ */
+KeyChain.prototype.exportSafeBag = function
+  (certificate, password, onComplete, onError)
+{
+  onError = (typeof password === "function") ? onComplete : onError;
+  onComplete = (typeof password === "function") ? password : onComplete;
+  password = (typeof password === "function") ? null : password;
+
+  return SyncPromise.complete(onComplete, onError,
+    this.exportSafeBagPromise(certificate, password, !onComplete));
+};
 
 /**
  * Import a certificate and its corresponding private key encapsulated in a
@@ -41583,6 +42052,7 @@ var Interest = function Interest
     this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
     this.forwardingHint_ = new ChangeCounter
       (new DelegationSet(interest.getForwardingHint()));
+    this.parameters_ = interest.parameters_;
     this.nonce_ = interest.nonce_;
     this.linkWireEncoding_ = interest.linkWireEncoding_;
     this.linkWireEncodingFormat_ = interest.linkWireEncodingFormat_;
@@ -41605,6 +42075,7 @@ var Interest = function Interest
     this.mustBeFresh_ = true;
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
     this.forwardingHint_ = new ChangeCounter(new DelegationSet());
+    this.parameters_ = new Blob();
     this.nonce_ = new Blob();
     this.linkWireEncoding_ = new Blob();
     this.linkWireEncodingFormat_ = null;
@@ -41849,6 +42320,24 @@ Interest.prototype.getForwardingHint = function()
 };
 
 /**
+ * Check if the Interest parameters are specified.
+ * @returns {boolean} True if the Interest parameters are specified, false if not.
+ */
+Interest.prototype.hasParameters = function()
+{
+  return this.parameters_.size() > 0;
+};
+
+/**
+ * Get the Interest parameters.
+ * @returns {Blob} The parameters as a Blob, which isNull() if unspecified.
+ */
+Interest.prototype.getParameters = function()
+{
+  return this.parameters_;
+};
+
+/**
  * @deprecated Use getNonce. This method returns a Buffer which is the former
  * behavior of getNonce, and should only be used while updating your code.
  */
@@ -42082,6 +42571,40 @@ Interest.prototype.setForwardingHint = function(forwardingHint)
     (typeof forwardingHint === 'object' && forwardingHint instanceof DelegationSet ?
      new DelegationSet(forwardingHint) : new DelegationSet());
   ++this.changeCount_;
+  return this;
+};
+
+/**
+ * Set the content to the given value.
+ * @param {Blob|Buffer} parameters The Interest parameters bytes. If parameters
+ * is not a Blob, then create a new Blob to copy the bytes (otherwise take
+ * another pointer to the same Blob).
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setParameters = function(parameters)
+{
+  this.parameters_ = typeof parameters === 'object' && parameters instanceof Blob ?
+    parameters : new Blob(parameters, true);
+  ++this.changeCount_;
+  return this;
+};
+
+/**
+ * Append the digest of the Interest parameters to the Name as a
+ * ParametersSha256DigestComponent. However, if the Interest parameters is
+ * unspecified, do nothing. This does not check if the Name already has a
+ * parameters digest component, so calling again will append another component.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.appendParametersDigestToName = function()
+{
+  if (!this.hasParameters())
+    return this;
+
+  var hash = Crypto.createHash('sha256');
+  hash.update(this.parameters_.buf());
+  this.getName().appendParametersSha256Digest(new Blob(hash.digest(), false));
+
   return this;
 };
 
@@ -43638,6 +44161,13 @@ Tlv0_2WireFormat.prototype.decodeName = function(name, input, copy)
  */
 Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
 {
+  if (interest.hasParameters())
+    // The application has specified a format v0.3 field. As we transition to
+    // format v0.3, encode as format v0.3 even though the application default is
+    // Tlv0_2WireFormat.
+    return Tlv0_2WireFormat.encodeInterestV03_
+      (interest, signedPortionBeginOffset, signedPortionEndOffset);
+
   var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
 
@@ -43790,6 +44320,9 @@ Tlv0_2WireFormat.prototype.decodeInterestV02_ = function(interest, input, copy)
   if (interest.getSelectedDelegationIndex() != null &&
       interest.getSelectedDelegationIndex() >= 0 && !interest.hasLink())
     throw new Error("Interest has a selected delegation, but no link object");
+
+  // Format v0.2 doesn't have Interest parameters.
+  interest.setParameters(new Blob());
 
   // Set the nonce last because setting other interest fields clears it.
   interest.setNonce(new Blob(nonce, copy));
@@ -44174,7 +44707,7 @@ Tlv0_2WireFormat.prototype.decodeDelegationSet = function
 };
 
 /**
- * Encode the EncryptedContent in NDN-TLV and return the encoding.
+ * Encode the EncryptedContent v1 in NDN-TLV and return the encoding.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object to
  * encode.
  * @return {Blob} A Blob containing the encoding.
@@ -44202,7 +44735,7 @@ Tlv0_2WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
 };
 
 /**
- * Decode input as an EncryptedContent in NDN-TLV and set the fields of the
+ * Decode input as an EncryptedContent v1 in NDN-TLV and set the fields of the
  * encryptedContent object.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object
  * whose fields are updated.
@@ -44221,6 +44754,7 @@ Tlv0_2WireFormat.prototype.decodeEncryptedContent = function
   var endOffset = decoder.
     readNestedTlvsStart(Tlv.Encrypt_EncryptedContent);
 
+  encryptedContent.clear();
   Tlv0_2WireFormat.decodeKeyLocator
     (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder, copy);
   encryptedContent.setAlgorithmType
@@ -44230,6 +44764,75 @@ Tlv0_2WireFormat.prototype.decodeEncryptedContent = function
      (Tlv.Encrypt_InitialVector, endOffset), copy));
   encryptedContent.setPayload
     (new Blob(decoder.readBlobTlv(Tlv.Encrypt_EncryptedPayload), copy));
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+/**
+ * Encode the EncryptedContent v2 (used in Name-based Access Control v2) in
+ * NDN-TLV and return the encoding.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object to
+ * encode.
+ * @return {Blob} A Blob containing the encoding.
+ */
+Tlv0_2WireFormat.prototype.encodeEncryptedContentV2 = function(encryptedContent)
+{
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  if (encryptedContent.getKeyLocator().getType() == KeyLocatorType.KEYNAME)
+    Tlv0_2WireFormat.encodeName
+      (encryptedContent.getKeyLocator().getKeyName(), encoder);
+  encoder.writeOptionalBlobTlv
+    (Tlv.Encrypt_EncryptedPayloadKey, encryptedContent.getPayloadKey().buf());
+  encoder.writeOptionalBlobTlv
+    (Tlv.Encrypt_InitialVector, encryptedContent.getInitialVector().buf());
+  encoder.writeBlobTlv
+    (Tlv.Encrypt_EncryptedPayload, encryptedContent.getPayload().buf());
+
+  encoder.writeTypeAndLength
+    (Tlv.Encrypt_EncryptedContent, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Decode input as an EncryptedContent v2 (used in Name-based Access Control
+ * v2) in NDN-TLV and set the fields of the encryptedContent object.
+ * See https://github.com/named-data/name-based-access-control/blob/new/docs/spec.rst .
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ */
+Tlv0_2WireFormat.prototype.decodeEncryptedContentV2 = function
+  (encryptedContent, input, copy)
+{
+  if (copy == null)
+    copy = true;
+
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.
+    readNestedTlvsStart(Tlv.Encrypt_EncryptedContent);
+
+  encryptedContent.clear();
+  encryptedContent.setPayload
+    (new Blob(decoder.readBlobTlv(Tlv.Encrypt_EncryptedPayload), copy));
+  encryptedContent.setInitialVector
+    (new Blob(decoder.readOptionalBlobTlv
+     (Tlv.Encrypt_InitialVector, endOffset), copy));
+  encryptedContent.setPayloadKey
+    (new Blob(decoder.readOptionalBlobTlv
+     (Tlv.Encrypt_EncryptedPayloadKey, endOffset), copy));
+
+  if (decoder.peekType(Tlv.Name, endOffset)) {
+    Tlv0_2WireFormat.decodeName
+      (encryptedContent.getKeyLocator().getKeyName(), decoder, copy);
+    encryptedContent.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+  }
 
   decoder.finishNestedTlvs(endOffset);
 };
@@ -44908,10 +45511,93 @@ Tlv0_2WireFormat.decodeDelegationSet_ = function
 };
 
 /**
+ * Encode interest in NDN-TLV format v0.3 and return the encoding.
+ * @param {Interest} interest The Interest object to encode.
+ * @return {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
+ */
+Tlv0_2WireFormat.encodeInterestV03_ = function(interest)
+{
+  // TODO: Throw an exception if the interest speficies V02 fields.
+
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeOptionalBlobTlv(Tlv.Parameters, interest.getParameters().buf());
+  // TODO: HopLimit.
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
+
+  // Encode the Nonce as 4 bytes.
+  if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
+    // This is the most common case. Generate a nonce.
+    encoder.writeBlobTlv(Tlv.Nonce, Crypto.randomBytes(4));
+  else if (interest.getNonce().size() < 4) {
+    var nonce = Buffer(4);
+    // Copy existing nonce bytes.
+    interest.getNonce().buf().copy(nonce);
+
+    // Generate random bytes for remaining bytes in the nonce.
+    for (var i = interest.getNonce().size(); i < 4; ++i)
+      nonce[i] = Crypto.randomBytes(1)[0];
+
+    encoder.writeBlobTlv(Tlv.Nonce, nonce);
+  }
+  else if (interest.getNonce().size() == 4)
+    // Use the nonce as-is.
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf());
+  else
+    // Truncate.
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
+
+  if (interest.getForwardingHint().size() > 0) {
+    if (interest.getSelectedDelegationIndex() != null)
+      throw new Error
+        ("An Interest may not have a selected delegation when encoding a forwarding hint");
+    if (interest.hasLink())
+      throw new Error
+        ("An Interest may not have a link object when encoding a forwarding hint");
+
+    var forwardingHintSaveLength = encoder.getLength();
+    Tlv0_2WireFormat.encodeDelegationSet_(interest.getForwardingHint(), encoder);
+    encoder.writeTypeAndLength(
+      Tlv.ForwardingHint, encoder.getLength() - forwardingHintSaveLength);
+  }
+
+  if (interest.getMustBeFresh())
+    encoder.writeTypeAndLength(Tlv.MustBeFresh, 0);
+  if (interest.getCanBePrefix())
+    encoder.writeTypeAndLength(Tlv.CanBePrefix, 0);
+
+  var tempOffsets = Tlv0_2WireFormat.encodeName(interest.getName(), encoder);
+  var signedPortionBeginOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionBeginOffset;
+  var signedPortionEndOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionEndOffset;
+
+  encoder.writeTypeAndLength(Tlv.Interest, encoder.getLength() - saveLength);
+  var signedPortionBeginOffset =
+    encoder.getLength() - signedPortionBeginOffsetFromBack;
+  var signedPortionEndOffset =
+    encoder.getLength() - signedPortionEndOffsetFromBack;
+
+  return { encoding: new Blob(encoder.getOutput(), false),
+           signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
+};
+
+/**
  * Decode input as an Interest in NDN-TLV format v0.3 and set the fields of
  * the Interest object. This private method is called if the main decodeInterest
- * fails to decode as v0.2. This ignores HopLimit and Parameters, and interprets
- * CanBePrefix using MaxSuffixComponents.
+ * fails to decode as v0.2. This ignores HopLimit and interprets CanBePrefix
+ * using MaxSuffixComponents.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
  * @param {boolean} copy (optional) If true, copy from the input when making new
@@ -44962,9 +45648,11 @@ Tlv0_2WireFormat.decodeInterestV03_ = function(interest, input, copy)
   interest.unsetLink();
   interest.setSelectedDelegationIndex(null);
 
-  // Ignore the HopLimit and Parameters.
+  // Ignore the HopLimit.
   decoder.readOptionalBlobTlv(Tlv.HopLimit, endOffset);
-  decoder.readOptionalBlobTlv(Tlv.Parameters, endOffset);
+
+  interest.setParameters(new Blob(decoder.readOptionalBlobTlv
+    (Tlv.Parameters, endOffset), copy));
 
   // Set the nonce last because setting other interest fields clears it.
   interest.setNonce(nonce == null ? new Blob() : new Blob(nonce, copy));
@@ -45321,6 +46009,82 @@ var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSu
  * @deprecated Use interest.wireEncode().
  */
 function encodeToBinaryInterest(interest) { return interest.wireEncode().buf(); }
+/**
+ * Copyright (C) 2019 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx security https://github.com/named-data/ndn-cxx/blob/master/src/ims/in-memory-storage-persistent.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var Data = require('../data.js').Data;
+
+/**
+ * InMemoryStorageRetaining provides an application cache with in-memory
+ * storage, of which no eviction policy will be employed. Entries will only be
+ * evicted by explicit application control.
+ * Note: In ndn-cxx, this class is called InMemoryStoragePersistent, but
+ * "persistent" misleadingly sounds like persistent on-disk storage.
+ *
+ * Create an InMemoryStorageRetaining.
+ * @constructor
+ */
+var InMemoryStorageRetaining = function InMemoryStorageRetaining()
+{
+  // The dictionary key is the Data packet Name URI string. The value is a Data.
+  this.cache_ = [];
+};
+
+exports.InMemoryStorageRetaining = InMemoryStorageRetaining;
+
+/**
+ * Insert a Data packet. If a Data packet with the same name, including the
+ * implicit digest, already exists, replace it.
+ * @param {Data} data The packet to insert, which is copied.
+ */
+InMemoryStorageRetaining.prototype.insert = function(data)
+{
+  this.cache_[data.getFullName().toUri()] = new Data(data);
+};
+
+/**
+ * Find the best match Data for an Interest.
+ * @param {Interest} interest The Interest with the Name of the Data packet to
+ * find.
+ * @returns {Data} The best match if any, otherwise None. You should not modify
+ * the returned object. If you need to modify it then you must make a copy.
+ */
+InMemoryStorageRetaining.prototype.find = function(interest)
+{
+  for (var nameUri in this.cache_) {
+    // Debug: Check selectors, especially CanBePrefix.
+    if (interest.getName().isPrefixOf(new Name(nameUri)))
+      return this.cache_[nameUri];
+  }
+};
+
+/**
+ * Get the number of packets stored in the in-memory storage.
+ * @returns {number} The number of packets.
+ */
+InMemoryStorageRetaining.prototype.size = function()
+{
+  return Object.keys(this.cache_).length;
+};
 /**
  * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -45928,10 +46692,10 @@ var PrivateKeyStorage = require('../../security/identity/private-key-storage.js'
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var PublicKey = require('../../security/certificate/public-key.js').PublicKey; /** @ignore */
-var rsaKeygen = null;
+var RsaKeypair = null;
 try {
-  // This should be installed with: sudo npm install rsa-keygen
-  rsaKeygen = require('rsa-keygen');
+  // This should be installed with: sudo npm install rsa-keypair
+  RsaKeypair = require('rsa-keypair');
 }
 catch (e) {}
 
@@ -45974,14 +46738,14 @@ RsaAlgorithm.generateKeyPromise = function(params, useSync)
     });
   }
   else {
-    if (!rsaKeygen)
+    if (!RsaKeypair)
       return SyncPromise.reject(new Error
-        ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
+        ("Need to install rsa-keypair: sudo npm install rsa-keypair"));
 
     try {
-      var keyPair = rsaKeygen.generate(params.getKeySize());
+      var keyPair = RsaKeypair.generate(params.getKeySize());
       // Get the PKCS1 private key DER from the PEM string and encode as PKCS8.
-      var privateKeyBase64 = keyPair.private_key.toString().replace
+      var privateKeyBase64 = keyPair.privateKey.toString().replace
         ("-----BEGIN RSA PRIVATE KEY-----", "").replace
         ("-----END RSA PRIVATE KEY-----", "");
       var pkcs1PrivateKeyDer = new Buffer(privateKeyBase64, 'base64');
@@ -46844,6 +47608,511 @@ exports.DecryptKey = DecryptKey;
  */
 DecryptKey.prototype.getKeyBits = function() { return this.keyBits_; };
 /**
+ * Copyright (C) 2019 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From the NAC library https://github.com/named-data/name-based-access-control/blob/new/src/decryptor.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Name = require('../name.js').Name;
+var Interest = require('../interest.js').Interest;
+var EncryptError = require('./encrypt-error.js').EncryptError; /** @ignore */
+var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
+var SafeBag = require('../security/safe-bag.js').SafeBag; /** @ignore */
+var EncryptorV2 = require('./encryptor-v2.js').EncryptorV2; /** @ignore */
+var EncryptError = require('./encrypt-error.js').EncryptError; /** @ignore */
+var EncryptedContent = require('./encrypted-content.js').EncryptedContent; /** @ignore */
+var EncryptParams = require('./algo/encrypt-params.js').EncryptParams; /** @ignore */
+var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm; /** @ignore */
+var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
+var Pib = require('../security/pib/pib.js').Pib; /** @ignore */
+var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
+var LOG = require('../log.js').Log.LOG;
+
+/**
+ * DecryptorV2 decrypts the supplied EncryptedContent element, using
+ * asynchronous operations, contingent on the retrieval of the CK Data packet,
+ * the KDK, and the successful decryption of both of these. For the meaning of
+ * "KDK", etc. see:
+ * https://github.com/named-data/name-based-access-control/blob/new/docs/spec.rst
+ * 
+ * Create a DecryptorV2 with the given parameters.
+ * @param {PibKey} credentialsKey The credentials key to be used to retrieve and
+ * decrypt the KDK.
+ * @param {Validator} validator The validation policy to ensure the validity of
+ * the KDK and CK.
+ * @param {KeyChain} keyChain The KeyChain that will be used to decrypt the KDK.
+ * @param {Face} face The Face that will be used to fetch the CK and KDK.
+ * @constructor
+ */
+var DecryptorV2 = function DecryptorV2(credentialsKey, validator, keyChain, face)
+{
+  // The dictionary key is the CK Name URI string. The value is a DecryptorV2.ContentKey.
+  // TODO: add some expiration, so they are not stored forever.
+  this.contentKeys_ = {};
+
+  this.credentialsKey_ = credentialsKey;
+  // this.validator_ = validator;
+  this.face_ = face;
+  // The external keychain with access credentials.
+  this.keyChain_ = keyChain;
+
+  // The internal in-memory keychain for temporarily storing KDKs.
+  this.internalKeyChain_ = new KeyChain("pib-memory:", "tpm-memory:");
+};
+
+exports.DecryptorV2 = DecryptorV2;
+
+DecryptorV2.prototype.shutdown = function()
+{
+  for (var nameUri in this.contentKeys_) {
+    var contentKey = this.contentKeys_[nameUri];
+
+    if (contentKey.pendingInterest > 0) {
+      this.face_.removePendingInterest(contentKey.pendingInterest);
+      contentKey.pendingInterest = 0;
+
+      for (var i in contentKey.pendingDecrypts)
+        contentKey.pendingDecrypts[i].onError
+          (EncryptError.ErrorCode.CkRetrievalFailure,
+           "Canceling pending decrypt as ContentKey is being destroyed");
+
+      // Clear is not really necessary, but just in case.
+      contentKey.pendingDecrypts = [];
+    }
+  }
+};
+
+/**
+ * Asynchronously decrypt the encryptedContent.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent to decrypt,
+ * which must have a KeyLocator with a KEYNAME and and initial vector. This does
+ * not copy the EncryptedContent object. If you may change it later, then pass
+ * in a copy of the object.
+ * @param {function} onSuccess On successful decryption, this calls
+ * onSuccess(plainData) where plainData is the decrypted Blob.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {function} onError On failure, this calls onError(errorCode, message)
+ * where errorCode is from EncryptError.ErrorCode, and message is an error
+ * string.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ */
+DecryptorV2.prototype.decrypt = function(encryptedContent, onSuccess, onError)
+{
+  if (encryptedContent.getKeyLocator().getType() != KeyLocatorType.KEYNAME) {
+    if (LOG > 3) console.log
+      ("Missing required KeyLocator in the supplied EncryptedContent block");
+    onError(EncryptError.ErrorCode.MissingRequiredKeyLocator,
+      "Missing required KeyLocator in the supplied EncryptedContent block");
+    return;
+  }
+
+  if (!encryptedContent.hasInitialVector()) {
+    if (LOG > 3) console.log
+      ("Missing required initial vector in the supplied EncryptedContent block");
+    onError(EncryptError.ErrorCode.MissingRequiredInitialVector,
+      "Missing required initial vector in the supplied EncryptedContent block");
+    return;
+  }
+
+  var ckName = encryptedContent.getKeyLocatorName();
+  var ckNameUri = ckName.toUri();
+  var contentKey = this.contentKeys_[ckNameUri];
+  var isNew = (contentKey === undefined);
+  if (isNew) {
+    contentKey = new DecryptorV2.ContentKey();
+    this.contentKeys_[ckNameUri] = contentKey;
+  }
+
+  if (contentKey.isRetrieved)
+    DecryptorV2.doDecrypt_(encryptedContent, contentKey.bits, onSuccess, onError);
+  else {
+    if (LOG > 3) console.log("CK " + ckName.toUri() +
+      " not yet available, so adding to the pending decrypt queue");
+    contentKey.pendingDecrypts.push(new DecryptorV2.ContentKey.PendingDecrypt
+      (encryptedContent, onSuccess, onError));
+  }
+
+  if (isNew)
+    this.fetchCk_(ckName, contentKey, onError, EncryptorV2.N_RETRIES);
+};
+
+DecryptorV2.ContentKey = function DecryptorV2ContentKey()
+{
+  this.isRetrieved = false;
+  // Blob
+  this.bits = null;
+  this.pendingInterest = 0;
+  // Array of DecryptorV2.ContentKey.PendingDecrypt
+  this.pendingDecrypts = [];
+};
+
+DecryptorV2.ContentKey.PendingDecrypt = function DecryptorV2ContentKeyPendingDecrypt
+  (encryptedContent, onSuccess, onError)
+{
+  // EncryptedContent
+  this.encryptedContent = encryptedContent;
+  // This calls onSuccess(plainData) where plainData is a Blob.
+  this.onSuccess = onSuccess;
+  // This calls onError(errorCode, message)
+  this.onError = onError;
+};
+
+DecryptorV2.prototype.fetchCk_ = function
+  (ckName, contentKey, onError, nTriesLeft)
+{
+  // The full name of the CK is
+  //
+  // <whatever-prefix>/CK/<ck-id>  /ENCRYPTED-BY /<kek-prefix>/KEK/<key-id>
+  // \                          /                \                        /
+  //  -----------  -------------                  -----------  -----------
+  //             \/                                          \/
+  //   from the encrypted data          unknown (name in retrieved CK is used to determine KDK)
+
+  if (LOG > 3) console.log("Fetching CK " + ckName.toUri());
+
+  var thisDecryptor = this;
+  var onData = function(ckInterest, ckData) {
+    try {
+      contentKey.pendingInterest = 0;
+      // TODO: Verify that the key is legitimate.
+      var kdkPrefix = [null];
+      var kdkIdentityName = [null];
+      var kdkKeyName = [null];
+      if (!DecryptorV2.extractKdkInfoFromCkName_
+          (ckData.getName(), ckInterest.getName(), onError, kdkPrefix,
+           kdkIdentityName, kdkKeyName))
+        // The error has already been reported.
+        return;
+
+      // Check if the KDK already exists.
+      var kdkIdentity = null;
+      try {
+        // Debug: Use a Promise.
+        kdkIdentity = thisDecryptor.internalKeyChain_.getPib().getIdentity
+          (kdkIdentityName[0]);
+      } catch (ex) {
+        if (!(ex instanceof Pib.Error))
+          throw ex;
+      }
+      if (kdkIdentity != null) {
+        var kdkKey = null;
+        try {
+          // Debug: Use a Promise.
+          kdkKey = kdkIdentity.getKey(kdkKeyName[0]);
+        } catch (ex) {
+          if (!(ex instanceof Pib.Error))
+            throw ex;
+        }
+        if (kdkKey != null) {
+          // The KDK was already fetched and imported.
+          if (LOG > 3) console.log("KDK " + kdkKeyName.toUri() +
+            " already exists, so directly using it to decrypt the CK");
+          thisDecryptor.decryptCkAndProcessPendingDecrypts_
+            (contentKey, ckData, kdkKeyName[0], onError);
+          return;
+        }
+      }
+
+      thisDecryptor.fetchKdk_
+        (contentKey, kdkPrefix[0], ckData, onError, EncryptorV2.N_RETRIES);
+    } catch (ex) {
+      onError(EncryptError.ErrorCode.General, "Error in fetchCk onData: " + ex);
+    }
+  };
+
+  var onTimeout = function(interest) {
+    contentKey.pendingInterest = 0;
+    if (nTriesLeft > 1)
+      thisDecryptor.fetchCk_(ckName, contentKey, onError, nTriesLeft - 1);
+    else
+      onError(EncryptError.ErrorCode.CkRetrievalTimeout,
+        "Retrieval of CK [" + interest.getName().toUri() + "] timed out");
+  };
+
+  var onNetworkNack = function(interest, networkNack) {
+    contentKey.pendingInterest = 0;
+    onError(EncryptError.ErrorCode.CkRetrievalFailure,
+      "Retrieval of CK [" + interest.getName().toUri() +
+      "] failed. Got NACK (" + networkNack.getReason() + ")");
+  };
+
+  try {
+    contentKey.pendingInterest = this.face_.expressInterest
+      (new Interest(ckName).setMustBeFresh(false).setCanBePrefix(true),
+       onData, onTimeout, onNetworkNack);
+  } catch (ex) {
+    onError(EncryptError.ErrorCode.General, "expressInterest error: " + ex);
+  }
+};
+
+/**
+ *
+ * @param {DecryptorV2.ContentKey} contentKey
+ * @param {Name} kdkPrefix
+ * @param {Data} ckData
+ * @param {function} onError On error, this calls onError(errorCode, message).
+ * @param {number} nTriesLeft
+ */
+DecryptorV2.prototype.fetchKdk_ = function
+  (contentKey, kdkPrefix, ckData, onError, nTriesLeft)
+{
+  // <kdk-prefix>/KDK/<kdk-id>    /ENCRYPTED-BY  /<credential-identity>/KEY/<key-id>
+  // \                          /                \                                /
+  //  -----------  -------------                  ---------------  ---------------
+  //             \/                                              \/
+  //     from the CK data                                from configuration
+
+  var kdkName = new Name(kdkPrefix);
+  kdkName
+    .append(EncryptorV2.NAME_COMPONENT_ENCRYPTED_BY)
+    .append(this.credentialsKey_.getName());
+
+  if (LOG > 3) console.log("Fetching KDK " + kdkName.toUri());
+
+  var thisDecryptor = this;
+  var onData = function(kdkInterest, kdkData) {
+    contentKey.pendingInterest = 0;
+    // TODO: Verify that the key is legitimate.
+
+    var isOk = thisDecryptor.decryptAndImportKdk_(kdkData, onError);
+    if (!isOk)
+      return;
+    // This way of getting the kdkKeyName is a bit hacky.
+    var kdkKeyName = kdkPrefix.getPrefix(-2)
+      .append("KEY").append(kdkPrefix.get(-1));
+    thisDecryptor.decryptCkAndProcessPendingDecrypts_
+      (contentKey, ckData, kdkKeyName, onError);
+  };
+
+  var onTimeout = function(interest) {
+    contentKey.pendingInterest = 0;
+    if (nTriesLeft > 1)
+      thisDecryptor.fetchKdk_
+        (contentKey, kdkPrefix, ckData, onError, nTriesLeft - 1);
+    else
+      onError(EncryptError.ErrorCode.KdkRetrievalTimeout,
+        "Retrieval of KDK [" + interest.getName().toUri() + "] timed out");
+  };
+
+  var onNetworkNack = function(interest, networkNack) {
+    contentKey.pendingInterest = 0;
+    onError(EncryptError.ErrorCode.KdkRetrievalFailure,
+      "Retrieval of KDK [" + interest.getName().toUri() +
+      "] failed. Got NACK (" + networkNack.getReason() + ")");
+  };
+
+  try {
+    contentKey.pendingInterest = this.face_.expressInterest
+      (new Interest(kdkName).setMustBeFresh(true).setCanBePrefix(false),
+       onData, onTimeout, onNetworkNack);
+  } catch (ex) {
+    onError(EncryptError.ErrorCode.General, "expressInterest error: " + ex);
+  }
+};
+
+/**
+ * @param {Data} kdkData
+ * @param {function} onError On error, this calls onError(errorCode, message).
+ * @returns {boolean} True for success, false for error (where this has called 
+ * onError).
+ */
+DecryptorV2.prototype.decryptAndImportKdk_ = function(kdkData, onError)
+{
+  try {
+    if (LOG > 3) console.log("Decrypting and importing KDK " +
+      kdkData.getName().toUri());
+    var encryptedContent = new EncryptedContent();
+    encryptedContent.wireDecodeV2(kdkData.getContent());
+
+    var safeBag = new SafeBag(encryptedContent.getPayload());
+    // Debug: Use a Promise.
+    var secret = SyncPromise.getValue(this.keyChain_.getTpm().decryptPromise
+      (encryptedContent.getPayloadKey().buf(), this.credentialsKey_.getName(), true));
+    if (secret.isNull()) {
+      onError(EncryptError.ErrorCode.TpmKeyNotFound,
+         "Could not decrypt secret, " + this.credentialsKey_.getName().toUri() +
+         " not found in TPM");
+      return false;
+    }
+
+    this.internalKeyChain_.importSafeBag(safeBag, secret.buf());
+    return true;
+  } catch (ex) {
+    // This can be EncodingException, Pib.Error, Tpm.Error, or a bunch of
+    // other runtime-derived errors.
+    onError(EncryptError.ErrorCode.DecryptionFailure,
+       "Failed to decrypt KDK [" + kdkData.getName().toUri() + "]: " + ex);
+    return false;
+  }
+};
+
+/**
+ * @param {DecryptorV2.ContentKey} contentKey
+ * @param {Data} ckData
+ * @param {Name} kdkKeyName
+ * @param {function} onError On error, this calls onError(errorCode, message).
+ */
+DecryptorV2.prototype.decryptCkAndProcessPendingDecrypts_ = function
+  (contentKey, ckData, kdkKeyName, onError)
+{
+  if (LOG > 3) console.log("Decrypting CK data " + ckData.getName().toUri());
+
+  var content = new EncryptedContent();
+  try {
+    content.wireDecodeV2(ckData.getContent());
+  } catch (ex) {
+    onError(EncryptError.ErrorCode.InvalidEncryptedFormat,
+      "Error decrypting EncryptedContent: " + ex);
+    return;
+  }
+
+  var ckBits;
+  try {
+    // Debug: Use a Promise.
+    ckBits = SyncPromise.getValue(this.internalKeyChain_.getTpm().decryptPromise
+      (content.getPayload().buf(), kdkKeyName, true));
+  } catch (ex) {
+    // We don't expect this from the in-memory KeyChain.
+    onError(EncryptError.ErrorCode.DecryptionFailure,
+      "Error decrypting the CK EncryptedContent " + ex);
+    return;
+  }
+
+  if (ckBits.isNull()) {
+    onError(EncryptError.ErrorCode.TpmKeyNotFound,
+      "Could not decrypt secret, " + kdkKeyName.toUri() + " not found in TPM");
+    return;
+  }
+
+  contentKey.bits = ckBits;
+  contentKey.isRetrieved = true;
+
+  for (var i in contentKey.pendingDecrypts) {
+    var pendingDecrypt = contentKey.pendingDecrypts[i];
+    // TODO: If this calls onError, should we quit?
+    DecryptorV2.doDecrypt_
+      (pendingDecrypt.encryptedContent, contentKey.bits,
+       pendingDecrypt.onSuccess, pendingDecrypt.onError);
+  }
+
+  contentKey.pendingDecrypts = [];
+};
+
+/**
+ * @param {EncryptedContent} content
+ * @param {Blob} ckBits
+ * @param {function} onSuccess On success, this calls onSuccess(plainData)
+ * where plainData is a Blob.
+ * @param {function} onError On error, this calls onError(errorCode, message).
+ */
+DecryptorV2.doDecrypt_ = function(content, ckBits, onSuccess, onError)
+{
+  if (!content.hasInitialVector()) {
+    onError(EncryptError.ErrorCode.MissingRequiredInitialVector,
+      "Expecting Initial Vector in the encrypted content, but it is not present");
+    return;
+  }
+
+  var plainData;
+  try {
+    var params = new EncryptParams(EncryptAlgorithmType.AesCbc);
+    params.setInitialVector(content.getInitialVector());
+    // Debug: Use a Promise.
+    plainData = AesAlgorithm.decrypt(ckBits, content.getPayload(), params);
+  } catch (ex) {
+    onError(EncryptError.ErrorCode.DecryptionFailure,
+      "Decryption error in doDecrypt: " + ex);
+    return;
+  }
+
+  try {
+    onSuccess(plainData);
+  } catch (ex) {
+    console.log("Error in onSuccess: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
+};
+
+/**
+ * Convert the KEK name to the KDK prefix:
+ * <access-namespace>/KEK/<key-id> ==> <access-namespace>/KDK/<key-id>.
+ * @param {Name} kekName The KEK name.
+ * @param {function} onError This calls onError.onError(errorCode, message) for
+ * an error.
+ * @return {Name} The KDK prefix, or null if an error was reported to onError.
+ */
+DecryptorV2.convertKekNameToKdkPrefix_ = function(kekName, onError)
+{
+  if (kekName.size() < 2 ||
+      !kekName.get(-2).equals(EncryptorV2.NAME_COMPONENT_KEK)) {
+    onError(EncryptError.ErrorCode.KekInvalidName,
+      "Invalid KEK name [" + kekName.toUri() + "]");
+    return null;
+  }
+
+  return kekName.getPrefix(-2)
+    .append(EncryptorV2.NAME_COMPONENT_KDK).append(kekName.get(-1));
+};
+
+/**
+ * Extract the KDK information from the CK Data packet name. The KDK identity
+ * name plus the KDK key ID together identify the KDK private key in the KeyChain.
+ * @param {Name} ckDataName The name of the CK Data packet.
+ * @param {Name} ckName The CK name from the Interest used to fetch the CK Data
+ * packet.
+ * @param {function} onError This calls onError.onError(errorCode, message) for
+ * an error.
+ * @param {Array<Name>} kdkPrefix This sets kdkPrefix[0] to the KDK prefix.
+ * @param {Array<Name>} kdkIdentityName This sets kdkIdentityName[0] to the KDK
+ * identity name.
+ * @param {Array<Name>} kdkKeyId This sets kdkKeyId[0] to the KDK key ID.
+ * @return {boolean} True for success or false if an error was reported to
+ * onError.
+ */
+DecryptorV2.extractKdkInfoFromCkName_ = function
+  (ckDataName, ckName, onError, kdkPrefix, kdkIdentityName, kdkKeyId)
+{
+  // <full-ck-name-with-id> | /ENCRYPTED-BY/<kek-prefix>/NAC/KEK/<key-id>
+
+  if (ckDataName.size() < ckName.size() + 1 ||
+      !ckDataName.getPrefix(ckName.size()).equals(ckName) ||
+      !ckDataName.get(ckName.size()).equals(EncryptorV2.NAME_COMPONENT_ENCRYPTED_BY)) {
+    onError(EncryptError.ErrorCode.CkInvalidName,
+      "Invalid CK name [" + ckDataName.toUri() + "]");
+    return false;
+  }
+
+  var kekName = ckDataName.getSubName(ckName.size() + 1);
+  kdkPrefix[0] = DecryptorV2.convertKekNameToKdkPrefix_(kekName, onError);
+  if (kdkPrefix[0] == null)
+    // The error has already been reported.
+    return false;
+
+  kdkIdentityName[0] = kekName.getPrefix(-2);
+  kdkKeyId[0] = kekName.getPrefix(-2).append("KEY").append(kekName.get(-1));
+  return true;
+};
+/**
  * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: From ndn-group-encrypt src/error-code https://github.com/named-data/ndn-group-encrypt
@@ -46873,14 +48142,34 @@ var EncryptError = function EncryptError()
 exports.EncryptError = EncryptError;
 
 EncryptError.ErrorCode = {
-  Timeout:                     1,
-  Validation:                  2,
-  UnsupportedEncryptionScheme: 32,
-  InvalidEncryptedFormat:      33,
-  NoDecryptKey:                34,
-  EncryptionFailure:           35,
-  DataRetrievalFailure:        36,
-  General:                     100
+  KekRetrievalFailure:  1,
+  KekRetrievalTimeout:  2,
+  KekInvalidName:       3,
+
+  KdkRetrievalFailure:  11,
+  KdkRetrievalTimeout:  12,
+  KdkInvalidName:       13,
+  KdkDecryptionFailure: 14,
+
+  CkRetrievalFailure:   21,
+  CkRetrievalTimeout:   22,
+  CkInvalidName:        23,
+
+  MissingRequiredKeyLocator:    101,
+  TpmKeyNotFound:               102,
+  EncryptionFailure:            103,
+  DecryptionFailure:            104,
+  MissingRequiredInitialVector: 110,
+
+  General:                      200,
+
+  // @deprecated These codes are from the NAC library v1.
+  Timeout:                     1001,
+  Validation:                  1002,
+  UnsupportedEncryptionScheme: 1032,
+  InvalidEncryptedFormat:      1033,
+  NoDecryptKey:                1034,
+  DataRetrievalFailure:        1036
 };
 /**
  * Copyright (C) 2015-2018 Regents of the University of California.
@@ -46955,6 +48244,7 @@ EncryptKey.prototype.getKeyBits = function() { return this.keyBits_; };
 
 /** @ignore */
 var KeyLocator = require('../key-locator.js').KeyLocator; /** @ignore */
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
 var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
 var Blob = require('../util/blob.js').Blob;
 
@@ -46975,13 +48265,10 @@ var EncryptedContent = function EncryptedContent(value)
     this.keyLocator_ = new KeyLocator(value.keyLocator_);
     this.initialVector_ = value.initialVector_;
     this.payload_ = value.payload_;
+    this.payloadKey_ = value.payloadKey_;
   }
-  else {
-    this.algorithmType_ = null;
-    this.keyLocator_ = new KeyLocator();
-    this.initialVector_ = new Blob();
-    this.payload_ = new Blob();
-  }
+  else
+    this.clear();
 };
 
 exports.EncryptedContent = EncryptedContent;
@@ -47006,6 +48293,28 @@ EncryptedContent.prototype.getKeyLocator = function()
 };
 
 /**
+ * Check that the key locator type is KEYNAME and return the key Name.
+ * @returns {Name} The key Name.
+ * @throws Error if the key locator type is not KEYNAME.
+ */
+EncryptedContent.prototype.getKeyLocatorName = function()
+{
+  if (this.keyLocator_.getType() != KeyLocatorType.KEYNAME)
+    throw new Error("getKeyLocatorName: The KeyLocator type must be KEYNAME");
+
+  return this.keyLocator_.getKeyName();
+};
+
+/**
+ * Check if the initial vector is specified.
+ * @return {boolean} True if the initial vector is specified.
+ */
+EncryptedContent.prototype.hasInitialVector = function()
+{
+  return !this.initialVector_.isNull();
+};
+
+/**
  * Get the initial vector.
  * @return {Blob} The initial vector. If not specified, isNull() is true.
  */
@@ -47021,6 +48330,15 @@ EncryptedContent.prototype.getInitialVector = function()
 EncryptedContent.prototype.getPayload = function()
 {
   return this.payload_;
+};
+
+/**
+ * Get the encrypted payload key.
+ * @return {Blob} The encrypted payload key. If not specified, isNull() is true.
+ */
+EncryptedContent.prototype.getPayloadKey = function()
+{
+  return this.payloadKey_;
 };
 
 /**
@@ -47048,6 +48366,19 @@ EncryptedContent.prototype.setKeyLocator = function(keyLocator)
   this.keyLocator_ = typeof keyLocator === 'object' &&
                        keyLocator instanceof KeyLocator ?
     new KeyLocator(keyLocator) : new KeyLocator();
+  return this;
+};
+
+/**
+ * Set the key locator type to KeyLocatorType.KEYNAME and set the key Name.
+ * @param {Name} keyName The key locator Name, which is copied.
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
+ * to update values.
+ */
+EncryptedContent.prototype.setKeyLocatorName = function(keyName)
+{
+  this.keyLocator_.setType(KeyLocatorType.KEYNAME);
+  this.keyLocator_.setKeyName(keyName);
   return this;
 };
 
@@ -47081,7 +48412,33 @@ EncryptedContent.prototype.setPayload = function(payload)
 };
 
 /**
- * Encode this EncryptedContent for a particular wire format.
+ * Set the encrypted payload key.
+ * @param {Blob} payloadKey The encrypted payload key. If not specified, set to
+ * the default Blob() where isNull() is true.
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
+ * to update values.
+ */
+EncryptedContent.prototype.setPayloadKey = function(payloadKey)
+{
+  this.payloadKey_ = typeof payloadKey === 'object' && payloadKey instanceof Blob ?
+    payloadKey : new Blob(payloadKey);
+  return this;
+};
+
+/**
+ * Set all the fields to indicate unspecified values.
+ */
+EncryptedContent.prototype.clear = function()
+{
+  this.algorithmType_ = null;
+  this.keyLocator_ = new KeyLocator();
+  this.initialVector_ = new Blob();
+  this.payload_ = new Blob();
+  this.payloadKey_ = new Blob();
+};
+
+/**
+ * Encode this to an EncryptedContent v1 wire encoding.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
  * @return {Blob} The encoded buffer in a Blob object.
@@ -47093,8 +48450,20 @@ EncryptedContent.prototype.wireEncode = function(wireFormat)
 };
 
 /**
- * Decode the input using a particular wire format and update this
- * EncryptedContent.
+ * Encode this to an EncryptedContent v2 wire encoding.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @return {Blob} The encoded buffer in a Blob object.
+ */
+EncryptedContent.prototype.wireEncodeV2 = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return wireFormat.encodeEncryptedContentV2(this);
+};
+
+/**
+ * Decode the input as an EncryptedContent v1 using a particular wire format and
+ * update this EncryptedContent.
  * @param {Blob|Buffer} input The buffer with the bytes to decode.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
@@ -47108,6 +48477,359 @@ EncryptedContent.prototype.wireDecode = function(input, wireFormat)
   else
     wireFormat.decodeEncryptedContent(this, input, true);
 };
+
+/**
+ * Decode the input as an EncryptedContent v2 using a particular wire format and
+ * update this EncryptedContent.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+EncryptedContent.prototype.wireDecodeV2 = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeEncryptedContentV2(this, input.buf(), false);
+  else
+    wireFormat.decodeEncryptedContentV2(this, input, true);
+};
+/**
+ * Copyright (C) 2019 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From the NAC library https://github.com/named-data/name-based-access-control/blob/new/src/encryptor.cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Crypto = require('../crypto.js'); /** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var Data = require('../data.js').Data; /** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var SigningInfo = require('../security/signing-info.js').SigningInfo; /** @ignore */
+var InMemoryStorageRetaining = require('../in-memory-storage/in-memory-storage-retaining.js').InMemoryStorageRetaining; /** @ignore */
+var PublicKey = require('../security/certificate/public-key.js').PublicKey; /** @ignore */
+var EncryptedContent = require('./encrypted-content.js').EncryptedContent; /** @ignore */
+var EncryptParams = require('./algo/encrypt-params.js').EncryptParams; /** @ignore */
+var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm; /** @ignore */
+var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
+var EncryptError = require('./encrypt-error.js').EncryptError; /** @ignore */
+var LOG = require('../log.js').Log.LOG;
+
+/**
+ * EncryptorV2 encrypts the requested content for name-based access control (NAC)
+ * using security v2. For the meaning of "KEK", etc. see:
+ * https://github.com/named-data/name-based-access-control/blob/new/docs/spec.rst
+ * 
+ * Create an EncryptorV2 with the given parameters. This uses the face to
+ * register to receive Interests for the prefix {ckPrefix}/CK.
+ * @param {Name} accessPrefix The NAC prefix to fetch the Key Encryption Key
+ * (KEK) (e.g., /access/prefix/NAC/data/subset). This copies the Name.
+ * @param {Name} ckPrefix The prefix under which Content Keys (CK) will be
+ * generated. (Each will have a unique version appended.) This copies the Name.
+ * @param {SigningInfo} ckDataSigningInfo The SigningInfo parameters to sign the
+ * Content Key (CK) Data packet. This copies the SigningInfo.
+ * @param {function} onError On failure to create the CK data (failed to fetch
+ * the KEK, failed to encrypt with the KEK, etc.), this calls
+ * onError(errorCode, message) where errorCode is from
+ * EncryptError.ErrorCode, and message is an error string. The encrypt
+ * method will continue trying to retrieve the KEK until success (with each
+ * attempt separated by RETRY_DELAY_KEK_RETRIEVAL_MS) and onError may be
+ * called multiple times.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @param {Validator} validator The validation policy to ensure correctness of
+ * the KEK.
+ * @param {KeyChain} keyChain The KeyChain used to sign Data packets.
+ * @param {Face} face The Face that will be used to fetch the KEK and publish CK data.
+ * @constructor
+ */
+var EncryptorV2 = function EncryptorV2
+  (accessPrefix, ckPrefix, ckDataSigningInfo, onError, validator, keyChain, face)
+{
+  // Copy the Name.
+  this.accessPrefix_ = new Name(accessPrefix);
+  this.ckPrefix_ = new Name(ckPrefix);
+  // ckBits_ will be set by regenerateCk().
+  this.ckBits_ = null;
+  this.ckDataSigningInfo_ = new SigningInfo(ckDataSigningInfo);
+  this.isKekRetrievalInProgress_ = false;
+  this.onError_ = onError;
+  this.keyChain_ = keyChain;
+  this.face_ = face;
+
+  this.kekData_ = null;
+  // Storage for encrypted CKs.
+  this.storage_ = new InMemoryStorageRetaining();
+  this.kekPendingInterestId_ = 0;
+
+  this.regenerateCk();
+
+  var thisEncryptor = this;
+  var onInterest = function(prefix, interest, face, interestFilterId, filter) {
+    var data = thisEncryptor.storage_.find(interest);
+    if (data != null) {
+      if (LOG > 3) console.log
+        ("Serving " + data.getName().toUri() + " from InMemoryStorage");
+      try {
+        face.putData(data);
+      } catch (ex) {
+        console.log("Error in Face.putData: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+    }
+    else {
+      if (LOG > 3) console.log
+        ("Didn't find CK data for " + interest.getName().toUri());
+      // TODO: Send NACK?
+    }
+  };
+
+  var onRegisterFailed = function(prefix) {
+    if (LOG > 0) console.log("Failed to register prefix " + prefix.toUri());
+  };
+
+  this.ckRegisteredPrefixId_ = this.face_.registerPrefix
+    (new Name(ckPrefix).append(EncryptorV2.NAME_COMPONENT_CK),
+     onInterest, onRegisterFailed);
+};
+
+exports.EncryptorV2 = EncryptorV2;
+
+EncryptorV2.prototype.shutdown = function()
+{
+  this.face_.unsetInterestFilter(this.ckRegisteredPrefixId_);
+  if (this.kekPendingInterestId_ > 0)
+    this.face_.removePendingInterest(this.kekPendingInterestId_);
+};
+
+/**
+ * Encrypt the plainData using the existing Content Key (CK) and return a new
+ * EncryptedContent.
+ * @param {Buffer|Blob} plainData The data to encrypt.
+ * @return {EncryptedContent} The new EncryptedContent.
+ */
+EncryptorV2.prototype.encrypt = function(plainData)
+{
+  // Generate the initial vector.
+  var initialVector = Crypto.randomBytes(EncryptorV2.AES_IV_SIZE);
+
+  var params = new EncryptParams(EncryptAlgorithmType.AesCbc);
+  params.setInitialVector(new Blob(initialVector, false));
+  if (!(plainData instanceof Blob))
+    plainData = new Blob(plainData);
+  // Debug: Use a Promise.
+  var encryptedData = AesAlgorithm.encrypt
+    (new Blob(this.ckBits_, false), plainData, params);
+
+  var content = new EncryptedContent();
+  content.setInitialVector(new Blob(initialVector, false));
+  content.setPayload(encryptedData);
+  content.setKeyLocatorName(this.ckName_);
+
+  return content;
+};
+
+/**
+ * Create a new Content Key (CK) and publish the corresponding CK Data packet.
+ * This uses the onError given to the constructor to report errors.
+ */
+EncryptorV2.prototype.regenerateCk = function()
+{
+  // TODO: Ensure that the CK Data packet for the old CK is published when the
+  // CK is updated before the KEK is fetched.
+
+  this.ckName_ = new Name(this.ckPrefix_);
+  this.ckName_.append(EncryptorV2.NAME_COMPONENT_CK);
+  // The version is the ID of the CK.
+  this.ckName_.appendVersion(new Date().getTime());
+
+  if (LOG > 3) console.log("Generating new CK: " + this.ckName_.toUri());
+  this.ckBits_ = Crypto.randomBytes(EncryptorV2.AES_KEY_SIZE);
+
+  // One implication: If the CK is updated before the KEK is fetched, then
+  // the KDK for the old CK will not be published.
+  if (this.kekData_ == null)
+    this.retryFetchingKek_();
+  else
+    this.makeAndPublishCkData_(this.onError_);
+};
+
+/**
+ * Get the number of packets stored in in-memory storage.
+ * @return {number} The number of packets.
+ */
+EncryptorV2.prototype.size = function()
+{
+  return this.storage_.size();
+};
+
+EncryptorV2.prototype.retryFetchingKek_ = function()
+{
+  if (this.isKekRetrievalInProgress_)
+    return;
+
+  if (LOG > 3) console.log("Retrying fetching of the KEK");
+  this.isKekRetrievalInProgress_ = true;
+
+  var thisEncryptor = this;
+  this.fetchKekAndPublishCkData_
+    (function() {
+       if (LOG > 3) console.log("The KEK was retrieved and published");
+       thisEncryptor.isKekRetrievalInProgress_ = false;
+     },
+     function(errorCode, message) {
+       if (LOG > 3) console.log("Failed to retrieve KEK: " + message);
+       thisEncryptor.isKekRetrievalInProgress_ = false;
+       thisEncryptor.onError_(errorCode, message);
+     },
+     EncryptorV2.N_RETRIES);
+};
+
+/**
+ * Create an Interest for <access-prefix>/KEK to retrieve the
+ * <access-prefix>/KEK/<key-id> KEK Data packet, and set kekData_.
+ * @param {function} onReady When the KEK is retrieved and published, this calls
+ * onReady().
+ * @param {function} onError On failure, this calls onError(errorCode, message)
+ * where errorCode is from EncryptError.ErrorCode, and message is an error
+ * string.
+ * @param {number} nTriesLeft The number of retries for expressInterest timeouts.
+ */
+EncryptorV2.prototype.fetchKekAndPublishCkData_ = function
+  (onReady, onError, nTriesLeft)
+{
+  if (LOG > 3) console.log("Fetching KEK: " +
+    new Name(this.accessPrefix_).append(EncryptorV2.NAME_COMPONENT_KEK).toUri());
+
+  if (this.kekPendingInterestId_ > 0) {
+    onError(EncryptError.ErrorCode.General,
+      "fetchKekAndPublishCkData: There is already a kekPendingInterestId_");
+    return;
+  }
+
+  var thisEncryptor = this;
+  var onData = function(interest, kekData) {
+    thisEncryptor.kekPendingInterestId_ = 0;
+    // TODO: Verify if the key is legitimate.
+    thisEncryptor.kekData_ = kekData;
+    if (thisEncryptor.makeAndPublishCkData_(onError))
+      onReady();
+    // Otherwise, failure has already been reported.
+  };
+
+  var onTimeout = function(interest) {
+    thisEncryptor.kekPendingInterestId_ = 0;
+    if (nTriesLeft > 1)
+      thisEncryptor.fetchKekAndPublishCkData_(onReady, onError, nTriesLeft - 1);
+    else {
+      onError(EncryptError.ErrorCode.KekRetrievalTimeout,
+        "Retrieval of KEK [" + interest.getName().toUri() + "] timed out");
+      if (LOG > 3) console.log("Scheduling retry after all timeouts");
+      setTimeout
+        (function() { thisEncryptor.retryFetchingKek_(); },
+         EncryptorV2.RETRY_DELAY_KEK_RETRIEVAL_MS);
+    }
+  };
+
+  var onNetworkNack = function(interest, networkNack) {
+    thisEncryptor.kekPendingInterestId_ = 0;
+    if (nTriesLeft > 1) {
+      setTimeout
+        (function() {
+           thisEncryptor.fetchKekAndPublishCkData_(onReady, onError, nTriesLeft - 1);
+         },
+         EncryptorV2.RETRY_DELAY_AFTER_NACK_MS);
+    }
+    else {
+      onError(EncryptError.ErrorCode.KekRetrievalFailure,
+        "Retrieval of KEK [" + interest.getName().toUri() +
+        "] failed. Got NACK (" + networkNack.getReason() + ")");
+      if (LOG > 3) console.log("Scheduling retry from NACK");
+      setTimeout
+        (function() { thisEncryptor.retryFetchingKek_(); },
+         EncryptorV2.RETRY_DELAY_KEK_RETRIEVAL_MS);
+    }
+  };
+
+  try {
+    this.kekPendingInterestId_ = this.face_.expressInterest
+      (new Interest(new Name(this.accessPrefix_).append(EncryptorV2.NAME_COMPONENT_KEK))
+         .setMustBeFresh(true)
+         .setCanBePrefix(true),
+       onData, onTimeout, onNetworkNack);
+  } catch (ex) {
+    onError(EncryptError.ErrorCode.General, "expressInterest error: " + ex);
+  }
+};
+
+/**
+ * Make a CK Data packet for ckName_ encrypted by the KEK in kekData_ and
+ * insert it in the storage_.
+ * @param {function} onError On failure, this calls onError(errorCode, message)
+ * where errorCode is from EncryptError.ErrorCode, and message is an error
+ * string.
+ * @returns {boolean} True on success, else false.
+ */
+EncryptorV2.prototype.makeAndPublishCkData_ = function(onError)
+{
+  try {
+    var kek = new PublicKey(this.kekData_.getContent());
+
+    var content = new EncryptedContent();
+    // Debug: Use a Promise.
+    var payload = kek.encrypt(this.ckBits_, EncryptAlgorithmType.RsaOaep);
+    content.setPayload(payload);
+
+    var ckData = new Data
+      (new Name(this.ckName_).append(EncryptorV2.NAME_COMPONENT_ENCRYPTED_BY)
+       .append(this.kekData_.getName()));
+    ckData.setContent(content.wireEncodeV2());
+    // FreshnessPeriod can serve as a soft access control for revoking access.
+    ckData.getMetaInfo().setFreshnessPeriod
+      (EncryptorV2.DEFAULT_CK_FRESHNESS_PERIOD_MS);
+    // Debug: Use a Promise.
+    this.keyChain_.sign(ckData, this.ckDataSigningInfo_);
+    this.storage_.insert(ckData);
+
+    if (LOG > 3) console.log("Publishing CK data: " + ckData.getName().toUri());
+    return true;
+  } catch (ex) {
+    onError(EncryptError.ErrorCode.EncryptionFailure,
+      "Failed to encrypt generated CK with KEK " + this.kekData_.getName().toUri());
+    return false;
+  }
+};
+
+EncryptorV2.NAME_COMPONENT_ENCRYPTED_BY = new Name.Component("ENCRYPTED-BY");
+EncryptorV2.NAME_COMPONENT_NAC = new Name.Component("NAC");
+EncryptorV2.NAME_COMPONENT_KEK = new Name.Component("KEK");
+EncryptorV2.NAME_COMPONENT_KDK = new Name.Component("KDK");
+EncryptorV2.NAME_COMPONENT_CK = new Name.Component("CK");
+
+EncryptorV2.RETRY_DELAY_AFTER_NACK_MS = 1000.0;
+EncryptorV2.RETRY_DELAY_KEK_RETRIEVAL_MS = 60 * 1000.0;
+
+EncryptorV2.AES_KEY_SIZE = 32;
+EncryptorV2.AES_IV_SIZE = 16;
+EncryptorV2.N_RETRIES = 3;
+
+EncryptorV2.DEFAULT_CK_FRESHNESS_PERIOD_MS = 3600 * 1000.0;
 /**
  * Copyright (C) 2015-2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
