@@ -120,7 +120,6 @@ describe ("TestEncryptorV2", function() {
   });
 
   it("KekRetrievalFailure", function() {
-/* debug
     // Replace the default fixture.
     var nErrors = [0];
     this.fixture_ = new EncryptorFixture
@@ -142,14 +141,14 @@ describe ("TestEncryptorV2", function() {
     // Check recovery.
     this.fixture_.publishData();
 
-    this.fixture_.face_.delayedCallTable_.setNowOffsetMilliseconds_(73000);
-    this.fixture_.face_.processEvents();
+    // Simulate the behavior of onTimeout in EncryptorV2.fetchKekAndPublishCkData_
+    // which calls retryFetchingKek_() after a delay.
+    this.fixture_.encryptor_.retryFetchingKek_();
 
     var kekData = this.fixture_.face_.sentData_[0];
     assert.ok(kekData.getName().getPrefix(6).equals
       (new Name("/access/policy/identity/NAC/dataset/KEK")));
     assert.equal(7, kekData.getName().size());
-*/
   });
 
   it("EnumerateDataFromInMemoryStorage", function() {
