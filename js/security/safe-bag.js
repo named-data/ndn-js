@@ -45,7 +45,6 @@ var PublicKey = require('./certificate/public-key.js').PublicKey;
  * A SafeBag represents a container for sensitive related information such as a
  * certificate and private key.
  *
- * There are two forms of the SafeBag constructor:
  * There are three forms of the SafeBag constructor:
  * SafeBag(certificate, privateKeyBag) - Create a SafeBag with the given
  * certificate and private key.
