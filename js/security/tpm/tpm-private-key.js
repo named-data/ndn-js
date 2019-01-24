@@ -28,6 +28,7 @@ var DigestAlgorithm = require('../security-types.js').DigestAlgorithm; /** @igno
 var DataUtils = require('../../encoding/data-utils.js').DataUtils; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
+var DerSequence = require('../../encoding/der/der-node.js').DerNode.DerSequence; /** @ignore */
 var DerInteger = require('../../encoding/der/der-node.js').DerNode.DerInteger; /** @ignore */
 var OID = require('../../encoding/oid.js').OID; /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
@@ -200,6 +201,144 @@ TpmPrivateKey.prototype.loadPkcs8 = function(encoding, keyType)
   }
 
   this.loadPkcs1(privateKeyDer, keyType);
+};
+
+/**
+ * Load the encrypted private key from a buffer with the PKCS #8 encoding of
+ * the EncryptedPrivateKeyInfo.
+ * This replaces any existing private key in this object. This partially
+ * decodes the private key to determine the key type.
+ * @param {Buffer} encoding The byte buffer with the private key encoding.
+ * @param {Buffer} password The password for decrypting the private key, which
+ * should have characters in the range of 1 to 127.
+ * @throws TpmPrivateKey.Error for errors decoding the key.
+ */
+TpmPrivateKey.prototype.loadEncryptedPkcs8 = function(encoding, password)
+{
+  if (encoding instanceof Blob)
+    encoding = encoding.buf();
+  if (password instanceof Blob)
+    password = password.buf();
+
+  // Decode the PKCS #8 EncryptedPrivateKeyInfo.
+  // See https://tools.ietf.org/html/rfc5208.
+  var oidString;
+  var parameters;
+  var encryptedKey;
+  try {
+    var parsedNode = DerNode.parse(encoding, 0);
+    var encryptedPkcs8Children = parsedNode.getChildren();
+    var algorithmIdChildren = DerNode.getSequence
+      (encryptedPkcs8Children, 0).getChildren();
+    oidString = algorithmIdChildren[0].toVal();
+    parameters = algorithmIdChildren[1];
+
+    encryptedKey = encryptedPkcs8Children[1].toVal();
+  }
+  catch (ex) {
+    throw new TpmPrivateKey.Error(new Error
+      ("Cannot decode the PKCS #8 EncryptedPrivateKeyInfo: " + ex));
+  }
+
+  // Use the password to get the unencrypted pkcs8Encoding.
+  var pkcs8Encoding;
+  if (oidString == TpmPrivateKey.PBES2_OID) {
+    // Decode the PBES2 parameters. See https://www.ietf.org/rfc/rfc2898.txt .
+    var keyDerivationOidString;
+    var keyDerivationParameters;
+    var encryptionSchemeOidString;
+    var encryptionSchemeParameters;
+    try {
+      var parametersChildren = parameters.getChildren();
+
+      var keyDerivationAlgorithmIdChildren = DerNode.getSequence
+        (parametersChildren, 0).getChildren();
+      keyDerivationOidString = keyDerivationAlgorithmIdChildren[0].toVal();
+      keyDerivationParameters = keyDerivationAlgorithmIdChildren[1];
+
+      var encryptionSchemeAlgorithmIdChildren = DerNode.getSequence
+        (parametersChildren, 1).getChildren();
+      encryptionSchemeOidString = encryptionSchemeAlgorithmIdChildren[0].toVal();
+      encryptionSchemeParameters = encryptionSchemeAlgorithmIdChildren[1];
+    }
+    catch (ex) {
+      throw new TpmPrivateKey.Error(new Error
+        ("Cannot decode the PBES2 parameters: " + ex));
+    }
+
+    // Get the derived key from the password.
+    var derivedKey = null;
+    if (keyDerivationOidString == TpmPrivateKey.PBKDF2_OID) {
+      // Decode the PBKDF2 parameters.
+      var salt;
+      var nIterations;
+      try {
+        var pbkdf2ParametersChildren = keyDerivationParameters.getChildren();
+        salt = pbkdf2ParametersChildren[0].toVal();
+        nIterations = pbkdf2ParametersChildren[1].toVal();
+      }
+      catch (ex) {
+        throw new TpmPrivateKey.Error(new Error
+          ("Cannot decode the PBES2 parameters: " + ex));
+      }
+
+      // Check the encryption scheme here to get the needed result length.
+      var resultLength;
+      if (encryptionSchemeOidString == TpmPrivateKey.DES_EDE3_CBC_OID)
+        resultLength = TpmPrivateKey.DES_EDE3_KEY_LENGTH;
+      else
+        throw new TpmPrivateKey.Error(new Error
+          ("Unrecognized PBES2 encryption scheme OID: " +
+           encryptionSchemeOidString));
+
+      try {
+        // TODO: Support Crypto.subtle.
+        derivedKey = Crypto.pbkdf2Sync
+          (password, salt.buf(), nIterations, resultLength, 'sha1');
+      }
+      catch (ex) {
+        throw new TpmPrivateKey.Error(new Error
+          ("Error computing the derived key using PBKDF2 with HMAC SHA1: " + ex));
+      }
+    }
+    else
+      throw new TpmPrivateKey.Error(new Error
+        ("Unrecognized PBES2 key derivation OID: " + keyDerivationOidString));
+
+    // Use the derived key to get the unencrypted pkcs8Encoding.
+    if (encryptionSchemeOidString == TpmPrivateKey.DES_EDE3_CBC_OID) {
+      // Decode the DES-EDE3-CBC parameters.
+      var initialVector;
+      try {
+        initialVector = encryptionSchemeParameters.toVal();
+      }
+      catch (ex) {
+        throw new TpmPrivateKey.Error(new Error
+          ("Cannot decode the DES-EDE3-CBC parameters: " + ex));
+      }
+
+      try {
+        // TODO: Support Crypto.subtle.
+        var cipher = Crypto.createDecipheriv
+          ("des-ede3-cbc", derivedKey, initialVector.buf());
+        pkcs8Encoding = Buffer.concat
+          ([cipher.update(encryptedKey.buf()), cipher.final()]);
+      }
+      catch (ex) {
+        throw new TpmPrivateKey.Error(new Error
+          ("Error decrypting PKCS #8 key with DES-EDE3-CBC: " + ex));
+      }
+    }
+    else
+      throw new TpmPrivateKey.Error(new Error
+        ("Unrecognized PBES2 encryption scheme OID: " +
+         encryptionSchemeOidString));
+  }
+  else
+    throw new TpmPrivateKey.Error(new Error
+      ("Unrecognized PKCS #8 EncryptedPrivateKeyInfo OID: " + oidString));
+
+  this.loadPkcs8(pkcs8Encoding);
 };
 
 /**
@@ -412,6 +551,88 @@ TpmPrivateKey.prototype.toPkcs8 = function()
 
   return TpmPrivateKey.encodePkcs8PrivateKey
     (this.toPkcs1().buf(), oid, new DerNode.DerNull());
+};
+
+/**
+ * Get the encoded encrypted private key in PKCS #8.
+ * @param {Buffer} password The password for encrypting the private key, which
+ * should have characters in the range of 1 to 127.
+ * @return {Blob} The encoding Blob of the EncryptedPrivateKeyInfo.
+ * @throws {TpmPrivateKey.Error} If no private key is loaded, or error encoding.
+ */
+TpmPrivateKey.prototype.toEncryptedPkcs8 = function(password)
+{
+  if (this.keyType_ == null)
+    throw new TpmPrivateKey.Error(new Error
+      ("toPkcs8: The private key is not loaded"));
+
+  if (password instanceof Blob)
+    password = password.buf();
+
+  // Create the derivedKey from the password.
+  var nIterations = 2048;
+  var salt = Crypto.randomBytes(8);
+  var derivedKey;
+  try {
+    // TODO: Support Crypto.subtle.
+    derivedKey = Crypto.pbkdf2Sync
+      (password, salt, nIterations, TpmPrivateKey.DES_EDE3_KEY_LENGTH, 'sha1');
+  }
+  catch (ex) {
+    throw new TpmPrivateKey.Error(new Error
+      ("Error computing the derived key using PBKDF2 with HMAC SHA1: " + ex));
+  }
+
+  // Use the derived key to get the encrypted pkcs8Encoding.
+  var encryptedEncoding;
+  var initialVector = Crypto.randomBytes(8);
+  try {
+    // TODO: Support Crypto.subtle.
+    var cipher = Crypto.createCipheriv
+      ("des-ede3-cbc", derivedKey, initialVector);
+    encryptedEncoding = Buffer.concat
+      ([cipher.update(this.toPkcs8().buf()), cipher.final()]);
+  }
+  catch (ex) {
+    throw new TpmPrivateKey.Error(new Error
+      ("Error encrypting PKCS #8 key with DES-EDE3-CBC: " + ex));
+  }
+
+  try {
+    // Encode the PBES2 parameters. See https://www.ietf.org/rfc/rfc2898.txt .
+    var keyDerivationParameters = new DerSequence();
+    keyDerivationParameters.addChild(new DerNode.DerOctetString(salt));
+    keyDerivationParameters.addChild(new DerNode.DerInteger(nIterations));
+    var keyDerivationAlgorithmIdentifier = new DerSequence();
+    keyDerivationAlgorithmIdentifier.addChild(new DerNode.DerOid
+      (TpmPrivateKey.PBKDF2_OID));
+    keyDerivationAlgorithmIdentifier.addChild(keyDerivationParameters);
+
+    var encryptionSchemeAlgorithmIdentifier = new DerSequence();
+    encryptionSchemeAlgorithmIdentifier.addChild(new DerNode.DerOid
+      (TpmPrivateKey.DES_EDE3_CBC_OID));
+    encryptionSchemeAlgorithmIdentifier.addChild(new DerNode.DerOctetString
+      (initialVector));
+
+    var encryptedKeyParameters = new DerSequence();
+    encryptedKeyParameters.addChild(keyDerivationAlgorithmIdentifier);
+    encryptedKeyParameters.addChild(encryptionSchemeAlgorithmIdentifier);
+    var encryptedKeyAlgorithmIdentifier = new DerSequence();
+    encryptedKeyAlgorithmIdentifier.addChild(new DerNode.DerOid
+      (TpmPrivateKey.PBES2_OID));
+    encryptedKeyAlgorithmIdentifier.addChild(encryptedKeyParameters);
+
+    // Encode the PKCS #8 EncryptedPrivateKeyInfo.
+    // See https://tools.ietf.org/html/rfc5208.
+    var encryptedKey = new DerSequence();
+    encryptedKey.addChild(encryptedKeyAlgorithmIdentifier);
+    encryptedKey.addChild(new DerNode.DerOctetString(encryptedEncoding));
+
+    return encryptedKey.encode();
+  } catch (ex) {
+    throw new TpmPrivateKey.Error(new Error
+      ("Error encoding the encryped PKCS #8 private key: " + ex));
+  }
 };
 
 /**
@@ -655,3 +876,7 @@ TpmPrivateKey.prototype.getDecryptSubtleKeyPromise_ = function()
 
 TpmPrivateKey.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
 TpmPrivateKey.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
+TpmPrivateKey.PBES2_OID = "1.2.840.113549.1.5.13";
+TpmPrivateKey.PBKDF2_OID = "1.2.840.113549.1.5.12";
+TpmPrivateKey.DES_EDE3_CBC_OID = "1.2.840.113549.3.7";
+TpmPrivateKey.DES_EDE3_KEY_LENGTH = 24;
