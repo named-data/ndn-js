@@ -113,6 +113,7 @@ exports.EncryptKey = require('./js/encrypt/encrypt-key.js').EncryptKey;
 exports.EncryptedContent = require('./js/encrypt/encrypted-content.js').EncryptedContent;
 exports.DecryptorV2 = require('./js/encrypt/decryptor-v2.js').DecryptorV2;
 exports.EncryptorV2 = require('./js/encrypt/encryptor-v2.js').EncryptorV2;
+exports.AccessManagerV2 = require('./js/encrypt/access-manager-v2.js').AccessManagerV2;
 exports.GroupManagerDb = require('./js/encrypt/group-manager-db.js').GroupManagerDb;
 exports.GroupManager = require('./js/encrypt/group-manager.js').GroupManager;
 exports.Interval = require('./js/encrypt/interval.js').Interval;
