@@ -20,6 +20,7 @@
 
 /** @ignore */
 var KeyLocator = require('../key-locator.js').KeyLocator; /** @ignore */
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
 var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
 var Blob = require('../util/blob.js').Blob;
 
@@ -40,13 +41,10 @@ var EncryptedContent = function EncryptedContent(value)
     this.keyLocator_ = new KeyLocator(value.keyLocator_);
     this.initialVector_ = value.initialVector_;
     this.payload_ = value.payload_;
+    this.payloadKey_ = value.payloadKey_;
   }
-  else {
-    this.algorithmType_ = null;
-    this.keyLocator_ = new KeyLocator();
-    this.initialVector_ = new Blob();
-    this.payload_ = new Blob();
-  }
+  else
+    this.clear();
 };
 
 exports.EncryptedContent = EncryptedContent;
@@ -71,6 +69,28 @@ EncryptedContent.prototype.getKeyLocator = function()
 };
 
 /**
+ * Check that the key locator type is KEYNAME and return the key Name.
+ * @returns {Name} The key Name.
+ * @throws Error if the key locator type is not KEYNAME.
+ */
+EncryptedContent.prototype.getKeyLocatorName = function()
+{
+  if (this.keyLocator_.getType() != KeyLocatorType.KEYNAME)
+    throw new Error("getKeyLocatorName: The KeyLocator type must be KEYNAME");
+
+  return this.keyLocator_.getKeyName();
+};
+
+/**
+ * Check if the initial vector is specified.
+ * @return {boolean} True if the initial vector is specified.
+ */
+EncryptedContent.prototype.hasInitialVector = function()
+{
+  return !this.initialVector_.isNull();
+};
+
+/**
  * Get the initial vector.
  * @return {Blob} The initial vector. If not specified, isNull() is true.
  */
@@ -86,6 +106,15 @@ EncryptedContent.prototype.getInitialVector = function()
 EncryptedContent.prototype.getPayload = function()
 {
   return this.payload_;
+};
+
+/**
+ * Get the encrypted payload key.
+ * @return {Blob} The encrypted payload key. If not specified, isNull() is true.
+ */
+EncryptedContent.prototype.getPayloadKey = function()
+{
+  return this.payloadKey_;
 };
 
 /**
@@ -113,6 +142,19 @@ EncryptedContent.prototype.setKeyLocator = function(keyLocator)
   this.keyLocator_ = typeof keyLocator === 'object' &&
                        keyLocator instanceof KeyLocator ?
     new KeyLocator(keyLocator) : new KeyLocator();
+  return this;
+};
+
+/**
+ * Set the key locator type to KeyLocatorType.KEYNAME and set the key Name.
+ * @param {Name} keyName The key locator Name, which is copied.
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
+ * to update values.
+ */
+EncryptedContent.prototype.setKeyLocatorName = function(keyName)
+{
+  this.keyLocator_.setType(KeyLocatorType.KEYNAME);
+  this.keyLocator_.setKeyName(keyName);
   return this;
 };
 
@@ -146,7 +188,33 @@ EncryptedContent.prototype.setPayload = function(payload)
 };
 
 /**
- * Encode this EncryptedContent for a particular wire format.
+ * Set the encrypted payload key.
+ * @param {Blob} payloadKey The encrypted payload key. If not specified, set to
+ * the default Blob() where isNull() is true.
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
+ * to update values.
+ */
+EncryptedContent.prototype.setPayloadKey = function(payloadKey)
+{
+  this.payloadKey_ = typeof payloadKey === 'object' && payloadKey instanceof Blob ?
+    payloadKey : new Blob(payloadKey);
+  return this;
+};
+
+/**
+ * Set all the fields to indicate unspecified values.
+ */
+EncryptedContent.prototype.clear = function()
+{
+  this.algorithmType_ = null;
+  this.keyLocator_ = new KeyLocator();
+  this.initialVector_ = new Blob();
+  this.payload_ = new Blob();
+  this.payloadKey_ = new Blob();
+};
+
+/**
+ * Encode this to an EncryptedContent v1 wire encoding.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
  * @return {Blob} The encoded buffer in a Blob object.
@@ -158,8 +226,20 @@ EncryptedContent.prototype.wireEncode = function(wireFormat)
 };
 
 /**
- * Decode the input using a particular wire format and update this
- * EncryptedContent.
+ * Encode this to an EncryptedContent v2 wire encoding.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @return {Blob} The encoded buffer in a Blob object.
+ */
+EncryptedContent.prototype.wireEncodeV2 = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return wireFormat.encodeEncryptedContentV2(this);
+};
+
+/**
+ * Decode the input as an EncryptedContent v1 using a particular wire format and
+ * update this EncryptedContent.
  * @param {Blob|Buffer} input The buffer with the bytes to decode.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
@@ -172,4 +252,21 @@ EncryptedContent.prototype.wireDecode = function(input, wireFormat)
     wireFormat.decodeEncryptedContent(this, input.buf(), false);
   else
     wireFormat.decodeEncryptedContent(this, input, true);
+};
+
+/**
+ * Decode the input as an EncryptedContent v2 using a particular wire format and
+ * update this EncryptedContent.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+EncryptedContent.prototype.wireDecodeV2 = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeEncryptedContentV2(this, input.buf(), false);
+  else
+    wireFormat.decodeEncryptedContentV2(this, input, true);
 };
