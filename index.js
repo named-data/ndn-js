@@ -111,6 +111,8 @@ exports.DecryptKey = require('./js/encrypt/decrypt-key.js').DecryptKey;
 exports.EncryptError = require('./js/encrypt/encrypt-error.js').EncryptError;
 exports.EncryptKey = require('./js/encrypt/encrypt-key.js').EncryptKey;
 exports.EncryptedContent = require('./js/encrypt/encrypted-content.js').EncryptedContent;
+exports.DecryptorV2 = require('./js/encrypt/decryptor-v2.js').DecryptorV2;
+exports.EncryptorV2 = require('./js/encrypt/encryptor-v2.js').EncryptorV2;
 exports.GroupManagerDb = require('./js/encrypt/group-manager-db.js').GroupManagerDb;
 exports.GroupManager = require('./js/encrypt/group-manager.js').GroupManager;
 exports.Interval = require('./js/encrypt/interval.js').Interval;
@@ -121,5 +123,6 @@ exports.Schedule = require('./js/encrypt/schedule.js').Schedule;
 exports.Sqlite3ConsumerDb = require('./js/encrypt/sqlite3-consumer-db.js').Sqlite3ConsumerDb;
 exports.Sqlite3GroupManagerDb = require('./js/encrypt/sqlite3-group-manager-db.js').Sqlite3GroupManagerDb;
 exports.Sqlite3ProducerDb = require('./js/encrypt/sqlite3-producer-db.js').Sqlite3ProducerDb;
+exports.InMemoryStorageRetaining = require('./js/in-memory-storage/in-memory-storage-retaining.js').InMemoryStorageRetaining;
 
 exports.ChronoSync2013 = require('./js/sync/chrono-sync2013.js').ChronoSync2013;
