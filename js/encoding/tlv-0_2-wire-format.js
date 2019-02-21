@@ -1474,7 +1474,7 @@ Tlv0_2WireFormat.encodeInterestV03_ = function(interest)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  encoder.writeOptionalBlobTlv(Tlv.Parameters, interest.getParameters().buf());
+  encoder.writeOptionalBlobTlv(Tlv.ApplicationParameters, interest.getParameters().buf());
   // TODO: HopLimit.
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
@@ -1596,7 +1596,7 @@ Tlv0_2WireFormat.decodeInterestV03_ = function(interest, input, copy)
   decoder.readOptionalBlobTlv(Tlv.HopLimit, endOffset);
 
   interest.setParameters(new Blob(decoder.readOptionalBlobTlv
-    (Tlv.Parameters, endOffset), copy));
+    (Tlv.ApplicationParameters, endOffset), copy));
 
   // Set the nonce last because setting other interest fields clears it.
   interest.setNonce(nonce == null ? new Blob() : new Blob(nonce, copy));
