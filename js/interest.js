@@ -82,7 +82,7 @@ var Interest = function Interest
     this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
     this.forwardingHint_ = new ChangeCounter
       (new DelegationSet(interest.getForwardingHint()));
-    this.parameters_ = interest.parameters_;
+    this.applicationParameters_ = interest.applicationParameters_;
     this.nonce_ = interest.nonce_;
     this.linkWireEncoding_ = interest.linkWireEncoding_;
     this.linkWireEncodingFormat_ = interest.linkWireEncodingFormat_;
@@ -105,7 +105,7 @@ var Interest = function Interest
     this.mustBeFresh_ = true;
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
     this.forwardingHint_ = new ChangeCounter(new DelegationSet());
-    this.parameters_ = new Blob();
+    this.applicationParameters_ = new Blob();
     this.nonce_ = new Blob();
     this.linkWireEncoding_ = new Blob();
     this.linkWireEncodingFormat_ = null;
@@ -355,7 +355,7 @@ Interest.prototype.getForwardingHint = function()
  */
 Interest.prototype.hasParameters = function()
 {
-  return this.parameters_.size() > 0;
+  return this.applicationParameters_.size() > 0;
 };
 
 /**
@@ -364,7 +364,7 @@ Interest.prototype.hasParameters = function()
  */
 Interest.prototype.getParameters = function()
 {
-  return this.parameters_;
+  return this.applicationParameters_;
 };
 
 /**
@@ -613,7 +613,7 @@ Interest.prototype.setForwardingHint = function(forwardingHint)
  */
 Interest.prototype.setParameters = function(parameters)
 {
-  this.parameters_ = typeof parameters === 'object' && parameters instanceof Blob ?
+  this.applicationParameters_ = typeof parameters === 'object' && parameters instanceof Blob ?
     parameters : new Blob(parameters, true);
   ++this.changeCount_;
   return this;
@@ -632,7 +632,7 @@ Interest.prototype.appendParametersDigestToName = function()
     return this;
 
   var hash = Crypto.createHash('sha256');
-  hash.update(this.parameters_.buf());
+  hash.update(this.applicationParameters_.buf());
   this.getName().appendParametersSha256Digest(new Blob(hash.digest(), false));
 
   return this;
