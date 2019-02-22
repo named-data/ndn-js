@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.17.0 (2019-01-23)
+Interim changes since NDN-JS v0.17.0 (2019-02-22)
 -------------------------------------------------
 
 Changes
@@ -19,6 +19,9 @@ Changes
 Bug fixes
 * https://github.com/named-data/ndn-js/pull/67 Fix checking against NaN.
 
+Deprecated
+* In Interest, deprecated getParameters, setParameters and hasParameters. Use
+  getApplicationParameters, setApplicationParameters and hasApplicationParameters.
 
 NDN-JS v0.17.0 (2018-09-17)
 ---------------------------

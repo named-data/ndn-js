@@ -105,7 +105,7 @@ Tlv0_2WireFormat.prototype.decodeName = function(name, input, copy)
  */
 Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
 {
-  if (interest.hasParameters())
+  if (interest.hasApplicationParameters())
     // The application has specified a format v0.3 field. As we transition to
     // format v0.3, encode as format v0.3 even though the application default is
     // Tlv0_2WireFormat.
@@ -265,8 +265,8 @@ Tlv0_2WireFormat.prototype.decodeInterestV02_ = function(interest, input, copy)
       interest.getSelectedDelegationIndex() >= 0 && !interest.hasLink())
     throw new Error("Interest has a selected delegation, but no link object");
 
-  // Format v0.2 doesn't have Interest parameters.
-  interest.setParameters(new Blob());
+  // Format v0.2 doesn't have application parameters.
+  interest.setApplicationParameters(new Blob());
 
   // Set the nonce last because setting other interest fields clears it.
   interest.setNonce(new Blob(nonce, copy));
@@ -1474,7 +1474,8 @@ Tlv0_2WireFormat.encodeInterestV03_ = function(interest)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  encoder.writeOptionalBlobTlv(Tlv.ApplicationParameters, interest.getParameters().buf());
+  encoder.writeOptionalBlobTlv
+    (Tlv.ApplicationParameters, interest.getApplicationParameters().buf());
   // TODO: HopLimit.
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
@@ -1595,7 +1596,7 @@ Tlv0_2WireFormat.decodeInterestV03_ = function(interest, input, copy)
   // Ignore the HopLimit.
   decoder.readOptionalBlobTlv(Tlv.HopLimit, endOffset);
 
-  interest.setParameters(new Blob(decoder.readOptionalBlobTlv
+  interest.setApplicationParameters(new Blob(decoder.readOptionalBlobTlv
     (Tlv.ApplicationParameters, endOffset), copy));
 
   // Set the nonce last because setting other interest fields clears it.

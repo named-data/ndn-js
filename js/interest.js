@@ -350,21 +350,39 @@ Interest.prototype.getForwardingHint = function()
 };
 
 /**
- * Check if the Interest parameters are specified.
- * @returns {boolean} True if the Interest parameters are specified, false if not.
+ * Check if the application parameters are specified.
+ * @returns {boolean} True if the application parameters are specified, false if
+ * not.
  */
-Interest.prototype.hasParameters = function()
+Interest.prototype.hasApplicationParameters = function()
 {
   return this.applicationParameters_.size() > 0;
 };
 
 /**
- * Get the Interest parameters.
- * @returns {Blob} The parameters as a Blob, which isNull() if unspecified.
+ * @deprecated Use hasApplicationParameters.
+ */
+Interest.prototype.hasParameters = function()
+{
+  return this.hasApplicationParameters();
+};
+
+/**
+ * Get the application parameters.
+ * @returns {Blob} The application parameters as a Blob, which isNull() if
+ * unspecified.
+ */
+Interest.prototype.getApplicationParameters = function()
+{
+  return this.applicationParameters_;
+};
+
+/**
+ * @deprecated Use getApplicationParameters.
  */
 Interest.prototype.getParameters = function()
 {
-  return this.applicationParameters_;
+  return this.getApplicationParameters();
 };
 
 /**
@@ -605,23 +623,32 @@ Interest.prototype.setForwardingHint = function(forwardingHint)
 };
 
 /**
- * Set the content to the given value.
- * @param {Blob|Buffer} parameters The Interest parameters bytes. If parameters
- * is not a Blob, then create a new Blob to copy the bytes (otherwise take
- * another pointer to the same Blob).
+ * Set the application parameters to the given value.
+ * @param {Blob|Buffer} applicationParameters The application parameters bytes.
+ * If applicationParameters is not a Blob, then create a new Blob to copy the
+ * bytes (otherwise take another pointer to the same Blob).
  * @return {Interest} This Interest so that you can chain calls to update values.
  */
-Interest.prototype.setParameters = function(parameters)
+Interest.prototype.setApplicationParameters = function(applicationParameters)
 {
-  this.applicationParameters_ = typeof parameters === 'object' && parameters instanceof Blob ?
-    parameters : new Blob(parameters, true);
+  this.applicationParameters_ = 
+    typeof applicationParameters === 'object' && applicationParameters instanceof Blob ?
+    applicationParameters : new Blob(applicationParameters, true);
   ++this.changeCount_;
   return this;
 };
 
 /**
- * Append the digest of the Interest parameters to the Name as a
- * ParametersSha256DigestComponent. However, if the Interest parameters is
+ * @deprecated Use setApplicationParameters.
+ */
+Interest.prototype.setParameters = function(applicationParameters)
+{
+  return this.setApplicationParameters(applicationParameters);
+};
+
+/**
+ * Append the digest of the application parameters to the Name as a
+ * ParametersSha256DigestComponent. However, if the application parameters is
  * unspecified, do nothing. This does not check if the Name already has a
  * parameters digest component, so calling again will append another component.
  * @return {Interest} This Interest so that you can chain calls to update values.
