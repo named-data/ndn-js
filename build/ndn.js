@@ -10181,7 +10181,7 @@ Tlv.ForwardingHint =   30;
 Tlv.SelectedDelegation = 32;
 Tlv.CanBePrefix =      33;
 Tlv.HopLimit =         34;
-Tlv.Parameters =       35;
+Tlv.ApplicationParameters = 35;
 Tlv.FaceInstance =     128;
 Tlv.ForwardingEntry =  129;
 Tlv.StatusResponse =   130;
@@ -42052,7 +42052,7 @@ var Interest = function Interest
     this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
     this.forwardingHint_ = new ChangeCounter
       (new DelegationSet(interest.getForwardingHint()));
-    this.parameters_ = interest.parameters_;
+    this.applicationParameters_ = interest.applicationParameters_;
     this.nonce_ = interest.nonce_;
     this.linkWireEncoding_ = interest.linkWireEncoding_;
     this.linkWireEncodingFormat_ = interest.linkWireEncodingFormat_;
@@ -42075,7 +42075,7 @@ var Interest = function Interest
     this.mustBeFresh_ = true;
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
     this.forwardingHint_ = new ChangeCounter(new DelegationSet());
-    this.parameters_ = new Blob();
+    this.applicationParameters_ = new Blob();
     this.nonce_ = new Blob();
     this.linkWireEncoding_ = new Blob();
     this.linkWireEncodingFormat_ = null;
@@ -42320,21 +42320,39 @@ Interest.prototype.getForwardingHint = function()
 };
 
 /**
- * Check if the Interest parameters are specified.
- * @returns {boolean} True if the Interest parameters are specified, false if not.
+ * Check if the application parameters are specified.
+ * @returns {boolean} True if the application parameters are specified, false if
+ * not.
  */
-Interest.prototype.hasParameters = function()
+Interest.prototype.hasApplicationParameters = function()
 {
-  return this.parameters_.size() > 0;
+  return this.applicationParameters_.size() > 0;
 };
 
 /**
- * Get the Interest parameters.
- * @returns {Blob} The parameters as a Blob, which isNull() if unspecified.
+ * @deprecated Use hasApplicationParameters.
+ */
+Interest.prototype.hasParameters = function()
+{
+  return this.hasApplicationParameters();
+};
+
+/**
+ * Get the application parameters.
+ * @returns {Blob} The application parameters as a Blob, which isNull() if
+ * unspecified.
+ */
+Interest.prototype.getApplicationParameters = function()
+{
+  return this.applicationParameters_;
+};
+
+/**
+ * @deprecated Use getApplicationParameters.
  */
 Interest.prototype.getParameters = function()
 {
-  return this.parameters_;
+  return this.getApplicationParameters();
 };
 
 /**
@@ -42575,23 +42593,32 @@ Interest.prototype.setForwardingHint = function(forwardingHint)
 };
 
 /**
- * Set the content to the given value.
- * @param {Blob|Buffer} parameters The Interest parameters bytes. If parameters
- * is not a Blob, then create a new Blob to copy the bytes (otherwise take
- * another pointer to the same Blob).
+ * Set the application parameters to the given value.
+ * @param {Blob|Buffer} applicationParameters The application parameters bytes.
+ * If applicationParameters is not a Blob, then create a new Blob to copy the
+ * bytes (otherwise take another pointer to the same Blob).
  * @return {Interest} This Interest so that you can chain calls to update values.
  */
-Interest.prototype.setParameters = function(parameters)
+Interest.prototype.setApplicationParameters = function(applicationParameters)
 {
-  this.parameters_ = typeof parameters === 'object' && parameters instanceof Blob ?
-    parameters : new Blob(parameters, true);
+  this.applicationParameters_ = 
+    typeof applicationParameters === 'object' && applicationParameters instanceof Blob ?
+    applicationParameters : new Blob(applicationParameters, true);
   ++this.changeCount_;
   return this;
 };
 
 /**
- * Append the digest of the Interest parameters to the Name as a
- * ParametersSha256DigestComponent. However, if the Interest parameters is
+ * @deprecated Use setApplicationParameters.
+ */
+Interest.prototype.setParameters = function(applicationParameters)
+{
+  return this.setApplicationParameters(applicationParameters);
+};
+
+/**
+ * Append the digest of the application parameters to the Name as a
+ * ParametersSha256DigestComponent. However, if the application parameters is
  * unspecified, do nothing. This does not check if the Name already has a
  * parameters digest component, so calling again will append another component.
  * @return {Interest} This Interest so that you can chain calls to update values.
@@ -42602,7 +42629,7 @@ Interest.prototype.appendParametersDigestToName = function()
     return this;
 
   var hash = Crypto.createHash('sha256');
-  hash.update(this.parameters_.buf());
+  hash.update(this.applicationParameters_.buf());
   this.getName().appendParametersSha256Digest(new Blob(hash.digest(), false));
 
   return this;
@@ -44161,7 +44188,7 @@ Tlv0_2WireFormat.prototype.decodeName = function(name, input, copy)
  */
 Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
 {
-  if (interest.hasParameters())
+  if (interest.hasApplicationParameters())
     // The application has specified a format v0.3 field. As we transition to
     // format v0.3, encode as format v0.3 even though the application default is
     // Tlv0_2WireFormat.
@@ -44321,8 +44348,8 @@ Tlv0_2WireFormat.prototype.decodeInterestV02_ = function(interest, input, copy)
       interest.getSelectedDelegationIndex() >= 0 && !interest.hasLink())
     throw new Error("Interest has a selected delegation, but no link object");
 
-  // Format v0.2 doesn't have Interest parameters.
-  interest.setParameters(new Blob());
+  // Format v0.2 doesn't have application parameters.
+  interest.setApplicationParameters(new Blob());
 
   // Set the nonce last because setting other interest fields clears it.
   interest.setNonce(new Blob(nonce, copy));
@@ -45530,7 +45557,8 @@ Tlv0_2WireFormat.encodeInterestV03_ = function(interest)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  encoder.writeOptionalBlobTlv(Tlv.Parameters, interest.getParameters().buf());
+  encoder.writeOptionalBlobTlv
+    (Tlv.ApplicationParameters, interest.getApplicationParameters().buf());
   // TODO: HopLimit.
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
@@ -45651,8 +45679,8 @@ Tlv0_2WireFormat.decodeInterestV03_ = function(interest, input, copy)
   // Ignore the HopLimit.
   decoder.readOptionalBlobTlv(Tlv.HopLimit, endOffset);
 
-  interest.setParameters(new Blob(decoder.readOptionalBlobTlv
-    (Tlv.Parameters, endOffset), copy));
+  interest.setApplicationParameters(new Blob(decoder.readOptionalBlobTlv
+    (Tlv.ApplicationParameters, endOffset), copy));
 
   // Set the nonce last because setting other interest fields clears it.
   interest.setNonce(nonce == null ? new Blob() : new Blob(nonce, copy));
