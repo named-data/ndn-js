@@ -491,34 +491,34 @@ describe('TestInterestMethods', function() {
     assert.equal(true,  new InterestFilter("/a", "<b><>+").doesMatch(new Name("/a/b/c")));
   });
 
-  it('SetParameters', function() {
+  it('SetApplicationParameters', function() {
     var interest = new Interest("/ndn");
-    assert.ok(!interest.hasParameters());
-    var parameters = new Blob(new Buffer([ 0x23, 0x00 ]));
-    interest.setParameters(parameters);
-    assert.ok(interest.hasParameters());
-    assert.ok(interest.getParameters().equals(parameters));
+    assert.ok(!interest.hasApplicationParameters());
+    var applicationParameters = new Blob(new Buffer([ 0x23, 0x00 ]));
+    interest.setApplicationParameters(applicationParameters);
+    assert.ok(interest.hasApplicationParameters());
+    assert.ok(interest.getApplicationParameters().equals(applicationParameters));
 
     var decodedInterest = new Interest();
     decodedInterest.wireDecode(interest.wireEncode());
-    assert.ok(decodedInterest.getParameters().equals(parameters));
+    assert.ok(decodedInterest.getApplicationParameters().equals(applicationParameters));
 
-    interest.setParameters(new Blob());
-    assert.ok(!interest.hasParameters());
+    interest.setApplicationParameters(new Blob());
+    assert.ok(!interest.hasApplicationParameters());
   });
 
   it('AppendParametersDigest', function() {
     var name = new Name("/local/ndn/prefix");
     var interest = new Interest(name);
 
-    assert.ok(!interest.hasParameters());
+    assert.ok(!interest.hasApplicationParameters());
     // No parameters yet, so it should do nothing.
     interest.appendParametersDigestToName();
     assert.equal("/local/ndn/prefix", interest.getName().toUri());
 
-    var parameters = new Blob(new Buffer([ 0x23, 0x01, 0xC0 ]));
-    interest.setParameters(parameters);
-    assert.ok(interest.hasParameters());
+    var applicationParameters = new Blob(new Buffer([ 0x23, 0x01, 0xC0 ]));
+    interest.setApplicationParameters(applicationParameters);
+    assert.ok(interest.hasApplicationParameters());
     interest.appendParametersDigestToName();
     assert.equal(name.size() + 1, interest.getName().size());
     assert.ok(interest.getName().getPrefix(-1).equals(name));
