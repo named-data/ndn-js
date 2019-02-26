@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.17.0 (2019-02-22)
+Interim changes since NDN-JS v0.17.0 (2019-02-26)
 -------------------------------------------------
 
 Changes
@@ -13,6 +13,8 @@ Changes
   deprecated 'constant' module.
 * https://github.com/named-data/ndn-js/pull/71 security (Node.js): Replace
   rsa-keygen with rsa-keypair.
+* https://redmine.named-data.net/issues/4655 Added name-based access control v2,
+  EncryptorV2, DecryptorV2 and AccessControlV2, with integration tests.
 * https://github.com/named-data/ndn-js/pull/70 Change SegmentFetcher to use new
   PipelineFixed & DataFetcher classes. (Thanks to Chavoosh and Junxiao.)
 
