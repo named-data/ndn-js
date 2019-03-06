@@ -1,5 +1,5 @@
-Interim changes since NDN-JS v0.17.0 (2019-02-26)
--------------------------------------------------
+NDN-JS v0.18.0 (2019-03-06)
+---------------------------
 
 Changes
 * https://redmine.named-data.net/issues/4111 In the browser, put the classes in
