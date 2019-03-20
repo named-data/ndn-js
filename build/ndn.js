@@ -42043,6 +42043,7 @@ var Interest = function Interest
     // Copy the name.
     this.name_ = new ChangeCounter(new Name(interest.getName()));
     this.maxSuffixComponents_ = interest.maxSuffixComponents_;
+    this.didSetCanBePrefix_ = interest.didSetCanBePrefix_;
     this.minSuffixComponents_ = interest.minSuffixComponents_;
 
     this.keyLocator_ = new ChangeCounter(new KeyLocator(interest.getKeyLocator()));
@@ -42065,7 +42066,12 @@ var Interest = function Interest
   }
   else {
     this.name_ = new ChangeCounter(new Name(nameOrInterest));
-    this.maxSuffixComponents_ = maxSuffixComponents;
+    if (maxSuffixComponents != null)
+      this.maxSuffixComponents_ = maxSuffixComponents;
+    else
+      this.maxSuffixComponents_ = (Interest.defaultCanBePrefix_ ? null : 1);
+    // didSetCanBePrefix_ is true if the app already called setDefaultCanBePrefix().
+    this.didSetCanBePrefix_ = Interest.didSetDefaultCanBePrefix_;
     this.minSuffixComponents_ = minSuffixComponents;
 
     this.keyLocator_ = new ChangeCounter(new KeyLocator());
@@ -42097,6 +42103,32 @@ Interest.RECURSIVE_POSTFIX = "*";
 
 Interest.CHILD_SELECTOR_LEFT = 0;
 Interest.CHILD_SELECTOR_RIGHT = 1;
+
+Interest.defaultCanBePrefix_ = true;
+Interest.didSetDefaultCanBePrefix_ = false;
+
+/**
+ * Get the default value of the CanBePrefix flag used in the Interest
+ * constructor. You can change this with Interest.setDefaultCanBePrefix().
+ * @return {boolean} The default value of the CanBePrefix flag.
+ */
+Interest.getDefaultCanBePrefix = function() { return Interest.defaultCanBePrefix_; };
+
+/**
+ * Set the default value of the CanBePrefix flag used in the Interest
+ * constructor. The default is currently true, but will be changed at a later
+ * date. The application should call this before creating any Interest
+ * (even to set the default again to true), or the application should
+ * explicitly call setCanBePrefix() after creating the Interest. Otherwise
+ * wireEncode will print a warning message. This is to avoid breaking any code
+ * when the library default for CanBePrefix is changed at a later date.
+ * @param {boolean} defaultCanBePrefix The default value of the CanBePrefix flag.
+ */
+Interest.setDefaultCanBePrefix = function(defaultCanBePrefix)
+{
+  Interest.defaultCanBePrefix_ = defaultCanBePrefix;
+  Interest.didSetDefaultCanBePrefix_ = true;
+};
 
 /**
  * Check if this interest's name matches the given name (using Name.match) and
@@ -42536,6 +42568,7 @@ Interest.prototype.setCanBePrefix = function(canBePrefix)
   // Use the closest v0.2 semantics. CanBePrefix is the opposite of exact
   // match where MaxSuffixComponents is 1 (for the implicit digest).
   this.maxSuffixComponents_ = (canBePrefix ? null : 1);
+  this.didSetCanBePrefix_ = true;
   ++this.changeCount_;
   return this;
 };
@@ -44145,6 +44178,8 @@ exports.Tlv0_2WireFormat = Tlv0_2WireFormat;
 // Default object.
 Tlv0_2WireFormat.instance = null;
 
+Tlv0_2WireFormat.didCanBePrefixWarning_ = false;
+
 /**
  * Encode name as an NDN-TLV Name and return the encoding.
  * @param {Name} name The Name to encode.
@@ -44188,6 +44223,12 @@ Tlv0_2WireFormat.prototype.decodeName = function(name, input, copy)
  */
 Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
 {
+  if (!interest.didSetCanBePrefix_ && !Tlv0_2WireFormat.didCanBePrefixWarning_) {
+    console.log
+      ("WARNING: The default CanBePrefix will change. See Interest.setDefaultCanBePrefix() for details.");
+    Tlv0_2WireFormat.didCanBePrefixWarning_ = true;
+  }
+
   if (interest.hasApplicationParameters())
     // The application has specified a format v0.3 field. As we transition to
     // format v0.3, encode as format v0.3 even though the application default is
