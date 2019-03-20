@@ -62,6 +62,8 @@ exports.Tlv0_2WireFormat = Tlv0_2WireFormat;
 // Default object.
 Tlv0_2WireFormat.instance = null;
 
+Tlv0_2WireFormat.didCanBePrefixWarning_ = false;
+
 /**
  * Encode name as an NDN-TLV Name and return the encoding.
  * @param {Name} name The Name to encode.
@@ -105,6 +107,12 @@ Tlv0_2WireFormat.prototype.decodeName = function(name, input, copy)
  */
 Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
 {
+  if (!interest.didSetCanBePrefix_ && !Tlv0_2WireFormat.didCanBePrefixWarning_) {
+    console.log
+      ("WARNING: The default CanBePrefix will change. See Interest.setDefaultCanBePrefix() for details.");
+    Tlv0_2WireFormat.didCanBePrefixWarning_ = true;
+  }
+
   if (interest.hasApplicationParameters())
     // The application has specified a format v0.3 field. As we transition to
     // format v0.3, encode as format v0.3 even though the application default is
