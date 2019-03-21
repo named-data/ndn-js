@@ -495,6 +495,9 @@ function getRandomNameString()
 // initiateChat() also sends random chat messages so that we don't need input from node JS
 function initiateChat()
 {
+  // Silence the warning from Interest wire encode.
+  Interest.setDefaultCanBePrefix(true);
+
   var hubPrefix = "ndn/edu/ucla/remap";
   var screenName = getRandomNameString();
 
@@ -529,4 +532,3 @@ function initiateChat()
 }
 
 initiateChat();
-

@@ -198,6 +198,9 @@ function dumpInterest(interest)
 
 function main()
 {
+  // Silence the warning from Interest wire encode.
+  Interest.setDefaultCanBePrefix(true);
+
   var interest = new Interest();
   interest.wireDecode(new Blob(TlvInterest, false));
   console.log("Interest:");

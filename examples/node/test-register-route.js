@@ -141,6 +141,9 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
 
 function main()
 {
+  // Silence the warning from Interest wire encode.
+  Interest.setDefaultCanBePrefix(true);
+
   var prefix = new Name("/nfd/edu/ucla/remap/test");
   // Route to aleph.ndn.ucla.edu.  Have to use the canonical name with
   // an IP address and port.

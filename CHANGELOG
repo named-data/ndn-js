@@ -1,3 +1,10 @@
+Interim changes since NDN-JS v0.18.0 (2019-03-20)
+-------------------------------------------------
+
+Changes
+* https://redmine.named-data.net/issues/4807 Print a warning if the application
+  didn't call Interest.setDefaultCanBePrefix() or set the Interest's CanBePrefix.
+
 NDN-JS v0.18.0 (2019-03-06)
 ---------------------------
 

@@ -20,7 +20,11 @@
 var readline = require('readline');
 var Face = require('../..').Face;
 var Name = require('../..').Name;
+var Interest = require('../..').Interest;
 var UnixTransport = require('../..').UnixTransport;
+
+// Silence the warning from Interest wire encode.
+Interest.setDefaultCanBePrefix(true);
 
 var onData = function(interest, data) {
   console.log("Got data packet with name " + data.getName().toUri());
