@@ -50,6 +50,9 @@ var TlvInterest = new Buffer([
 
 function main()
 {
+  // Silence the warning from Interest wire encode.
+  Interest.setDefaultCanBePrefix(true);
+
   var interest = new Interest();
   interest.wireDecode(new Blob(TlvInterest, false));
 

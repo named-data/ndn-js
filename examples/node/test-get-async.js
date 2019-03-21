@@ -19,6 +19,10 @@
 
 var Face = require('../..').Face;
 var Name = require('../..').Name;
+var Interest = require('../..').Interest;
+
+// Silence the warning from Interest wire encode.
+Interest.setDefaultCanBePrefix(true);
 
 var face = new Face({host: "memoria.ndn.ucla.edu"});
 var callbackCount = 0;

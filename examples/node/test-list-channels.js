@@ -33,6 +33,9 @@ var SegmentFetcher = require('../..').SegmentFetcher;
 
 function main()
 {
+  // Silence the warning from Interest wire encode.
+  Interest.setDefaultCanBePrefix(true);
+
   // Connect to the local forwarder with a Unix socket.
   var face = new Face(new UnixTransport());
 
