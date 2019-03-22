@@ -310,7 +310,8 @@ Interest.prototype.getMaxSuffixComponents = function()
 };
 
 /**
- * Get the CanBePrefix flag. If not specified, the default is true.
+ * Get the CanBePrefix flag. If not specified, the default is true, or the
+ * value from setDefaultCanBePrefix().
  * @returns {boolean} The CanBePrefix flag.
  */
 Interest.prototype.getCanBePrefix = function()
@@ -589,8 +590,7 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 
 /**
  * Set the CanBePrefix flag.
- * @param {boolean} canBePrefix True if the Interest name can be a prefix. If
- * you do not set this flag, the default value is true.
+ * @param {boolean} canBePrefix True if the Interest name can be a prefix.
  * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setCanBePrefix = function(canBePrefix)
