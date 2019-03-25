@@ -63,6 +63,8 @@ ForwardingFlags.prototype.getNfdForwardingFlags = function()
  * Set the flags according to the NFD forwarding flags as used in the
  * ControlParameters of the command interest.
  * @param {number} nfdForwardingFlags An integer with the bits set.
+ * @return {ForwardingFlags} This ForwardingFlags so that you can chain calls to
+ * update values.
  */
 ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
 {
@@ -70,6 +72,7 @@ ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
     ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT) != 0);
   this.capture =
     ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CAPTURE) != 0);
+  return this;
 };
 
 /**
@@ -86,12 +89,25 @@ ForwardingFlags.prototype.getCapture = function() { return this.capture; };
 
 /**
  * Set the value of the "childInherit" flag
- * @param {number} value true to set the flag, false to clear it.
+ * @param {number} childInherit true to set the "childInherit" flag, false to
+ * clear it.
+ * @return {ForwardingFlags} This ForwardingFlags so that you can chain calls to
+ * update values.
  */
-ForwardingFlags.prototype.setChildInherit = function(value) { this.childInherit = value; };
+ForwardingFlags.prototype.setChildInherit = function(childInherit)
+{ 
+  this.childInherit = childInherit;
+  return this;
+};
 
 /**
  * Set the value of the "capture" flag
- * @param {number} value true to set the flag, false to clear it.
+ * @param {number} capture true to set the "capture" flag, false to clear it.
+ * @return {ForwardingFlags} This ForwardingFlags so that you can chain calls to
+ * update values.
  */
-ForwardingFlags.prototype.setCapture = function(value) { this.capture = value; };
+ForwardingFlags.prototype.setCapture = function(capture)
+{ 
+  this.capture = capture;
+  return this;
+};
