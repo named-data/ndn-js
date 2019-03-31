@@ -806,6 +806,12 @@ Face.prototype.nfdRegisterPrefix = function
   var controlParameters = new ControlParameters();
   controlParameters.setName(prefix);
   controlParameters.setForwardingFlags(flags);
+  if (flags.getOrigin() != null && flags.getOrigin() >= 0) {
+    controlParameters.setOrigin(flags.getOrigin());
+    // Remove the origin value from the flags since it is not used to encode.
+    controlParameters.getForwardingFlags().setOrigin(null);
+  }
+
 
   // Make the callback for this.isLocal().
   var thisFace = this;
