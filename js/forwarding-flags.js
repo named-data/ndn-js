@@ -30,10 +30,12 @@ var ForwardingFlags = function ForwardingFlags(value)
     // Make a copy.
     this.childInherit = value.childInherit;
     this.capture = value.capture;
+    this.origin = value.origin;
   }
   else {
     this.childInherit = true;
     this.capture = false;
+    this.origin = null;
   }
 };
 
@@ -62,6 +64,7 @@ ForwardingFlags.prototype.getNfdForwardingFlags = function()
 /**
  * Set the flags according to the NFD forwarding flags as used in the
  * ControlParameters of the command interest.
+ * This ignores the origin value.
  * @param {number} nfdForwardingFlags An integer with the bits set.
  * @return {ForwardingFlags} This ForwardingFlags so that you can chain calls to
  * update values.
@@ -88,6 +91,15 @@ ForwardingFlags.prototype.getChildInherit = function() { return this.childInheri
 ForwardingFlags.prototype.getCapture = function() { return this.capture; };
 
 /**
+ * Get the origin value.
+ * @return {number} The origin value, or null if not specified.
+ */
+ForwardingFlags.prototype.getOrigin = function()
+{
+  return this.origin;
+};
+
+/**
  * Set the value of the "childInherit" flag
  * @param {number} childInherit true to set the "childInherit" flag, false to
  * clear it.
@@ -109,5 +121,15 @@ ForwardingFlags.prototype.setChildInherit = function(childInherit)
 ForwardingFlags.prototype.setCapture = function(capture)
 { 
   this.capture = capture;
+  return this;
+};
+
+/**
+ * Set the origin value.
+ * @param {number} origin The new origin value, or null for not specified.
+ */
+ForwardingFlags.prototype.setOrigin = function(origin)
+{
+  this.origin = origin;
   return this;
 };
