@@ -42280,7 +42280,8 @@ Interest.prototype.getMaxSuffixComponents = function()
 };
 
 /**
- * Get the CanBePrefix flag. If not specified, the default is true.
+ * Get the CanBePrefix flag. If not specified, the default is true, or the
+ * value from setDefaultCanBePrefix().
  * @returns {boolean} The CanBePrefix flag.
  */
 Interest.prototype.getCanBePrefix = function()
@@ -42559,8 +42560,7 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 
 /**
  * Set the CanBePrefix flag.
- * @param {boolean} canBePrefix True if the Interest name can be a prefix. If
- * you do not set this flag, the default value is true.
+ * @param {boolean} canBePrefix True if the Interest name can be a prefix.
  * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setCanBePrefix = function(canBePrefix)
@@ -42994,10 +42994,12 @@ var ForwardingFlags = function ForwardingFlags(value)
     // Make a copy.
     this.childInherit = value.childInherit;
     this.capture = value.capture;
+    this.origin = value.origin;
   }
   else {
     this.childInherit = true;
     this.capture = false;
+    this.origin = null;
   }
 };
 
@@ -43026,7 +43028,10 @@ ForwardingFlags.prototype.getNfdForwardingFlags = function()
 /**
  * Set the flags according to the NFD forwarding flags as used in the
  * ControlParameters of the command interest.
+ * This ignores the origin value.
  * @param {number} nfdForwardingFlags An integer with the bits set.
+ * @return {ForwardingFlags} This ForwardingFlags so that you can chain calls to
+ * update values.
  */
 ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
 {
@@ -43034,6 +43039,7 @@ ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
     ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT) != 0);
   this.capture =
     ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CAPTURE) != 0);
+  return this;
 };
 
 /**
@@ -43049,16 +43055,48 @@ ForwardingFlags.prototype.getChildInherit = function() { return this.childInheri
 ForwardingFlags.prototype.getCapture = function() { return this.capture; };
 
 /**
- * Set the value of the "childInherit" flag
- * @param {number} value true to set the flag, false to clear it.
+ * Get the origin value.
+ * @return {number} The origin value, or null if not specified.
  */
-ForwardingFlags.prototype.setChildInherit = function(value) { this.childInherit = value; };
+ForwardingFlags.prototype.getOrigin = function()
+{
+  return this.origin;
+};
+
+/**
+ * Set the value of the "childInherit" flag
+ * @param {number} childInherit true to set the "childInherit" flag, false to
+ * clear it.
+ * @return {ForwardingFlags} This ForwardingFlags so that you can chain calls to
+ * update values.
+ */
+ForwardingFlags.prototype.setChildInherit = function(childInherit)
+{ 
+  this.childInherit = childInherit;
+  return this;
+};
 
 /**
  * Set the value of the "capture" flag
- * @param {number} value true to set the flag, false to clear it.
+ * @param {number} capture true to set the "capture" flag, false to clear it.
+ * @return {ForwardingFlags} This ForwardingFlags so that you can chain calls to
+ * update values.
  */
-ForwardingFlags.prototype.setCapture = function(value) { this.capture = value; };
+ForwardingFlags.prototype.setCapture = function(capture)
+{ 
+  this.capture = capture;
+  return this;
+};
+
+/**
+ * Set the origin value.
+ * @param {number} origin The new origin value, or null for not specified.
+ */
+ForwardingFlags.prototype.setOrigin = function(origin)
+{
+  this.origin = origin;
+  return this;
+};
 /**
  * Copyright (C) 2014-2019 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -55403,6 +55441,12 @@ Face.prototype.nfdRegisterPrefix = function
   var controlParameters = new ControlParameters();
   controlParameters.setName(prefix);
   controlParameters.setForwardingFlags(flags);
+  if (flags.getOrigin() != null && flags.getOrigin() >= 0) {
+    controlParameters.setOrigin(flags.getOrigin());
+    // Remove the origin value from the flags since it is not used to encode.
+    controlParameters.getForwardingFlags().setOrigin(null);
+  }
+
 
   // Make the callback for this.isLocal().
   var thisFace = this;
