@@ -226,6 +226,7 @@ def build (bld):
                  "js/security/validator-null.js",
                  "js/exclude.js",
                  "js/interest.js",
+                 "js/registration-options.js",
                  "js/forwarding-flags.js",
                  "js/control-parameters.js",
                  "js/control-response.js",

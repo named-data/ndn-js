@@ -30,7 +30,7 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat; /** @ignore */
 var Tlv = require('./encoding/tlv/tlv.js').Tlv; /** @ignore */
 var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
-var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags; /** @ignore */
+var RegistrationOptions = require('./registration-options.js').RegistrationOptions; /** @ignore */
 var Transport = require('./transport/transport.js').Transport; /** @ignore */
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport; /** @ignore */
 var UnixTransport = require('./transport/unix-transport.js').UnixTransport; /** @ignore */
@@ -603,39 +603,39 @@ Face.prototype.nodeMakeCommandInterest = function
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for
- * finer control of which interests are forward to the application. If omitted,
- * use the default flags defined by the default ForwardingFlags constructor.
+ * @param {RegistrationOptions} registrationOptions (optional) The registration
+ * options for finer control of how to forward an interest and other options.
  * @return {number} The registered prefix ID which can be used with
  * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefix = function
-  (prefix, onInterest, onRegisterFailed, onRegisterSuccess, flags, wireFormat)
+  (prefix, onInterest, onRegisterFailed, onRegisterSuccess, registrationOptions,
+   wireFormat)
 {
   // Temporarlity reassign to resolve the different overloaded forms.
   var arg4 = onRegisterSuccess;
-  var arg5 = flags;
+  var arg5 = registrationOptions;
   var arg6 = wireFormat;
   // arg4, arg5, arg6 may be:
-  // OnRegisterSuccess, ForwardingFlags, WireFormat
-  // OnRegisterSuccess, ForwardingFlags, null
-  // OnRegisterSuccess, WireFormat,      null
-  // OnRegisterSuccess, null,            null
-  // ForwardingFlags,   WireFormat,      null
-  // ForwardingFlags,   null,            null
-  // WireFormat,        null,            null
-  // null,              null,            null
+  // OnRegisterSuccess,   RegistrationOptions, WireFormat
+  // OnRegisterSuccess,   RegistrationOptions, null
+  // OnRegisterSuccess,   WireFormat,          null
+  // OnRegisterSuccess,   null,                null
+  // RegistrationOptions, WireFormat,          null
+  // RegistrationOptions, null,                null
+  // WireFormat,          null,                null
+  // null,                null,                null
   if (typeof arg4 === "function")
     onRegisterSuccess = arg4;
   else
     onRegisterSuccess = null;
 
-  if (arg4 instanceof ForwardingFlags)
-    flags = arg4;
-  else if (arg5 instanceof ForwardingFlags)
-    flags = arg5;
+  if (arg4 instanceof RegistrationOptions)
+    registrationOptions = arg4;
+  else if (arg5 instanceof RegistrationOptions)
+    registrationOptions = arg5;
   else
-    flags = new ForwardingFlags();
+    registrationOptions = new RegistrationOptions();
 
   if (arg4 instanceof WireFormat)
     wireFormat = arg4;
@@ -653,7 +653,7 @@ Face.prototype.registerPrefix = function
   var thisFace = this;
   var onConnected = function() {
     thisFace.nfdRegisterPrefix
-      (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
+      (registeredPrefixId, prefix, onInterest, registrationOptions, onRegisterFailed,
        onRegisterSuccess, thisFace.commandKeyChain,
        thisFace.commandCertificateName, wireFormat);
   };
@@ -785,7 +785,7 @@ Face.RegisterResponse.prototype.onTimeout = function(interest)
  * don't add to registeredPrefixTable (assuming it has already been done).
  * @param {Name} prefix
  * @param {function} onInterest
- * @param {ForwardingFlags} flags
+ * @param {RegistrationOptions} registrationOptions
  * @param {function} onRegisterFailed
  * @param {function} onRegisterSuccess
  * @param {KeyChain} commandKeyChain
@@ -793,7 +793,7 @@ Face.RegisterResponse.prototype.onTimeout = function(interest)
  * @param {WireFormat} wireFormat
  */
 Face.prototype.nfdRegisterPrefix = function
-  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
+  (registeredPrefixId, prefix, onInterest, registrationOptions, onRegisterFailed,
    onRegisterSuccess, commandKeyChain, commandCertificateName, wireFormat)
 {
   if (commandKeyChain == null)
@@ -805,9 +805,9 @@ Face.prototype.nfdRegisterPrefix = function
 
   var controlParameters = new ControlParameters();
   controlParameters.setName(prefix);
-  controlParameters.setForwardingFlags(flags);
-  if (flags.getOrigin() != null && flags.getOrigin() >= 0) {
-    controlParameters.setOrigin(flags.getOrigin());
+  controlParameters.setForwardingFlags(registrationOptions);
+  if (registrationOptions.getOrigin() != null && registrationOptions.getOrigin() >= 0) {
+    controlParameters.setOrigin(registrationOptions.getOrigin());
     // Remove the origin value from the flags since it is not used to encode.
     controlParameters.getForwardingFlags().setOrigin(null);
   }

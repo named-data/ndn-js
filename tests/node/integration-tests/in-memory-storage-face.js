@@ -66,7 +66,8 @@ InMemoryStorageFace.prototype.expressInterest = function
 };
 
 InMemoryStorageFace.prototype.registerPrefix = function
-  (prefix, onInterest, onRegisterFailed, onRegisterSuccess, flags, wireFormat)
+  (prefix, onInterest, onRegisterFailed, onRegisterSuccess, registrationOptions,
+   wireFormat)
 {
   this.interestFilterTable_.setInterestFilter
     (0, new InterestFilter(prefix), onInterest, this);

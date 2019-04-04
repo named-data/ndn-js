@@ -10182,19 +10182,6 @@ Tlv.SelectedDelegation = 32;
 Tlv.CanBePrefix =      33;
 Tlv.HopLimit =         34;
 Tlv.ApplicationParameters = 35;
-Tlv.FaceInstance =     128;
-Tlv.ForwardingEntry =  129;
-Tlv.StatusResponse =   130;
-Tlv.Action =           131;
-Tlv.FaceID =           132;
-Tlv.IPProto =          133;
-Tlv.Host =             134;
-Tlv.Port =             135;
-Tlv.MulticastInterface = 136;
-Tlv.MulticastTTL =     137;
-Tlv.ForwardingFlags =  138;
-Tlv.StatusCode =       139;
-Tlv.StatusText =       140;
 
 Tlv.SignatureType_DigestSha256 = 0;
 Tlv.SignatureType_SignatureSha256WithRsa = 1;
@@ -13339,7 +13326,7 @@ BoostInfoParser.prototype.parseLine = function(line, context)
 /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 var InterestFilter = require('../interest-filter.js').InterestFilter; /** @ignore */
-var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ignore */
+var RegistrationOptions = require('../registration-options.js').RegistrationOptions; /** @ignore */
 var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
 
@@ -13423,33 +13410,34 @@ exports.MemoryContentCache = MemoryContentCache;
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {ForwardingFlags} flags (optional) See Face.registerPrefix.
+ * @param {RegistrationOptions} registrationOptions (optional) See Face.registerPrefix.
  * @param {WireFormat} wireFormat (optional) See Face.registerPrefix.
  */
 MemoryContentCache.prototype.registerPrefix = function
-  (prefix, onRegisterFailed, onRegisterSuccess, onDataNotFound, flags, wireFormat)
+  (prefix, onRegisterFailed, onRegisterSuccess, onDataNotFound, 
+   registrationOptions, wireFormat)
 {
   var arg3 = onRegisterSuccess;
   var arg4 = onDataNotFound;
-  var arg5 = flags;
+  var arg5 = registrationOptions;
   var arg6 = wireFormat;
-  // arg3,                arg4,            arg5,            arg6 may be:
-  // [OnRegisterSuccess], OnDataNotFound,  ForwardingFlags, WireFormat
-  // [OnRegisterSuccess], OnDataNotFound,  ForwardingFlags, null
-  // [OnRegisterSuccess], OnDataNotFound,  WireFormat,      null
-  // [OnRegisterSuccess], OnDataNotFound,  null,            null
-  // [OnRegisterSuccess], ForwardingFlags, WireFormat,      null
-  // [OnRegisterSuccess], ForwardingFlags, null,            null
-  // [OnRegisterSuccess], WireFormat,      null,            null
-  // [OnRegisterSuccess], null,            null,            null
-  // OnDataNotFound,      ForwardingFlags, WireFormat,      null
-  // OnDataNotFound,      ForwardingFlags, null,            null
-  // OnDataNotFound,      WireFormat,      null,            null
-  // OnDataNotFound,      null,            null,            null
-  // ForwardingFlags,     WireFormat,      null,            null
-  // ForwardingFlags,     null,            null,            null
-  // WireFormat,          null,            null,            null
-  // null,                null,            null,            null
+  // arg3,                arg4,                arg5,                arg6 may be:
+  // [OnRegisterSuccess], OnDataNotFound,      RegistrationOptions, WireFormat
+  // [OnRegisterSuccess], OnDataNotFound,      RegistrationOptions, null
+  // [OnRegisterSuccess], OnDataNotFound,      WireFormat,          null
+  // [OnRegisterSuccess], OnDataNotFound,      null,                null
+  // [OnRegisterSuccess], RegistrationOptions, WireFormat,          null
+  // [OnRegisterSuccess], RegistrationOptions, null,                null
+  // [OnRegisterSuccess], WireFormat,          null,                null
+  // [OnRegisterSuccess], null,                null,                null
+  // OnDataNotFound,      RegistrationOptions, WireFormat,          null
+  // OnDataNotFound,      RegistrationOptions, null,                null
+  // OnDataNotFound,      WireFormat,          null,                null
+  // OnDataNotFound,      null,                null,                null
+  // RegistrationOptions, WireFormat,          null,                null
+  // RegistrationOptions, null,                null,                null
+  // WireFormat,          null,                null,                null
+  // null,                null,                null,                null
   if (typeof arg3 === "object" && arg3.length === 1 &&
       typeof arg3[0] === "function")
     onRegisterSuccess = arg3[0];
@@ -13463,14 +13451,14 @@ MemoryContentCache.prototype.registerPrefix = function
   else
     onDataNotFound = null;
 
-  if (arg3 instanceof ForwardingFlags)
-    flags = arg3;
-  else if (arg4 instanceof ForwardingFlags)
-    flags = arg4;
-  else if (arg5 instanceof ForwardingFlags)
-    flags = arg5;
+  if (arg3 instanceof RegistrationOptions)
+    registrationOptions = arg3;
+  else if (arg4 instanceof RegistrationOptions)
+    registrationOptions = arg4;
+  else if (arg5 instanceof RegistrationOptions)
+    registrationOptions = arg5;
   else
-    flags = new ForwardingFlags();
+    registrationOptions = new RegistrationOptions();
 
   if (arg3 instanceof WireFormat)
     wireFormat = arg3;
@@ -13487,7 +13475,7 @@ MemoryContentCache.prototype.registerPrefix = function
     this.onDataNotFoundForPrefix[prefix.toUri()] = onDataNotFound;
   var registeredPrefixId = this.face.registerPrefix
     (prefix, this.onInterest.bind(this), onRegisterFailed, onRegisterSuccess,
-     flags, wireFormat);
+     registrationOptions, wireFormat);
   this.registeredPrefixIdList.push(registeredPrefixId);
 };
 
@@ -42963,7 +42951,7 @@ Object.defineProperty(Interest.prototype, "nonce",
   { get: function() { return this.getNonceAsBuffer(); },
     set: function(val) { this.setNonce(val); } });
 /**
- * Copyright (C) 2013-2019 Regents of the University of California.
+ * Copyright (C) 2019 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -42982,15 +42970,21 @@ Object.defineProperty(Interest.prototype, "nonce",
  */
 
 /**
- * A ForwardingFlags object holds the flags which specify how the forwarding daemon should forward an interest for
- * a registered prefix.  We use a separate ForwardingFlags object to retain future compatibility if the daemon forwarding
- * bits are changed, amended or deprecated.
- * Create a new ForwardingFlags with "childInherit" set and all other flags cleared.
+ * A RegistrationOptions holds the options used when registering with the
+ * forwarder to specify how to forward an interest and other options. We use a
+ * separate RegistrationOptions object to retain future compatibility if the
+ * format of the registration command is changed.
+ * (This class was renamed from ForwardingFlags, which is deprecated.)
+ * Create a new RegistrationOptions object, possibly copying values from another
+ * object.
+ * @param {RegistrationOptions} value (optional) If value is a
+ * RegistrationOptions, copy its values. If value is omitted, the type is the
+ * default with "childInherit" true and other flags false.
  * @constructor
  */
-var ForwardingFlags = function ForwardingFlags(value)
+var RegistrationOptions = function RegistrationOptions(value)
 {
-  if (typeof value === 'object' && value instanceof ForwardingFlags) {
+  if (typeof value === 'object' && value instanceof RegistrationOptions) {
     // Make a copy.
     this.childInherit = value.childInherit;
     this.capture = value.capture;
@@ -43003,24 +42997,24 @@ var ForwardingFlags = function ForwardingFlags(value)
   }
 };
 
-exports.ForwardingFlags = ForwardingFlags;
+exports.RegistrationOptions = RegistrationOptions;
 
-ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT = 1;
-ForwardingFlags.NfdForwardingFlags_CAPTURE       = 2;
+RegistrationOptions.NfdForwardingFlags_CHILD_INHERIT = 1;
+RegistrationOptions.NfdForwardingFlags_CAPTURE       = 2;
 
 /**
  * Get an integer with the bits set according to the NFD forwarding flags as
  * used in the ControlParameters of the command interest.
  * @return {number} An integer with the bits set.
  */
-ForwardingFlags.prototype.getNfdForwardingFlags = function()
+RegistrationOptions.prototype.getNfdForwardingFlags = function()
 {
   var result = 0;
 
   if (this.childInherit)
-    result |= ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT;
+    result |= RegistrationOptions.NfdForwardingFlags_CHILD_INHERIT;
   if (this.capture)
-    result |= ForwardingFlags.NfdForwardingFlags_CAPTURE;
+    result |= RegistrationOptions.NfdForwardingFlags_CAPTURE;
 
   return result;
 };
@@ -43030,15 +43024,15 @@ ForwardingFlags.prototype.getNfdForwardingFlags = function()
  * ControlParameters of the command interest.
  * This ignores the origin value.
  * @param {number} nfdForwardingFlags An integer with the bits set.
- * @return {ForwardingFlags} This ForwardingFlags so that you can chain calls to
- * update values.
+ * @return {RegistrationOptions} This RegistrationOptions so that you can chain
+ * calls to update values.
  */
-ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
+RegistrationOptions.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
 {
   this.childInherit =
-    ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT) != 0);
+    ((nfdForwardingFlags & RegistrationOptions.NfdForwardingFlags_CHILD_INHERIT) != 0);
   this.capture =
-    ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CAPTURE) != 0);
+    ((nfdForwardingFlags & RegistrationOptions.NfdForwardingFlags_CAPTURE) != 0);
   return this;
 };
 
@@ -43046,19 +43040,19 @@ ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
  * Get the value of the "childInherit" flag.
  * @return {Boolean} true if the flag is set, false if it is cleared.
  */
-ForwardingFlags.prototype.getChildInherit = function() { return this.childInherit; };
+RegistrationOptions.prototype.getChildInherit = function() { return this.childInherit; };
 
 /**
  * Get the value of the "capture" flag.
  * @return {Boolean} true if the flag is set, false if it is cleared.
  */
-ForwardingFlags.prototype.getCapture = function() { return this.capture; };
+RegistrationOptions.prototype.getCapture = function() { return this.capture; };
 
 /**
  * Get the origin value.
  * @return {number} The origin value, or null if not specified.
  */
-ForwardingFlags.prototype.getOrigin = function()
+RegistrationOptions.prototype.getOrigin = function()
 {
   return this.origin;
 };
@@ -43067,10 +43061,10 @@ ForwardingFlags.prototype.getOrigin = function()
  * Set the value of the "childInherit" flag
  * @param {number} childInherit true to set the "childInherit" flag, false to
  * clear it.
- * @return {ForwardingFlags} This ForwardingFlags so that you can chain calls to
- * update values.
+ * @return {RegistrationOptions} This RegistrationOptions so that you can chain
+ * calls to update values.
  */
-ForwardingFlags.prototype.setChildInherit = function(childInherit)
+RegistrationOptions.prototype.setChildInherit = function(childInherit)
 { 
   this.childInherit = childInherit;
   return this;
@@ -43079,10 +43073,10 @@ ForwardingFlags.prototype.setChildInherit = function(childInherit)
 /**
  * Set the value of the "capture" flag
  * @param {number} capture true to set the "capture" flag, false to clear it.
- * @return {ForwardingFlags} This ForwardingFlags so that you can chain calls to
- * update values.
+ * @return {RegistrationOptions} This RegistrationOptions so that you can chain
+ * calls to update values.
  */
-ForwardingFlags.prototype.setCapture = function(capture)
+RegistrationOptions.prototype.setCapture = function(capture)
 { 
   this.capture = capture;
   return this;
@@ -43091,12 +43085,58 @@ ForwardingFlags.prototype.setCapture = function(capture)
 /**
  * Set the origin value.
  * @param {number} origin The new origin value, or null for not specified.
+ * @return {RegistrationOptions} This RegistrationOptions so that you can chain
+ * calls to update values.
  */
-ForwardingFlags.prototype.setOrigin = function(origin)
+RegistrationOptions.prototype.setOrigin = function(origin)
 {
   this.origin = origin;
   return this;
 };
+/**
+ * Copyright (C) 2013-2019 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var RegistrationOptions = require('./registration-options.js').RegistrationOptions;
+
+/**
+ * Create a new ForwardingFlags object, possibly copying values from another
+ * object.
+ * @param {ForwardingFlags} value (optional) If value is a
+ * RegistrationOptions (or ForwardingFlags), copy its values. If value is
+ * omitted, the type is the default with "childInherit" true and other flags
+ * false.
+ * @deprecated Use RegistrationOptions.
+ * @constructor
+ */
+var ForwardingFlags = function ForwardingFlags(value)
+{
+  // Call the base constructor.
+  RegistrationOptions.call(this, value);
+};
+
+ForwardingFlags.prototype = new RegistrationOptions();
+
+exports.ForwardingFlags = ForwardingFlags;
+
+ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT = RegistrationOptions.NfdForwardingFlags_CHILD_INHERIT;
+ForwardingFlags.NfdForwardingFlags_CAPTURE       = RegistrationOptions.NfdForwardingFlags_CAPTURE;
 /**
  * Copyright (C) 2014-2019 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -43117,7 +43157,7 @@ ForwardingFlags.prototype.setOrigin = function(origin)
  */
 
 /** @ignore */
-var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags; /** @ignore */
+var RegistrationOptions = require('./registration-options.js').RegistrationOptions; /** @ignore */
 var Name = require('./name.js').Name; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
 var Blob = require('./util/blob.js').Blob;
@@ -43139,7 +43179,7 @@ var ControlParameters = function ControlParameters(value)
     this.localControlFeature = value.localControlFeature;
     this.origin = value.origin;
     this.cost = value.cost;
-    this.forwardingFlags = new ForwardingFlags(value.forwardingFlags);
+    this.flags = new RegistrationOptions(value.flags);
     this.strategy = new Name(value.strategy);
     this.expirationPeriod = value.expirationPeriod;
   }
@@ -43150,7 +43190,7 @@ var ControlParameters = function ControlParameters(value)
     this.localControlFeature = null;
     this.origin = null;
     this.cost = null;
-    this.forwardingFlags = new ForwardingFlags();
+    this.flags = new RegistrationOptions();
     this.strategy = new Name();
     this.expirationPeriod = null;
   }
@@ -43166,7 +43206,7 @@ ControlParameters.prototype.clear = function()
   this.localControlFeature = null;
   this.origin = null;
   this.cost = null;
-  this.forwardingFlags = new ForwardingFlags();
+  this.flags = new RegistrationOptions();
   this.strategy = new Name();
   this.expirationPeriod = null;
 };
@@ -43255,12 +43295,12 @@ ControlParameters.prototype.getCost = function()
 };
 
 /**
- * Get the ForwardingFlags object.
- * @return {ForwardingFlags} The ForwardingFlags object.
+ * Get the RegistrationOptions object containing the flags.
+ * @return {RegistrationOptions} The RegistrationOptions object.
  */
 ControlParameters.prototype.getForwardingFlags = function()
 {
-  return this.forwardingFlags;
+  return this.flags;
 };
 
 /**
@@ -43339,15 +43379,16 @@ ControlParameters.prototype.setCost = function(cost)
 };
 
 /**
- * Set the ForwardingFlags object to a copy of forwardingFlags. You can use
- * getForwardingFlags() and change the existing ForwardingFlags object.
- * @param {ForwardingFlags} forwardingFlags The new cost value, or null for not specified.
+ * Set the RegistrationOptions object to a copy of flags. You can use
+ * getForwardingFlags() and change the existing RegistrationOptions object.
+ * @param {RegistrationOptions} flags The new RegistrationOptions object containing
+ * the flags, or null if not specified.
  */
-ControlParameters.prototype.setForwardingFlags = function(forwardingFlags)
+ControlParameters.prototype.setForwardingFlags = function(flags)
 {
-  this.forwardingFlags =
-    typeof forwardingFlags === 'object' && forwardingFlags instanceof ForwardingFlags ?
-      new ForwardingFlags(forwardingFlags) : new ForwardingFlags();
+  this.flags =
+    typeof flags === 'object' && flags instanceof RegistrationOptions ?
+      new RegistrationOptions(flags) : new RegistrationOptions();
 };
 
 /**
@@ -44176,7 +44217,7 @@ var Crypto = require('../crypto.js'); /** @ignore */
 var Blob = require('../util/blob.js').Blob; /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 var ComponentType = require('../name.js').ComponentType; /** @ignore */
-var ForwardingFlags = require('../forwarding-flags').ForwardingFlags; /** @ignore */
+var RegistrationOptions = require('../registration-options').RegistrationOptions; /** @ignore */
 var Tlv = require('./tlv/tlv.js').Tlv; /** @ignore */
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
 var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
@@ -44190,7 +44231,6 @@ var GenericSignature = require('../generic-signature.js').GenericSignature; /** 
 var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature; /** @ignore */
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var ControlParameters = require('../control-parameters.js').ControlParameters; /** @ignore */
-var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ignore */
 var NetworkNack = require('../network-nack.js').NetworkNack; /** @ignore */
 var Schedule = require('../encrypt/schedule.js').Schedule; /** @ignore */
 var IncomingFaceId = require('../lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
@@ -45463,7 +45503,7 @@ Tlv0_2WireFormat.encodeControlParameters = function(controlParameters, encoder)
   }
 
   var flags = controlParameters.getForwardingFlags().getNfdForwardingFlags();
-  if (flags != new ForwardingFlags().getNfdForwardingFlags())
+  if (flags != new RegistrationOptions().getNfdForwardingFlags())
       // The flags are not the default value.
       encoder.writeNonNegativeIntegerTlv
         (Tlv.ControlParameters_Flags, flags);
@@ -45540,7 +45580,7 @@ Tlv0_2WireFormat.decodeControlParameters = function
 
   // set forwarding flags
   if (decoder.peekType(Tlv.ControlParameters_Flags, endOffset)) {
-    var flags = new ForwardingFlags();
+    var flags = new RegistrationOptions();
     flags.setNfdForwardingFlags(decoder.
       readNonNegativeIntegerTlv(Tlv.ControlParameters_Flags, endOffset));
     controlParameters.setForwardingFlags(flags);
@@ -54665,7 +54705,7 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat; /** @ignore */
 var Tlv = require('./encoding/tlv/tlv.js').Tlv; /** @ignore */
 var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
-var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags; /** @ignore */
+var RegistrationOptions = require('./registration-options.js').RegistrationOptions; /** @ignore */
 var Transport = require('./transport/transport.js').Transport; /** @ignore */
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport; /** @ignore */
 var UnixTransport = require('./transport/unix-transport.js').UnixTransport; /** @ignore */
@@ -55238,39 +55278,39 @@ Face.prototype.nodeMakeCommandInterest = function
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for
- * finer control of which interests are forward to the application. If omitted,
- * use the default flags defined by the default ForwardingFlags constructor.
+ * @param {RegistrationOptions} registrationOptions (optional) The registration
+ * options for finer control of how to forward an interest and other options.
  * @return {number} The registered prefix ID which can be used with
  * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefix = function
-  (prefix, onInterest, onRegisterFailed, onRegisterSuccess, flags, wireFormat)
+  (prefix, onInterest, onRegisterFailed, onRegisterSuccess, registrationOptions,
+   wireFormat)
 {
   // Temporarlity reassign to resolve the different overloaded forms.
   var arg4 = onRegisterSuccess;
-  var arg5 = flags;
+  var arg5 = registrationOptions;
   var arg6 = wireFormat;
   // arg4, arg5, arg6 may be:
-  // OnRegisterSuccess, ForwardingFlags, WireFormat
-  // OnRegisterSuccess, ForwardingFlags, null
-  // OnRegisterSuccess, WireFormat,      null
-  // OnRegisterSuccess, null,            null
-  // ForwardingFlags,   WireFormat,      null
-  // ForwardingFlags,   null,            null
-  // WireFormat,        null,            null
-  // null,              null,            null
+  // OnRegisterSuccess,   RegistrationOptions, WireFormat
+  // OnRegisterSuccess,   RegistrationOptions, null
+  // OnRegisterSuccess,   WireFormat,          null
+  // OnRegisterSuccess,   null,                null
+  // RegistrationOptions, WireFormat,          null
+  // RegistrationOptions, null,                null
+  // WireFormat,          null,                null
+  // null,                null,                null
   if (typeof arg4 === "function")
     onRegisterSuccess = arg4;
   else
     onRegisterSuccess = null;
 
-  if (arg4 instanceof ForwardingFlags)
-    flags = arg4;
-  else if (arg5 instanceof ForwardingFlags)
-    flags = arg5;
+  if (arg4 instanceof RegistrationOptions)
+    registrationOptions = arg4;
+  else if (arg5 instanceof RegistrationOptions)
+    registrationOptions = arg5;
   else
-    flags = new ForwardingFlags();
+    registrationOptions = new RegistrationOptions();
 
   if (arg4 instanceof WireFormat)
     wireFormat = arg4;
@@ -55288,7 +55328,7 @@ Face.prototype.registerPrefix = function
   var thisFace = this;
   var onConnected = function() {
     thisFace.nfdRegisterPrefix
-      (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
+      (registeredPrefixId, prefix, onInterest, registrationOptions, onRegisterFailed,
        onRegisterSuccess, thisFace.commandKeyChain,
        thisFace.commandCertificateName, wireFormat);
   };
@@ -55420,7 +55460,7 @@ Face.RegisterResponse.prototype.onTimeout = function(interest)
  * don't add to registeredPrefixTable (assuming it has already been done).
  * @param {Name} prefix
  * @param {function} onInterest
- * @param {ForwardingFlags} flags
+ * @param {RegistrationOptions} registrationOptions
  * @param {function} onRegisterFailed
  * @param {function} onRegisterSuccess
  * @param {KeyChain} commandKeyChain
@@ -55428,7 +55468,7 @@ Face.RegisterResponse.prototype.onTimeout = function(interest)
  * @param {WireFormat} wireFormat
  */
 Face.prototype.nfdRegisterPrefix = function
-  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
+  (registeredPrefixId, prefix, onInterest, registrationOptions, onRegisterFailed,
    onRegisterSuccess, commandKeyChain, commandCertificateName, wireFormat)
 {
   if (commandKeyChain == null)
@@ -55440,9 +55480,9 @@ Face.prototype.nfdRegisterPrefix = function
 
   var controlParameters = new ControlParameters();
   controlParameters.setName(prefix);
-  controlParameters.setForwardingFlags(flags);
-  if (flags.getOrigin() != null && flags.getOrigin() >= 0) {
-    controlParameters.setOrigin(flags.getOrigin());
+  controlParameters.setForwardingFlags(registrationOptions);
+  if (registrationOptions.getOrigin() != null && registrationOptions.getOrigin() >= 0) {
+    controlParameters.setOrigin(registrationOptions.getOrigin());
     // Remove the origin value from the flags since it is not used to encode.
     controlParameters.getForwardingFlags().setOrigin(null);
   }
