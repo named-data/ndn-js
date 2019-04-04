@@ -20,7 +20,7 @@
 /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 var InterestFilter = require('../interest-filter.js').InterestFilter; /** @ignore */
-var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ignore */
+var RegistrationOptions = require('../registration-options.js').RegistrationOptions; /** @ignore */
 var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
 
@@ -104,33 +104,34 @@ exports.MemoryContentCache = MemoryContentCache;
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {ForwardingFlags} flags (optional) See Face.registerPrefix.
+ * @param {RegistrationOptions} registrationOptions (optional) See Face.registerPrefix.
  * @param {WireFormat} wireFormat (optional) See Face.registerPrefix.
  */
 MemoryContentCache.prototype.registerPrefix = function
-  (prefix, onRegisterFailed, onRegisterSuccess, onDataNotFound, flags, wireFormat)
+  (prefix, onRegisterFailed, onRegisterSuccess, onDataNotFound, 
+   registrationOptions, wireFormat)
 {
   var arg3 = onRegisterSuccess;
   var arg4 = onDataNotFound;
-  var arg5 = flags;
+  var arg5 = registrationOptions;
   var arg6 = wireFormat;
-  // arg3,                arg4,            arg5,            arg6 may be:
-  // [OnRegisterSuccess], OnDataNotFound,  ForwardingFlags, WireFormat
-  // [OnRegisterSuccess], OnDataNotFound,  ForwardingFlags, null
-  // [OnRegisterSuccess], OnDataNotFound,  WireFormat,      null
-  // [OnRegisterSuccess], OnDataNotFound,  null,            null
-  // [OnRegisterSuccess], ForwardingFlags, WireFormat,      null
-  // [OnRegisterSuccess], ForwardingFlags, null,            null
-  // [OnRegisterSuccess], WireFormat,      null,            null
-  // [OnRegisterSuccess], null,            null,            null
-  // OnDataNotFound,      ForwardingFlags, WireFormat,      null
-  // OnDataNotFound,      ForwardingFlags, null,            null
-  // OnDataNotFound,      WireFormat,      null,            null
-  // OnDataNotFound,      null,            null,            null
-  // ForwardingFlags,     WireFormat,      null,            null
-  // ForwardingFlags,     null,            null,            null
-  // WireFormat,          null,            null,            null
-  // null,                null,            null,            null
+  // arg3,                arg4,                arg5,                arg6 may be:
+  // [OnRegisterSuccess], OnDataNotFound,      RegistrationOptions, WireFormat
+  // [OnRegisterSuccess], OnDataNotFound,      RegistrationOptions, null
+  // [OnRegisterSuccess], OnDataNotFound,      WireFormat,          null
+  // [OnRegisterSuccess], OnDataNotFound,      null,                null
+  // [OnRegisterSuccess], RegistrationOptions, WireFormat,          null
+  // [OnRegisterSuccess], RegistrationOptions, null,                null
+  // [OnRegisterSuccess], WireFormat,          null,                null
+  // [OnRegisterSuccess], null,                null,                null
+  // OnDataNotFound,      RegistrationOptions, WireFormat,          null
+  // OnDataNotFound,      RegistrationOptions, null,                null
+  // OnDataNotFound,      WireFormat,          null,                null
+  // OnDataNotFound,      null,                null,                null
+  // RegistrationOptions, WireFormat,          null,                null
+  // RegistrationOptions, null,                null,                null
+  // WireFormat,          null,                null,                null
+  // null,                null,                null,                null
   if (typeof arg3 === "object" && arg3.length === 1 &&
       typeof arg3[0] === "function")
     onRegisterSuccess = arg3[0];
@@ -144,14 +145,14 @@ MemoryContentCache.prototype.registerPrefix = function
   else
     onDataNotFound = null;
 
-  if (arg3 instanceof ForwardingFlags)
-    flags = arg3;
-  else if (arg4 instanceof ForwardingFlags)
-    flags = arg4;
-  else if (arg5 instanceof ForwardingFlags)
-    flags = arg5;
+  if (arg3 instanceof RegistrationOptions)
+    registrationOptions = arg3;
+  else if (arg4 instanceof RegistrationOptions)
+    registrationOptions = arg4;
+  else if (arg5 instanceof RegistrationOptions)
+    registrationOptions = arg5;
   else
-    flags = new ForwardingFlags();
+    registrationOptions = new RegistrationOptions();
 
   if (arg3 instanceof WireFormat)
     wireFormat = arg3;
@@ -168,7 +169,7 @@ MemoryContentCache.prototype.registerPrefix = function
     this.onDataNotFoundForPrefix[prefix.toUri()] = onDataNotFound;
   var registeredPrefixId = this.face.registerPrefix
     (prefix, this.onInterest.bind(this), onRegisterFailed, onRegisterSuccess,
-     flags, wireFormat);
+     registrationOptions, wireFormat);
   this.registeredPrefixIdList.push(registeredPrefixId);
 };
 

@@ -18,7 +18,7 @@
  */
 
 /** @ignore */
-var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags; /** @ignore */
+var RegistrationOptions = require('./registration-options.js').RegistrationOptions; /** @ignore */
 var Name = require('./name.js').Name; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
 var Blob = require('./util/blob.js').Blob;
@@ -40,7 +40,7 @@ var ControlParameters = function ControlParameters(value)
     this.localControlFeature = value.localControlFeature;
     this.origin = value.origin;
     this.cost = value.cost;
-    this.forwardingFlags = new ForwardingFlags(value.forwardingFlags);
+    this.flags = new RegistrationOptions(value.flags);
     this.strategy = new Name(value.strategy);
     this.expirationPeriod = value.expirationPeriod;
   }
@@ -51,7 +51,7 @@ var ControlParameters = function ControlParameters(value)
     this.localControlFeature = null;
     this.origin = null;
     this.cost = null;
-    this.forwardingFlags = new ForwardingFlags();
+    this.flags = new RegistrationOptions();
     this.strategy = new Name();
     this.expirationPeriod = null;
   }
@@ -67,7 +67,7 @@ ControlParameters.prototype.clear = function()
   this.localControlFeature = null;
   this.origin = null;
   this.cost = null;
-  this.forwardingFlags = new ForwardingFlags();
+  this.flags = new RegistrationOptions();
   this.strategy = new Name();
   this.expirationPeriod = null;
 };
@@ -156,12 +156,12 @@ ControlParameters.prototype.getCost = function()
 };
 
 /**
- * Get the ForwardingFlags object.
- * @return {ForwardingFlags} The ForwardingFlags object.
+ * Get the RegistrationOptions object containing the flags.
+ * @return {RegistrationOptions} The RegistrationOptions object.
  */
 ControlParameters.prototype.getForwardingFlags = function()
 {
-  return this.forwardingFlags;
+  return this.flags;
 };
 
 /**
@@ -240,15 +240,16 @@ ControlParameters.prototype.setCost = function(cost)
 };
 
 /**
- * Set the ForwardingFlags object to a copy of forwardingFlags. You can use
- * getForwardingFlags() and change the existing ForwardingFlags object.
- * @param {ForwardingFlags} forwardingFlags The new cost value, or null for not specified.
+ * Set the RegistrationOptions object to a copy of flags. You can use
+ * getForwardingFlags() and change the existing RegistrationOptions object.
+ * @param {RegistrationOptions} flags The new RegistrationOptions object containing
+ * the flags, or null if not specified.
  */
-ControlParameters.prototype.setForwardingFlags = function(forwardingFlags)
+ControlParameters.prototype.setForwardingFlags = function(flags)
 {
-  this.forwardingFlags =
-    typeof forwardingFlags === 'object' && forwardingFlags instanceof ForwardingFlags ?
-      new ForwardingFlags(forwardingFlags) : new ForwardingFlags();
+  this.flags =
+    typeof flags === 'object' && flags instanceof RegistrationOptions ?
+      new RegistrationOptions(flags) : new RegistrationOptions();
 };
 
 /**

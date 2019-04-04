@@ -22,7 +22,7 @@ var Crypto = require('../crypto.js'); /** @ignore */
 var Blob = require('../util/blob.js').Blob; /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
 var ComponentType = require('../name.js').ComponentType; /** @ignore */
-var ForwardingFlags = require('../forwarding-flags').ForwardingFlags; /** @ignore */
+var RegistrationOptions = require('../registration-options').RegistrationOptions; /** @ignore */
 var Tlv = require('./tlv/tlv.js').Tlv; /** @ignore */
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
 var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
@@ -36,7 +36,6 @@ var GenericSignature = require('../generic-signature.js').GenericSignature; /** 
 var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature; /** @ignore */
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var ControlParameters = require('../control-parameters.js').ControlParameters; /** @ignore */
-var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ignore */
 var NetworkNack = require('../network-nack.js').NetworkNack; /** @ignore */
 var Schedule = require('../encrypt/schedule.js').Schedule; /** @ignore */
 var IncomingFaceId = require('../lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
@@ -1309,7 +1308,7 @@ Tlv0_2WireFormat.encodeControlParameters = function(controlParameters, encoder)
   }
 
   var flags = controlParameters.getForwardingFlags().getNfdForwardingFlags();
-  if (flags != new ForwardingFlags().getNfdForwardingFlags())
+  if (flags != new RegistrationOptions().getNfdForwardingFlags())
       // The flags are not the default value.
       encoder.writeNonNegativeIntegerTlv
         (Tlv.ControlParameters_Flags, flags);
@@ -1386,7 +1385,7 @@ Tlv0_2WireFormat.decodeControlParameters = function
 
   // set forwarding flags
   if (decoder.peekType(Tlv.ControlParameters_Flags, endOffset)) {
-    var flags = new ForwardingFlags();
+    var flags = new RegistrationOptions();
     flags.setNfdForwardingFlags(decoder.
       readNonNegativeIntegerTlv(Tlv.ControlParameters_Flags, endOffset));
     controlParameters.setForwardingFlags(flags);
