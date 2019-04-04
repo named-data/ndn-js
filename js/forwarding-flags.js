@@ -17,119 +17,28 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
+var RegistrationOptions = require('./registration-options.js').RegistrationOptions;
+
 /**
- * A ForwardingFlags object holds the flags which specify how the forwarding daemon should forward an interest for
- * a registered prefix.  We use a separate ForwardingFlags object to retain future compatibility if the daemon forwarding
- * bits are changed, amended or deprecated.
- * Create a new ForwardingFlags with "childInherit" set and all other flags cleared.
+ * Create a new ForwardingFlags object, possibly copying values from another
+ * object.
+ * @param {ForwardingFlags} value (optional) If value is a
+ * RegistrationOptions (or ForwardingFlags), copy its values. If value is
+ * omitted, the type is the default with "childInherit" true and other flags
+ * false.
+ * @deprecated Use RegistrationOptions.
  * @constructor
  */
 var ForwardingFlags = function ForwardingFlags(value)
 {
-  if (typeof value === 'object' && value instanceof ForwardingFlags) {
-    // Make a copy.
-    this.childInherit = value.childInherit;
-    this.capture = value.capture;
-    this.origin = value.origin;
-  }
-  else {
-    this.childInherit = true;
-    this.capture = false;
-    this.origin = null;
-  }
+  // Call the base constructor.
+  RegistrationOptions.call(this, value);
 };
+
+ForwardingFlags.prototype = new RegistrationOptions();
 
 exports.ForwardingFlags = ForwardingFlags;
 
-ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT = 1;
-ForwardingFlags.NfdForwardingFlags_CAPTURE       = 2;
-
-/**
- * Get an integer with the bits set according to the NFD forwarding flags as
- * used in the ControlParameters of the command interest.
- * @return {number} An integer with the bits set.
- */
-ForwardingFlags.prototype.getNfdForwardingFlags = function()
-{
-  var result = 0;
-
-  if (this.childInherit)
-    result |= ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT;
-  if (this.capture)
-    result |= ForwardingFlags.NfdForwardingFlags_CAPTURE;
-
-  return result;
-};
-
-/**
- * Set the flags according to the NFD forwarding flags as used in the
- * ControlParameters of the command interest.
- * This ignores the origin value.
- * @param {number} nfdForwardingFlags An integer with the bits set.
- * @return {ForwardingFlags} This ForwardingFlags so that you can chain calls to
- * update values.
- */
-ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
-{
-  this.childInherit =
-    ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT) != 0);
-  this.capture =
-    ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CAPTURE) != 0);
-  return this;
-};
-
-/**
- * Get the value of the "childInherit" flag.
- * @return {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getChildInherit = function() { return this.childInherit; };
-
-/**
- * Get the value of the "capture" flag.
- * @return {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getCapture = function() { return this.capture; };
-
-/**
- * Get the origin value.
- * @return {number} The origin value, or null if not specified.
- */
-ForwardingFlags.prototype.getOrigin = function()
-{
-  return this.origin;
-};
-
-/**
- * Set the value of the "childInherit" flag
- * @param {number} childInherit true to set the "childInherit" flag, false to
- * clear it.
- * @return {ForwardingFlags} This ForwardingFlags so that you can chain calls to
- * update values.
- */
-ForwardingFlags.prototype.setChildInherit = function(childInherit)
-{ 
-  this.childInherit = childInherit;
-  return this;
-};
-
-/**
- * Set the value of the "capture" flag
- * @param {number} capture true to set the "capture" flag, false to clear it.
- * @return {ForwardingFlags} This ForwardingFlags so that you can chain calls to
- * update values.
- */
-ForwardingFlags.prototype.setCapture = function(capture)
-{ 
-  this.capture = capture;
-  return this;
-};
-
-/**
- * Set the origin value.
- * @param {number} origin The new origin value, or null for not specified.
- */
-ForwardingFlags.prototype.setOrigin = function(origin)
-{
-  this.origin = origin;
-  return this;
-};
+ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT = RegistrationOptions.NfdForwardingFlags_CHILD_INHERIT;
+ForwardingFlags.NfdForwardingFlags_CAPTURE       = RegistrationOptions.NfdForwardingFlags_CAPTURE;
