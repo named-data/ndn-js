@@ -1,11 +1,15 @@
-Interim changes since NDN-JS v0.18.0 (2019-04-01)
+Interim changes since NDN-JS v0.18.0 (2019-04-05)
 -------------------------------------------------
 
 Changes
 * https://redmine.named-data.net/issues/4807 Print a warning if the application
   didn't call Interest.setDefaultCanBePrefix() or set the Interest's CanBePrefix.
-* https://redmine.named-data.net/issues/4869 In ForwardingFlags, added setOrigin()
+* https://redmine.named-data.net/issues/4869 Renamed ForwardingFlags to RegistrationOptions.
+* https://redmine.named-data.net/issues/4869 In RegistrationOptions, added setOrigin()
   to use in the flags argument of registerPrefix.
+
+Deprecated
+* Deprecated ForwardingFlags. Use RegistrationOptions.
 
 NDN-JS v0.18.0 (2019-03-06)
 ---------------------------
