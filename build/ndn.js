@@ -54848,6 +54848,7 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.interestFilterTable_ = new InterestFilterTable();
   this.registeredPrefixTable_ = new RegisteredPrefixTable(this.interestFilterTable_);
   this.lastEntryId = 0;
+  this.interestLoopbackEnabled_ = false;
 };
 
 exports.Face = Face;
@@ -54953,6 +54954,22 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
 
     return makeConnectionInfo(hostList.splice(0, 1)[0], port);
   };
+};
+
+/**
+ * Enable or disable Interest loopback. If Interest loopback is enabled, then
+ * an Interest to expressInterest is also sent to each of the matching
+ * OnInterest callbacks that the application gave to registerPrefix or
+ * setInterestFilter, and a Data that the application gives to putData can
+ * satisfy pending Interests. This way one part of an application can do
+ * Interest/Data exchange with another part through the same Face. Interest
+ * loopback is disabled by default.
+ * @param {boolean} interestLoopbackEnabled If True, enable Interest loopback,
+ * otherwise disable it.
+ */
+Face.prototype.setInterestLoopbackEnabled = function(interestLoopbackEnabled)
+{
+  this.interestLoopbackEnabled_ = interestLoopbackEnabled;
 };
 
 /**
@@ -55138,7 +55155,8 @@ Face.prototype.reconnectAndExpressInterest = function
 
 /**
  * Do the work of reconnectAndExpressInterest once we know we are connected.
- * Add the PendingInterest and call this.transport.send to send the interest.
+ * Add the PendingInterest and call this.transport.send to send the interest. If
+ * Interest loopback is enabled, then also call dispatchInterest.
  */
 Face.prototype.expressInterestHelper = function
   (pendingInterestId, interest, onData, onTimeout, onNetworkNack, wireFormat)
@@ -55156,6 +55174,9 @@ Face.prototype.expressInterestHelper = function
         ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
 
     this.transport.send(binaryInterest.buf());
+
+    if (this.interestLoopbackEnabled_)
+      dispatchInterest(interest);
   }
 };
 
@@ -55600,6 +55621,21 @@ Face.prototype.unsetInterestFilter = function(interestFilterId)
 Face.prototype.putData = function(data, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (this.interestLoopbackEnabled_) {
+    var hasApplicationMatch = this.satisfyPendingInterests(data);
+    if (hasApplicationMatch)
+      // satisfyPendingInterests called the OnData callback for one of
+      // the pending Interests from the application, so we don't need
+      // to send the Data packet to the forwarder. There is a
+      // possibility that we also received an overlapping  matching
+      // Interest from the forwarder within the Interest lifetime which
+      // we won't satisfy by sending the Data to the forwarder. To fix
+      // this case we could just send the Data to the forwarder anyway,
+      // or we can make the pending Interest table more complicated by
+      // also tracking the Interests that we receive from the forwarder.
+      return;
+  }
 
   var encoding = data.wireEncode(wireFormat);
   if (encoding.size() > Face.getMaxNdnPacketSize())
