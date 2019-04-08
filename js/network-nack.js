@@ -68,8 +68,14 @@ NetworkNack.prototype.getOtherReasonCode = function()
  * @param {number} reason The network Nack reason enum value from
  * NetworkNack.Reason. If the packet's reason code is not a recognized Reason
  * enum value, use Reason.OTHER_CODE and call setOtherReasonCode().
+ * @return {NetworkNack} This NetworkNack so that you can chain calls to update
+ * values.
  */
-NetworkNack.prototype.setReason = function(reason) { this.reason_ = reason; };
+NetworkNack.prototype.setReason = function(reason)
+{
+  this.reason_ = reason;
+  return this;
+};
 
 /**
  * Set the packet's reason code to use when the reason enum is
@@ -77,12 +83,15 @@ NetworkNack.prototype.setReason = function(reason) { this.reason_ = reason; };
  * just call setReason().
  * @param {number} otherReasonCode The packet's unrecognized reason code, which
  * must be non-negative.
+ * @return {NetworkNack} This NetworkNack so that you can chain calls to update
+ * values.
  */
 NetworkNack.prototype.setOtherReasonCode = function(otherReasonCode)
 {
   if (otherReasonCode < 0)
     throw new Error("NetworkNack other reason code must be non-negative");
   this.otherReasonCode_ = otherReasonCode;
+  return this;
 };
 
 /**
