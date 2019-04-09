@@ -55657,6 +55657,7 @@ Face.prototype.putData = function(data, wireFormat)
 
 /**
  * The OnInterest callback can call this to put a Nack for the received Interest.
+ * Note: This method is an experimental feature, and the API may change.
  * @param {Interest} interest The Interest to put in the Nack packet.
  * @param {NetworkNack} networkNack The NetworkNack with the reason code. For
  * example, new NetworkNack().setReason(NetworkNack.Reason.NO_ROUTE).
