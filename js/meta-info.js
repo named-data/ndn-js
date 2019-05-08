@@ -70,7 +70,8 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     this.type = type == null || type < 0 ? ContentType.BLOB : type;
     this.otherTypeCode_ = -1;
     this.freshnessSeconds = freshnessSeconds; // deprecated
-    this.finalBlockID = finalBlockId; // byte array // deprecated
+    // This sets finalBlockId_. If finalBlockId is supplied, it is a byte array (deprecated).
+    this.setFinalBlockId(finalBlockId);
   }
 
   this.changeCount_ = 0;
