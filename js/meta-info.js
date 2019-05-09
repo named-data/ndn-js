@@ -203,6 +203,19 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
 };
 
 /**
+ * Clear fields and reset to default values.
+ */
+MetaInfo.prototype.clear = function()
+{
+  this.type = ContentType.BLOB;
+  this.otherTypeCode_ = -1;
+  this.freshnessSeconds = null;
+  this.finalBlockId_ = new Name.Component();
+
+  ++this.changeCount_;
+};
+
+/**
  * Get the change count, which is incremented each time this object is changed.
  * @return {number} The change count.
  */
