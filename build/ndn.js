@@ -18044,7 +18044,8 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     this.type = type == null || type < 0 ? ContentType.BLOB : type;
     this.otherTypeCode_ = -1;
     this.freshnessSeconds = freshnessSeconds; // deprecated
-    this.finalBlockID = finalBlockId; // byte array // deprecated
+    // This sets finalBlockId_. If finalBlockId is supplied, it is a byte array (deprecated).
+    this.setFinalBlockId(finalBlockId);
   }
 
   this.changeCount_ = 0;
@@ -18173,6 +18174,19 @@ MetaInfo.prototype.setFinalBlockId = function(finalBlockId)
 MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
 {
   this.setFinalBlockId(finalBlockId);
+};
+
+/**
+ * Clear fields and reset to default values.
+ */
+MetaInfo.prototype.clear = function()
+{
+  this.type = ContentType.BLOB;
+  this.otherTypeCode_ = -1;
+  this.freshnessSeconds = null;
+  this.finalBlockId_ = new Name.Component();
+
+  ++this.changeCount_;
 };
 
 /**
@@ -44159,8 +44173,14 @@ NetworkNack.prototype.getOtherReasonCode = function()
  * @param {number} reason The network Nack reason enum value from
  * NetworkNack.Reason. If the packet's reason code is not a recognized Reason
  * enum value, use Reason.OTHER_CODE and call setOtherReasonCode().
+ * @return {NetworkNack} This NetworkNack so that you can chain calls to update
+ * values.
  */
-NetworkNack.prototype.setReason = function(reason) { this.reason_ = reason; };
+NetworkNack.prototype.setReason = function(reason)
+{
+  this.reason_ = reason;
+  return this;
+};
 
 /**
  * Set the packet's reason code to use when the reason enum is
@@ -44168,12 +44188,15 @@ NetworkNack.prototype.setReason = function(reason) { this.reason_ = reason; };
  * just call setReason().
  * @param {number} otherReasonCode The packet's unrecognized reason code, which
  * must be non-negative.
+ * @return {NetworkNack} This NetworkNack so that you can chain calls to update
+ * values.
  */
 NetworkNack.prototype.setOtherReasonCode = function(otherReasonCode)
 {
   if (otherReasonCode < 0)
     throw new Error("NetworkNack other reason code must be non-negative");
   this.otherReasonCode_ = otherReasonCode;
+  return this;
 };
 
 /**
@@ -44537,8 +44560,11 @@ Tlv0_2WireFormat.prototype.decodeData = function(data, input, copy)
   var signedPortionBeginOffset = decoder.getOffset();
 
   Tlv0_2WireFormat.decodeName(data.getName(), decoder, copy);
-  Tlv0_2WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder, copy);
-  data.setContent(new Blob(decoder.readBlobTlv(Tlv.Content), copy));
+  if (decoder.peekType(Tlv.MetaInfo, endOffset))
+    Tlv0_2WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder, copy);
+  else
+    data.getMetaInfo().clear();
+  data.setContent(new Blob(decoder.readOptionalBlobTlv(Tlv.Content, endOffset), copy));
   Tlv0_2WireFormat.decodeSignatureInfo(data, decoder, copy);
 
   var signedPortionEndOffset = decoder.getOffset();
