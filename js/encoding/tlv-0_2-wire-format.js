@@ -346,7 +346,7 @@ Tlv0_2WireFormat.prototype.decodeData = function(data, input, copy)
     Tlv0_2WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder, copy);
   else
     data.getMetaInfo().clear();
-  data.setContent(new Blob(decoder.readOptionalBlobTlv(Tlv.Content), copy));
+  data.setContent(new Blob(decoder.readOptionalBlobTlv(Tlv.Content, endOffset), copy));
   Tlv0_2WireFormat.decodeSignatureInfo(data, decoder, copy);
 
   var signedPortionEndOffset = decoder.getOffset();
