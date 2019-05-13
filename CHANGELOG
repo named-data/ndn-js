@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.18.0 (2019-04-05)
+Interim changes since NDN-JS v0.18.0 (2019-05-13)
 -------------------------------------------------
 
 Changes
@@ -10,6 +10,10 @@ Changes
 
 Deprecated
 * Deprecated ForwardingFlags. Use RegistrationOptions.
+
+Bug fixes
+* https://redmine.named-data.net/issues/4926 In decoding Data, make MetaInfo
+  and Content optional.
 
 NDN-JS v0.18.0 (2019-03-06)
 ---------------------------
