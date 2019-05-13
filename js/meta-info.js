@@ -70,7 +70,8 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     this.type = type == null || type < 0 ? ContentType.BLOB : type;
     this.otherTypeCode_ = -1;
     this.freshnessSeconds = freshnessSeconds; // deprecated
-    this.finalBlockID = finalBlockId; // byte array // deprecated
+    // This sets finalBlockId_. If finalBlockId is supplied, it is a byte array (deprecated).
+    this.setFinalBlockId(finalBlockId);
   }
 
   this.changeCount_ = 0;
@@ -199,6 +200,19 @@ MetaInfo.prototype.setFinalBlockId = function(finalBlockId)
 MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
 {
   this.setFinalBlockId(finalBlockId);
+};
+
+/**
+ * Clear fields and reset to default values.
+ */
+MetaInfo.prototype.clear = function()
+{
+  this.type = ContentType.BLOB;
+  this.otherTypeCode_ = -1;
+  this.freshnessSeconds = null;
+  this.finalBlockId_ = new Name.Component();
+
+  ++this.changeCount_;
 };
 
 /**
