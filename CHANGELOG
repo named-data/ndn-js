@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.18.0 (2019-05-13)
+Interim changes since NDN-JS v0.18.0 (2019-05-15)
 -------------------------------------------------
 
 Changes
@@ -7,6 +7,7 @@ Changes
 * https://redmine.named-data.net/issues/4869 Renamed ForwardingFlags to RegistrationOptions.
 * https://redmine.named-data.net/issues/4869 In RegistrationOptions, added setOrigin()
   to use in the flags argument of registerPrefix.
+* https://redmine.named-data.net/issues/4813 In Face, added putNack().
 
 Deprecated
 * Deprecated ForwardingFlags. Use RegistrationOptions.
