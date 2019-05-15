@@ -54731,6 +54731,7 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat; /** @ignore */
 var Tlv = require('./encoding/tlv/tlv.js').Tlv; /** @ignore */
 var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
+var TlvEncoder = require('./encoding/tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
 var RegistrationOptions = require('./registration-options.js').RegistrationOptions; /** @ignore */
 var Transport = require('./transport/transport.js').Transport; /** @ignore */
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport; /** @ignore */
@@ -55672,6 +55673,25 @@ Face.prototype.putData = function(data, wireFormat)
 };
 
 /**
+ * The OnInterest callback can call this to put a Nack for the received Interest.
+ * Note: This method is an experimental feature, and the API may change.
+ * @param {Interest} interest The Interest to put in the Nack packet.
+ * @param {NetworkNack} networkNack The NetworkNack with the reason code. For
+ * example, new NetworkNack().setReason(NetworkNack.Reason.NO_ROUTE).
+ * @throws Error If the encoded Nack packet size exceeds getMaxNdnPacketSize().
+ */
+Face.prototype.putNack = function(interest, networkNack)
+{
+  // TODO: Generalize this and move to WireFormat.encodeLpPacket.
+  var encoding = Face.encodeLpNack_(interest, networkNack);
+  if (encoding.size() > Face.getMaxNdnPacketSize())
+    throw new Error
+      ("The encoded Nack packet size exceeds the maximum limit getMaxNdnPacketSize()");
+
+  this.transport.send(encoding.buf());
+};
+
+/**
  * Send the encoded packet out through the transport.
  * @param {Buffer} encoding The Buffer with the encoded packet to send.
  * @throws Error If the encoded packet size exceeds getMaxNdnPacketSize().
@@ -55897,6 +55917,48 @@ Face.prototype.closeByTransport = function()
 {
   this.readyStatus = Face.CLOSED;
   this.onclose();
+};
+
+/**
+ * Encode the interest into an NDN-TLV LpPacket as a NACK with the reason code
+ * in the networkNack object.
+ * TODO: Generalize this and move to WireFormat.encodeLpPacket.
+ * @param {Interest} interest The Interest to put in the LpPacket fragment.
+ * @param {NetworkNack} networkNack The NetworkNack with the reason code.
+ * @return {Blob} A Blob containing the encoding.
+ */
+Face.encodeLpNack_ = function(interest, networkNack)
+{
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  // Encode the fragment with the Interest.
+  encoder.writeBlobTlv(Tlv.LpPacket_Fragment, interest.wireEncode().buf());
+
+  // Encode the reason.
+  var reason;
+  if (networkNack.getReason() == NetworkNack.Reason.NONE ||
+      networkNack.getReason() == NetworkNack.Reason.CONGESTION ||
+      networkNack.getReason() == NetworkNack.Reason.DUPLICATE ||
+      networkNack.getReason() == NetworkNack.Reason.NO_ROUTE)
+    // The Reason enum is set up with the correct integer for each NDN-TLV Reason.
+    reason = networkNack.getReason();
+  else if (networkNack.getReason() == NetworkNack.Reason.OTHER_CODE)
+    reason = networkNack.getOtherReasonCode();
+  else
+    // We don't expect this to happen.
+    throw new Error("unrecognized NetworkNack.getReason() value");
+
+  var nackSaveLength = encoder.getLength();
+  encoder.writeNonNegativeIntegerTlv(Tlv.LpPacket_NackReason, reason);
+  encoder.writeTypeAndLength
+    (Tlv.LpPacket_Nack, encoder.getLength() - nackSaveLength);
+
+  encoder.writeTypeAndLength
+    (Tlv.LpPacket_LpPacket, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
 };
 
 Face.nonceTemplate_ = new Blob(new Buffer(4), false);
