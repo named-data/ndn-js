@@ -64,7 +64,7 @@ SegmentFetcher.DontVerifySegment = function(data)
  *                                propagate to all subsequent Interests. The only exception
  *                                is that the initial Interest will be forced to include
  *                                "MustBeFresh=true" which will be turned off in subsequent Interests.
- * @param validatorKeyChain {KeyChain} This is used by ValidatorKeyChain.verifyData(data).
+ * @param {KeyChain} validatorKeyChain This is used by ValidatorKeyChain.verifyData(data).
  *                                     If validation fails then abort fetching and call onError with
  *                                     SEGMENT_VERIFICATION_FAILED. This does not make a copy of the
  *                                     KeyChain; the object must remain valid while fetching. If
@@ -93,9 +93,9 @@ SegmentFetcher.DontVerifySegment = function(data)
  *     SegmentFetcher.fetch(face, interest, null, onComplete, onError);
  */
 SegmentFetcher.fetch = function
-  (face, baseInterest, validatorKeyChain, onComplete, onError, opts = null)
+  (face, baseInterest, validatorKeyChain, onComplete, onError, opts)
 {
-  if (opts === null || opts.pipeline === undefined || opts.pipeline === "cubic") {
+  if (opts == null || opts.pipeline === undefined || opts.pipeline === "cubic") {
     if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
       new PipelineCubic
         (baseInterest, face, null, validatorKeyChain, onComplete, onError)

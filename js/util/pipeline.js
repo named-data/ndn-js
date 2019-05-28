@@ -79,7 +79,7 @@ Pipeline.ErrorCode = {
 
 Pipeline.op = function (arg, def, opts)
 {
-  if (opts === null)
+  if (opts == null)
     return def;
   if (!opts.hasOwnProperty(arg))
     return def;

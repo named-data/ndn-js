@@ -13972,7 +13972,7 @@ SegmentFetcher.DontVerifySegment = function(data)
  *                                propagate to all subsequent Interests. The only exception
  *                                is that the initial Interest will be forced to include
  *                                "MustBeFresh=true" which will be turned off in subsequent Interests.
- * @param validatorKeyChain {KeyChain} This is used by ValidatorKeyChain.verifyData(data).
+ * @param {KeyChain} validatorKeyChain This is used by ValidatorKeyChain.verifyData(data).
  *                                     If validation fails then abort fetching and call onError with
  *                                     SEGMENT_VERIFICATION_FAILED. This does not make a copy of the
  *                                     KeyChain; the object must remain valid while fetching. If
@@ -14001,9 +14001,9 @@ SegmentFetcher.DontVerifySegment = function(data)
  *     SegmentFetcher.fetch(face, interest, null, onComplete, onError);
  */
 SegmentFetcher.fetch = function
-  (face, baseInterest, validatorKeyChain, onComplete, onError, opts = null)
+  (face, baseInterest, validatorKeyChain, onComplete, onError, opts)
 {
-  if (opts === null || opts.pipeline === undefined || opts.pipeline === "cubic") {
+  if (opts == null || opts.pipeline === undefined || opts.pipeline === "cubic") {
     if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
       new PipelineCubic
         (baseInterest, face, null, validatorKeyChain, onComplete, onError)
@@ -14107,7 +14107,7 @@ Pipeline.ErrorCode = {
 
 Pipeline.op = function (arg, def, opts)
 {
-  if (opts === null)
+  if (opts == null)
     return def;
   if (!opts.hasOwnProperty(arg))
     return def;
@@ -14541,19 +14541,19 @@ PipelineCubic.prototype.increaseWindow = function()
     }
 
     // 1. Time since last congestion event in seconds
-    let t = (Date.now() - this.lastDecrease) / 1000;
+    var t = (Date.now() - this.lastDecrease) / 1000;
 
     // 2. Time it takes to increase the window to wmax
-    let k = Math.cbrt(this.wmax * (1 - this.cubicBeta) / this.cubic_c);
+    var k = Math.cbrt(this.wmax * (1 - this.cubicBeta) / this.cubic_c);
 
     // 3. Target: W_cubic(t) = C*(t-K)^3 + wmax (Eq. 1)
-    let wCubic = this.cubic_c * Math.pow(t - k, 3) + this.wmax;
+    var wCubic = this.cubic_c * Math.pow(t - k, 3) + this.wmax;
 
     // 4. Estimate of Reno Increase (Currently Disabled)
-    let wEst = 0.0;
+    var wEst = 0.0;
 
     // Actual adaptation
-    let cubicIncrement = Math.max(wCubic, wEst) - this.cwnd;
+    var cubicIncrement = Math.max(wCubic, wEst) - this.cwnd;
     // Cubic increment must be positive
     // Note: This change is not part of the RFC, but it is added performance improvement
     cubicIncrement = Math.max(0, cubicIncrement);
@@ -14636,7 +14636,7 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
     }
   }
 
-  let interest = new Interest(this.baseInterest);
+  var interest = new Interest(this.baseInterest);
   if (!Number.isNaN(this.versionNo)) {
     interest.setName(new Name(this.baseInterest.getName())
                      .appendVersion(this.versionNo)
@@ -14650,7 +14650,7 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
     interest.setMustBeFresh(false);
   }
 
-  let segInfo = {};
+  var segInfo = {};
   segInfo.pendingInterestId = this.face.expressInterest
     (interest,
      this.handleData.bind(this),
@@ -14680,11 +14680,11 @@ PipelineCubic.prototype.schedulePackets = function()
     console.log("ERROR: Number of in flight Interests is negative");
   }
 
-  let availableWindowSize = this.cwnd - this.nInFlight;
+  var availableWindowSize = this.cwnd - this.nInFlight;
 
   while (availableWindowSize > 0) {
     if (this.retxQueue.length != 0) { // do retransmission first
-      let retxSegNo = this.retxQueue.shift();
+      var retxSegNo = this.retxQueue.shift();
       if (this.segmentInfo[retxSegNo] === undefined) {
         this.nSkippedRetx++;
         continue;
@@ -14725,7 +14725,7 @@ PipelineCubic.prototype.onData = function(data)
   if (this.isStopped)
     return;
 
-  let recSegmentNo = 0;
+  var recSegmentNo = 0;
 
   if (Number.isNaN(this.versionNo)) {
     try {
@@ -14775,12 +14775,12 @@ PipelineCubic.prototype.onData = function(data)
     }
   }
 
-  let recSeg = this.segmentInfo[recSegmentNo];
+  var recSeg = this.segmentInfo[recSegmentNo];
   if (recSeg === undefined) {
     return; // ignore already-received segment
   }
 
-  let rtt = Date.now() - recSeg.timeSent;
+  var rtt = Date.now() - recSeg.timeSent;
   if (LOG > 1) {
     console.log ("Received segment #" + recSegmentNo
                  + ", rtt=" + rtt + "ms"
@@ -14801,7 +14801,7 @@ PipelineCubic.prototype.onData = function(data)
   if ((recSeg.state === PipelineCubic.SegmentState.FirstTimeSent ||
        recSeg.state === PipelineCubic.SegmentState.InRetxQueue) &&
       this.retxCount[recSegmentNo] === undefined) {
-    let nExpectedSamples = Math.max((this.nInFlight + 1) >> 1, 1);
+    var nExpectedSamples = Math.max((this.nInFlight + 1) >> 1, 1);
     if (nExpectedSamples <= 0) {
       console.log("ERROR: nExpectedSamples is less than or equal to ZERO");
     }
@@ -14819,8 +14819,7 @@ PipelineCubic.prototype.onData = function(data)
     this.cancelInFlightSegmentsGreaterThan(this.finalBlockId);
     try {
       this.cancel();
-      if (LOG >= 0)
-        this.printSummary();
+      this.printSummary();
       this.onComplete(new Blob(content, false));
     } catch (ex) {
       console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
@@ -14844,15 +14843,15 @@ PipelineCubic.prototype.checkRto = function()
   if (this.isStopped)
     return;
 
-  let hasTimeout = false;
+  var hasTimeout = false;
 
-  for (let i=0; i < this.segmentInfo.length; ++i) {
+  for (var i=0; i < this.segmentInfo.length; ++i) {
     if (this.segmentInfo[i] === undefined)
       continue;
 
-    let segInfo = this.segmentInfo[i];
+    var segInfo = this.segmentInfo[i];
     if (segInfo.state !== PipelineCubic.SegmentState.InRetxQueue) { // skip segments already in the retx queue
-      let timeElapsed = Date.now() - segInfo.timeSent;
+      var timeElapsed = Date.now() - segInfo.timeSent;
       if (timeElapsed > segInfo.rto) { // timer expired?
         this.nTimeouts++;
         hasTimeout = true;
@@ -14901,7 +14900,7 @@ PipelineCubic.prototype.recordTimeout = function()
 
 PipelineCubic.prototype.cancelInFlightSegmentsGreaterThan = function(segNo)
 {
-  for (let i=segNo + 1; i < this.segmentInfo.length; ++i) {
+  for (var i=segNo + 1; i < this.segmentInfo.length; ++i) {
     // cancel fetching all segments that follow
     if (this.segmentInfo[i] !== undefined)
       this.face.removePendingInterest(this.segmentInfo[i].pendingInterestId);
@@ -14924,7 +14923,7 @@ PipelineCubic.prototype.handleFail = function(segNo, errCode, reason)
     this.segmentInfo[segNo] = undefined;  // do not splice
     this.nInFlight--;
 
-    let empty = true;
+    var empty = true;
     for (i=0; i < this.segmentInfo.length; ++i) {
       if (this.segmentInfo[i] !== undefined) {
         empty = false;
@@ -14952,7 +14951,7 @@ PipelineCubic.prototype.handleLifetimeExpiration = function(interest)
     return;
 
   this.nTimeouts++;
-  let recSeg = 0; // the very first Interest does not have segment number
+  var recSeg = 0; // the very first Interest does not have segment number
   // treated the same as timeout for now
   if (interest.getName().get(-1).isSegment())
     recSeg = interest.getName().get(-1).toSegment();
@@ -14971,7 +14970,7 @@ PipelineCubic.prototype.handleNack = function(interest)
   if (this.isStopped)
     return;
 
-  let recSeg = 0; // the very first Interest does not have segment number
+  var recSeg = 0; // the very first Interest does not have segment number
   // treated the same as timeout for now
   if (interest.getName().get(-1).isSegment())
     recSeg = interest.getName().get(-1).toSegment();
@@ -15006,7 +15005,10 @@ PipelineCubic.prototype.onWarning = function(errCode, reason)
 
 PipelineCubic.prototype.printSummary = function()
 {
-  let statMsg = "";
+  if (LOG < 3)
+    return;
+
+  var statMsg = "";
   if (this.rttEstimator.getMinRtt() === Number.MAX_VALUE ||
       this.rttEstimator.getMaxRtt() === Number.NEGATIVE_INFINITY) {
      statMsg = "stats unavailable";
@@ -15027,6 +15029,7 @@ PipelineCubic.prototype.printSummary = function()
 /**
  * Copyright (C) 2018-2019 Regents of the University of California.
  * @author: Chavoosh Ghasemi <chghasemi@cs.arizona.edu>
+ * @author: From https://github.com/named-data/ndn-tools/tree/master/tools/chunks
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15052,8 +15055,8 @@ var Pipeline = require('./pipeline.js').Pipeline;
  *
  * @param {Object} opts An object that can contain RTT estimator options to overwrite their default
  *                 values. If null is passed then all options will be set to their default values.
- */ 
-var RttEstimator = function RttEstimator(opts = null)
+ */
+var RttEstimator = function RttEstimator(opts)
 {
   // Options
   this.alpha = Pipeline.op("alpha", 0.125, opts); // parameter for RTT estimation
@@ -15109,8 +15112,8 @@ RttEstimator.prototype.addMeasurement = function(segNo, rtt, nExpectedSamples)
     this.rto = this.sRtt + this.k * this.rttVar;
   }
   else {
-    let alpha = this.alpha / nExpectedSamples;
-    let beta = this.beta / nExpectedSamples;
+    var alpha = this.alpha / nExpectedSamples;
+    var beta = this.beta / nExpectedSamples;
     this.rttVar = (1 - beta) * this.rttVar + beta * Math.abs(this.sRtt - rtt);
     this.sRtt = (1 - alpha) * this.sRtt + alpha * rtt;
     this.rto = this.sRtt + this.k * this.rttVar;

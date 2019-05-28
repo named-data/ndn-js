@@ -1,6 +1,7 @@
 /**
  * Copyright (C) 2018-2019 Regents of the University of California.
  * @author: Chavoosh Ghasemi <chghasemi@cs.arizona.edu>
+ * @author: From https://github.com/named-data/ndn-tools/tree/master/tools/chunks
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -27,7 +28,7 @@ var Pipeline = require('./pipeline.js').Pipeline;
  * @param {Object} opts An object that can contain RTT estimator options to overwrite their default
  *                 values. If null is passed then all options will be set to their default values.
  */
-var RttEstimator = function RttEstimator(opts = null)
+var RttEstimator = function RttEstimator(opts)
 {
   // Options
   this.alpha = Pipeline.op("alpha", 0.125, opts); // parameter for RTT estimation
@@ -83,8 +84,8 @@ RttEstimator.prototype.addMeasurement = function(segNo, rtt, nExpectedSamples)
     this.rto = this.sRtt + this.k * this.rttVar;
   }
   else {
-    let alpha = this.alpha / nExpectedSamples;
-    let beta = this.beta / nExpectedSamples;
+    var alpha = this.alpha / nExpectedSamples;
+    var beta = this.beta / nExpectedSamples;
     this.rttVar = (1 - beta) * this.rttVar + beta * Math.abs(this.sRtt - rtt);
     this.sRtt = (1 - alpha) * this.sRtt + alpha * rtt;
     this.rto = this.sRtt + this.k * this.rttVar;

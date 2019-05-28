@@ -129,19 +129,19 @@ PipelineCubic.prototype.increaseWindow = function()
     }
 
     // 1. Time since last congestion event in seconds
-    let t = (Date.now() - this.lastDecrease) / 1000;
+    var t = (Date.now() - this.lastDecrease) / 1000;
 
     // 2. Time it takes to increase the window to wmax
-    let k = Math.cbrt(this.wmax * (1 - this.cubicBeta) / this.cubic_c);
+    var k = Math.cbrt(this.wmax * (1 - this.cubicBeta) / this.cubic_c);
 
     // 3. Target: W_cubic(t) = C*(t-K)^3 + wmax (Eq. 1)
-    let wCubic = this.cubic_c * Math.pow(t - k, 3) + this.wmax;
+    var wCubic = this.cubic_c * Math.pow(t - k, 3) + this.wmax;
 
     // 4. Estimate of Reno Increase (Currently Disabled)
-    let wEst = 0.0;
+    var wEst = 0.0;
 
     // Actual adaptation
-    let cubicIncrement = Math.max(wCubic, wEst) - this.cwnd;
+    var cubicIncrement = Math.max(wCubic, wEst) - this.cwnd;
     // Cubic increment must be positive
     // Note: This change is not part of the RFC, but it is added performance improvement
     cubicIncrement = Math.max(0, cubicIncrement);
@@ -224,7 +224,7 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
     }
   }
 
-  let interest = new Interest(this.baseInterest);
+  var interest = new Interest(this.baseInterest);
   if (!Number.isNaN(this.versionNo)) {
     interest.setName(new Name(this.baseInterest.getName())
                      .appendVersion(this.versionNo)
@@ -238,7 +238,7 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
     interest.setMustBeFresh(false);
   }
 
-  let segInfo = {};
+  var segInfo = {};
   segInfo.pendingInterestId = this.face.expressInterest
     (interest,
      this.handleData.bind(this),
@@ -268,11 +268,11 @@ PipelineCubic.prototype.schedulePackets = function()
     console.log("ERROR: Number of in flight Interests is negative");
   }
 
-  let availableWindowSize = this.cwnd - this.nInFlight;
+  var availableWindowSize = this.cwnd - this.nInFlight;
 
   while (availableWindowSize > 0) {
     if (this.retxQueue.length != 0) { // do retransmission first
-      let retxSegNo = this.retxQueue.shift();
+      var retxSegNo = this.retxQueue.shift();
       if (this.segmentInfo[retxSegNo] === undefined) {
         this.nSkippedRetx++;
         continue;
@@ -313,7 +313,7 @@ PipelineCubic.prototype.onData = function(data)
   if (this.isStopped)
     return;
 
-  let recSegmentNo = 0;
+  var recSegmentNo = 0;
 
   if (Number.isNaN(this.versionNo)) {
     try {
@@ -363,12 +363,12 @@ PipelineCubic.prototype.onData = function(data)
     }
   }
 
-  let recSeg = this.segmentInfo[recSegmentNo];
+  var recSeg = this.segmentInfo[recSegmentNo];
   if (recSeg === undefined) {
     return; // ignore already-received segment
   }
 
-  let rtt = Date.now() - recSeg.timeSent;
+  var rtt = Date.now() - recSeg.timeSent;
   if (LOG > 1) {
     console.log ("Received segment #" + recSegmentNo
                  + ", rtt=" + rtt + "ms"
@@ -389,7 +389,7 @@ PipelineCubic.prototype.onData = function(data)
   if ((recSeg.state === PipelineCubic.SegmentState.FirstTimeSent ||
        recSeg.state === PipelineCubic.SegmentState.InRetxQueue) &&
       this.retxCount[recSegmentNo] === undefined) {
-    let nExpectedSamples = Math.max((this.nInFlight + 1) >> 1, 1);
+    var nExpectedSamples = Math.max((this.nInFlight + 1) >> 1, 1);
     if (nExpectedSamples <= 0) {
       console.log("ERROR: nExpectedSamples is less than or equal to ZERO");
     }
@@ -431,15 +431,15 @@ PipelineCubic.prototype.checkRto = function()
   if (this.isStopped)
     return;
 
-  let hasTimeout = false;
+  var hasTimeout = false;
 
-  for (let i=0; i < this.segmentInfo.length; ++i) {
+  for (var i=0; i < this.segmentInfo.length; ++i) {
     if (this.segmentInfo[i] === undefined)
       continue;
 
-    let segInfo = this.segmentInfo[i];
+    var segInfo = this.segmentInfo[i];
     if (segInfo.state !== PipelineCubic.SegmentState.InRetxQueue) { // skip segments already in the retx queue
-      let timeElapsed = Date.now() - segInfo.timeSent;
+      var timeElapsed = Date.now() - segInfo.timeSent;
       if (timeElapsed > segInfo.rto) { // timer expired?
         this.nTimeouts++;
         hasTimeout = true;
@@ -488,7 +488,7 @@ PipelineCubic.prototype.recordTimeout = function()
 
 PipelineCubic.prototype.cancelInFlightSegmentsGreaterThan = function(segNo)
 {
-  for (let i=segNo + 1; i < this.segmentInfo.length; ++i) {
+  for (var i=segNo + 1; i < this.segmentInfo.length; ++i) {
     // cancel fetching all segments that follow
     if (this.segmentInfo[i] !== undefined)
       this.face.removePendingInterest(this.segmentInfo[i].pendingInterestId);
@@ -511,7 +511,7 @@ PipelineCubic.prototype.handleFail = function(segNo, errCode, reason)
     this.segmentInfo[segNo] = undefined;  // do not splice
     this.nInFlight--;
 
-    let empty = true;
+    var empty = true;
     for (i=0; i < this.segmentInfo.length; ++i) {
       if (this.segmentInfo[i] !== undefined) {
         empty = false;
@@ -539,7 +539,7 @@ PipelineCubic.prototype.handleLifetimeExpiration = function(interest)
     return;
 
   this.nTimeouts++;
-  let recSeg = 0; // the very first Interest does not have segment number
+  var recSeg = 0; // the very first Interest does not have segment number
   // treated the same as timeout for now
   if (interest.getName().get(-1).isSegment())
     recSeg = interest.getName().get(-1).toSegment();
@@ -558,7 +558,7 @@ PipelineCubic.prototype.handleNack = function(interest)
   if (this.isStopped)
     return;
 
-  let recSeg = 0; // the very first Interest does not have segment number
+  var recSeg = 0; // the very first Interest does not have segment number
   // treated the same as timeout for now
   if (interest.getName().get(-1).isSegment())
     recSeg = interest.getName().get(-1).toSegment();
@@ -596,7 +596,7 @@ PipelineCubic.prototype.printSummary = function()
   if (LOG < 3)
     return;
 
-  let statMsg = "";
+  var statMsg = "";
   if (this.rttEstimator.getMinRtt() === Number.MAX_VALUE ||
       this.rttEstimator.getMaxRtt() === Number.NEGATIVE_INFINITY) {
      statMsg = "stats unavailable";
