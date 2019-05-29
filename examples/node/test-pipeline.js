@@ -21,55 +21,52 @@ var Face = require('../..').Face;
 var Name = require('../..').Name;
 var Interest = require('../..').Interest;
 var SegmentFetcher = require('../..').SegmentFetcher;
-var LOG = require('../log.js').Log.LOG;
+var Log = require('../../js/log.js').Log;
 
 // Silence the warning from Interest wire encode.
 Interest.setDefaultCanBePrefix(true);
 
-var face = new Face({host: "memoria.ndn.ucla.edu"});
-
-var onTimeout = function(interest) {
-  console.log("Time out for interest " + interest.getName().toUri());
-};
+//var face = new Face({host: "memoria.ndn.ucla.edu"});
+var callbackCount = 1;
 
 var onComplete = function(content) {
-  console.log("onComplete called.");
+  console.log("Successfully received the content");
 };
 
-// Try to fetch anything.
-var name1 = new Name("/");
+// Try to fetch a remote file using Fixed pipeline
+var name1 = new Name("/ndn/edu/ucla/remap/demo/ndn-js-test/hello.txt/%FDU%8D%9DM");
 console.log("Express name " + name1.toUri());
-
 SegmentFetcher.fetch
-  (face, new Interest(name1),
+  (new Face({host: "memoria.ndn.ucla.edu"}), new Interest(name1),
    null /*validator key*/,
    onComplete, function(errorCode, message) {
-   console.log("Error " + errorCode + ": " + message);
+     console.log("Error " + errorCode + ": " + message);
    },
-   null /*pipeline type (default: Cubic) and its options*/
+   {pipeline: "fixed"} /*pipeline type (default: Cubic) and its options*/
   );
 
-// Try to fetch using a known name.
-var name2 = new Name("/ndn/edu/ucla/remap/demo/ndn-js-test/hello.txt/%FDU%8D%9DM");
+
+// Try to fetch a local file using Cubic pipeline
+// NOTE: A file under "/test/junkfile" needs to be published on the local machine, first
+var name2 = new Name("/test/junkfile");
 console.log("Express name " + name2.toUri());
 SegmentFetcher.fetch
-  (face, new Interest(name2),
+  (new Face({host: "localhost"}), new Interest(name2),
    null /*validator key*/,
    onComplete, function(errorCode, message) {
-   console.log("Error " + errorCode + ": " + message);
+     console.log("Error " + errorCode + ": " + message);
    },
    null /*pipeline type (default: Cubic) and its options*/
   );
- 
 
-// Expect this to time out.
+// Expect this to time out
 var name3 = new Name("/test/timeout");
 console.log("Express name " + name3.toUri());
 SegmentFetcher.fetch
-  (face, new Interest(name3),
+  (new Face({host: "localhost"}), new Interest(name3),
    null /*validator key*/,
    onComplete, function(errorCode, message) {
-   console.log("Error " + errorCode + ": " + message);
+     console.log("Error " + errorCode + ": " + message);
    },
    null /*pipeline type (default: Cubic) and its options*/
   );

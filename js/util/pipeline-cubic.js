@@ -20,11 +20,13 @@
 
 /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
+var Name = require('../name.js').Name;
 var Blob = require('./blob.js').Blob; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon;
 var RttEstimator = require('./rtt-estimator.js').RttEstimator;
 var Pipeline = require('./pipeline.js').Pipeline;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * Implementation of Cubic pipeline according to:
@@ -203,9 +205,6 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
   if (!isRetransmission && this.hasFailure)
     return;
 
-  if (LOG > 1)
-    console.log((isRetransmission ? "Retransmitting" : "Requesting") + " segment #" + segNo);
-
   if (isRetransmission) {
     // keep track of retx count for this segment
     if (this.retxCount[segNo] === undefined) {
@@ -218,11 +217,14 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
             "Reached the maximum number of retries (" +
              this.maxRetriesOnTimeoutOrNack + ") while retrieving segment #" + segNo);
       }
-
-      if (LOG > 1)
-        console.log("# of retries for segment #" + segNo + " is " + this.retxCount[segNo]);
     }
+    if (LOG > 1)
+      console.log("Retransmitting segment #" + segNo + " (" + this.retxCount[segNo] + ")");
   }
+
+  if (LOG > 1 && !isRetransmission)
+    console.log("Requesting segment #" + segNo);
+
 
   var interest = new Interest(this.baseInterest);
   if (!Number.isNaN(this.versionNo)) {
@@ -560,7 +562,7 @@ PipelineCubic.prototype.handleNack = function(interest)
 
   var recSeg = 0; // the very first Interest does not have segment number
   // treated the same as timeout for now
-  if (interest.getName().get(-1).isSegment())
+  if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment())
     recSeg = interest.getName().get(-1).toSegment();
 
   this.enqueueForRetransmission(recSeg);
