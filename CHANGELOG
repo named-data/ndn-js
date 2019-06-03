@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.18.0 (2019-05-15)
+Interim changes since NDN-JS v0.18.0 (2019-06-03)
 -------------------------------------------------
 
 Changes
@@ -15,6 +15,7 @@ Deprecated
 Bug fixes
 * https://redmine.named-data.net/issues/4926 In decoding Data, make MetaInfo
   and Content optional.
+* https://redmine.named-data.net/issues/4947 ApplicationParameters TLV type code.
 
 NDN-JS v0.18.0 (2019-03-06)
 ---------------------------

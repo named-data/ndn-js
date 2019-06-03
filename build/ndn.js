@@ -10181,7 +10181,7 @@ Tlv.ForwardingHint =   30;
 Tlv.SelectedDelegation = 32;
 Tlv.CanBePrefix =      33;
 Tlv.HopLimit =         34;
-Tlv.ApplicationParameters = 35;
+Tlv.ApplicationParameters = 36;
 
 Tlv.SignatureType_DigestSha256 = 0;
 Tlv.SignatureType_SignatureSha256WithRsa = 1;
@@ -55934,7 +55934,8 @@ Face.encodeLpNack_ = function(interest, networkNack)
 
   // Encode backwards.
   // Encode the fragment with the Interest.
-  encoder.writeBlobTlv(Tlv.LpPacket_Fragment, interest.wireEncode().buf());
+  encoder.writeBlobTlv
+    (Tlv.LpPacket_Fragment, interest.wireEncode(TlvWireFormat.get()).buf());
 
   // Encode the reason.
   var reason;
