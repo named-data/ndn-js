@@ -28,7 +28,6 @@ var RttEstimator = require('./rtt-estimator.js').RttEstimator;
 var Pipeline = require('./pipeline.js').Pipeline;
 var LOG = require('../log.js').Log.LOG;
 
-Log.LOG = 4;
 /**
  * Implementation of Cubic pipeline according to:
  *   [RFC8312](https://tools.ietf.org/html/rfc8312)
