@@ -23,6 +23,7 @@
 var Interest = require('../interest.js').Interest; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
 var PipelineFixed = require('./pipeline-fixed.js').PipelineFixed;
+var PipelineCubic = require('./pipeline-cubic.js').PipelineCubic;
 
 var SegmentFetcher = function SegmentFetcher() { };
 
@@ -35,7 +36,8 @@ SegmentFetcher.ErrorCode = {
   INTEREST_TIMEOUT: 1,
   DATA_HAS_NO_SEGMENT: 2,
   SEGMENT_VERIFICATION_FAILED: 3,
-  INVALID_KEYCHAIN: 4
+  INVALID_KEYCHAIN: 4,
+  INVALID_PIPELINE: 5
 };
 
 
@@ -52,33 +54,31 @@ SegmentFetcher.DontVerifySegment = function(data)
  * version by using a pipeline.
  *
  * The available pipelines are:
- * - Pipeline Fixed [default]
- * - [TODO] Pipeline Aimd
+ * - Pipeline Fixed
+ * - Pipeline Cubic [default]
  *
- * Initiate segment fetching.
- * 
  * @param {Face} face This face is used by pipeline to express Interests and fetch segments.
- * @param {Interest} baseInterest An Interest for the initial segment of the
- * requested data, where baseInterest.getName() has the name prefix. This
- * interest may include a custom InterestLifetime that will propagate to all subsequent
- * Interests. The only exception is that the initial Interest will be forced to include
- * "MustBeFresh=true" which will be turned off in subsequent Interests.
- * @param validatorKeyChain {KeyChain} This is used by ValidatorKeyChain.verifyData(data).
- * If validation fails then abort fetching and call onError with SEGMENT_VERIFICATION_FAILED.
- * This does not make a copy of the KeyChain; the object must remain valid while fetching.
- * If validatorKeyChain is null, this does not validate the data packet.
+ * @param {Interest} baseInterest An Interest for the initial segment of the requested data,
+ *                                where baseInterest.getName() has the name prefix. This
+ *                                interest may include a custom InterestLifetime that will
+ *                                propagate to all subsequent Interests. The only exception
+ *                                is that the initial Interest will be forced to include
+ *                                "MustBeFresh=true" which will be turned off in subsequent Interests.
+ * @param {KeyChain} validatorKeyChain This is used by ValidatorKeyChain.verifyData(data).
+ *                                     If validation fails then abort fetching and call onError with
+ *                                     SEGMENT_VERIFICATION_FAILED. This does not make a copy of the
+ *                                     KeyChain; the object must remain valid while fetching. If
+ *                                     validatorKeyChain is null, this does not validate the data packet.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onComplete When all segments are received, call
- * onComplete(content) where content is a Blob which has the concatenation of
- * the content of all the segments.
+ * @param {function} onComplete When all segments are received, call onComplete(content) where content is
+ *                              a Blob which has the concatenation of the content of all the segments.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onError Call onError.onError(errorCode, message) for
- * timeout or an error processing segments. errorCode is a value from
- * PipelineFixed.ErrorCode and message is a related string.
+ * @param {function} onError Call onError.onError(errorCode, message) for listed error above, where errorCode
+ *                           is a value from PipelineFixed.ErrorCode and message is a related string.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -93,15 +93,28 @@ SegmentFetcher.DontVerifySegment = function(data)
  *     SegmentFetcher.fetch(face, interest, null, onComplete, onError);
  */
 SegmentFetcher.fetch = function
-  (face, baseInterest, validatorKeyChain, onComplete, onError)
+  (face, baseInterest, validatorKeyChain, onComplete, onError, opts)
 {
-  var basePrefix = baseInterest.getName().toUri();
-
-  if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
-    new PipelineFixed
-      (basePrefix, face, validatorKeyChain, onComplete, onError)
-      .fetchFirstSegment(baseInterest);
-  else
-    onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,
-            "validatorKeyChain should be either a KeyChain instance or null.");
+  if (opts == null || opts.pipeline === undefined || opts.pipeline === "cubic") {
+    if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
+      new PipelineCubic
+        (baseInterest, face, null, validatorKeyChain, onComplete, onError)
+        .run();
+    else
+      onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,
+              "validatorKeyChain should be either a KeyChain instance or null.");
+  }
+  else if (opts.pipeline === "fixed") {
+    if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
+      new PipelineFixed
+        (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
+        .run();
+    else
+      onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,
+              "validatorKeyChain should be either a KeyChain instance or null.");
+  }
+  else {
+      onError(SegmentFetcher.ErrorCode.INVALID_PIPELINE,
+              opts.pipeline + " is not a valid pipeline type");
+  }
 };

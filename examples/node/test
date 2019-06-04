@@ -1,0 +1,44 @@
+
+// Try to fetch using a known name.
+var name1 = new Name("/ndn/edu/ucla/remap/demo/ndn-js-test/hello.txt/%FDU%8D%9DM");
+console.log("Express name " + name1.toUri());
+SegmentFetcher.fetch
+  (new Face({host: "memoria.ndn.ucla.edu"}), new Interest(name1),
+   null /*validator key*/,
+   onComplete, function(errorCode, message) {
+     console.log("Error " + errorCode + ": " + message);
+     //if (++callbackCount >= 3)
+       //face.close(); // This will cause the script to quit.
+   },
+   null /*pipeline type (default: Cubic) and its options*/
+  );
+ 
+
+
+// Try to fetch a local file.
+var name2 = new Name("/testecho");
+console.log("Express name " + name2.toUri());
+SegmentFetcher.fetch
+  (new Face({host: "localhost"}), new Interest(name2),
+   null /*validator key*/,
+   onComplete, function(errorCode, message) {
+     console.log("Error " + errorCode + ": " + message);
+     //if (++callbackcount >= 3)
+       //face.close(); // this will cause the script to quit.
+   },
+   null /*pipeline type (default: Cubic) and its options*/
+  );
+
+// Expect this to time out.
+var name3 = new Name("/test/timeout");
+console.log("Express name " + name3.toUri());
+SegmentFetcher.fetch
+  (new Face({host: "localhost"}), new Interest(name3),
+   null /*validator key*/,
+   onComplete, function(errorCode, message) {
+     console.log("Error " + errorCode + ": " + message);
+     //if (++callbackcount >= 3)
+       //face.close(); // this will cause the script to quit.
+   },
+   null /*pipeline type (default: Cubic) and its options*/
+  );

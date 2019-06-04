@@ -24,6 +24,7 @@ var Blob = require('./blob.js').Blob; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon;
 var DataFetcher = require('./data-fetcher.js').DataFetcher;
+var Pipeline = require('./pipeline.js').Pipeline;
 
 /**
  * Retrieve the segments of solicited data by keeping a fixed-size window of N
@@ -33,80 +34,56 @@ var DataFetcher = require('./data-fetcher.js').DataFetcher;
  * timeout or nack will try to resolve the corresponded segment by retransmitting
  * the Interest a few times.
  *
- * PipelineFixed assumes that the data is named /<prefix>/<version>/<segment>,
- * where:
- * - <prefix> is the specified name prefix,
- * - <version> is an unknown version that needs to be discovered, and
- * - <segment> is a segment number. 
- * Note: The number of segments is unknown and is controlled by the
- *       `FinalBlockId` field in the first retrieved Data packet. So, the
- *       very first Data packet MUST contain the `FinalBlockId` field.
+ * After discovering the version number from the very first Data packet
+ * (see Pipeline documentation), then:
  *
- * The following logic is implemented in PipelineFixed:
- *
- * 1. Express the first Interest to discover the version:
- *
- *    >> Interest: /<prefix>?MustBeFresh=true
- *
- * 2. Infer the latest version of the Data: <version> = Data.getName().get(-2)
- *
- * 3. Pipeline the Interests starting from segment 0:
+ * 1. Pipeline the Interests starting from segment 0:
  *
  *    >> Interest: /<prefix>/<version>/<segment=0>
  *    >> Interest: /<prefix>/<version>/<segment=1>
  *    ...
  *    >> Interest: /<prefix>/<version>/<segment=this.windowSize-1>
- * 
+ *
  * We do not issue interest for segments that are already received.
  * At any given time the number of on the fly Interests should be equal
  * to this.windowSize. The next expected segment to fetch will be this.windowSize
  *
- * 4. Upon receiving a valid Data back we pipeline an Interest for the
+ * 2. Upon receiving a valid Data back we pipeline an Interest for the
  *    next expected segment.
  *
- * We repeat step 4 until the FinalBlockId === Data.getName().get(-1).
+ * We repeat step 2 until the FinalBlockId === Data.getName().get(-1).
  *
- * 5. Call the onComplete callback with a Blob that concatenates the content
+ * 3. Call the onComplete callback with a Blob that concatenates the content
  *    from all segments.
  *
  * If an error occurs during the fetching process, the onError callback is called
- * with a proper error code.  The following errors are possible:
- *
- * - `INTEREST_TIMEOUT`: if any of the Interests times out (probably after a number of retries)
- * - `DATA_HAS_NO_SEGMENT`: if any of the retrieved Data packets does not have a segment
- *   as the last component of the name (not counting the implicit digest)
- * - `SEGMENT_VERIFICATION_FAILED`: if any retrieved segment fails
- *   the KeyChain verifyData.
- *
- * In order to validate individual segments, a KeyChain needs to be supplied.
- * If verifyData fails, the fetching process is aborted with
- * SEGMENT_VERIFICATION_FAILED. If data validation is not required, pass null.
- *
+ * with a proper error code (see Pipeline documenation).
  *
  * This is a public constructor to create a new PipelineFixed.
- * @param {string} basePrefix This is the prefix of the data we want to retrieve
- * its segments (excluding <version> and <segment> components).
+ * @param {Interest} baseInterest This interest should be well-formed to represent all necessary fields
+ *                                 that the application wants to use for all Interests (e.g., interest
+ *                                 lifetime).
  * @param {Face} face The segments will be fetched through this face.
- * @param {KeyChain} validatorKeyChain If this is not null, use its verifyData
- * otherwise skip Data validation.
- * @param {function} onComplete When all segments are received, call
- * onComplete(content) where content is a Blob which has the concatenation of
- * the content of all the segments.
+ * @param {Object} opts An object that can contain pipeline options to overwrite their default values.
+ *                      If null is passed then all pipeline options will be set to their default values.
+ * @param {KeyChain} validatorKeyChain If this is not null, use its verifyData otherwise skip
+ *                                     Data validation.
+ * @param {function} onComplete When all segments are received, call onComplete(content) where content
+ *                              is a Blob which has the concatenation of the content of all the segments.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onError Call onError(errorCode, message) for
- * timeout or an error processing segments. errorCode is a value from
- * PipelineFixed.ErrorCode and message is a related string.
+ * @param {function} onError Call onError(errorCode, message) for any error during content retrieval
+ *                           (see Pipeline documentation for ful list of errors).
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @constructor
  */
 var PipelineFixed = function PipelineFixed
-  (basePrefix, face, validatorKeyChain, onComplete, onError)
+  (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
 {
-  this.contentPrefix = basePrefix;
+  this.baseInterest = baseInterest;
   this.face = face;
   this.validatorKeyChain = validatorKeyChain;
   this.onComplete = onComplete;
@@ -118,25 +95,15 @@ var PipelineFixed = function PipelineFixed
   this.finalBlockId = Number.MAX_SAFE_INTEGER;
 
   // Options
-  this.windowSize = 10;
-  this.maxTimeoutRetries = 3;
-  this.maxNackRetries = 3;
+  this.windowSize = Pipeline.op("windowSize", 10, opts);
+  this.maxTimeoutRetries = Pipeline.op("maxTimeoutRetries", 3, opts);
+  this.maxNackRetries = Pipeline.op("maxNackRetries", 3, opts);
 
   this.contentParts = []; // of Buffer (no duplicate entry)
   this.dataFetchersContainer = []; // if we need to cancel pending interests
 };
 
 exports.PipelineFixed = PipelineFixed;
-
-/**
- * An ErrorCode value is passed in the onError callback.
- */
-PipelineFixed.ErrorCode = {
-  INTEREST_TIMEOUT: 1,
-  DATA_HAS_NO_SEGMENT: 2,
-  SEGMENT_VERIFICATION_FAILED: 3,
-  NACK_RECEIVED: 4
-};
 
 /**
  * Use DataFetcher to fetch the solicited segment. Timeouts and Nacks will be
@@ -150,19 +117,19 @@ PipelineFixed.prototype.fetchSegment = function(interest)
       (this.face, interest, this.maxTimeoutRetries, this.maxNackRetries,
        this.onData.bind(this), this.onTimeout.bind(this), this.onNack.bind(this));
        this.dataFetchersContainer[segmentNo].fetch();
-  } 
+  }
   else { // do not keep track of very first interest
     (new DataFetcher
       (this.face, interest, this.maxTimeoutRetries, this.maxNackRetries,
        this.onData.bind(this), this.onTimeout.bind(this), this.onNack.bind(this)))
        .fetch();
- 
-  } 
+
+  }
 };
 
-PipelineFixed.prototype.fetchFirstSegment = function(baseInterest)
+PipelineFixed.prototype.run = function()
 {
-  var interest = new Interest(baseInterest);
+  var interest = new Interest(this.baseInterest);
   interest.setMustBeFresh(true);
 
   this.fetchSegment(interest);
@@ -214,7 +181,7 @@ PipelineFixed.prototype.onData = function(originalInterest, data)
          },
          this.onValidationFailed.bind(this));
     } catch (ex) {
-      this.reportError(PipelineFixed.ErrorCode.SEGMENT_VERIFICATION_FAILED,
+      Pipeline.reportError(this.onError, Pipeline.ErrorCode.SEGMENT_VERIFICATION_FAILED,
                        "Error in KeyChain.verifyData: " + ex);
     }
   }
@@ -230,9 +197,9 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
     currentSegment = data.getName().get(-1).toSegment();
   }
   catch (ex) {
-    this.reportError(PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
-                     "Error decoding the name segment number " +
-                     data.getName().get(-1).toEscapedString() + ": " + ex);
+    Pipeline.reportError(this.onError, Pipeline.ErrorCode.DATA_HAS_NO_SEGMENT,
+                         "Error decoding the name segment number " +
+                         data.getName().get(-1).toEscapedString() + ": " + ex);
     return;
   }
 
@@ -243,7 +210,7 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
       this.cancelPendingInterestsAboveFinalBlockId();
     }
     catch (ex) {
-      this.reportError(PipelineFixed.ErrorCode.DATA_HAS_NO_SEGMENT,
+      Pipeline.reportError(this.onError, Pipeline.ErrorCode.DATA_HAS_NO_SEGMENT,
            "Error decoding the FinalBlockId segment number " +
             data.getMetaInfo().getFinalBlockId().toEscapedString() +
             ": " + ex);
@@ -277,21 +244,21 @@ PipelineFixed.prototype.onVerified = function(data, originalInterest)
 
 PipelineFixed.prototype.onValidationFailed = function(data, reason)
 {
-  this.reportError(PipelineFixed.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-                   "Segment verification failed for " + data.getName().toUri() +
-                   " . Reason: " + reason);
+  Pipeline.reportError(this.onError, Pipeline.ErrorCode.SEGMENT_VERIFICATION_FAILED,
+                       "Segment verification failed for " + data.getName().toUri() +
+                       " . Reason: " + reason);
 };
 
 PipelineFixed.prototype.onTimeout = function(interest)
 {
-  this.reportError(PipelineFixed.ErrorCode.INTEREST_TIMEOUT,
-                   "Time out for interest " + interest.getName().toUri());
+  Pipeline.reportError(this.onError, Pipeline.ErrorCode.INTEREST_TIMEOUT,
+                       "Time out for interest " + interest.getName().toUri());
 };
 
 PipelineFixed.prototype.onNack = function(interest)
 {
-  this.reportError(PipelineFixed.ErrorCode.NACK_RECEIVED,
-                   "Received Nack for interest " + interest.getName().toUri());
+  Pipeline.reportError(this.onError, Pipeline.ErrorCode.NACK_RECEIVED,
+                       "Received Nack for interest " + interest.getName().toUri());
 };
 
 PipelineFixed.prototype.increaseNumberOfSegmentsOnFly = function()
