@@ -14440,6 +14440,7 @@ var RttEstimator = require('./rtt-estimator.js').RttEstimator;
 var Pipeline = require('./pipeline.js').Pipeline;
 var LOG = require('../log.js').Log.LOG;
 
+Log.LOG = 4;
 /**
  * Implementation of Cubic pipeline according to:
  *   [RFC8312](https://tools.ietf.org/html/rfc8312)
@@ -14476,6 +14477,9 @@ var PipelineCubic = function PipelineCubic
   this.onComplete = onComplete;
   this.onError = onError;
   this.versionNo = NaN; // is discovered from the first received Data packet
+  this.versionIsProvided = false;  // baseInterest's name contains version number or not
+  if (baseInterest.getName().components.length > 0 && baseInterest.getName().get(-1).isVersion())
+    this.versionIsProvided = true;
 
   // Adaptive options
   this.initCwnd = Pipeline.op("initCwnd", 1.0, opts);
@@ -14639,10 +14643,16 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
 
 
   var interest = new Interest(this.baseInterest);
-  if (!Number.isNaN(this.versionNo)) {
-    interest.setName(new Name(this.baseInterest.getName())
-                     .appendVersion(this.versionNo)
-                     .appendSegment(segNo));
+  if (!Number.isNaN(this.versionNo) ) {
+    if (this.versionIsProvided === false) {
+      interest.setName(new Name(this.baseInterest.getName())
+                       .appendVersion(this.versionNo)
+                       .appendSegment(segNo));
+    }
+    else {
+      interest.setName(new Name(this.baseInterest.getName())
+                       .appendSegment(segNo));
+    }
   }
 
   if (segNo === 0) {
@@ -14763,18 +14773,17 @@ PipelineCubic.prototype.onData = function(data)
       return;
     }
     this.hasFinalBlockId = true;
+  }
 
-    // Save the content
-    this.contentParts[recSegmentNo] = data.getContent().buf();
+  // Save the content
+  this.contentParts[recSegmentNo] = data.getContent().buf();
 
-
-    if (this.hasFailure && this.finalBlockId >= this.failedSegNo) {
-      // previously failed segment is part of the content
-      return this.onFailure(this.failureReason);
-    }
-    else {
-      this.hasFailure = false;
-    }
+  if (this.hasFailure && this.hasFinalBlockId && this.finalBlockId >= this.failedSegNo) {
+    // previously failed segment is part of the content
+    return this.onFailure(this.failureReason);
+  }
+  else {
+    this.hasFailure = false;
   }
 
   var recSeg = this.segmentInfo[recSegmentNo];
