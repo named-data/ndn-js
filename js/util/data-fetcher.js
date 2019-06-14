@@ -20,6 +20,7 @@
 /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
+var Pipeline = require('./pipeline.js').Pipeline;
 
 /**
  * DataFetcher is a utility class to fetch Data with automatic retries.
@@ -27,31 +28,32 @@ var LOG = require('../log.js').Log.LOG;
  * This is a public constructor to create a new DataFetcher object.
  * @param {Face} face The segment will be fetched through this face.
  * @param {Interest} interest Use this as the basis of the future issued Interest(s) to fetch
- * the solicited segment.
- * @param {int} maxTimeoutRetries The max number of retries upon facing Timeout.
- * @param {int} maxNackRetries The max number of retries upon facing Nack.
+ *                            the solicited segment.
+ * @param {int} maxRetriesOnTimeoutOrNack The max number of retries upon facing Timeout or Nack.
  * @param {function} onData Call this function upon receiving the Data packet for the
- * solicited segment.
- * @param {function} onTimeout Call this function after receiving Timeout for more than
- * maxTimeoutRetries times. 
- * @param {function} onNack Call this function after receiving Nack for more than
- * maxNackRetries times.
+ *                          solicited segment.
+ * @param {function} onFailure Call this function after receiving Timeout or Nack for more than
+ *                             maxRetriesOnTimeoutOrNack times.
  * @constructor
  *
  */
 var DataFetcher = function DataFetcher
-  (face, interest, maxTimeoutRetries, maxNackRetries, onData, onTimeout, onNack)
+  (face, interest, maxRetriesOnTimeoutOrNack, onData, handleFailure)
 {
   this.face = face;
   this.interest = interest;
-  this.maxNackRetries = maxNackRetries;
-  this.maxTimeoutRetries = maxTimeoutRetries;
+  this.maxRetriesOnTimeoutOrNack = maxRetriesOnTimeoutOrNack;
 
   this.onData = onData;
-  this.onTimeout = onTimeout;
-  this.onNack = onNack;
+  this.handleFailure = handleFailure;
 
   this.numberOfTimeoutRetries = 0;
+  this.numberOfNackRetries = 0;
+  this.segmentNo = 0; // segment number of the current Interest
+  if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
+    this.segmentNo = interest.getName().get(-1).toSegment();
+  }
+
   this.pendingInterestId = null;
 };
 
@@ -62,24 +64,24 @@ DataFetcher.prototype.fetch = function()
   this.pendingInterestId = this.face.expressInterest
     (this.interest,
      this.handleData.bind(this),
-     this.handleTimeout.bind(this),
+     this.handleLifetimeExpiration.bind(this),
      this.handleNack.bind(this));
 };
 
-DataFetcher.prototype.cancelPendingInterest = function()
+DataFetcher.prototype.getPendingInterestId = function()
 {
-  this.face.removePendingInterest(this.pendingInterestId);
+  return this.pendingInterestId;
 };
 
-DataFetcher.prototype.handleData = function(originalInterest, data)
+DataFetcher.prototype.handleData = function(interest, data)
 {
-  this.onData(originalInterest, data);
+  this.onData(interest, data);
 };
 
-DataFetcher.prototype.handleTimeout = function(interest)
+DataFetcher.prototype.handleLifetimeExpiration = function(interest)
 {
   this.numberOfTimeoutRetries++;
-  if (this.numberOfTimeoutRetries <= this.maxTimeoutRetries) {
+  if (this.numberOfTimeoutRetries <= this.maxRetriesOnTimeoutOrNack) {
     var newInterest = new Interest(interest);
     newInterest.refreshNonce();
     this.interest = newInterest;
@@ -88,14 +90,21 @@ DataFetcher.prototype.handleTimeout = function(interest)
     this.fetch();
   }
   else {
-    this.onTimeout(interest);
+    var segNo = 0;
+    if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
+      segNo = interest.getName().get(-1).toSegment();
+    }
+
+    this.handleFailure(this.segmentNo, Pipeline.ErrorCode.MAX_NACK_TIMEOUT_RETRIES,
+         "Reached the maximum number of retries (" +
+          this.maxRetriesOnTimeoutOrNack + ") while retrieving segment #" + segNo);
   }
 };
 
 DataFetcher.prototype.handleNack = function(interest)
 {
   this.numberOfNackRetries += 1;
-  if (this.numberOfNackRetries <= this.maxNackRetries) {
+  if (this.numberOfNackRetries <= this.maxRetriesOnTimeoutOrNack) {
     var newInterest = new Interest(interest);
     newInterest.refreshNonce();
     this.interest = newInterest;
@@ -105,6 +114,13 @@ DataFetcher.prototype.handleNack = function(interest)
     setTimeout(this.fetch.bind(this), 40 + Math.random() * 20);
   }
   else {
-    this.onNack(interest);
+    var segNo = 0;
+    if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
+      segNo = interest.getName().get(-1).toSegment();
+    }
+
+    this.handleFailure(this.segmentNo, Pipeline.ErrorCode.MAX_NACK_TIMEOUT_RETRIES,
+         "Reached the maximum number of retries (" +
+          this.maxRetriesOnTimeoutOrNack + ") while retrieving segment #" + segNo);
   }
 };

@@ -45,32 +45,26 @@ var LOG = require('../log.js').Log.LOG;
  *                                     Data validation.
  * @param {function} onComplete When all segments are received, call onComplete(content) where content
  *                              is a Blob which has the concatenation of the content of all the segments.
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
+ * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
+ *       callback should catch and properly handle any exceptions.
  * @param {function} onError Call onError(errorCode, message) for any error during content retrieval
  *                           (see Pipeline documentation for ful list of errors).
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
+ * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
+ *       callback should catch and properly handle any exceptions.
  * @constructor
  */
 var PipelineCubic = function PipelineCubic
   (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
 {
-  this.baseInterest = baseInterest;
+  this.pipeline = new Pipeline(baseInterest);
   this.face = face;
   this.validatorKeyChain = validatorKeyChain;
   this.onComplete = onComplete;
   this.onError = onError;
-  this.versionNo = NaN; // is discovered from the first received Data packet
-  this.versionIsProvided = false;  // baseInterest's name contains version number or not
-  if (baseInterest.getName().components.length > 0 && baseInterest.getName().get(-1).isVersion())
-    this.versionIsProvided = true;
 
   // Adaptive options
   this.initCwnd = Pipeline.op("initCwnd", 1.0, opts);
-  this.cwnd = p=Pipeline.op("cwnd", this.initCwnd, opts);
+  this.cwnd = Pipeline.op("cwnd", this.initCwnd, opts);
   this.ssthresh = Pipeline.op("ssthresh", Number.MAX_VALUE, opts);
   this.rtoCheckInterval = Pipeline.op("rtoCheckInterval", 10, opts);
   this.disableCwa = Pipeline.op("disableCwa", false, opts);
@@ -92,6 +86,7 @@ var PipelineCubic = function PipelineCubic
   this.nInFlight = 0;      // # of segments in flight
   this.nLossDecr = 0;      // # of window decreases caused by packet loss
   this.nTimeouts = 0;      // # of timed out segments
+  this.nNacks = 0;         // # of nack segments
   this.nSkippedRetx = 0;   // # of segments queued for retransmission but received before
                            // retransmission occurred
   this.nRetransmitted = 0; // # of retransmitted segments
@@ -99,16 +94,8 @@ var PipelineCubic = function PipelineCubic
   this.segmentInfo = [];   // track information that is necessary for segment transmission
   this.retxQueue = [];     // a queue to store segments that need to retransmitted
   this.retxCount = [];     // track number of retx of each segment
-  this.isStopped = false;  // false means the pipeline is running
-  this.hasFailure = false;
-  this.hasFinalBlockId = false;
-  this.failedSegNo = 0;
-  this.nextSegmentNo = 0;
-  this.numberOfSatisfiedSegments = 0;
-  this.finalBlockId = Number.MAX_SAFE_INTEGER;
 
   this.rttEstimator = new RttEstimator(opts);
-  this.contentParts = []; // of Buffer (no duplicate entry)
 }
 
 exports.PipelineCubic = PipelineCubic;
@@ -178,34 +165,31 @@ PipelineCubic.prototype.decreaseWindow = function()
 
 PipelineCubic.prototype.run = function()
 {
-  // schedule the next check after predefined interval
+  // Schedule the next check after the predefined interval
   setTimeout(this.checkRto.bind(this), this.rtoCheckInterval);
 
-  this.sendInterest(this.getNextSegmentNo(), false);
+  this.sendInterest(this.pipeline.getNextSegmentNo(), false);
 };
 
 PipelineCubic.prototype.cancel = function()
 {
-  if (this.isStopped)
-    return;
-
-  this.isStopped = true;
+  this.pipeline.cancel();
   this.segmentInfo.length = 0;
 };
 
 /**
- * @param segNo the segment # of the to-be-sent Interest
+ * @param segNo to-be-sent segment number
  * @param isRetransmission true if this is a retransmission
  */
 PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
 {
-  if (this.isStopped)
+  if (this.pipeline.isStopped)
     return;
 
-  if (this.hasFinalBlockId && segNo > this.finalBlockId)
+  if (this.pipeline.hasFinalBlockId && segNo > this.pipeline.finalBlockId)
     return;
 
-  if (!isRetransmission && this.hasFailure)
+  if (!isRetransmission && this.pipeline.hasFailure)
     return;
 
   if (isRetransmission) {
@@ -216,7 +200,7 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
     else { // not the first retransmission
       this.retxCount[segNo]++;
       if (this.retxCount[segNo] > this.maxRetriesOnTimeoutOrNack) {
-        return this.handleFail(segNo, Pipeline.ErrorCode.MAX_NACK_TIMEOUT_RETRIES,
+        return this.handleFailure(segNo, Pipeline.ErrorCode.MAX_NACK_TIMEOUT_RETRIES,
             "Reached the maximum number of retries (" +
              this.maxRetriesOnTimeoutOrNack + ") while retrieving segment #" + segNo);
       }
@@ -228,21 +212,9 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
   if (LOG > 1 && !isRetransmission)
     console.log("Requesting segment #" + segNo);
 
+  var interest = this.pipeline.makeInterest(segNo);
 
-  var interest = new Interest(this.baseInterest);
-  if (!Number.isNaN(this.versionNo) ) {
-    if (this.versionIsProvided === false) {
-      interest.setName(new Name(this.baseInterest.getName())
-                       .appendVersion(this.versionNo)
-                       .appendSegment(segNo));
-    }
-    else {
-      interest.setName(new Name(this.baseInterest.getName())
-                       .appendSegment(segNo));
-    }
-  }
-
-  if (segNo === 0) {
+  if (Number.isNaN(this.pipeline.versionNo) ) {
     interest.setMustBeFresh(true);
   }
   else {
@@ -276,7 +248,8 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
 PipelineCubic.prototype.schedulePackets = function()
 {
   if (this.nInFlight < 0) {
-    console.log("ERROR: Number of in flight Interests is negative");
+    this.handleFailure(-1, Pipeline.ErrorCode.MISC, "Number of in flight Interests is negative.");
+    return;
   }
 
   var availableWindowSize = this.cwnd - this.nInFlight;
@@ -292,7 +265,7 @@ PipelineCubic.prototype.schedulePackets = function()
       this.sendInterest(retxSegNo, true);
     }
     else { // send next segment
-      this.sendInterest(this.getNextSegmentNo(), false);
+      this.sendInterest(this.pipeline.getNextSegmentNo(), false);
     }
     availableWindowSize--;
   }
@@ -306,12 +279,14 @@ PipelineCubic.prototype.handleData = function(interest, data)
       this.validatorKeyChain.verifyData
         (data,
          function(localData) {
-           thisPipeline.onVerified(localData, interest);
+           thisPipeline.onData(localData);
          },
          this.onValidationFailed.bind(this));
-    } catch (ex) {
+    }
+    catch (ex) {
       Pipeline.reportError(this.onError, Pipeline.ErrorCode.SEGMENT_VERIFICATION_FAILED,
                            "Error in KeyChain.verifyData: " + ex);
+      return;
     }
   }
   else {
@@ -321,61 +296,65 @@ PipelineCubic.prototype.handleData = function(interest, data)
 
 PipelineCubic.prototype.onData = function(data)
 {
-  if (this.isStopped)
+  if (this.pipeline.isStopped)
     return;
 
   var recSegmentNo = 0;
-
-  if (Number.isNaN(this.versionNo)) {
-    try {
-      this.versionNo = data.getName().get(-2).toVersion();
-    }
-    catch (ex) {
-      this.handleFailure(recSegmentNo, Pipeline.ErrorCode.DATA_HAS_NO_VERSION,
-                          "Error decoding the name version number " +
-                          data.getName().get(-2).toEscapedString() + ": " + ex);
-      return;
-    }
-  }
-
   try {
     recSegmentNo = data.getName().get(-1).toSegment();
   }
   catch (ex) {
     this.handleFailure(recSegmentNo, Pipeline.ErrorCode.DATA_HAS_NO_SEGMENT,
-                       "Error decoding the name segment number " +
+                       "Error while decoding the segment number " +
                        data.getName().get(-1).toEscapedString() + ": " + ex);
     return;
   }
 
-  // set finalBlockId
-  if (!this.hasFinalBlockId && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
+  if (Number.isNaN(this.pipeline.versionNo)) {
     try {
-      this.finalBlockId = data.getMetaInfo().getFinalBlockId().toSegment();
+      this.pipeline.versionNo = data.getName().get(-2).toVersion();
+    }
+    catch (ex) {
+      this.handleFailure(recSegmentNo, Pipeline.ErrorCode.DATA_HAS_NO_VERSION,
+                          "Error while decoding the version number " +
+                          data.getName().get(-2).toEscapedString() + ": " + ex);
+      return;
+    }
+  }
+
+  // set finalBlockId
+  if (!this.pipeline.hasFinalBlockId && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
+    try {
+      this.pipeline.finalBlockId = data.getMetaInfo().getFinalBlockId().toSegment();
     }
     catch (ex) {
       this.handleFailure(recSegmentNo, Pipeline.ErrorCode.DATA_HAS_NO_SEGMENT,
-                         "Error decoding the name segment number " +
+                         "Error while decoding FinalBlockId field " +
                          data.getName().get(-1).toEscapedString() + ": " + ex);
       return;
     }
-    this.hasFinalBlockId = true;
+    this.pipeline.hasFinalBlockId = true;
   }
 
   // Save the content
-  this.contentParts[recSegmentNo] = data.getContent().buf();
+  this.pipeline.contentParts[recSegmentNo] = data.getContent().buf();
 
-  if (this.hasFailure && this.hasFinalBlockId && this.finalBlockId >= this.failedSegNo) {
-    // previously failed segment is part of the content
-    return this.onFailure(this.failureReason);
-  }
-  else {
-    this.hasFailure = false;
+  if (this.pipeline.hasFailure && this.pipeline.hasFinalBlockId) {
+    if(this.pipeline.finalBlockId >= this.pipeline.failedSegNo) {
+      // Previously failed segment is part of the content
+      return this.pipeline.onFailure(this.pipeline.failureErrorCode,
+                                     this.pipeline.failureReason,
+                                     this.onError,
+                                     this.cancel.bind(this));
+    }
+    else {
+      this.pipeline.hasFailure = false;
+    }
   }
 
   var recSeg = this.segmentInfo[recSegmentNo];
   if (recSeg === undefined) {
-    return; // ignore already-received segment
+    return; // ignore an already-received segment
   }
 
   var rtt = Date.now() - recSeg.timeSent;
@@ -389,13 +368,13 @@ PipelineCubic.prototype.onData = function(data)
     this.highData = recSegmentNo;
   }
 
-  // for segments in retx queue, we must not decrement nInFlight
+  // For segments in retx queue, we must not decrement nInFlight
   // because it was already decremented when the segment timed out
   if (recSeg.state !== PipelineCubic.SegmentState.InRetxQueue) {
     this.nInFlight--;
   }
 
-  // do not sample RTT for retransmitted segments
+  // Do not sample RTT for retransmitted segments
   if ((recSeg.state === PipelineCubic.SegmentState.FirstTimeSent ||
        recSeg.state === PipelineCubic.SegmentState.InRetxQueue) &&
       this.retxCount[recSegmentNo] === undefined) {
@@ -406,39 +385,39 @@ PipelineCubic.prototype.onData = function(data)
     this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
   }
 
-  // clear the entry associated with the received segment
+  // Clear the entry associated with the received segment
   this.segmentInfo[recSegmentNo] = undefined;  // do not splice
 
-  this.numberOfSatisfiedSegments++;
+  this.pipeline.numberOfSatisfiedSegments++;
+
   // Check whether we are finished
-  if (this.hasFinalBlockId && this.numberOfSatisfiedSegments > this.finalBlockId) {
-    // Concatenate to get content.
-    var content = Buffer.concat(this.contentParts);
-    this.cancelInFlightSegmentsGreaterThan(this.finalBlockId);
+  if (this.pipeline.hasFinalBlockId &&
+      this.pipeline.numberOfSatisfiedSegments > this.pipeline.finalBlockId) {
+    // Concatenate to get the content
+    var content = Buffer.concat(this.pipeline.contentParts);
+    this.cancelInFlightSegmentsGreaterThan(this.pipeline.finalBlockId);
     try {
       this.cancel();
       this.printSummary();
       this.onComplete(new Blob(content, false));
-    } catch (ex) {
-      console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+    catch (ex) {
+      this.handleFailure(-1, Pipeline.ErrorCode.MISC,
+           "Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+      return;
     }
     return;
   }
 
   this.increaseWindow();
 
-  // Fetch the next segments
+  // Schedule the next segments to be fetched
   this.schedulePackets();
-};
-
-PipelineCubic.prototype.getNextSegmentNo = function()
-{
-  return this.nextSegmentNo++;
 };
 
 PipelineCubic.prototype.checkRto = function()
 {
-  if (this.isStopped)
+  if (this.pipeline.isStopped)
     return;
 
   var hasTimeout = false;
@@ -448,7 +427,7 @@ PipelineCubic.prototype.checkRto = function()
       continue;
 
     var segInfo = this.segmentInfo[i];
-    if (segInfo.state !== PipelineCubic.SegmentState.InRetxQueue) { // skip segments already in the retx queue
+    if (segInfo.state !== PipelineCubic.SegmentState.InRetxQueue) { // skip segments in the retx queue
       var timeElapsed = Date.now() - segInfo.timeSent;
       if (timeElapsed > segInfo.rto) { // timer expired?
         this.nTimeouts++;
@@ -464,14 +443,15 @@ PipelineCubic.prototype.checkRto = function()
     this.schedulePackets();
   }
 
-  // schedule the next check after predefined interval
+  // schedule the next check after the predefined interval
   setTimeout(this.checkRto.bind(this), this.rtoCheckInterval);
 };
 
 PipelineCubic.prototype.enqueueForRetransmission = function(segNo)
 {
   if (this.nInFlight <= 0) {
-    console.log("ERROR: number of in-flight segments is less than or equal to ZERO");
+    this.handleFailure(-1, Pipeline.ErrorCode.MISC, "Number of in flight Interests <= 0.");
+    return;
   }
 
   this.nInFlight--;
@@ -490,15 +470,15 @@ PipelineCubic.prototype.recordTimeout = function()
     this.nLossDecr++;
 
     if (LOG > 1) {
-    console.log("Packet loss event, new cwnd = " + this.cwnd
-                + ", ssthresh = " + this.ssthresh);
+      console.log("Packet loss event, new cwnd = " + this.cwnd
+                  + ", ssthresh = " + this.ssthresh);
     }
   }
 };
 
 PipelineCubic.prototype.cancelInFlightSegmentsGreaterThan = function(segNo)
 {
-  for (var i=segNo + 1; i < this.segmentInfo.length; ++i) {
+  for (var i = segNo + 1; i < this.segmentInfo.length; ++i) {
     // cancel fetching all segments that follow
     if (this.segmentInfo[i] !== undefined)
       this.face.removePendingInterest(this.segmentInfo[i].pendingInterestId);
@@ -508,56 +488,72 @@ PipelineCubic.prototype.cancelInFlightSegmentsGreaterThan = function(segNo)
   }
 };
 
-PipelineCubic.prototype.handleFail = function(segNo, errCode, reason)
+/**
+ * @param {int} segNo the segment for which a failure happened
+ * @note if segNo is `-1` it means a general failure happened
+ *       (e.g., negative number of in flight segments)
+ * @param {Pipeline.ErrorCode} errCode One of the predefined error codes.
+ * @param {string} reason A short description about the error.
+ */
+PipelineCubic.prototype.handleFailure = function(segNo, errCode, reason)
 {
-  if (this.isStopped)
+  if (this.pipeline.isStopped)
     return;
 
-  // if the failed segment is definitely part of the content, raise a fatal error
-  if (segNo === 0 || (this.hasFinalBlockId && segNo <= this.finalBlockId))
-    return this.onFailure(errCode, reason);
+  // this is a general failure; not specific to one segment
+  if (segNo === -1) {
+    this.pipeline.onFailure(errCode, reason, this.onError, this.cancel.bind(this));
+    return;
+  }
 
-  if (!this.hasFinalBlockId) {
+  // if the failed segment is definitely part of the content, raise a fatal error
+  if (segNo === 0 || (this.pipeline.hasFinalBlockId && segNo <= this.pipeline.finalBlockId))
+    return this.pipeline.onFailure(errCode, reason, this.onError, this.cancel.bind(this));
+
+  if (!this.pipeline.hasFinalBlockId) {
     this.segmentInfo[segNo] = undefined;  // do not splice
     this.nInFlight--;
 
-    var empty = true;
-    for (i=0; i < this.segmentInfo.length; ++i) {
+    var queueIsEmpty = true;
+    for (var i = 0; i < this.segmentInfo.length; ++i) {
       if (this.segmentInfo[i] !== undefined) {
-        empty = false;
+        queueIsEmpty = false;
         break;
       }
     }
 
-    if (empty) {
-      this.onFailure(Pipeline.ErrorCode.NO_FINALBLOCK,
-                     "Fetching terminated at segment " + segNo +
-                     " but no finalBlockId has been found");
+    if (queueIsEmpty) {
+      this.pipeline.onFailure(Pipeline.ErrorCode.NO_FINALBLOCK,
+                              "Fetching terminated at segment " + segNo +
+                              " but no finalBlockId has been found",
+                              this.onError,
+                              this.cancel.bind(this));
     }
     else {
       this.cancelInFlightSegmentsGreaterThan(segNo);
-      this.hasFailure = true;
-      this.failedSegNo = segNo;
-      this.failureReason = reason;
+      this.pipeline.hasFailure = true;
+      this.pipeline.failedSegNo = segNo;
+      this.pipeline.failureErrorCode = errCode;
+      this.pipeline.failureReason = reason;
     }
   }
 };
 
 PipelineCubic.prototype.handleLifetimeExpiration = function(interest)
 {
-  if (this.isStopped)
+  if (this.pipeline.isStopped)
     return;
 
   this.nTimeouts++;
-  var recSeg = 0; // the very first Interest does not have segment number
-  // treated the same as timeout for now
-  if (interest.getName().get(-1).isSegment())
-    recSeg = interest.getName().get(-1).toSegment();
+  var recSegmentNo = 0; // the very first Interest does not have segment number
+  // Treated the same as timeout for now
+  if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment())
+    recSegmentNo = interest.getName().get(-1).toSegment();
 
-  this.enqueueForRetransmission(recSeg);
+  this.enqueueForRetransmission(recSegmentNo);
 
   this.onWarning(Pipeline.ErrorCode.INTEREST_LIFETIME_EXPIRATION,
-                 "handle interest lifetime expiration for segment " + recSeg);
+                 "handle interest lifetime expiration for segment " + recSegmentNo);
 
   this.recordTimeout();
   this.schedulePackets();
@@ -565,17 +561,18 @@ PipelineCubic.prototype.handleLifetimeExpiration = function(interest)
 
 PipelineCubic.prototype.handleNack = function(interest)
 {
-  if (this.isStopped)
+  if (this.pipeline.isStopped)
     return;
 
-  var recSeg = 0; // the very first Interest does not have segment number
-  // treated the same as timeout for now
+  this.nNacks++;
+  var recSegmentNo = 0; // the very first Interest does not have segment number
+  // Treated the same as timeout for now
   if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment())
-    recSeg = interest.getName().get(-1).toSegment();
+    recSegmentNo = interest.getName().get(-1).toSegment();
 
-  this.enqueueForRetransmission(recSeg);
+  this.enqueueForRetransmission(recSegmentNo);
 
-  this.onWarning(Pipeline.ErrorCode.NACK_RECEIVED, "handle nack for segment " + recSeg);
+  this.onWarning(Pipeline.ErrorCode.NACK_RECEIVED, "handle nack for segment " + recSegmentNo);
 
   this.recordTimeout();
   this.schedulePackets();
@@ -588,12 +585,6 @@ PipelineCubic.prototype.onValidationFailed = function(data, reason)
                        " . Reason: " + reason);
 };
 
-PipelineCubic.prototype.onFailure = function(errCode, reason)
-{
-  this.cancel();
-  Pipeline.reportError(this.onError, errCode, reason);
-};
-
 PipelineCubic.prototype.onWarning = function(errCode, reason)
 {
   if (LOG > 2) {
@@ -603,24 +594,25 @@ PipelineCubic.prototype.onWarning = function(errCode, reason)
 
 PipelineCubic.prototype.printSummary = function()
 {
-  if (LOG < 3)
+  if (LOG < 2)
     return;
 
-  var statMsg = "";
+  var rttMsg = "";
   if (this.rttEstimator.getMinRtt() === Number.MAX_VALUE ||
       this.rttEstimator.getMaxRtt() === Number.NEGATIVE_INFINITY) {
-     statMsg = "stats unavailable";
+     rttMsg = "stats unavailable";
    }
    else {
-     statMsg = "min/avg/max = " + this.rttEstimator.getMinRtt().toPrecision(3) + "/"
+     rttMsg = "min/avg/max = " + this.rttEstimator.getMinRtt().toPrecision(3) + "/"
                                 + this.rttEstimator.getAvgRtt().toPrecision(3) + "/"
                                 + this.rttEstimator.getMaxRtt().toPrecision(3) + " ms";
   }
 
   console.log("Timeouts: " + this.nTimeouts + " (caused " + this.nLossDecr + " window decreases)\n" +
+              "Nacks: " + this.nNacks + "\n" +
               "Retransmitted segments: " + this.nRetransmitted +
               " (" + (this.nSent == 0 ? 0 : (this.nRetransmitted / this.nSent * 100))  + "%)" +
               ", skipped: " + this.nSkippedRetx + "\n" +
-              "RTT " + statMsg);
+              "RTT " + rttMsg);
 
 };
