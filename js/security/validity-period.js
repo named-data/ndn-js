@@ -150,7 +150,8 @@ ValidityPeriod.canGetFromSignature = function(signature)
 
 /**
  * If the signature is a type that has a ValidityPeriod, then return it.
- * Otherwise throw an error.
+ * Otherwise throw an error. To check if the signature has a ValidityPeriod
+ * without throwing an error, you can use canGetFromSignature().
  * @param {Signature} An object of a subclass of Signature.
  * @return {ValidityPeriod} The signature's ValidityPeriod. It is an error if
  * signature doesn't have a ValidityPeriod.
