@@ -76,10 +76,11 @@ var Pipeline = require('./pipeline.js').Pipeline;
  *                           (see Pipeline documentation for ful list of errors).
  * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
  *       callback should catch and properly handle any exceptions.
+ * @param {Object} stats An object that exposes statistics of content retrieval performance to caller.
  * @constructor
  */
 var PipelineFixed = function PipelineFixed
-  (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
+  (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
 {
   this.face = face;
   this.validatorKeyChain = validatorKeyChain;
@@ -94,6 +95,9 @@ var PipelineFixed = function PipelineFixed
   this.maxRetriesOnTimeoutOrNack = Pipeline.op("maxRetriesOnTimeoutOrNack", 3, opts);
 
   this.dataFetchersContainer = []; // if we need to cancel pending interests
+
+  // Stats collector
+  this.stats = stats;
 };
 
 exports.PipelineFixed = PipelineFixed;
@@ -185,7 +189,7 @@ PipelineFixed.prototype.handleData = function(interest, data)
     }
     catch (ex) {
       Pipeline.reportError(this.onError, Pipeline.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-                       "Error in KeyChain.verifyData: " + ex);
+                           "Error in KeyChain.verifyData: " + ex);
       return;
     }
   }

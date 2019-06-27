@@ -93,12 +93,12 @@ SegmentFetcher.DontVerifySegment = function(data)
  *     SegmentFetcher.fetch(face, interest, null, onComplete, onError);
  */
 SegmentFetcher.fetch = function
-  (face, baseInterest, validatorKeyChain, onComplete, onError, opts)
+  (face, baseInterest, validatorKeyChain, onComplete, onError, opts, stats)
 {
   if (opts == null || opts.pipeline === undefined || opts.pipeline === "cubic") {
     if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
       new PipelineCubic
-        (baseInterest, face, null, validatorKeyChain, onComplete, onError)
+        (baseInterest, face, null, validatorKeyChain, onComplete, onError, stats)
         .run();
     else
       onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,
@@ -107,7 +107,7 @@ SegmentFetcher.fetch = function
   else if (opts.pipeline === "fixed") {
     if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
       new PipelineFixed
-        (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
+        (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
         .run();
     else
       onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,

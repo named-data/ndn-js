@@ -51,10 +51,11 @@ var LOG = require('../log.js').Log.LOG;
  *                           (see Pipeline documentation for ful list of errors).
  * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
  *       callback should catch and properly handle any exceptions.
+ * @param {Object} stats An object that exposes statistics of content retrieval performance to caller.
  * @constructor
  */
 var PipelineCubic = function PipelineCubic
-  (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
+  (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
 {
   this.pipeline = new Pipeline(baseInterest);
   this.face = face;
@@ -96,6 +97,9 @@ var PipelineCubic = function PipelineCubic
   this.retxCount = [];     // track number of retx of each segment
 
   this.rttEstimator = new RttEstimator(opts);
+
+  // Stats collector
+  this.stats = stats;
 }
 
 exports.PipelineCubic = PipelineCubic;
