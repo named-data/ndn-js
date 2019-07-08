@@ -14006,7 +14006,7 @@ SegmentFetcher.fetch = function
   if (opts == null || opts.pipeline === undefined || opts.pipeline === "cubic") {
     if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
       new PipelineCubic
-        (baseInterest, face, null, validatorKeyChain, onComplete, onError, stats)
+        (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
         .run();
     else
       onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,
@@ -14240,8 +14240,10 @@ var Interest = require('../interest.js').Interest; /** @ignore */
 var Blob = require('./blob.js').Blob; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon; /** @ignore */
+var RttEstimator = require('./rtt-estimator.js').RttEstimator; /** @ignore */
 var DataFetcher = require('./data-fetcher.js').DataFetcher; /** @ignore */
 var Pipeline = require('./pipeline.js').Pipeline;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * Retrieve the segments of solicited data by keeping a fixed-size window of N
@@ -14311,10 +14313,21 @@ var PipelineFixed = function PipelineFixed
   this.windowSize = Pipeline.op("windowSize", 10, opts);
   this.maxRetriesOnTimeoutOrNack = Pipeline.op("maxRetriesOnTimeoutOrNack", 3, opts);
 
+  this.segmentInfo = []; // track information that is necessary for segment transmission.
+                         // If a segment experienced retransmission its status will
+                         // be `retx`, otherwise `normal`
   this.dataFetchersContainer = []; // if we need to cancel pending interests
+
+  this.rttEstimator = new RttEstimator(opts);
 
   // Stats collector
   this.stats = stats;
+  this.stats = {nTimeouts      : 0,
+                nNacks         : 0,
+                nRetransmitted : 0,
+                avgRtt         : 0,
+                avgJitter      : 0,
+                nSegments      : 0};
 };
 
 exports.PipelineFixed = PipelineFixed;
@@ -14343,19 +14356,21 @@ PipelineFixed.prototype.sendInterest = function(interest)
 
   if (this.pipeline.hasFailure)
     return;
-
+  var segmentNo = 0;
   if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
-    var segmentNo = interest.getName().get(-1).toSegment();
+    segmentNo = interest.getName().get(-1).toSegment();
     this.dataFetchersContainer[segmentNo] = new DataFetcher
       (this.face, interest, this.maxRetriesOnTimeoutOrNack,
-       this.handleData.bind(this), this.handleFailure.bind(this));
+       this.handleData.bind(this), this.handleFailure.bind(this),
+       this.segmentInfo, this.stats);
        this.dataFetchersContainer[segmentNo].fetch();
   }
-  else { // do not keep track of very first interest
-    (new DataFetcher
+  else { // this is the very first interest
+    this.dataFetchersContainer[segmentNo] = new DataFetcher
       (this.face, interest, this.maxRetriesOnTimeoutOrNack,
-       this.handleData.bind(this), this.handleFailure.bind(this)))
-       .fetch();
+       this.handleData.bind(this), this.handleFailure.bind(this),
+       this.segmentInfo, this.stats);
+       this.dataFetchersContainer[segmentNo].fetch();
   }
 };
 
@@ -14474,13 +14489,38 @@ PipelineFixed.prototype.onData = function(data)
     }
   }
 
-  this.pipeline.numberOfSatisfiedSegments += 1;
+  var recSeg = this.segmentInfo[recSegmentNo];
+  if (recSeg === undefined) {
+    return; // ignore an already-received segment
+  }
+
+  var rtt = Date.now() - recSeg.timeSent;
+  if (LOG > 1) {
+    console.log ("Received segment #" + recSegmentNo
+                 + ", rtt=" + rtt + "ms"
+                 + ", rto=" + recSeg.rto + "ms");
+  }
+
+  // Do not sample RTT for retransmitted segments
+  if (this.segmentInfo[recSegmentNo].stat === "normal") {
+    var nExpectedSamples = Math.max((this.nInFlight + 1) >> 1, 1);
+    if (nExpectedSamples <= 0) {
+      console.log("ERROR: nExpectedSamples is less than or equal to ZERO");
+    }
+    this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
+  }
+
+  this.pipeline.numberOfSatisfiedSegments++;
 
   // Check whether we are finished
   if (this.pipeline.hasFinalBlockId &&
       this.pipeline.numberOfSatisfiedSegments > this.pipeline.finalBlockId) {
     // Concatenate to get content.
     var content = Buffer.concat(this.pipeline.contentParts);
+    this.cancelInFlightSegmentsGreaterThan(this.pipeline.finalBlockId);
+    this.stats.avgRtt    = this.rttEstimator.getAvgRtt().toPrecision(3),
+    this.stats.avgJitter = this.rttEstimator.getAvgJitter().toPrecision(3),
+    this.stats.nSegments = this.pipeline.numberOfSatisfiedSegments;
     try {
       this.pipeline.cancel();
       this.onComplete(new Blob(content, false));
@@ -15271,8 +15311,6 @@ RttEstimator.prototype.addMeasurement = function(segNo, rtt, nExpectedSamples)
 
   this.rto = this.clamp(this.rto, this.minRto, this.maxRto);
 
-  //afterRttMeasurement({segNo, rtt, this.sRtt, this.rttVar, this.rto});
-
   this.rttAvg = (this.nRttSamples * this.rttAvg + rtt) / (this.nRttSamples + 1);
   this.rttMax = Math.max(rtt, this.rttMax);
   this.rttMin = Math.min(rtt, this.rttMin);
@@ -15365,7 +15403,7 @@ var Pipeline = require('./pipeline.js').Pipeline;
  *
  */
 var DataFetcher = function DataFetcher
-  (face, interest, maxRetriesOnTimeoutOrNack, onData, handleFailure)
+  (face, interest, maxRetriesOnTimeoutOrNack, onData, handleFailure, segmentInfo, stats)
 {
   this.face = face;
   this.interest = interest;
@@ -15374,12 +15412,20 @@ var DataFetcher = function DataFetcher
   this.onData = onData;
   this.handleFailure = handleFailure;
 
-  this.numberOfTimeoutRetries = 0;
-  this.numberOfNackRetries = 0;
+  this.segmentInfo = segmentInfo;
+  this.stats = stats;
+
   this.segmentNo = 0; // segment number of the current Interest
   if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
     this.segmentNo = interest.getName().get(-1).toSegment();
   }
+
+  this.nTimeoutRetries = 0;
+  this.nNackRetries = 0;
+
+  this.segmentInfo[this.segmentNo] = {};
+  this.segmentInfo[this.segmentNo].stat = "normal";
+  this.segmentInfo[this.segmentNo].timeSent = Date.now();
 
   this.pendingInterestId = null;
 };
@@ -15402,13 +15448,17 @@ DataFetcher.prototype.getPendingInterestId = function()
 
 DataFetcher.prototype.handleData = function(interest, data)
 {
+  this.stats.nTimeouts += this.nTimeoutRetries;
+  this.stats.nNacks += this.nNackRetries;
+  this.stats.nRetransmitted += (this.nNackRetries + this.nTimeoutRetries);
   this.onData(interest, data);
 };
 
 DataFetcher.prototype.handleLifetimeExpiration = function(interest)
 {
-  this.numberOfTimeoutRetries++;
-  if (this.numberOfTimeoutRetries <= this.maxRetriesOnTimeoutOrNack) {
+  this.nTimeoutRetries++;
+  this.segmentInfo[this.segmentNo].stat = "retx";
+  if (this.nTimeoutRetries <= this.maxRetriesOnTimeoutOrNack) {
     var newInterest = new Interest(interest);
     newInterest.refreshNonce();
     this.interest = newInterest;
@@ -15430,8 +15480,9 @@ DataFetcher.prototype.handleLifetimeExpiration = function(interest)
 
 DataFetcher.prototype.handleNack = function(interest)
 {
-  this.numberOfNackRetries += 1;
-  if (this.numberOfNackRetries <= this.maxRetriesOnTimeoutOrNack) {
+  this.nNackRetries += 1;
+  this.segmentInfo[this.segmentNo].stat = "retx";
+  if (this.nNackRetries <= this.maxRetriesOnTimeoutOrNack) {
     var newInterest = new Interest(interest);
     newInterest.refreshNonce();
     this.interest = newInterest;

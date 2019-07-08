@@ -96,8 +96,6 @@ RttEstimator.prototype.addMeasurement = function(segNo, rtt, nExpectedSamples)
 
   this.rto = this.clamp(this.rto, this.minRto, this.maxRto);
 
-  //afterRttMeasurement({segNo, rtt, this.sRtt, this.rttVar, this.rto});
-
   this.rttAvg = (this.nRttSamples * this.rttAvg + rtt) / (this.nRttSamples + 1);
   this.rttMax = Math.max(rtt, this.rttMax);
   this.rttMin = Math.min(rtt, this.rttMin);

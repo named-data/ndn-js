@@ -38,7 +38,7 @@ var Pipeline = require('./pipeline.js').Pipeline;
  *
  */
 var DataFetcher = function DataFetcher
-  (face, interest, maxRetriesOnTimeoutOrNack, onData, handleFailure)
+  (face, interest, maxRetriesOnTimeoutOrNack, onData, handleFailure, segmentInfo, stats)
 {
   this.face = face;
   this.interest = interest;
@@ -47,12 +47,20 @@ var DataFetcher = function DataFetcher
   this.onData = onData;
   this.handleFailure = handleFailure;
 
-  this.numberOfTimeoutRetries = 0;
-  this.numberOfNackRetries = 0;
+  this.segmentInfo = segmentInfo;
+  this.stats = stats;
+
   this.segmentNo = 0; // segment number of the current Interest
   if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
     this.segmentNo = interest.getName().get(-1).toSegment();
   }
+
+  this.nTimeoutRetries = 0;
+  this.nNackRetries = 0;
+
+  this.segmentInfo[this.segmentNo] = {};
+  this.segmentInfo[this.segmentNo].stat = "normal";
+  this.segmentInfo[this.segmentNo].timeSent = Date.now();
 
   this.pendingInterestId = null;
 };
@@ -75,13 +83,17 @@ DataFetcher.prototype.getPendingInterestId = function()
 
 DataFetcher.prototype.handleData = function(interest, data)
 {
+  this.stats.nTimeouts += this.nTimeoutRetries;
+  this.stats.nNacks += this.nNackRetries;
+  this.stats.nRetransmitted += (this.nNackRetries + this.nTimeoutRetries);
   this.onData(interest, data);
 };
 
 DataFetcher.prototype.handleLifetimeExpiration = function(interest)
 {
-  this.numberOfTimeoutRetries++;
-  if (this.numberOfTimeoutRetries <= this.maxRetriesOnTimeoutOrNack) {
+  this.nTimeoutRetries++;
+  this.segmentInfo[this.segmentNo].stat = "retx";
+  if (this.nTimeoutRetries <= this.maxRetriesOnTimeoutOrNack) {
     var newInterest = new Interest(interest);
     newInterest.refreshNonce();
     this.interest = newInterest;
@@ -103,8 +115,9 @@ DataFetcher.prototype.handleLifetimeExpiration = function(interest)
 
 DataFetcher.prototype.handleNack = function(interest)
 {
-  this.numberOfNackRetries += 1;
-  if (this.numberOfNackRetries <= this.maxRetriesOnTimeoutOrNack) {
+  this.nNackRetries += 1;
+  this.segmentInfo[this.segmentNo].stat = "retx";
+  if (this.nNackRetries <= this.maxRetriesOnTimeoutOrNack) {
     var newInterest = new Interest(interest);
     newInterest.refreshNonce();
     this.interest = newInterest;

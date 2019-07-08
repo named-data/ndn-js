@@ -98,7 +98,7 @@ SegmentFetcher.fetch = function
   if (opts == null || opts.pipeline === undefined || opts.pipeline === "cubic") {
     if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
       new PipelineCubic
-        (baseInterest, face, null, validatorKeyChain, onComplete, onError, stats)
+        (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
         .run();
     else
       onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,
