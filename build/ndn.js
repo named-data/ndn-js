@@ -14495,6 +14495,8 @@ PipelineFixed.prototype.onData = function(data)
   }
 
   var rtt = Date.now() - recSeg.timeSent;
+  var fullDelay = Date.now() - recSeg.initTimeSent;
+
   if (LOG > 1) {
     console.log ("Received segment #" + recSegmentNo
                  + ", rtt=" + rtt + "ms"
@@ -14508,6 +14510,10 @@ PipelineFixed.prototype.onData = function(data)
       console.log("ERROR: nExpectedSamples is less than or equal to ZERO");
     }
     this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
+  }
+  else { // Sample the retrieval delay to calculate jitter
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
   }
 
   this.pipeline.numberOfSatisfiedSegments++;
@@ -14819,6 +14825,10 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
      this.handleLifetimeExpiration.bind(this),
      this.handleNack.bind(this));
 
+  // initTimeSent allows calculating full delay
+  if (isRetransmission && segInfo.initTimeSent === undefined)
+    segInfo.initTimeSent = segInfo.timeSent;
+
   segInfo.timeSent = Date.now();
   segInfo.rto = this.rttEstimator.getEstimatedRto();
 
@@ -14949,6 +14959,10 @@ PipelineCubic.prototype.onData = function(data)
   }
 
   var rtt = Date.now() - recSeg.timeSent;
+  var fullDelay = 0;
+  if (recSeg.initTimeSent !== undefined)
+    fullDelay = Date.now() - recSeg.initTimeSent;
+
   if (LOG > 1) {
     console.log ("Received segment #" + recSegmentNo
                  + ", rtt=" + rtt + "ms"
@@ -14974,6 +14988,10 @@ PipelineCubic.prototype.onData = function(data)
       console.log("ERROR: nExpectedSamples is less than or equal to ZERO");
     }
     this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
+  }
+  else { // Sample the retrieval delay to calculate jitter
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
   }
 
   // Clear the entry associated with the received segment
@@ -15255,7 +15273,8 @@ var RttEstimator = function RttEstimator(opts)
   this.minRto = Pipeline.op("minRto", 200, opts); // lower bound of RTO (ms)
   this.maxRto = Pipeline.op("maxRto", 20000, opts); // upper bound of RTO (ms)
   this.rtoBackoffMultiplier = Pipeline.op("rtoBackoffMultiplier", 2, opts);
-  this.rttArr = [];  // keep track of RTT of each segment to calculate ave jitter
+
+  this.delayArr = [];  // keep track of full delay of each segment to calculate ave jitter
 
   this.sRtt = NaN; // smoothed RTT
   this.rttVar = NaN; // RTT variation
@@ -15315,8 +15334,12 @@ RttEstimator.prototype.addMeasurement = function(segNo, rtt, nExpectedSamples)
   this.rttMax = Math.max(rtt, this.rttMax);
   this.rttMin = Math.min(rtt, this.rttMin);
 
-  this.rttArr[segNo] = rtt;
   this.nRttSamples++;
+};
+
+RttEstimator.prototype.addDelayMeasurement = function(segNo, delay)
+{
+  this.delayArr[segNo] = delay;
 };
 
 /**
@@ -15327,13 +15350,13 @@ RttEstimator.prototype.getAvgJitter = function()
   var samples = 0;
   var jitterAvg = 0;
   var jitterLast = 0;
-  for (var i = 0; i < this.rttArr.length; ++i) {
-    if (this.rttArr[i] === undefined)
+  for (var i = 0; i < this.delayArr.length; ++i) {
+    if (this.delayArr[i] === undefined)
       continue;
     if (samples > 0) {
-      jitterAvg = ((jitterAvg * samples) + Math.abs(jitterLast - this.rttArr[i])) / (samples + 1);
+      jitterAvg = ((jitterAvg * samples) + Math.abs(jitterLast - this.delayArr[i])) / (samples + 1);
     }
-    jitterLast = this.rttArr[i];
+    jitterLast = this.delayArr[i];
     samples++;
   }
   return jitterAvg;
@@ -15425,7 +15448,7 @@ var DataFetcher = function DataFetcher
 
   this.segmentInfo[this.segmentNo] = {};
   this.segmentInfo[this.segmentNo].stat = "normal";
-  this.segmentInfo[this.segmentNo].timeSent = Date.now();
+  this.segmentInfo[this.segmentNo].initTimeSent = Date.now();
 
   this.pendingInterestId = null;
 };
@@ -15434,6 +15457,7 @@ exports.DataFetcher = DataFetcher;
 
 DataFetcher.prototype.fetch = function()
 {
+  this.segmentInfo[this.segmentNo].timeSent = Date.now();
   this.pendingInterestId = this.face.expressInterest
     (this.interest,
      this.handleData.bind(this),

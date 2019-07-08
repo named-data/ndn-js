@@ -40,7 +40,8 @@ var RttEstimator = function RttEstimator(opts)
   this.minRto = Pipeline.op("minRto", 200, opts); // lower bound of RTO (ms)
   this.maxRto = Pipeline.op("maxRto", 20000, opts); // upper bound of RTO (ms)
   this.rtoBackoffMultiplier = Pipeline.op("rtoBackoffMultiplier", 2, opts);
-  this.rttArr = [];  // keep track of RTT of each segment to calculate ave jitter
+
+  this.delayArr = [];  // keep track of full delay of each segment to calculate ave jitter
 
   this.sRtt = NaN; // smoothed RTT
   this.rttVar = NaN; // RTT variation
@@ -100,8 +101,12 @@ RttEstimator.prototype.addMeasurement = function(segNo, rtt, nExpectedSamples)
   this.rttMax = Math.max(rtt, this.rttMax);
   this.rttMin = Math.min(rtt, this.rttMin);
 
-  this.rttArr[segNo] = rtt;
   this.nRttSamples++;
+};
+
+RttEstimator.prototype.addDelayMeasurement = function(segNo, delay)
+{
+  this.delayArr[segNo] = delay;
 };
 
 /**
@@ -112,13 +117,13 @@ RttEstimator.prototype.getAvgJitter = function()
   var samples = 0;
   var jitterAvg = 0;
   var jitterLast = 0;
-  for (var i = 0; i < this.rttArr.length; ++i) {
-    if (this.rttArr[i] === undefined)
+  for (var i = 0; i < this.delayArr.length; ++i) {
+    if (this.delayArr[i] === undefined)
       continue;
     if (samples > 0) {
-      jitterAvg = ((jitterAvg * samples) + Math.abs(jitterLast - this.rttArr[i])) / (samples + 1);
+      jitterAvg = ((jitterAvg * samples) + Math.abs(jitterLast - this.delayArr[i])) / (samples + 1);
     }
-    jitterLast = this.rttArr[i];
+    jitterLast = this.delayArr[i];
     samples++;
   }
   return jitterAvg;

@@ -60,7 +60,7 @@ var DataFetcher = function DataFetcher
 
   this.segmentInfo[this.segmentNo] = {};
   this.segmentInfo[this.segmentNo].stat = "normal";
-  this.segmentInfo[this.segmentNo].timeSent = Date.now();
+  this.segmentInfo[this.segmentNo].initTimeSent = Date.now();
 
   this.pendingInterestId = null;
 };
@@ -69,6 +69,7 @@ exports.DataFetcher = DataFetcher;
 
 DataFetcher.prototype.fetch = function()
 {
+  this.segmentInfo[this.segmentNo].timeSent = Date.now();
   this.pendingInterestId = this.face.expressInterest
     (this.interest,
      this.handleData.bind(this),

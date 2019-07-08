@@ -278,6 +278,8 @@ PipelineFixed.prototype.onData = function(data)
   }
 
   var rtt = Date.now() - recSeg.timeSent;
+  var fullDelay = Date.now() - recSeg.initTimeSent;
+
   if (LOG > 1) {
     console.log ("Received segment #" + recSegmentNo
                  + ", rtt=" + rtt + "ms"
@@ -291,6 +293,10 @@ PipelineFixed.prototype.onData = function(data)
       console.log("ERROR: nExpectedSamples is less than or equal to ZERO");
     }
     this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
+  }
+  else { // Sample the retrieval delay to calculate jitter
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
   }
 
   this.pipeline.numberOfSatisfiedSegments++;

@@ -232,6 +232,10 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
      this.handleLifetimeExpiration.bind(this),
      this.handleNack.bind(this));
 
+  // initTimeSent allows calculating full delay
+  if (isRetransmission && segInfo.initTimeSent === undefined)
+    segInfo.initTimeSent = segInfo.timeSent;
+
   segInfo.timeSent = Date.now();
   segInfo.rto = this.rttEstimator.getEstimatedRto();
 
@@ -362,6 +366,10 @@ PipelineCubic.prototype.onData = function(data)
   }
 
   var rtt = Date.now() - recSeg.timeSent;
+  var fullDelay = 0;
+  if (recSeg.initTimeSent !== undefined)
+    fullDelay = Date.now() - recSeg.initTimeSent;
+
   if (LOG > 1) {
     console.log ("Received segment #" + recSegmentNo
                  + ", rtt=" + rtt + "ms"
@@ -387,6 +395,10 @@ PipelineCubic.prototype.onData = function(data)
       console.log("ERROR: nExpectedSamples is less than or equal to ZERO");
     }
     this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
+  }
+  else { // Sample the retrieval delay to calculate jitter
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
   }
 
   // Clear the entry associated with the received segment
