@@ -13930,7 +13930,7 @@ MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMillisecon
 /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
-var PipelineFixed = require('./pipeline-fixed.js').PipelineFixed;
+var PipelineFixed = require('./pipeline-fixed.js').PipelineFixed; /** @ignore */
 var PipelineCubic = require('./pipeline-cubic.js').PipelineCubic;
 
 var SegmentFetcher = function SegmentFetcher() { };
@@ -14045,7 +14045,8 @@ SegmentFetcher.fetch = function
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Interest = require('../interest.js').Interest;
+/** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon;
 
 /**
@@ -14238,8 +14239,8 @@ Pipeline.prototype.onFailure = function(errCode, reason, onError, cancel)
 var Interest = require('../interest.js').Interest; /** @ignore */
 var Blob = require('./blob.js').Blob; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
-var NdnCommon = require('./ndn-common.js').NdnCommon;
-var DataFetcher = require('./data-fetcher.js').DataFetcher;
+var NdnCommon = require('./ndn-common.js').NdnCommon; /** @ignore */
+var DataFetcher = require('./data-fetcher.js').DataFetcher; /** @ignore */
 var Pipeline = require('./pipeline.js').Pipeline;
 
 /**
@@ -14562,12 +14563,12 @@ PipelineFixed.prototype.onValidationFailed = function(data, reason)
 
 /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
-var Name = require('../name.js').Name;
+var Name = require('../name.js').Name; /** @ignore */
 var Blob = require('./blob.js').Blob; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
-var NdnCommon = require('./ndn-common.js').NdnCommon;
-var RttEstimator = require('./rtt-estimator.js').RttEstimator;
-var Pipeline = require('./pipeline.js').Pipeline;
+var NdnCommon = require('./ndn-common.js').NdnCommon; /** @ignore */
+var RttEstimator = require('./rtt-estimator.js').RttEstimator; /** @ignore */
+var Pipeline = require('./pipeline.js').Pipeline; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
 
 /**
@@ -15178,7 +15179,9 @@ PipelineCubic.prototype.printSummary = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var Pipeline = require('./pipeline.js').Pipeline;
+
 /**
  * Round Trip Time Estimator
  *
