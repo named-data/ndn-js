@@ -22,8 +22,8 @@
 var Interest = require('../interest.js').Interest; /** @ignore */
 var Blob = require('./blob.js').Blob; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
-var NdnCommon = require('./ndn-common.js').NdnCommon;
-var DataFetcher = require('./data-fetcher.js').DataFetcher;
+var NdnCommon = require('./ndn-common.js').NdnCommon; /** @ignore */
+var DataFetcher = require('./data-fetcher.js').DataFetcher; /** @ignore */
 var Pipeline = require('./pipeline.js').Pipeline;
 
 /**

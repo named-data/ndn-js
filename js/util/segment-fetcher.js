@@ -22,7 +22,7 @@
 /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
-var PipelineFixed = require('./pipeline-fixed.js').PipelineFixed;
+var PipelineFixed = require('./pipeline-fixed.js').PipelineFixed; /** @ignore */
 var PipelineCubic = require('./pipeline-cubic.js').PipelineCubic;
 
 var SegmentFetcher = function SegmentFetcher() { };

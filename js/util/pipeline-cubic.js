@@ -20,12 +20,12 @@
 
 /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
-var Name = require('../name.js').Name;
+var Name = require('../name.js').Name; /** @ignore */
 var Blob = require('./blob.js').Blob; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
-var NdnCommon = require('./ndn-common.js').NdnCommon;
-var RttEstimator = require('./rtt-estimator.js').RttEstimator;
-var Pipeline = require('./pipeline.js').Pipeline;
+var NdnCommon = require('./ndn-common.js').NdnCommon; /** @ignore */
+var RttEstimator = require('./rtt-estimator.js').RttEstimator; /** @ignore */
+var Pipeline = require('./pipeline.js').Pipeline; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
 
 /**

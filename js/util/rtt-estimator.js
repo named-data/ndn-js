@@ -18,7 +18,9 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var Pipeline = require('./pipeline.js').Pipeline;
+
 /**
  * Round Trip Time Estimator
  *
