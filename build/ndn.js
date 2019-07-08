@@ -14045,25 +14045,31 @@ SegmentFetcher.fetch = function
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var Interest = require('../interest.js').Interest;
 var NdnCommon = require('./ndn-common.js').NdnCommon;
 
 /**
  * Here are some basic assumptions and logics that are applied to all pipelines in the library:
  *
- * The data is named /<prefix>/<version>/<segment>, where:
- * - <prefix> is the specified name prefix,
+ * Name of data packets look like /<prefix>/<version>/<segment>, where:
+ * - <prefix>  is the specified name prefix,
  * - <version> is an unknown version that needs to be discovered, and
  * - <segment> is a segment number.
  *
  * Note: The number of segments is unknown and is controlled by
  *       `FinalBlockId` field in one of the retrieved Data packet.
- *       This field should exist at least in the last Data packet.
+ *       This field MUST exist at least in the last Data packet.
  *
  * The following logic is implemented in all pipelines:
  *
- * 1. Express the first Interest to discover the version:
+ * 1. If the version is not provided in Interest's name, then express the first Interest
+ *    to discover the version:
  *
  *    >> Interest: /<prefix>?MustBeFresh=true
+ *
+ *    Otherwise, express the following Interest:
+ *
+ *    >> Interest: /<prefix>/version/%00%00?MustBeFresh=false
  *
  * 2. Infer the latest version of the Data: <version> = Data.getName().get(-2)
  *
@@ -14084,12 +14090,35 @@ var NdnCommon = require('./ndn-common.js').NdnCommon;
  * - `MAX_NACK_TIMEOUT_RETRIES`: after a proper number of retries to fetch a given segment, if
  *                               the corresponding segment is an essential part of the content
  *                               (i.e., segmentNo <= finalBlockId), this error will be raised.
+ * - `MISC`: miscellaneous errors (preferably an error reason should be provided).
  *
  * In order to validate individual segments, a KeyChain needs to be supplied to a given pipeline.
  * If verifyData fails, the fetching process is aborted with SEGMENT_VERIFICATION_FAILED.
- * If data validation is not required, pass null.
+ * If data validation is not required just pass null.
  */
-var Pipeline = function Pipeline () { }
+var Pipeline = function Pipeline (baseInterest) {
+  this.baseInterest = baseInterest;
+  this.nextSegmentNo = 0;
+  this.numberOfSatisfiedSegments = 0;
+  this.finalBlockId = Number.MAX_SAFE_INTEGER;
+  this.versionNo = NaN; // set by name of the baseInterest or the first received Data packet
+  this.versionIsProvided = false;  // whether baseInterest's name contains version number
+  if (baseInterest.getName().components.length > 0 && baseInterest.getName().get(-1).isVersion()) {
+    this.versionNo = baseInterest.getName().get(-1).toVersion();
+    this.versionIsProvided = true;
+  }
+
+  this.isStopped = false; // false means the pipeline is running
+  this.hasFailure = false;
+  this.hasFinalBlockId = false;
+  this.failedSegNo = 0;
+  this.failureReason;
+  this.failureErrorCode;
+
+  this.contentParts = []; // buffer (no duplicate entry)
+}
+
+exports.Pipeline = Pipeline;
 
 /**
  * An ErrorCode value is passed in the onError callback.
@@ -14102,7 +14131,48 @@ Pipeline.ErrorCode = {
   SEGMENT_VERIFICATION_FAILED: 5,
   NACK_RECEIVED: 6,
   NO_FINALBLOCK: 7,
-  MAX_NACK_TIMEOUT_RETRIES: 8
+  MAX_NACK_TIMEOUT_RETRIES: 8,
+  MISC: 9
+};
+
+/**
+ * Stop the pipeline
+ */
+Pipeline.prototype.cancel = function()
+{
+  if (this.isStopped)
+    return;
+
+  this.isStopped = true;
+};
+
+/**
+ * Make an Interest with proper name
+ * @description If baseInterest's name contains version number it will be used, otherwise the
+ *              discovered version number will be used. Then @param segNo is appended to the name.
+ *              If no version number is available, we send back a copy of baseInterest.
+ */
+Pipeline.prototype.makeInterest = function(segNo)
+{
+  var interest = new Interest(this.baseInterest);
+
+  if (!Number.isNaN(this.versionNo) ) {
+    if (this.versionIsProvided === false) {
+      interest.setName(new Name(this.baseInterest.getName())
+                       .appendVersion(this.versionNo)
+                       .appendSegment(segNo));
+    }
+    else {
+      interest.setName(new Name(this.baseInterest.getName())
+                       .appendSegment(segNo));
+    }
+  }
+  return interest;
+};
+
+Pipeline.prototype.getNextSegmentNo = function()
+{
+  return this.nextSegmentNo++;
 };
 
 Pipeline.op = function (arg, def, opts)
@@ -14128,7 +14198,22 @@ Pipeline.reportError = function(onError, errCode, msg)
   }
 };
 
-exports.Pipeline = Pipeline;
+/**
+ * @param {Pipeline.ErrorCode} errCode One of the predefined error codes.
+ * @param {string} reason A short description about the error.
+ * @param {function} onError Call onError(errorCode, message) for any error during content retrieval
+ *                           (see Pipeline documentation for ful list of errors).
+ * @param {function} cancel If no function is provided then the local cancel function will run.
+ */
+Pipeline.prototype.onFailure = function(errCode, reason, onError, cancel)
+{
+  if (cancel == null)
+    this.cancel();
+  else
+    cancel();
+
+  Pipeline.reportError(onError, errCode, reason);
+};
 /**
  * Copyright (C) 2018-2019 Regents of the University of California.
  * @author: Chavoosh Ghasemi <chghasemi@cs.arizona.edu>
@@ -14159,7 +14244,7 @@ var Pipeline = require('./pipeline.js').Pipeline;
 
 /**
  * Retrieve the segments of solicited data by keeping a fixed-size window of N
- * of on fly Interests at any given time.
+ * of in fly Interests at any given time.
  *
  * To handle timeout and nack we use DataFetcher class which upon facing
  * timeout or nack will try to resolve the corresponded segment by retransmitting
@@ -14188,7 +14273,7 @@ var Pipeline = require('./pipeline.js').Pipeline;
  *    from all segments.
  *
  * If an error occurs during the fetching process, the onError callback is called
- * with a proper error code (see Pipeline documenation).
+ * with a proper error code (see Pipeline documentation).
  *
  * This is a public constructor to create a new PipelineFixed.
  * @param {Interest} baseInterest This interest should be well-formed to represent all necessary fields
@@ -14201,106 +14286,108 @@ var Pipeline = require('./pipeline.js').Pipeline;
  *                                     Data validation.
  * @param {function} onComplete When all segments are received, call onComplete(content) where content
  *                              is a Blob which has the concatenation of the content of all the segments.
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
+ * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
+ *       callback should catch and properly handle any exceptions.
  * @param {function} onError Call onError(errorCode, message) for any error during content retrieval
  *                           (see Pipeline documentation for ful list of errors).
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
+ * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
+ *       callback should catch and properly handle any exceptions.
  * @constructor
  */
 var PipelineFixed = function PipelineFixed
   (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
 {
-  this.baseInterest = baseInterest;
   this.face = face;
   this.validatorKeyChain = validatorKeyChain;
   this.onComplete = onComplete;
   this.onError = onError;
+  this.pipeline = new Pipeline(baseInterest);
 
-  this.numberOfSatisfiedSegments = 0;
-  this.nextSegmentToRequest = 0;
-  this.segmentsOnFly = 0;
-  this.finalBlockId = Number.MAX_SAFE_INTEGER;
+  this.nInFlight = 0;
 
   // Options
   this.windowSize = Pipeline.op("windowSize", 10, opts);
-  this.maxTimeoutRetries = Pipeline.op("maxTimeoutRetries", 3, opts);
-  this.maxNackRetries = Pipeline.op("maxNackRetries", 3, opts);
+  this.maxRetriesOnTimeoutOrNack = Pipeline.op("maxRetriesOnTimeoutOrNack", 3, opts);
 
-  this.contentParts = []; // of Buffer (no duplicate entry)
   this.dataFetchersContainer = []; // if we need to cancel pending interests
 };
 
 exports.PipelineFixed = PipelineFixed;
 
+PipelineFixed.prototype.run = function()
+{
+  var interest = this.pipeline.makeInterest(0);
+  if (Number.isNaN(this.pipeline.versionNo) ) {
+    interest.setMustBeFresh(true);
+  }
+  else {
+    interest.setMustBeFresh(false);
+  }
+
+  this.sendInterest(interest);
+};
+
 /**
  * Use DataFetcher to fetch the solicited segment. Timeouts and Nacks will be
  * handled by DataFetcher class.
  */
-PipelineFixed.prototype.fetchSegment = function(interest)
+PipelineFixed.prototype.sendInterest = function(interest)
 {
-  if (interest.getName().get(-1).isSegment()) {
+  if (this.pipeline.isStopped)
+    return;
+
+  if (this.pipeline.hasFailure)
+    return;
+
+  if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
     var segmentNo = interest.getName().get(-1).toSegment();
     this.dataFetchersContainer[segmentNo] = new DataFetcher
-      (this.face, interest, this.maxTimeoutRetries, this.maxNackRetries,
-       this.onData.bind(this), this.onTimeout.bind(this), this.onNack.bind(this));
+      (this.face, interest, this.maxRetriesOnTimeoutOrNack,
+       this.handleData.bind(this), this.handleFailure.bind(this));
        this.dataFetchersContainer[segmentNo].fetch();
   }
   else { // do not keep track of very first interest
     (new DataFetcher
-      (this.face, interest, this.maxTimeoutRetries, this.maxNackRetries,
-       this.onData.bind(this), this.onTimeout.bind(this), this.onNack.bind(this)))
+      (this.face, interest, this.maxRetriesOnTimeoutOrNack,
+       this.handleData.bind(this), this.handleFailure.bind(this)))
        .fetch();
-
   }
 };
 
-PipelineFixed.prototype.run = function()
+PipelineFixed.prototype.sendNextInterests = function()
 {
-  var interest = new Interest(this.baseInterest);
-  interest.setMustBeFresh(true);
+  if (this.pipeline.isStopped)
+    return;
 
-  this.fetchSegment(interest);
-};
-
-PipelineFixed.prototype.fetchNextSegments = function (originalInterest, dataName)
-{
-  var interest = new Interest(originalInterest);
-  // Changing a field clears the nonce so that a new nonce will be generated
-  interest.setMustBeFresh(false);
-
-  while (this.nextSegmentToRequest <= this.finalBlockId && this.segmentsOnFly <= this.windowSize) {
+  while (this.pipeline.nextSegmentNo <= this.pipeline.finalBlockId && this.nInFlight <= this.windowSize) {
     // do not re-send an interest for existing segments
-    if (this.contentParts[this.nextSegmentToRequest] !== undefined) {
-      this.nextSegmentToRequest += 1;
+    if (this.pipeline.contentParts[this.pipeline.nextSegmentNo] !== undefined) {
+      this.pipeline.getNextSegmentNo();
       continue;
     }
 
-    interest.setName(dataName.getPrefix(-1).appendSegment(this.nextSegmentToRequest));
+    var interest = this.pipeline.makeInterest(this.pipeline.getNextSegmentNo());
+    // Changing a field clears the nonce so that a new nonce will be generated
+    interest.setMustBeFresh(false);
     interest.refreshNonce();
 
-    this.fetchSegment(interest);
-
-    this.nextSegmentToRequest += 1;
-    this.increaseNumberOfSegmentsOnFly();
+    this.sendInterest(interest);
+    this.nInFlight++;
   }
 };
 
-PipelineFixed.prototype.cancelPendingInterestsAboveFinalBlockId = function ()
+PipelineFixed.prototype.cancelInFlightSegmentsGreaterThan = function(segNo)
 {
   var len = this.dataFetchersContainer.length;
 
-  for (var i = this.finalBlockId + 1; i < len; i++) {
+  for (var i = segNo + 1; i < len; ++i) {
     if (this.dataFetchersContainer[i] !== null) {
-      this.dataFetchersContainer[i].cancelPendingInterest();
+      this.face.removePendingInterest(this.dataFetchersContainer[i].getPendingInterestId());
     }
   }
 };
 
-PipelineFixed.prototype.onData = function(originalInterest, data)
+PipelineFixed.prototype.handleData = function(interest, data)
 {
   if (this.validatorKeyChain !== null) {
     try {
@@ -14308,69 +14395,143 @@ PipelineFixed.prototype.onData = function(originalInterest, data)
       this.validatorKeyChain.verifyData
         (data,
          function(localData) {
-           thisPipeline.onVerified(localData, originalInterest);
+           thisPipeline.onData(localData);
          },
          this.onValidationFailed.bind(this));
-    } catch (ex) {
+    }
+    catch (ex) {
       Pipeline.reportError(this.onError, Pipeline.ErrorCode.SEGMENT_VERIFICATION_FAILED,
                        "Error in KeyChain.verifyData: " + ex);
+      return;
     }
   }
   else {
-    this.onVerified(data, originalInterest);
+    this.onData(data);
   }
 };
 
-PipelineFixed.prototype.onVerified = function(data, originalInterest)
+PipelineFixed.prototype.onData = function(data)
 {
-  var currentSegment = 0;
+  if (this.pipeline.isStopped)
+    return;
+
+  var recSegmentNo = 0;
   try {
-    currentSegment = data.getName().get(-1).toSegment();
+    recSegmentNo = data.getName().get(-1).toSegment();
   }
   catch (ex) {
-    Pipeline.reportError(this.onError, Pipeline.ErrorCode.DATA_HAS_NO_SEGMENT,
-                         "Error decoding the name segment number " +
-                         data.getName().get(-1).toEscapedString() + ": " + ex);
+    this.handleFailure(recSegmentNo, Pipeline.ErrorCode.DATA_HAS_NO_SEGMENT,
+                       "Error while decoding the segment number " +
+                       data.getName().get(-1).toEscapedString() + ": " + ex);
     return;
+  }
+
+  if (Number.isNaN(this.pipeline.versionNo)) {
+    try {
+      this.pipeline.versionNo = data.getName().get(-2).toVersion();
+    }
+    catch (ex) {
+      this.handleFailure(recSegmentNo, Pipeline.ErrorCode.DATA_HAS_NO_VERSION,
+                          "Error while decoding the version number " +
+                          data.getName().get(-2).toEscapedString() + ": " + ex);
+      return;
+    }
   }
 
   // set finalBlockId
   if (data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
     try {
-      this.finalBlockId = data.getMetaInfo().getFinalBlockId().toSegment();
-      this.cancelPendingInterestsAboveFinalBlockId();
+      this.pipeline.finalBlockId = data.getMetaInfo().getFinalBlockId().toSegment();
+      this.cancelInFlightSegmentsGreaterThan(this.pipeline.finalBlockId);
     }
     catch (ex) {
       Pipeline.reportError(this.onError, Pipeline.ErrorCode.DATA_HAS_NO_SEGMENT,
-           "Error decoding the FinalBlockId segment number " +
+           "Error while decoding the FinalBlockId field " +
             data.getMetaInfo().getFinalBlockId().toEscapedString() +
             ": " + ex);
       return;
     }
+    this.pipeline.hasFinalBlockId = true;
   }
 
-  this.numberOfSatisfiedSegments += 1;
-
   // Save the content
-  this.contentParts[currentSegment] = data.getContent().buf();
+  this.pipeline.contentParts[recSegmentNo] = data.getContent().buf();
+
+  if (this.pipeline.hasFailure && this.pipeline.hasFinalBlockId) {
+    if(this.pipeline.finalBlockId >= this.pipeline.failedSegNo) {
+      // Previously failed segment is part of the content
+      return this.pipeline.onFailure(this.pipeline.failureErrorCode,
+                                     this.pipeline.failureReason,
+                                     this.onError);
+    }
+    else {
+      this.pipeline.hasFailure = false;
+    }
+  }
+
+  this.pipeline.numberOfSatisfiedSegments += 1;
 
   // Check whether we are finished
-  if (this.numberOfSatisfiedSegments > this.finalBlockId) {
+  if (this.pipeline.hasFinalBlockId &&
+      this.pipeline.numberOfSatisfiedSegments > this.pipeline.finalBlockId) {
     // Concatenate to get content.
-    var content = Buffer.concat(this.contentParts);
+    var content = Buffer.concat(this.pipeline.contentParts);
     try {
+      this.pipeline.cancel();
       this.onComplete(new Blob(content, false));
-    } catch (ex) {
-      console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
     }
-
+    catch (ex) {
+      console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+      return;
+    }
     return;
   }
 
-  this.decreaseNumberOfSegmentsOnFly();
+  this.nInFlight = Math.max(this.nInFlight - 1, 0);
 
-  // Fetch the next segments
-  this.fetchNextSegments(originalInterest, data.getName());
+  // Send next Interests
+  this.sendNextInterests();
+};
+
+/**
+ * @param segNo the segment for which a failure happened
+ * @note if segNo is `-1` it means a general failure happened
+ *       (e.g., negative number of in flight segments)
+ * @param errCode comes from Pipeline.ErrorCode
+ * @param reason a description about the failure
+ */
+PipelineFixed.prototype.handleFailure = function(segNo, errCode, reason)
+{
+  if (this.pipeline.isStopped)
+    return;
+
+  // this is a general failure; not specific to one segment
+  if (segNo === -1) {
+    this.pipeline.onFailure(errCode, reason, this.onError);
+    return;
+  }
+
+  // if the failed segment is definitely part of the content, raise a fatal error
+  if (segNo === 0 || (this.pipeline.hasFinalBlockId && segNo <= this.pipeline.finalBlockId))
+    return this.pipeline.onFailure(errCode, reason, this.onError);
+
+  if (!this.pipeline.hasFinalBlockId) {
+    this.nInFlight--;
+
+    if (this.nInFlight <= 0) {
+      this.pipeline.onFailure(Pipeline.ErrorCode.NO_FINALBLOCK,
+                              "Fetching terminated at segment " + segNo +
+                              " but no finalBlockId has been found",
+                              this.onError);
+    }
+    else {
+      this.cancelInFlightSegmentsGreaterThan(segNo);
+      this.pipeline.hasFailure = true;
+      this.pipeline.failedSegNo = segNo;
+      this.pipeline.failureErrorCode = errCode;
+      this.pipeline.failureReason = reason;
+    }
+  }
 };
 
 PipelineFixed.prototype.onValidationFailed = function(data, reason)
@@ -14378,37 +14539,6 @@ PipelineFixed.prototype.onValidationFailed = function(data, reason)
   Pipeline.reportError(this.onError, Pipeline.ErrorCode.SEGMENT_VERIFICATION_FAILED,
                        "Segment verification failed for " + data.getName().toUri() +
                        " . Reason: " + reason);
-};
-
-PipelineFixed.prototype.onTimeout = function(interest)
-{
-  Pipeline.reportError(this.onError, Pipeline.ErrorCode.INTEREST_TIMEOUT,
-                       "Time out for interest " + interest.getName().toUri());
-};
-
-PipelineFixed.prototype.onNack = function(interest)
-{
-  Pipeline.reportError(this.onError, Pipeline.ErrorCode.NACK_RECEIVED,
-                       "Received Nack for interest " + interest.getName().toUri());
-};
-
-PipelineFixed.prototype.increaseNumberOfSegmentsOnFly = function()
-{
-  this.segmentsOnFly++;
-};
-
-PipelineFixed.prototype.decreaseNumberOfSegmentsOnFly = function()
-{
-  this.segmentsOnFly = Math.max(this.segmentsOnFly - 1, 0);
-};
-
-PipelineFixed.prototype.reportError = function(errCode, msg)
-{
-  try {
-    this.onError(errCode, msg);
-  } catch (ex) {
-    console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
-  }
 };
 /**
  * Copyright (C) 2018-2019 Regents of the University of California.
@@ -14457,32 +14587,26 @@ var LOG = require('../log.js').Log.LOG;
  *                                     Data validation.
  * @param {function} onComplete When all segments are received, call onComplete(content) where content
  *                              is a Blob which has the concatenation of the content of all the segments.
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
+ * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
+ *       callback should catch and properly handle any exceptions.
  * @param {function} onError Call onError(errorCode, message) for any error during content retrieval
  *                           (see Pipeline documentation for ful list of errors).
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
+ * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
+ *       callback should catch and properly handle any exceptions.
  * @constructor
  */
 var PipelineCubic = function PipelineCubic
   (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
 {
-  this.baseInterest = baseInterest;
+  this.pipeline = new Pipeline(baseInterest);
   this.face = face;
   this.validatorKeyChain = validatorKeyChain;
   this.onComplete = onComplete;
   this.onError = onError;
-  this.versionNo = NaN; // is discovered from the first received Data packet
-  this.versionIsProvided = false;  // baseInterest's name contains version number or not
-  if (baseInterest.getName().components.length > 0 && baseInterest.getName().get(-1).isVersion())
-    this.versionIsProvided = true;
 
   // Adaptive options
   this.initCwnd = Pipeline.op("initCwnd", 1.0, opts);
-  this.cwnd = p=Pipeline.op("cwnd", this.initCwnd, opts);
+  this.cwnd = Pipeline.op("cwnd", this.initCwnd, opts);
   this.ssthresh = Pipeline.op("ssthresh", Number.MAX_VALUE, opts);
   this.rtoCheckInterval = Pipeline.op("rtoCheckInterval", 10, opts);
   this.disableCwa = Pipeline.op("disableCwa", false, opts);
@@ -14504,6 +14628,7 @@ var PipelineCubic = function PipelineCubic
   this.nInFlight = 0;      // # of segments in flight
   this.nLossDecr = 0;      // # of window decreases caused by packet loss
   this.nTimeouts = 0;      // # of timed out segments
+  this.nNacks = 0;         // # of nack segments
   this.nSkippedRetx = 0;   // # of segments queued for retransmission but received before
                            // retransmission occurred
   this.nRetransmitted = 0; // # of retransmitted segments
@@ -14511,16 +14636,8 @@ var PipelineCubic = function PipelineCubic
   this.segmentInfo = [];   // track information that is necessary for segment transmission
   this.retxQueue = [];     // a queue to store segments that need to retransmitted
   this.retxCount = [];     // track number of retx of each segment
-  this.isStopped = false;  // false means the pipeline is running
-  this.hasFailure = false;
-  this.hasFinalBlockId = false;
-  this.failedSegNo = 0;
-  this.nextSegmentNo = 0;
-  this.numberOfSatisfiedSegments = 0;
-  this.finalBlockId = Number.MAX_SAFE_INTEGER;
 
   this.rttEstimator = new RttEstimator(opts);
-  this.contentParts = []; // of Buffer (no duplicate entry)
 }
 
 exports.PipelineCubic = PipelineCubic;
@@ -14590,34 +14707,31 @@ PipelineCubic.prototype.decreaseWindow = function()
 
 PipelineCubic.prototype.run = function()
 {
-  // schedule the next check after predefined interval
+  // Schedule the next check after the predefined interval
   setTimeout(this.checkRto.bind(this), this.rtoCheckInterval);
 
-  this.sendInterest(this.getNextSegmentNo(), false);
+  this.sendInterest(this.pipeline.getNextSegmentNo(), false);
 };
 
 PipelineCubic.prototype.cancel = function()
 {
-  if (this.isStopped)
-    return;
-
-  this.isStopped = true;
+  this.pipeline.cancel();
   this.segmentInfo.length = 0;
 };
 
 /**
- * @param segNo the segment # of the to-be-sent Interest
+ * @param segNo to-be-sent segment number
  * @param isRetransmission true if this is a retransmission
  */
 PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
 {
-  if (this.isStopped)
+  if (this.pipeline.isStopped)
     return;
 
-  if (this.hasFinalBlockId && segNo > this.finalBlockId)
+  if (this.pipeline.hasFinalBlockId && segNo > this.pipeline.finalBlockId)
     return;
 
-  if (!isRetransmission && this.hasFailure)
+  if (!isRetransmission && this.pipeline.hasFailure)
     return;
 
   if (isRetransmission) {
@@ -14628,7 +14742,7 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
     else { // not the first retransmission
       this.retxCount[segNo]++;
       if (this.retxCount[segNo] > this.maxRetriesOnTimeoutOrNack) {
-        return this.handleFail(segNo, Pipeline.ErrorCode.MAX_NACK_TIMEOUT_RETRIES,
+        return this.handleFailure(segNo, Pipeline.ErrorCode.MAX_NACK_TIMEOUT_RETRIES,
             "Reached the maximum number of retries (" +
              this.maxRetriesOnTimeoutOrNack + ") while retrieving segment #" + segNo);
       }
@@ -14640,21 +14754,9 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
   if (LOG > 1 && !isRetransmission)
     console.log("Requesting segment #" + segNo);
 
+  var interest = this.pipeline.makeInterest(segNo);
 
-  var interest = new Interest(this.baseInterest);
-  if (!Number.isNaN(this.versionNo) ) {
-    if (this.versionIsProvided === false) {
-      interest.setName(new Name(this.baseInterest.getName())
-                       .appendVersion(this.versionNo)
-                       .appendSegment(segNo));
-    }
-    else {
-      interest.setName(new Name(this.baseInterest.getName())
-                       .appendSegment(segNo));
-    }
-  }
-
-  if (segNo === 0) {
+  if (Number.isNaN(this.pipeline.versionNo) ) {
     interest.setMustBeFresh(true);
   }
   else {
@@ -14688,7 +14790,8 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
 PipelineCubic.prototype.schedulePackets = function()
 {
   if (this.nInFlight < 0) {
-    console.log("ERROR: Number of in flight Interests is negative");
+    this.handleFailure(-1, Pipeline.ErrorCode.MISC, "Number of in flight Interests is negative.");
+    return;
   }
 
   var availableWindowSize = this.cwnd - this.nInFlight;
@@ -14704,7 +14807,7 @@ PipelineCubic.prototype.schedulePackets = function()
       this.sendInterest(retxSegNo, true);
     }
     else { // send next segment
-      this.sendInterest(this.getNextSegmentNo(), false);
+      this.sendInterest(this.pipeline.getNextSegmentNo(), false);
     }
     availableWindowSize--;
   }
@@ -14718,12 +14821,14 @@ PipelineCubic.prototype.handleData = function(interest, data)
       this.validatorKeyChain.verifyData
         (data,
          function(localData) {
-           thisPipeline.onVerified(localData, interest);
+           thisPipeline.onData(localData);
          },
          this.onValidationFailed.bind(this));
-    } catch (ex) {
+    }
+    catch (ex) {
       Pipeline.reportError(this.onError, Pipeline.ErrorCode.SEGMENT_VERIFICATION_FAILED,
                            "Error in KeyChain.verifyData: " + ex);
+      return;
     }
   }
   else {
@@ -14733,61 +14838,65 @@ PipelineCubic.prototype.handleData = function(interest, data)
 
 PipelineCubic.prototype.onData = function(data)
 {
-  if (this.isStopped)
+  if (this.pipeline.isStopped)
     return;
 
   var recSegmentNo = 0;
-
-  if (Number.isNaN(this.versionNo)) {
-    try {
-      this.versionNo = data.getName().get(-2).toVersion();
-    }
-    catch (ex) {
-      this.handleFailure(recSegmentNo, Pipeline.ErrorCode.DATA_HAS_NO_VERSION,
-                          "Error decoding the name version number " +
-                          data.getName().get(-2).toEscapedString() + ": " + ex);
-      return;
-    }
-  }
-
   try {
     recSegmentNo = data.getName().get(-1).toSegment();
   }
   catch (ex) {
     this.handleFailure(recSegmentNo, Pipeline.ErrorCode.DATA_HAS_NO_SEGMENT,
-                       "Error decoding the name segment number " +
+                       "Error while decoding the segment number " +
                        data.getName().get(-1).toEscapedString() + ": " + ex);
     return;
   }
 
-  // set finalBlockId
-  if (!this.hasFinalBlockId && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
+  if (Number.isNaN(this.pipeline.versionNo)) {
     try {
-      this.finalBlockId = data.getMetaInfo().getFinalBlockId().toSegment();
+      this.pipeline.versionNo = data.getName().get(-2).toVersion();
+    }
+    catch (ex) {
+      this.handleFailure(recSegmentNo, Pipeline.ErrorCode.DATA_HAS_NO_VERSION,
+                          "Error while decoding the version number " +
+                          data.getName().get(-2).toEscapedString() + ": " + ex);
+      return;
+    }
+  }
+
+  // set finalBlockId
+  if (!this.pipeline.hasFinalBlockId && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
+    try {
+      this.pipeline.finalBlockId = data.getMetaInfo().getFinalBlockId().toSegment();
     }
     catch (ex) {
       this.handleFailure(recSegmentNo, Pipeline.ErrorCode.DATA_HAS_NO_SEGMENT,
-                         "Error decoding the name segment number " +
+                         "Error while decoding FinalBlockId field " +
                          data.getName().get(-1).toEscapedString() + ": " + ex);
       return;
     }
-    this.hasFinalBlockId = true;
+    this.pipeline.hasFinalBlockId = true;
   }
 
   // Save the content
-  this.contentParts[recSegmentNo] = data.getContent().buf();
+  this.pipeline.contentParts[recSegmentNo] = data.getContent().buf();
 
-  if (this.hasFailure && this.hasFinalBlockId && this.finalBlockId >= this.failedSegNo) {
-    // previously failed segment is part of the content
-    return this.onFailure(this.failureReason);
-  }
-  else {
-    this.hasFailure = false;
+  if (this.pipeline.hasFailure && this.pipeline.hasFinalBlockId) {
+    if(this.pipeline.finalBlockId >= this.pipeline.failedSegNo) {
+      // Previously failed segment is part of the content
+      return this.pipeline.onFailure(this.pipeline.failureErrorCode,
+                                     this.pipeline.failureReason,
+                                     this.onError,
+                                     this.cancel.bind(this));
+    }
+    else {
+      this.pipeline.hasFailure = false;
+    }
   }
 
   var recSeg = this.segmentInfo[recSegmentNo];
   if (recSeg === undefined) {
-    return; // ignore already-received segment
+    return; // ignore an already-received segment
   }
 
   var rtt = Date.now() - recSeg.timeSent;
@@ -14801,13 +14910,13 @@ PipelineCubic.prototype.onData = function(data)
     this.highData = recSegmentNo;
   }
 
-  // for segments in retx queue, we must not decrement nInFlight
+  // For segments in retx queue, we must not decrement nInFlight
   // because it was already decremented when the segment timed out
   if (recSeg.state !== PipelineCubic.SegmentState.InRetxQueue) {
     this.nInFlight--;
   }
 
-  // do not sample RTT for retransmitted segments
+  // Do not sample RTT for retransmitted segments
   if ((recSeg.state === PipelineCubic.SegmentState.FirstTimeSent ||
        recSeg.state === PipelineCubic.SegmentState.InRetxQueue) &&
       this.retxCount[recSegmentNo] === undefined) {
@@ -14818,39 +14927,39 @@ PipelineCubic.prototype.onData = function(data)
     this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
   }
 
-  // clear the entry associated with the received segment
+  // Clear the entry associated with the received segment
   this.segmentInfo[recSegmentNo] = undefined;  // do not splice
 
-  this.numberOfSatisfiedSegments++;
+  this.pipeline.numberOfSatisfiedSegments++;
+
   // Check whether we are finished
-  if (this.hasFinalBlockId && this.numberOfSatisfiedSegments > this.finalBlockId) {
-    // Concatenate to get content.
-    var content = Buffer.concat(this.contentParts);
-    this.cancelInFlightSegmentsGreaterThan(this.finalBlockId);
+  if (this.pipeline.hasFinalBlockId &&
+      this.pipeline.numberOfSatisfiedSegments > this.pipeline.finalBlockId) {
+    // Concatenate to get the content
+    var content = Buffer.concat(this.pipeline.contentParts);
+    this.cancelInFlightSegmentsGreaterThan(this.pipeline.finalBlockId);
     try {
       this.cancel();
       this.printSummary();
       this.onComplete(new Blob(content, false));
-    } catch (ex) {
-      console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+    catch (ex) {
+      this.handleFailure(-1, Pipeline.ErrorCode.MISC,
+           "Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+      return;
     }
     return;
   }
 
   this.increaseWindow();
 
-  // Fetch the next segments
+  // Schedule the next segments to be fetched
   this.schedulePackets();
-};
-
-PipelineCubic.prototype.getNextSegmentNo = function()
-{
-  return this.nextSegmentNo++;
 };
 
 PipelineCubic.prototype.checkRto = function()
 {
-  if (this.isStopped)
+  if (this.pipeline.isStopped)
     return;
 
   var hasTimeout = false;
@@ -14860,7 +14969,7 @@ PipelineCubic.prototype.checkRto = function()
       continue;
 
     var segInfo = this.segmentInfo[i];
-    if (segInfo.state !== PipelineCubic.SegmentState.InRetxQueue) { // skip segments already in the retx queue
+    if (segInfo.state !== PipelineCubic.SegmentState.InRetxQueue) { // skip segments in the retx queue
       var timeElapsed = Date.now() - segInfo.timeSent;
       if (timeElapsed > segInfo.rto) { // timer expired?
         this.nTimeouts++;
@@ -14876,14 +14985,15 @@ PipelineCubic.prototype.checkRto = function()
     this.schedulePackets();
   }
 
-  // schedule the next check after predefined interval
+  // schedule the next check after the predefined interval
   setTimeout(this.checkRto.bind(this), this.rtoCheckInterval);
 };
 
 PipelineCubic.prototype.enqueueForRetransmission = function(segNo)
 {
   if (this.nInFlight <= 0) {
-    console.log("ERROR: number of in-flight segments is less than or equal to ZERO");
+    this.handleFailure(-1, Pipeline.ErrorCode.MISC, "Number of in flight Interests <= 0.");
+    return;
   }
 
   this.nInFlight--;
@@ -14902,15 +15012,15 @@ PipelineCubic.prototype.recordTimeout = function()
     this.nLossDecr++;
 
     if (LOG > 1) {
-    console.log("Packet loss event, new cwnd = " + this.cwnd
-                + ", ssthresh = " + this.ssthresh);
+      console.log("Packet loss event, new cwnd = " + this.cwnd
+                  + ", ssthresh = " + this.ssthresh);
     }
   }
 };
 
 PipelineCubic.prototype.cancelInFlightSegmentsGreaterThan = function(segNo)
 {
-  for (var i=segNo + 1; i < this.segmentInfo.length; ++i) {
+  for (var i = segNo + 1; i < this.segmentInfo.length; ++i) {
     // cancel fetching all segments that follow
     if (this.segmentInfo[i] !== undefined)
       this.face.removePendingInterest(this.segmentInfo[i].pendingInterestId);
@@ -14920,56 +15030,72 @@ PipelineCubic.prototype.cancelInFlightSegmentsGreaterThan = function(segNo)
   }
 };
 
-PipelineCubic.prototype.handleFail = function(segNo, errCode, reason)
+/**
+ * @param {int} segNo the segment for which a failure happened
+ * @note if segNo is `-1` it means a general failure happened
+ *       (e.g., negative number of in flight segments)
+ * @param {Pipeline.ErrorCode} errCode One of the predefined error codes.
+ * @param {string} reason A short description about the error.
+ */
+PipelineCubic.prototype.handleFailure = function(segNo, errCode, reason)
 {
-  if (this.isStopped)
+  if (this.pipeline.isStopped)
     return;
 
-  // if the failed segment is definitely part of the content, raise a fatal error
-  if (segNo === 0 || (this.hasFinalBlockId && segNo <= this.finalBlockId))
-    return this.onFailure(errCode, reason);
+  // this is a general failure; not specific to one segment
+  if (segNo === -1) {
+    this.pipeline.onFailure(errCode, reason, this.onError, this.cancel.bind(this));
+    return;
+  }
 
-  if (!this.hasFinalBlockId) {
+  // if the failed segment is definitely part of the content, raise a fatal error
+  if (segNo === 0 || (this.pipeline.hasFinalBlockId && segNo <= this.pipeline.finalBlockId))
+    return this.pipeline.onFailure(errCode, reason, this.onError, this.cancel.bind(this));
+
+  if (!this.pipeline.hasFinalBlockId) {
     this.segmentInfo[segNo] = undefined;  // do not splice
     this.nInFlight--;
 
-    var empty = true;
-    for (i=0; i < this.segmentInfo.length; ++i) {
+    var queueIsEmpty = true;
+    for (var i = 0; i < this.segmentInfo.length; ++i) {
       if (this.segmentInfo[i] !== undefined) {
-        empty = false;
+        queueIsEmpty = false;
         break;
       }
     }
 
-    if (empty) {
-      this.onFailure(Pipeline.ErrorCode.NO_FINALBLOCK,
-                     "Fetching terminated at segment " + segNo +
-                     " but no finalBlockId has been found");
+    if (queueIsEmpty) {
+      this.pipeline.onFailure(Pipeline.ErrorCode.NO_FINALBLOCK,
+                              "Fetching terminated at segment " + segNo +
+                              " but no finalBlockId has been found",
+                              this.onError,
+                              this.cancel.bind(this));
     }
     else {
       this.cancelInFlightSegmentsGreaterThan(segNo);
-      this.hasFailure = true;
-      this.failedSegNo = segNo;
-      this.failureReason = reason;
+      this.pipeline.hasFailure = true;
+      this.pipeline.failedSegNo = segNo;
+      this.pipeline.failureErrorCode = errCode;
+      this.pipeline.failureReason = reason;
     }
   }
 };
 
 PipelineCubic.prototype.handleLifetimeExpiration = function(interest)
 {
-  if (this.isStopped)
+  if (this.pipeline.isStopped)
     return;
 
   this.nTimeouts++;
-  var recSeg = 0; // the very first Interest does not have segment number
-  // treated the same as timeout for now
-  if (interest.getName().get(-1).isSegment())
-    recSeg = interest.getName().get(-1).toSegment();
+  var recSegmentNo = 0; // the very first Interest does not have segment number
+  // Treated the same as timeout for now
+  if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment())
+    recSegmentNo = interest.getName().get(-1).toSegment();
 
-  this.enqueueForRetransmission(recSeg);
+  this.enqueueForRetransmission(recSegmentNo);
 
   this.onWarning(Pipeline.ErrorCode.INTEREST_LIFETIME_EXPIRATION,
-                 "handle interest lifetime expiration for segment " + recSeg);
+                 "handle interest lifetime expiration for segment " + recSegmentNo);
 
   this.recordTimeout();
   this.schedulePackets();
@@ -14977,17 +15103,18 @@ PipelineCubic.prototype.handleLifetimeExpiration = function(interest)
 
 PipelineCubic.prototype.handleNack = function(interest)
 {
-  if (this.isStopped)
+  if (this.pipeline.isStopped)
     return;
 
-  var recSeg = 0; // the very first Interest does not have segment number
-  // treated the same as timeout for now
+  this.nNacks++;
+  var recSegmentNo = 0; // the very first Interest does not have segment number
+  // Treated the same as timeout for now
   if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment())
-    recSeg = interest.getName().get(-1).toSegment();
+    recSegmentNo = interest.getName().get(-1).toSegment();
 
-  this.enqueueForRetransmission(recSeg);
+  this.enqueueForRetransmission(recSegmentNo);
 
-  this.onWarning(Pipeline.ErrorCode.NACK_RECEIVED, "handle nack for segment " + recSeg);
+  this.onWarning(Pipeline.ErrorCode.NACK_RECEIVED, "handle nack for segment " + recSegmentNo);
 
   this.recordTimeout();
   this.schedulePackets();
@@ -15000,12 +15127,6 @@ PipelineCubic.prototype.onValidationFailed = function(data, reason)
                        " . Reason: " + reason);
 };
 
-PipelineCubic.prototype.onFailure = function(errCode, reason)
-{
-  this.cancel();
-  Pipeline.reportError(this.onError, errCode, reason);
-};
-
 PipelineCubic.prototype.onWarning = function(errCode, reason)
 {
   if (LOG > 2) {
@@ -15015,25 +15136,26 @@ PipelineCubic.prototype.onWarning = function(errCode, reason)
 
 PipelineCubic.prototype.printSummary = function()
 {
-  if (LOG < 3)
+  if (LOG < 2)
     return;
 
-  var statMsg = "";
+  var rttMsg = "";
   if (this.rttEstimator.getMinRtt() === Number.MAX_VALUE ||
       this.rttEstimator.getMaxRtt() === Number.NEGATIVE_INFINITY) {
-     statMsg = "stats unavailable";
+     rttMsg = "stats unavailable";
    }
    else {
-     statMsg = "min/avg/max = " + this.rttEstimator.getMinRtt().toPrecision(3) + "/"
+     rttMsg = "min/avg/max = " + this.rttEstimator.getMinRtt().toPrecision(3) + "/"
                                 + this.rttEstimator.getAvgRtt().toPrecision(3) + "/"
                                 + this.rttEstimator.getMaxRtt().toPrecision(3) + " ms";
   }
 
   console.log("Timeouts: " + this.nTimeouts + " (caused " + this.nLossDecr + " window decreases)\n" +
+              "Nacks: " + this.nNacks + "\n" +
               "Retransmitted segments: " + this.nRetransmitted +
               " (" + (this.nSent == 0 ? 0 : (this.nRetransmitted / this.nSent * 100))  + "%)" +
               ", skipped: " + this.nSkippedRetx + "\n" +
-              "RTT " + statMsg);
+              "RTT " + rttMsg);
 
 };
 /**
@@ -15185,6 +15307,7 @@ RttEstimator.prototype.getAvgRtt = function()
 /** @ignore */
 var Interest = require('../interest.js').Interest; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
+var Pipeline = require('./pipeline.js').Pipeline;
 
 /**
  * DataFetcher is a utility class to fetch Data with automatic retries.
@@ -15192,31 +15315,32 @@ var LOG = require('../log.js').Log.LOG;
  * This is a public constructor to create a new DataFetcher object.
  * @param {Face} face The segment will be fetched through this face.
  * @param {Interest} interest Use this as the basis of the future issued Interest(s) to fetch
- * the solicited segment.
- * @param {int} maxTimeoutRetries The max number of retries upon facing Timeout.
- * @param {int} maxNackRetries The max number of retries upon facing Nack.
+ *                            the solicited segment.
+ * @param {int} maxRetriesOnTimeoutOrNack The max number of retries upon facing Timeout or Nack.
  * @param {function} onData Call this function upon receiving the Data packet for the
- * solicited segment.
- * @param {function} onTimeout Call this function after receiving Timeout for more than
- * maxTimeoutRetries times. 
- * @param {function} onNack Call this function after receiving Nack for more than
- * maxNackRetries times.
+ *                          solicited segment.
+ * @param {function} onFailure Call this function after receiving Timeout or Nack for more than
+ *                             maxRetriesOnTimeoutOrNack times.
  * @constructor
  *
  */
 var DataFetcher = function DataFetcher
-  (face, interest, maxTimeoutRetries, maxNackRetries, onData, onTimeout, onNack)
+  (face, interest, maxRetriesOnTimeoutOrNack, onData, handleFailure)
 {
   this.face = face;
   this.interest = interest;
-  this.maxNackRetries = maxNackRetries;
-  this.maxTimeoutRetries = maxTimeoutRetries;
+  this.maxRetriesOnTimeoutOrNack = maxRetriesOnTimeoutOrNack;
 
   this.onData = onData;
-  this.onTimeout = onTimeout;
-  this.onNack = onNack;
+  this.handleFailure = handleFailure;
 
   this.numberOfTimeoutRetries = 0;
+  this.numberOfNackRetries = 0;
+  this.segmentNo = 0; // segment number of the current Interest
+  if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
+    this.segmentNo = interest.getName().get(-1).toSegment();
+  }
+
   this.pendingInterestId = null;
 };
 
@@ -15227,24 +15351,24 @@ DataFetcher.prototype.fetch = function()
   this.pendingInterestId = this.face.expressInterest
     (this.interest,
      this.handleData.bind(this),
-     this.handleTimeout.bind(this),
+     this.handleLifetimeExpiration.bind(this),
      this.handleNack.bind(this));
 };
 
-DataFetcher.prototype.cancelPendingInterest = function()
+DataFetcher.prototype.getPendingInterestId = function()
 {
-  this.face.removePendingInterest(this.pendingInterestId);
+  return this.pendingInterestId;
 };
 
-DataFetcher.prototype.handleData = function(originalInterest, data)
+DataFetcher.prototype.handleData = function(interest, data)
 {
-  this.onData(originalInterest, data);
+  this.onData(interest, data);
 };
 
-DataFetcher.prototype.handleTimeout = function(interest)
+DataFetcher.prototype.handleLifetimeExpiration = function(interest)
 {
   this.numberOfTimeoutRetries++;
-  if (this.numberOfTimeoutRetries <= this.maxTimeoutRetries) {
+  if (this.numberOfTimeoutRetries <= this.maxRetriesOnTimeoutOrNack) {
     var newInterest = new Interest(interest);
     newInterest.refreshNonce();
     this.interest = newInterest;
@@ -15253,14 +15377,21 @@ DataFetcher.prototype.handleTimeout = function(interest)
     this.fetch();
   }
   else {
-    this.onTimeout(interest);
+    var segNo = 0;
+    if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
+      segNo = interest.getName().get(-1).toSegment();
+    }
+
+    this.handleFailure(this.segmentNo, Pipeline.ErrorCode.MAX_NACK_TIMEOUT_RETRIES,
+         "Reached the maximum number of retries (" +
+          this.maxRetriesOnTimeoutOrNack + ") while retrieving segment #" + segNo);
   }
 };
 
 DataFetcher.prototype.handleNack = function(interest)
 {
   this.numberOfNackRetries += 1;
-  if (this.numberOfNackRetries <= this.maxNackRetries) {
+  if (this.numberOfNackRetries <= this.maxRetriesOnTimeoutOrNack) {
     var newInterest = new Interest(interest);
     newInterest.refreshNonce();
     this.interest = newInterest;
@@ -15270,7 +15401,14 @@ DataFetcher.prototype.handleNack = function(interest)
     setTimeout(this.fetch.bind(this), 40 + Math.random() * 20);
   }
   else {
-    this.onNack(interest);
+    var segNo = 0;
+    if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
+      segNo = interest.getName().get(-1).toSegment();
+    }
+
+    this.handleFailure(this.segmentNo, Pipeline.ErrorCode.MAX_NACK_TIMEOUT_RETRIES,
+         "Reached the maximum number of retries (" +
+          this.maxRetriesOnTimeoutOrNack + ") while retrieving segment #" + segNo);
   }
 };
 /**
@@ -18761,7 +18899,8 @@ KeyLocator.canGetFromSignature = function(signature)
 
 /**
  * If the signature is a type that has a KeyLocator, then return it. Otherwise
- * throw an error.
+ * throw an error. To check if the signature has a KeyLocator without throwing
+ * an error, you can use canGetFromSignature().
  * @param {Signature} signature An object of a subclass of Signature.
  * @return {KeyLocator} The signature's KeyLocator. It is an error if signature
  * doesn't have a KeyLocator.
@@ -21049,7 +21188,8 @@ var ValidityPeriod = require('./validity-period.js').ValidityPeriod;
  *
  * The SigningInfo constructor has multiple forms:
  * SigningInfo() - Create a default SigningInfo with
- * SigningInfo.SignerType.NULL and an empty Name.
+ * SigningInfo.SignerType.NULL (which will cause KeyChain.sign to use the
+ *   default identity) and an empty Name.
  * SigningInfo(signingInfo) - Create a SigningInfo as a copy of the given
  *   signingInfo (taking a pointer to the given signingInfo PibIdentity and
  *   PibKey without copying).
@@ -21544,7 +21684,8 @@ ValidityPeriod.canGetFromSignature = function(signature)
 
 /**
  * If the signature is a type that has a ValidityPeriod, then return it.
- * Otherwise throw an error.
+ * Otherwise throw an error. To check if the signature has a ValidityPeriod
+ * without throwing an error, you can use canGetFromSignature().
  * @param {Signature} An object of a subclass of Signature.
  * @return {ValidityPeriod} The signature's ValidityPeriod. It is an error if
  * signature doesn't have a ValidityPeriod.

@@ -17,25 +17,31 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var Interest = require('../interest.js').Interest;
 var NdnCommon = require('./ndn-common.js').NdnCommon;
 
 /**
  * Here are some basic assumptions and logics that are applied to all pipelines in the library:
  *
- * The data is named /<prefix>/<version>/<segment>, where:
- * - <prefix> is the specified name prefix,
+ * Name of data packets look like /<prefix>/<version>/<segment>, where:
+ * - <prefix>  is the specified name prefix,
  * - <version> is an unknown version that needs to be discovered, and
  * - <segment> is a segment number.
  *
  * Note: The number of segments is unknown and is controlled by
  *       `FinalBlockId` field in one of the retrieved Data packet.
- *       This field should exist at least in the last Data packet.
+ *       This field MUST exist at least in the last Data packet.
  *
  * The following logic is implemented in all pipelines:
  *
- * 1. Express the first Interest to discover the version:
+ * 1. If the version is not provided in Interest's name, then express the first Interest
+ *    to discover the version:
  *
  *    >> Interest: /<prefix>?MustBeFresh=true
+ *
+ *    Otherwise, express the following Interest:
+ *
+ *    >> Interest: /<prefix>/version/%00%00?MustBeFresh=false
  *
  * 2. Infer the latest version of the Data: <version> = Data.getName().get(-2)
  *
@@ -56,12 +62,35 @@ var NdnCommon = require('./ndn-common.js').NdnCommon;
  * - `MAX_NACK_TIMEOUT_RETRIES`: after a proper number of retries to fetch a given segment, if
  *                               the corresponding segment is an essential part of the content
  *                               (i.e., segmentNo <= finalBlockId), this error will be raised.
+ * - `MISC`: miscellaneous errors (preferably an error reason should be provided).
  *
  * In order to validate individual segments, a KeyChain needs to be supplied to a given pipeline.
  * If verifyData fails, the fetching process is aborted with SEGMENT_VERIFICATION_FAILED.
- * If data validation is not required, pass null.
+ * If data validation is not required just pass null.
  */
-var Pipeline = function Pipeline () { }
+var Pipeline = function Pipeline (baseInterest) {
+  this.baseInterest = baseInterest;
+  this.nextSegmentNo = 0;
+  this.numberOfSatisfiedSegments = 0;
+  this.finalBlockId = Number.MAX_SAFE_INTEGER;
+  this.versionNo = NaN; // set by name of the baseInterest or the first received Data packet
+  this.versionIsProvided = false;  // whether baseInterest's name contains version number
+  if (baseInterest.getName().components.length > 0 && baseInterest.getName().get(-1).isVersion()) {
+    this.versionNo = baseInterest.getName().get(-1).toVersion();
+    this.versionIsProvided = true;
+  }
+
+  this.isStopped = false; // false means the pipeline is running
+  this.hasFailure = false;
+  this.hasFinalBlockId = false;
+  this.failedSegNo = 0;
+  this.failureReason;
+  this.failureErrorCode;
+
+  this.contentParts = []; // buffer (no duplicate entry)
+}
+
+exports.Pipeline = Pipeline;
 
 /**
  * An ErrorCode value is passed in the onError callback.
@@ -74,7 +103,48 @@ Pipeline.ErrorCode = {
   SEGMENT_VERIFICATION_FAILED: 5,
   NACK_RECEIVED: 6,
   NO_FINALBLOCK: 7,
-  MAX_NACK_TIMEOUT_RETRIES: 8
+  MAX_NACK_TIMEOUT_RETRIES: 8,
+  MISC: 9
+};
+
+/**
+ * Stop the pipeline
+ */
+Pipeline.prototype.cancel = function()
+{
+  if (this.isStopped)
+    return;
+
+  this.isStopped = true;
+};
+
+/**
+ * Make an Interest with proper name
+ * @description If baseInterest's name contains version number it will be used, otherwise the
+ *              discovered version number will be used. Then @param segNo is appended to the name.
+ *              If no version number is available, we send back a copy of baseInterest.
+ */
+Pipeline.prototype.makeInterest = function(segNo)
+{
+  var interest = new Interest(this.baseInterest);
+
+  if (!Number.isNaN(this.versionNo) ) {
+    if (this.versionIsProvided === false) {
+      interest.setName(new Name(this.baseInterest.getName())
+                       .appendVersion(this.versionNo)
+                       .appendSegment(segNo));
+    }
+    else {
+      interest.setName(new Name(this.baseInterest.getName())
+                       .appendSegment(segNo));
+    }
+  }
+  return interest;
+};
+
+Pipeline.prototype.getNextSegmentNo = function()
+{
+  return this.nextSegmentNo++;
 };
 
 Pipeline.op = function (arg, def, opts)
@@ -100,4 +170,19 @@ Pipeline.reportError = function(onError, errCode, msg)
   }
 };
 
-exports.Pipeline = Pipeline;
+/**
+ * @param {Pipeline.ErrorCode} errCode One of the predefined error codes.
+ * @param {string} reason A short description about the error.
+ * @param {function} onError Call onError(errorCode, message) for any error during content retrieval
+ *                           (see Pipeline documentation for ful list of errors).
+ * @param {function} cancel If no function is provided then the local cancel function will run.
+ */
+Pipeline.prototype.onFailure = function(errCode, reason, onError, cancel)
+{
+  if (cancel == null)
+    this.cancel();
+  else
+    cancel();
+
+  Pipeline.reportError(onError, errCode, reason);
+};
