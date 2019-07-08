@@ -14045,6 +14045,7 @@ SegmentFetcher.fetch = function
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var Interest = require('../interest.js').Interest;
 var NdnCommon = require('./ndn-common.js').NdnCommon;
 
 /**
@@ -15339,7 +15340,7 @@ var DataFetcher = function DataFetcher
   if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
     this.segmentNo = interest.getName().get(-1).toSegment();
   }
-  
+
   this.pendingInterestId = null;
 };
 
@@ -18898,7 +18899,8 @@ KeyLocator.canGetFromSignature = function(signature)
 
 /**
  * If the signature is a type that has a KeyLocator, then return it. Otherwise
- * throw an error.
+ * throw an error. To check if the signature has a KeyLocator without throwing
+ * an error, you can use canGetFromSignature().
  * @param {Signature} signature An object of a subclass of Signature.
  * @return {KeyLocator} The signature's KeyLocator. It is an error if signature
  * doesn't have a KeyLocator.
@@ -21186,7 +21188,8 @@ var ValidityPeriod = require('./validity-period.js').ValidityPeriod;
  *
  * The SigningInfo constructor has multiple forms:
  * SigningInfo() - Create a default SigningInfo with
- * SigningInfo.SignerType.NULL and an empty Name.
+ * SigningInfo.SignerType.NULL (which will cause KeyChain.sign to use the
+ *   default identity) and an empty Name.
  * SigningInfo(signingInfo) - Create a SigningInfo as a copy of the given
  *   signingInfo (taking a pointer to the given signingInfo PibIdentity and
  *   PibKey without copying).
@@ -21681,7 +21684,8 @@ ValidityPeriod.canGetFromSignature = function(signature)
 
 /**
  * If the signature is a type that has a ValidityPeriod, then return it.
- * Otherwise throw an error.
+ * Otherwise throw an error. To check if the signature has a ValidityPeriod
+ * without throwing an error, you can use canGetFromSignature().
  * @param {Signature} An object of a subclass of Signature.
  * @return {ValidityPeriod} The signature's ValidityPeriod. It is an error if
  * signature doesn't have a ValidityPeriod.
