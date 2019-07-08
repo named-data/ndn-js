@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.18.0 (2019-06-04)
+Interim changes since NDN-JS v0.18.0 (2019-07-08)
 -------------------------------------------------
 
 Changes
@@ -9,6 +9,7 @@ Changes
   to use in the flags argument of registerPrefix.
 * https://redmine.named-data.net/issues/4813 In Face, added putNack().
 * https://github.com/named-data/ndn-js/pull/72 Add PipelineCubic & refactor PipelineFixed.
+* https://github.com/named-data/ndn-js/pull/73 Refactor to put common code in the Pipeline class.
 
 Deprecated
 * Deprecated ForwardingFlags. Use RegistrationOptions.
