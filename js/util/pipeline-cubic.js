@@ -617,6 +617,6 @@ PipelineCubic.prototype.printSummary = function()
               "Retransmitted segments: " + this.nRetransmitted +
               " (" + (this.nSent == 0 ? 0 : (this.nRetransmitted / this.nSent * 100))  + "%)" +
               ", skipped: " + this.nSkippedRetx + "\n" +
-              "RTT " + rttMsg);
-
+              "RTT " + rttMsg + "\n" +
+              "Average jitter: " + this.rttEstimator.getAvgJitter().toPrecision(3) + " ms");
 };

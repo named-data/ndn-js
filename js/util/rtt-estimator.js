@@ -109,7 +109,7 @@ RttEstimator.prototype.addMeasurement = function(segNo, rtt, nExpectedSamples)
 /**
  * Return average of retrieved segments' RTT variance
  */
-RttEstimator.prototype.getAveJitter = function()
+RttEstimator.prototype.getAvgJitter = function()
 {
   var samples = 0;
   var jitterAvg = 0;
@@ -123,6 +123,7 @@ RttEstimator.prototype.getAveJitter = function()
     jitterLast = this.rttArr[i];
     samples++;
   }
+  return jitterAvg;
 };
 
 RttEstimator.prototype.backoffRto = function()

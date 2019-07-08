@@ -14001,12 +14001,12 @@ SegmentFetcher.DontVerifySegment = function(data)
  *     SegmentFetcher.fetch(face, interest, null, onComplete, onError);
  */
 SegmentFetcher.fetch = function
-  (face, baseInterest, validatorKeyChain, onComplete, onError, opts)
+  (face, baseInterest, validatorKeyChain, onComplete, onError, opts, stats)
 {
   if (opts == null || opts.pipeline === undefined || opts.pipeline === "cubic") {
     if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
       new PipelineCubic
-        (baseInterest, face, null, validatorKeyChain, onComplete, onError)
+        (baseInterest, face, null, validatorKeyChain, onComplete, onError, stats)
         .run();
     else
       onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,
@@ -14015,7 +14015,7 @@ SegmentFetcher.fetch = function
   else if (opts.pipeline === "fixed") {
     if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
       new PipelineFixed
-        (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
+        (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
         .run();
     else
       onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,
@@ -14293,10 +14293,11 @@ var Pipeline = require('./pipeline.js').Pipeline;
  *                           (see Pipeline documentation for ful list of errors).
  * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
  *       callback should catch and properly handle any exceptions.
+ * @param {Object} stats An object that exposes statistics of content retrieval performance to caller.
  * @constructor
  */
 var PipelineFixed = function PipelineFixed
-  (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
+  (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
 {
   this.face = face;
   this.validatorKeyChain = validatorKeyChain;
@@ -14311,6 +14312,9 @@ var PipelineFixed = function PipelineFixed
   this.maxRetriesOnTimeoutOrNack = Pipeline.op("maxRetriesOnTimeoutOrNack", 3, opts);
 
   this.dataFetchersContainer = []; // if we need to cancel pending interests
+
+  // Stats collector
+  this.stats = stats;
 };
 
 exports.PipelineFixed = PipelineFixed;
@@ -14402,7 +14406,7 @@ PipelineFixed.prototype.handleData = function(interest, data)
     }
     catch (ex) {
       Pipeline.reportError(this.onError, Pipeline.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-                       "Error in KeyChain.verifyData: " + ex);
+                           "Error in KeyChain.verifyData: " + ex);
       return;
     }
   }
@@ -14594,10 +14598,11 @@ var LOG = require('../log.js').Log.LOG;
  *                           (see Pipeline documentation for ful list of errors).
  * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
  *       callback should catch and properly handle any exceptions.
+ * @param {Object} stats An object that exposes statistics of content retrieval performance to caller.
  * @constructor
  */
 var PipelineCubic = function PipelineCubic
-  (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
+  (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
 {
   this.pipeline = new Pipeline(baseInterest);
   this.face = face;
@@ -14639,6 +14644,9 @@ var PipelineCubic = function PipelineCubic
   this.retxCount = [];     // track number of retx of each segment
 
   this.rttEstimator = new RttEstimator(opts);
+
+  // Stats collector
+  this.stats = stats;
 }
 
 exports.PipelineCubic = PipelineCubic;
@@ -15156,8 +15164,8 @@ PipelineCubic.prototype.printSummary = function()
               "Retransmitted segments: " + this.nRetransmitted +
               " (" + (this.nSent == 0 ? 0 : (this.nRetransmitted / this.nSent * 100))  + "%)" +
               ", skipped: " + this.nSkippedRetx + "\n" +
-              "RTT " + rttMsg);
-
+              "RTT " + rttMsg + "\n" +
+              "Average jitter: " + this.rttEstimator.getAvgJitter().toPrecision(3) + " ms");
 };
 /**
  * Copyright (C) 2018-2019 Regents of the University of California.
@@ -15201,6 +15209,7 @@ var RttEstimator = function RttEstimator(opts)
   this.minRto = Pipeline.op("minRto", 200, opts); // lower bound of RTO (ms)
   this.maxRto = Pipeline.op("maxRto", 20000, opts); // upper bound of RTO (ms)
   this.rtoBackoffMultiplier = Pipeline.op("rtoBackoffMultiplier", 2, opts);
+  this.rttArr = [];  // keep track of RTT of each segment to calculate ave jitter
 
   this.sRtt = NaN; // smoothed RTT
   this.rttVar = NaN; // RTT variation
@@ -15261,7 +15270,29 @@ RttEstimator.prototype.addMeasurement = function(segNo, rtt, nExpectedSamples)
   this.rttAvg = (this.nRttSamples * this.rttAvg + rtt) / (this.nRttSamples + 1);
   this.rttMax = Math.max(rtt, this.rttMax);
   this.rttMin = Math.min(rtt, this.rttMin);
+
+  this.rttArr[segNo] = rtt;
   this.nRttSamples++;
+};
+
+/**
+ * Return average of retrieved segments' RTT variance
+ */
+RttEstimator.prototype.getAvgJitter = function()
+{
+  var samples = 0;
+  var jitterAvg = 0;
+  var jitterLast = 0;
+  for (var i = 0; i < this.rttArr.length; ++i) {
+    if (this.rttArr[i] === undefined)
+      continue;
+    if (samples > 0) {
+      jitterAvg = ((jitterAvg * samples) + Math.abs(jitterLast - this.rttArr[i])) / (samples + 1);
+    }
+    jitterLast = this.rttArr[i];
+    samples++;
+  }
+  return jitterAvg;
 };
 
 RttEstimator.prototype.backoffRto = function()
