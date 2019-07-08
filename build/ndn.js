@@ -15422,8 +15422,11 @@ var Pipeline = require('./pipeline.js').Pipeline;
  *                          solicited segment.
  * @param {function} onFailure Call this function after receiving Timeout or Nack for more than
  *                             maxRetriesOnTimeoutOrNack times.
- * @constructor
+ * @param {Object} segmentInfo An object that tracks the important information about each segment.
+ *                             E.g., number of retries upon timeout and nack.
+ * @param {Object} stats An object that containes statistics of content retrieval performance.
  *
+ * @constructor
  */
 var DataFetcher = function DataFetcher
   (face, interest, maxRetriesOnTimeoutOrNack, onData, handleFailure, segmentInfo, stats)
