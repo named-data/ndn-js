@@ -13990,6 +13990,30 @@ SegmentFetcher.DontVerifySegment = function(data)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
+ * @param {Object} opts (optional) An object that allows callers to choose one of the pipelines (i.e., `fixed` or `cubic`).
+ *                                 It also can override the default values of the the chosen pipeline's parameters.
+ *                                 If ommited or null, `cubic` pipeline will be used with its default values.
+ * Examples:
+ *     // Asking for `fixed` pipeline and overriding a couple of its parameters
+ *     opts = {pipeline                  : "fixed",
+ *             windowSize                : 20,
+ *             maxRetriesOnTimeoutOrNack : 10}
+ *
+ *     // Asking for `cubic` pipeline and overriding one of its parameters
+ *     opts = {pipeline   : "cubic",
+ *             disableCwa : true}
+ *
+ *     // Asking for `cubic` pipeline (i.e., default pipeline) and overriding one of its parameters
+ *     opts = {maxRetriesOnTimeoutOrNack : 10}
+ *
+ * @param {Object} stats (optional) An object that exposes statistics of pipeline's content retrieval performance
+ *                                  to the caller.
+ *                                  The caller should pass an empty object as `stats` - the content of this object
+ *                                  will be overrided by the pipeline. Pipelines populate this object with the statistical
+ *                                  information about the content retrieval. The caller can read object after the content
+ *                                  retrieval process is done (probably in onComplete function).
+ *                                  If omitted or null, the caller will not be able to access the stats.
+ * NOTE: If the caller wants to use @param stats, it MUST specify @param opts (e.g., by passing null).
  *
  * Example:
  *     var onComplete = function(content) { ... }
@@ -14507,7 +14531,7 @@ PipelineFixed.prototype.onData = function(data)
   if (this.segmentInfo[recSegmentNo].stat === "normal") {
     var nExpectedSamples = Math.max((this.nInFlight + 1) >> 1, 1);
     if (nExpectedSamples <= 0) {
-      console.log("ERROR: nExpectedSamples is less than or equal to ZERO");
+      this.handleFailure(-1, Pipeline.ErrorCode.MISC, "nExpectedSamples is less than or equal to ZERO.");
     }
     this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
     this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
@@ -14985,7 +15009,7 @@ PipelineCubic.prototype.onData = function(data)
       this.retxCount[recSegmentNo] === undefined) {
     var nExpectedSamples = Math.max((this.nInFlight + 1) >> 1, 1);
     if (nExpectedSamples <= 0) {
-      console.log("ERROR: nExpectedSamples is less than or equal to ZERO");
+      this.handleFailure(-1, Pipeline.ErrorCode.MISC, "nExpectedSamples is less than or equal to ZERO.");
     }
     this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
     this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));

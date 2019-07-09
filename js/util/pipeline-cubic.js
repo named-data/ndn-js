@@ -392,7 +392,7 @@ PipelineCubic.prototype.onData = function(data)
       this.retxCount[recSegmentNo] === undefined) {
     var nExpectedSamples = Math.max((this.nInFlight + 1) >> 1, 1);
     if (nExpectedSamples <= 0) {
-      console.log("ERROR: nExpectedSamples is less than or equal to ZERO");
+      this.handleFailure(-1, Pipeline.ErrorCode.MISC, "nExpectedSamples is less than or equal to ZERO.");
     }
     this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
     this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
