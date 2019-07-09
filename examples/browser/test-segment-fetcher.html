@@ -68,7 +68,7 @@ This page uses SegmentFetcher to fetch any NDN segmented content via Fixed/Cubic
            },
            {pipeline:   "fixed" /*pipeline type and its options*/,
             windowSize: 20,
-            maxTimeoutRetries: 10}
+            maxRetriesOnTimeoutOrNack : 10}
           );
       }
     }
