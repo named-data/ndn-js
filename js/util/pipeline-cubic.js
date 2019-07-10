@@ -51,10 +51,11 @@ var LOG = require('../log.js').Log.LOG;
  *                           (see Pipeline documentation for ful list of errors).
  * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
  *       callback should catch and properly handle any exceptions.
+ * @param {Object} stats An object that exposes statistics of content retrieval performance to caller.
  * @constructor
  */
 var PipelineCubic = function PipelineCubic
-  (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
+  (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
 {
   this.pipeline = new Pipeline(baseInterest);
   this.face = face;
@@ -96,6 +97,9 @@ var PipelineCubic = function PipelineCubic
   this.retxCount = [];     // track number of retx of each segment
 
   this.rttEstimator = new RttEstimator(opts);
+
+  // Stats collector
+  this.stats = stats;
 }
 
 exports.PipelineCubic = PipelineCubic;
@@ -228,6 +232,10 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
      this.handleLifetimeExpiration.bind(this),
      this.handleNack.bind(this));
 
+  // initTimeSent allows calculating full delay
+  if (isRetransmission && segInfo.initTimeSent === undefined)
+    segInfo.initTimeSent = segInfo.timeSent;
+
   segInfo.timeSent = Date.now();
   segInfo.rto = this.rttEstimator.getEstimatedRto();
 
@@ -358,6 +366,10 @@ PipelineCubic.prototype.onData = function(data)
   }
 
   var rtt = Date.now() - recSeg.timeSent;
+  var fullDelay = 0;
+  if (recSeg.initTimeSent !== undefined)
+    fullDelay = Date.now() - recSeg.initTimeSent;
+
   if (LOG > 1) {
     console.log ("Received segment #" + recSegmentNo
                  + ", rtt=" + rtt + "ms"
@@ -380,9 +392,13 @@ PipelineCubic.prototype.onData = function(data)
       this.retxCount[recSegmentNo] === undefined) {
     var nExpectedSamples = Math.max((this.nInFlight + 1) >> 1, 1);
     if (nExpectedSamples <= 0) {
-      console.log("ERROR: nExpectedSamples is less than or equal to ZERO");
+      this.handleFailure(-1, Pipeline.ErrorCode.MISC, "nExpectedSamples is less than or equal to ZERO.");
     }
     this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
+  }
+  else { // Sample the retrieval delay to calculate jitter
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
   }
 
   // Clear the entry associated with the received segment
@@ -396,6 +412,12 @@ PipelineCubic.prototype.onData = function(data)
     // Concatenate to get the content
     var content = Buffer.concat(this.pipeline.contentParts);
     this.cancelInFlightSegmentsGreaterThan(this.pipeline.finalBlockId);
+    this.stats = {nTimeouts      : this.nTimeouts,
+                  nNacks         : this.nNacks,
+                  nRetransmitted : this.nRetransmitted,
+                  avgRtt         : this.rttEstimator.getAvgRtt().toPrecision(3),
+                  avgJitter      : this.rttEstimator.getAvgJitter().toPrecision(3),
+                  nSegments      : this.pipeline.numberOfSatisfiedSegments};
     try {
       this.cancel();
       this.printSummary();
@@ -613,6 +635,6 @@ PipelineCubic.prototype.printSummary = function()
               "Retransmitted segments: " + this.nRetransmitted +
               " (" + (this.nSent == 0 ? 0 : (this.nRetransmitted / this.nSent * 100))  + "%)" +
               ", skipped: " + this.nSkippedRetx + "\n" +
-              "RTT " + rttMsg);
-
+              "RTT " + rttMsg + "\n" +
+              "Average jitter: " + this.rttEstimator.getAvgJitter().toPrecision(3) + " ms");
 };

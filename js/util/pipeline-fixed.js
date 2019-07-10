@@ -23,8 +23,10 @@ var Interest = require('../interest.js').Interest; /** @ignore */
 var Blob = require('./blob.js').Blob; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon; /** @ignore */
+var RttEstimator = require('./rtt-estimator.js').RttEstimator; /** @ignore */
 var DataFetcher = require('./data-fetcher.js').DataFetcher; /** @ignore */
 var Pipeline = require('./pipeline.js').Pipeline;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * Retrieve the segments of solicited data by keeping a fixed-size window of N
@@ -76,10 +78,11 @@ var Pipeline = require('./pipeline.js').Pipeline;
  *                           (see Pipeline documentation for ful list of errors).
  * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
  *       callback should catch and properly handle any exceptions.
+ * @param {Object} stats An object that exposes statistics of content retrieval performance to caller.
  * @constructor
  */
 var PipelineFixed = function PipelineFixed
-  (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
+  (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
 {
   this.face = face;
   this.validatorKeyChain = validatorKeyChain;
@@ -93,7 +96,21 @@ var PipelineFixed = function PipelineFixed
   this.windowSize = Pipeline.op("windowSize", 10, opts);
   this.maxRetriesOnTimeoutOrNack = Pipeline.op("maxRetriesOnTimeoutOrNack", 3, opts);
 
+  this.segmentInfo = []; // track information that is necessary for segment transmission.
+                         // If a segment experienced retransmission its status will
+                         // be `retx`, otherwise `normal`
   this.dataFetchersContainer = []; // if we need to cancel pending interests
+
+  this.rttEstimator = new RttEstimator(opts);
+
+  // Stats collector
+  this.stats = stats;
+  this.stats = {nTimeouts      : 0,
+                nNacks         : 0,
+                nRetransmitted : 0,
+                avgRtt         : 0,
+                avgJitter      : 0,
+                nSegments      : 0};
 };
 
 exports.PipelineFixed = PipelineFixed;
@@ -122,19 +139,21 @@ PipelineFixed.prototype.sendInterest = function(interest)
 
   if (this.pipeline.hasFailure)
     return;
-
+  var segmentNo = 0;
   if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
-    var segmentNo = interest.getName().get(-1).toSegment();
+    segmentNo = interest.getName().get(-1).toSegment();
     this.dataFetchersContainer[segmentNo] = new DataFetcher
       (this.face, interest, this.maxRetriesOnTimeoutOrNack,
-       this.handleData.bind(this), this.handleFailure.bind(this));
+       this.handleData.bind(this), this.handleFailure.bind(this),
+       this.segmentInfo, this.stats);
        this.dataFetchersContainer[segmentNo].fetch();
   }
-  else { // do not keep track of very first interest
-    (new DataFetcher
+  else { // this is the very first interest
+    this.dataFetchersContainer[segmentNo] = new DataFetcher
       (this.face, interest, this.maxRetriesOnTimeoutOrNack,
-       this.handleData.bind(this), this.handleFailure.bind(this)))
-       .fetch();
+       this.handleData.bind(this), this.handleFailure.bind(this),
+       this.segmentInfo, this.stats);
+       this.dataFetchersContainer[segmentNo].fetch();
   }
 };
 
@@ -185,7 +204,7 @@ PipelineFixed.prototype.handleData = function(interest, data)
     }
     catch (ex) {
       Pipeline.reportError(this.onError, Pipeline.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-                       "Error in KeyChain.verifyData: " + ex);
+                           "Error in KeyChain.verifyData: " + ex);
       return;
     }
   }
@@ -253,13 +272,44 @@ PipelineFixed.prototype.onData = function(data)
     }
   }
 
-  this.pipeline.numberOfSatisfiedSegments += 1;
+  var recSeg = this.segmentInfo[recSegmentNo];
+  if (recSeg === undefined) {
+    return; // ignore an already-received segment
+  }
+
+  var rtt = Date.now() - recSeg.timeSent;
+  var fullDelay = Date.now() - recSeg.initTimeSent;
+
+  if (LOG > 1) {
+    console.log ("Received segment #" + recSegmentNo
+                 + ", rtt=" + rtt + "ms"
+                 + ", rto=" + recSeg.rto + "ms");
+  }
+
+  // Do not sample RTT for retransmitted segments
+  if (this.segmentInfo[recSegmentNo].stat === "normal") {
+    var nExpectedSamples = Math.max((this.nInFlight + 1) >> 1, 1);
+    if (nExpectedSamples <= 0) {
+      this.handleFailure(-1, Pipeline.ErrorCode.MISC, "nExpectedSamples is less than or equal to ZERO.");
+    }
+    this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
+  }
+  else { // Sample the retrieval delay to calculate jitter
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
+  }
+
+  this.pipeline.numberOfSatisfiedSegments++;
 
   // Check whether we are finished
   if (this.pipeline.hasFinalBlockId &&
       this.pipeline.numberOfSatisfiedSegments > this.pipeline.finalBlockId) {
     // Concatenate to get content.
     var content = Buffer.concat(this.pipeline.contentParts);
+    this.cancelInFlightSegmentsGreaterThan(this.pipeline.finalBlockId);
+    this.stats.avgRtt    = this.rttEstimator.getAvgRtt().toPrecision(3),
+    this.stats.avgJitter = this.rttEstimator.getAvgJitter().toPrecision(3),
+    this.stats.nSegments = this.pipeline.numberOfSatisfiedSegments;
     try {
       this.pipeline.cancel();
       this.onComplete(new Blob(content, false));

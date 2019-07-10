@@ -13990,6 +13990,30 @@ SegmentFetcher.DontVerifySegment = function(data)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
+ * @param {Object} opts (optional) An object that allows callers to choose one of the pipelines (i.e., `fixed` or `cubic`).
+ *                                 It also can override the default values of the the chosen pipeline's parameters.
+ *                                 If ommited or null, `cubic` pipeline will be used with its default values.
+ * Examples:
+ *     // Asking for `fixed` pipeline and overriding a couple of its parameters
+ *     opts = {pipeline                  : "fixed",
+ *             windowSize                : 20,
+ *             maxRetriesOnTimeoutOrNack : 10}
+ *
+ *     // Asking for `cubic` pipeline and overriding one of its parameters
+ *     opts = {pipeline   : "cubic",
+ *             disableCwa : true}
+ *
+ *     // Asking for `cubic` pipeline (i.e., default pipeline) and overriding one of its parameters
+ *     opts = {maxRetriesOnTimeoutOrNack : 10}
+ *
+ * @param {Object} stats (optional) An object that exposes statistics of pipeline's content retrieval performance
+ *                                  to the caller.
+ *                                  The caller should pass an empty object as `stats` - the content of this object
+ *                                  will be overrided by the pipeline. Pipelines populate this object with the statistical
+ *                                  information about the content retrieval. The caller can read object after the content
+ *                                  retrieval process is done (probably in onComplete function).
+ *                                  If omitted or null, the caller will not be able to access the stats.
+ * NOTE: If the caller wants to use @param stats, it MUST specify @param opts (e.g., by passing null).
  *
  * Example:
  *     var onComplete = function(content) { ... }
@@ -14001,12 +14025,12 @@ SegmentFetcher.DontVerifySegment = function(data)
  *     SegmentFetcher.fetch(face, interest, null, onComplete, onError);
  */
 SegmentFetcher.fetch = function
-  (face, baseInterest, validatorKeyChain, onComplete, onError, opts)
+  (face, baseInterest, validatorKeyChain, onComplete, onError, opts, stats)
 {
   if (opts == null || opts.pipeline === undefined || opts.pipeline === "cubic") {
     if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
       new PipelineCubic
-        (baseInterest, face, null, validatorKeyChain, onComplete, onError)
+        (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
         .run();
     else
       onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,
@@ -14015,7 +14039,7 @@ SegmentFetcher.fetch = function
   else if (opts.pipeline === "fixed") {
     if (validatorKeyChain == null || validatorKeyChain instanceof KeyChain)
       new PipelineFixed
-        (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
+        (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
         .run();
     else
       onError(SegmentFetcher.ErrorCode.INVALID_KEYCHAIN,
@@ -14240,8 +14264,10 @@ var Interest = require('../interest.js').Interest; /** @ignore */
 var Blob = require('./blob.js').Blob; /** @ignore */
 var KeyChain = require('../security/key-chain.js').KeyChain; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon; /** @ignore */
+var RttEstimator = require('./rtt-estimator.js').RttEstimator; /** @ignore */
 var DataFetcher = require('./data-fetcher.js').DataFetcher; /** @ignore */
 var Pipeline = require('./pipeline.js').Pipeline;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * Retrieve the segments of solicited data by keeping a fixed-size window of N
@@ -14293,10 +14319,11 @@ var Pipeline = require('./pipeline.js').Pipeline;
  *                           (see Pipeline documentation for ful list of errors).
  * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
  *       callback should catch and properly handle any exceptions.
+ * @param {Object} stats An object that exposes statistics of content retrieval performance to caller.
  * @constructor
  */
 var PipelineFixed = function PipelineFixed
-  (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
+  (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
 {
   this.face = face;
   this.validatorKeyChain = validatorKeyChain;
@@ -14310,7 +14337,21 @@ var PipelineFixed = function PipelineFixed
   this.windowSize = Pipeline.op("windowSize", 10, opts);
   this.maxRetriesOnTimeoutOrNack = Pipeline.op("maxRetriesOnTimeoutOrNack", 3, opts);
 
+  this.segmentInfo = []; // track information that is necessary for segment transmission.
+                         // If a segment experienced retransmission its status will
+                         // be `retx`, otherwise `normal`
   this.dataFetchersContainer = []; // if we need to cancel pending interests
+
+  this.rttEstimator = new RttEstimator(opts);
+
+  // Stats collector
+  this.stats = stats;
+  this.stats = {nTimeouts      : 0,
+                nNacks         : 0,
+                nRetransmitted : 0,
+                avgRtt         : 0,
+                avgJitter      : 0,
+                nSegments      : 0};
 };
 
 exports.PipelineFixed = PipelineFixed;
@@ -14339,19 +14380,21 @@ PipelineFixed.prototype.sendInterest = function(interest)
 
   if (this.pipeline.hasFailure)
     return;
-
+  var segmentNo = 0;
   if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
-    var segmentNo = interest.getName().get(-1).toSegment();
+    segmentNo = interest.getName().get(-1).toSegment();
     this.dataFetchersContainer[segmentNo] = new DataFetcher
       (this.face, interest, this.maxRetriesOnTimeoutOrNack,
-       this.handleData.bind(this), this.handleFailure.bind(this));
+       this.handleData.bind(this), this.handleFailure.bind(this),
+       this.segmentInfo, this.stats);
        this.dataFetchersContainer[segmentNo].fetch();
   }
-  else { // do not keep track of very first interest
-    (new DataFetcher
+  else { // this is the very first interest
+    this.dataFetchersContainer[segmentNo] = new DataFetcher
       (this.face, interest, this.maxRetriesOnTimeoutOrNack,
-       this.handleData.bind(this), this.handleFailure.bind(this)))
-       .fetch();
+       this.handleData.bind(this), this.handleFailure.bind(this),
+       this.segmentInfo, this.stats);
+       this.dataFetchersContainer[segmentNo].fetch();
   }
 };
 
@@ -14402,7 +14445,7 @@ PipelineFixed.prototype.handleData = function(interest, data)
     }
     catch (ex) {
       Pipeline.reportError(this.onError, Pipeline.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-                       "Error in KeyChain.verifyData: " + ex);
+                           "Error in KeyChain.verifyData: " + ex);
       return;
     }
   }
@@ -14470,13 +14513,44 @@ PipelineFixed.prototype.onData = function(data)
     }
   }
 
-  this.pipeline.numberOfSatisfiedSegments += 1;
+  var recSeg = this.segmentInfo[recSegmentNo];
+  if (recSeg === undefined) {
+    return; // ignore an already-received segment
+  }
+
+  var rtt = Date.now() - recSeg.timeSent;
+  var fullDelay = Date.now() - recSeg.initTimeSent;
+
+  if (LOG > 1) {
+    console.log ("Received segment #" + recSegmentNo
+                 + ", rtt=" + rtt + "ms"
+                 + ", rto=" + recSeg.rto + "ms");
+  }
+
+  // Do not sample RTT for retransmitted segments
+  if (this.segmentInfo[recSegmentNo].stat === "normal") {
+    var nExpectedSamples = Math.max((this.nInFlight + 1) >> 1, 1);
+    if (nExpectedSamples <= 0) {
+      this.handleFailure(-1, Pipeline.ErrorCode.MISC, "nExpectedSamples is less than or equal to ZERO.");
+    }
+    this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
+  }
+  else { // Sample the retrieval delay to calculate jitter
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
+  }
+
+  this.pipeline.numberOfSatisfiedSegments++;
 
   // Check whether we are finished
   if (this.pipeline.hasFinalBlockId &&
       this.pipeline.numberOfSatisfiedSegments > this.pipeline.finalBlockId) {
     // Concatenate to get content.
     var content = Buffer.concat(this.pipeline.contentParts);
+    this.cancelInFlightSegmentsGreaterThan(this.pipeline.finalBlockId);
+    this.stats.avgRtt    = this.rttEstimator.getAvgRtt().toPrecision(3),
+    this.stats.avgJitter = this.rttEstimator.getAvgJitter().toPrecision(3),
+    this.stats.nSegments = this.pipeline.numberOfSatisfiedSegments;
     try {
       this.pipeline.cancel();
       this.onComplete(new Blob(content, false));
@@ -14594,10 +14668,11 @@ var LOG = require('../log.js').Log.LOG;
  *                           (see Pipeline documentation for ful list of errors).
  * NOTE: The library will log any exceptions thrown by this callback, but for better error handling the
  *       callback should catch and properly handle any exceptions.
+ * @param {Object} stats An object that exposes statistics of content retrieval performance to caller.
  * @constructor
  */
 var PipelineCubic = function PipelineCubic
-  (baseInterest, face, opts, validatorKeyChain, onComplete, onError)
+  (baseInterest, face, opts, validatorKeyChain, onComplete, onError, stats)
 {
   this.pipeline = new Pipeline(baseInterest);
   this.face = face;
@@ -14639,6 +14714,9 @@ var PipelineCubic = function PipelineCubic
   this.retxCount = [];     // track number of retx of each segment
 
   this.rttEstimator = new RttEstimator(opts);
+
+  // Stats collector
+  this.stats = stats;
 }
 
 exports.PipelineCubic = PipelineCubic;
@@ -14771,6 +14849,10 @@ PipelineCubic.prototype.sendInterest = function(segNo, isRetransmission)
      this.handleLifetimeExpiration.bind(this),
      this.handleNack.bind(this));
 
+  // initTimeSent allows calculating full delay
+  if (isRetransmission && segInfo.initTimeSent === undefined)
+    segInfo.initTimeSent = segInfo.timeSent;
+
   segInfo.timeSent = Date.now();
   segInfo.rto = this.rttEstimator.getEstimatedRto();
 
@@ -14901,6 +14983,10 @@ PipelineCubic.prototype.onData = function(data)
   }
 
   var rtt = Date.now() - recSeg.timeSent;
+  var fullDelay = 0;
+  if (recSeg.initTimeSent !== undefined)
+    fullDelay = Date.now() - recSeg.initTimeSent;
+
   if (LOG > 1) {
     console.log ("Received segment #" + recSegmentNo
                  + ", rtt=" + rtt + "ms"
@@ -14923,9 +15009,13 @@ PipelineCubic.prototype.onData = function(data)
       this.retxCount[recSegmentNo] === undefined) {
     var nExpectedSamples = Math.max((this.nInFlight + 1) >> 1, 1);
     if (nExpectedSamples <= 0) {
-      console.log("ERROR: nExpectedSamples is less than or equal to ZERO");
+      this.handleFailure(-1, Pipeline.ErrorCode.MISC, "nExpectedSamples is less than or equal to ZERO.");
     }
     this.rttEstimator.addMeasurement(recSegmentNo, rtt, nExpectedSamples);
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
+  }
+  else { // Sample the retrieval delay to calculate jitter
+    this.rttEstimator.addDelayMeasurement(recSegmentNo, Math.max(rtt, fullDelay));
   }
 
   // Clear the entry associated with the received segment
@@ -14939,6 +15029,12 @@ PipelineCubic.prototype.onData = function(data)
     // Concatenate to get the content
     var content = Buffer.concat(this.pipeline.contentParts);
     this.cancelInFlightSegmentsGreaterThan(this.pipeline.finalBlockId);
+    this.stats = {nTimeouts      : this.nTimeouts,
+                  nNacks         : this.nNacks,
+                  nRetransmitted : this.nRetransmitted,
+                  avgRtt         : this.rttEstimator.getAvgRtt().toPrecision(3),
+                  avgJitter      : this.rttEstimator.getAvgJitter().toPrecision(3),
+                  nSegments      : this.pipeline.numberOfSatisfiedSegments};
     try {
       this.cancel();
       this.printSummary();
@@ -15156,8 +15252,8 @@ PipelineCubic.prototype.printSummary = function()
               "Retransmitted segments: " + this.nRetransmitted +
               " (" + (this.nSent == 0 ? 0 : (this.nRetransmitted / this.nSent * 100))  + "%)" +
               ", skipped: " + this.nSkippedRetx + "\n" +
-              "RTT " + rttMsg);
-
+              "RTT " + rttMsg + "\n" +
+              "Average jitter: " + this.rttEstimator.getAvgJitter().toPrecision(3) + " ms");
 };
 /**
  * Copyright (C) 2018-2019 Regents of the University of California.
@@ -15201,6 +15297,8 @@ var RttEstimator = function RttEstimator(opts)
   this.minRto = Pipeline.op("minRto", 200, opts); // lower bound of RTO (ms)
   this.maxRto = Pipeline.op("maxRto", 20000, opts); // upper bound of RTO (ms)
   this.rtoBackoffMultiplier = Pipeline.op("rtoBackoffMultiplier", 2, opts);
+
+  this.delayArr = [];  // keep track of full delay of each segment to calculate ave jitter
 
   this.sRtt = NaN; // smoothed RTT
   this.rttVar = NaN; // RTT variation
@@ -15256,12 +15354,36 @@ RttEstimator.prototype.addMeasurement = function(segNo, rtt, nExpectedSamples)
 
   this.rto = this.clamp(this.rto, this.minRto, this.maxRto);
 
-  //afterRttMeasurement({segNo, rtt, this.sRtt, this.rttVar, this.rto});
-
   this.rttAvg = (this.nRttSamples * this.rttAvg + rtt) / (this.nRttSamples + 1);
   this.rttMax = Math.max(rtt, this.rttMax);
   this.rttMin = Math.min(rtt, this.rttMin);
+
   this.nRttSamples++;
+};
+
+RttEstimator.prototype.addDelayMeasurement = function(segNo, delay)
+{
+  this.delayArr[segNo] = delay;
+};
+
+/**
+ * Return average of retrieved segments' RTT variance
+ */
+RttEstimator.prototype.getAvgJitter = function()
+{
+  var samples = 0;
+  var jitterAvg = 0;
+  var jitterLast = 0;
+  for (var i = 0; i < this.delayArr.length; ++i) {
+    if (this.delayArr[i] === undefined)
+      continue;
+    if (samples > 0) {
+      jitterAvg = ((jitterAvg * samples) + Math.abs(jitterLast - this.delayArr[i])) / (samples + 1);
+    }
+    jitterLast = this.delayArr[i];
+    samples++;
+  }
+  return jitterAvg;
 };
 
 RttEstimator.prototype.backoffRto = function()
@@ -15324,11 +15446,14 @@ var Pipeline = require('./pipeline.js').Pipeline;
  *                          solicited segment.
  * @param {function} onFailure Call this function after receiving Timeout or Nack for more than
  *                             maxRetriesOnTimeoutOrNack times.
- * @constructor
+ * @param {Object} segmentInfo An object that tracks the important information about each segment.
+ *                             E.g., number of retries upon timeout and nack.
+ * @param {Object} stats An object that containes statistics of content retrieval performance.
  *
+ * @constructor
  */
 var DataFetcher = function DataFetcher
-  (face, interest, maxRetriesOnTimeoutOrNack, onData, handleFailure)
+  (face, interest, maxRetriesOnTimeoutOrNack, onData, handleFailure, segmentInfo, stats)
 {
   this.face = face;
   this.interest = interest;
@@ -15337,12 +15462,20 @@ var DataFetcher = function DataFetcher
   this.onData = onData;
   this.handleFailure = handleFailure;
 
-  this.numberOfTimeoutRetries = 0;
-  this.numberOfNackRetries = 0;
+  this.segmentInfo = segmentInfo;
+  this.stats = stats;
+
   this.segmentNo = 0; // segment number of the current Interest
   if (interest.getName().components.length > 0 && interest.getName().get(-1).isSegment()) {
     this.segmentNo = interest.getName().get(-1).toSegment();
   }
+
+  this.nTimeoutRetries = 0;
+  this.nNackRetries = 0;
+
+  this.segmentInfo[this.segmentNo] = {};
+  this.segmentInfo[this.segmentNo].stat = "normal";
+  this.segmentInfo[this.segmentNo].initTimeSent = Date.now();
 
   this.pendingInterestId = null;
 };
@@ -15351,6 +15484,7 @@ exports.DataFetcher = DataFetcher;
 
 DataFetcher.prototype.fetch = function()
 {
+  this.segmentInfo[this.segmentNo].timeSent = Date.now();
   this.pendingInterestId = this.face.expressInterest
     (this.interest,
      this.handleData.bind(this),
@@ -15365,13 +15499,17 @@ DataFetcher.prototype.getPendingInterestId = function()
 
 DataFetcher.prototype.handleData = function(interest, data)
 {
+  this.stats.nTimeouts += this.nTimeoutRetries;
+  this.stats.nNacks += this.nNackRetries;
+  this.stats.nRetransmitted += (this.nNackRetries + this.nTimeoutRetries);
   this.onData(interest, data);
 };
 
 DataFetcher.prototype.handleLifetimeExpiration = function(interest)
 {
-  this.numberOfTimeoutRetries++;
-  if (this.numberOfTimeoutRetries <= this.maxRetriesOnTimeoutOrNack) {
+  this.nTimeoutRetries++;
+  this.segmentInfo[this.segmentNo].stat = "retx";
+  if (this.nTimeoutRetries <= this.maxRetriesOnTimeoutOrNack) {
     var newInterest = new Interest(interest);
     newInterest.refreshNonce();
     this.interest = newInterest;
@@ -15393,8 +15531,9 @@ DataFetcher.prototype.handleLifetimeExpiration = function(interest)
 
 DataFetcher.prototype.handleNack = function(interest)
 {
-  this.numberOfNackRetries += 1;
-  if (this.numberOfNackRetries <= this.maxRetriesOnTimeoutOrNack) {
+  this.nNackRetries += 1;
+  this.segmentInfo[this.segmentNo].stat = "retx";
+  if (this.nNackRetries <= this.maxRetriesOnTimeoutOrNack) {
     var newInterest = new Interest(interest);
     newInterest.refreshNonce();
     this.interest = newInterest;
