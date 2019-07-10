@@ -412,12 +412,13 @@ PipelineCubic.prototype.onData = function(data)
     // Concatenate to get the content
     var content = Buffer.concat(this.pipeline.contentParts);
     this.cancelInFlightSegmentsGreaterThan(this.pipeline.finalBlockId);
-    this.stats = {nTimeouts      : this.nTimeouts,
-                  nNacks         : this.nNacks,
-                  nRetransmitted : this.nRetransmitted,
-                  avgRtt         : this.rttEstimator.getAvgRtt().toPrecision(3),
-                  avgJitter      : this.rttEstimator.getAvgJitter().toPrecision(3),
-                  nSegments      : this.pipeline.numberOfSatisfiedSegments};
+    // fill out the stats
+    this.stats.nTimeouts      = this.nTimeouts;
+    this.stats.nNacks         = this.nNacks;
+    this.stats.nRetransmitted = this.nRetransmitted;
+    this.stats.avgRtt         = this.rttEstimator.getAvgRtt().toPrecision(3);
+    this.stats.avgJitter      = this.rttEstimator.getAvgJitter().toPrecision(3);
+    this.stats.nSegments      = this.pipeline.numberOfSatisfiedSegments;
     try {
       this.cancel();
       this.printSummary();
