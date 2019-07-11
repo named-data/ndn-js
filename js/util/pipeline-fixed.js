@@ -105,12 +105,9 @@ var PipelineFixed = function PipelineFixed
 
   // Stats collector
   this.stats = stats;
-  this.stats = {nTimeouts      : 0,
-                nNacks         : 0,
-                nRetransmitted : 0,
-                avgRtt         : 0,
-                avgJitter      : 0,
-                nSegments      : 0};
+  this.stats.nTimeouts      = 0;
+  this.stats.nNacks         = 0;
+  this.stats.nRetransmitted = 0;
 };
 
 exports.PipelineFixed = PipelineFixed;
