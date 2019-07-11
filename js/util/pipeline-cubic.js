@@ -99,7 +99,7 @@ var PipelineCubic = function PipelineCubic
   this.rttEstimator = new RttEstimator(opts);
 
   // Stats collector
-  this.stats = stats;
+  this.stats = stats != null ? stats : {};
 }
 
 exports.PipelineCubic = PipelineCubic;
