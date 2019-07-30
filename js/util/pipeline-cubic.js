@@ -627,8 +627,8 @@ PipelineCubic.prototype.printSummary = function()
    }
    else {
      rttMsg = "min/avg/max = " + this.rttEstimator.getMinRtt().toPrecision(3) + "/"
-                                + this.rttEstimator.getAvgRtt().toPrecision(3) + "/"
-                                + this.rttEstimator.getMaxRtt().toPrecision(3) + " ms";
+                               + this.rttEstimator.getAvgRtt().toPrecision(3) + "/"
+                               + this.rttEstimator.getMaxRtt().toPrecision(3) + " ms";
   }
 
   console.log("Timeouts: " + this.nTimeouts + " (caused " + this.nLossDecr + " window decreases)\n" +

@@ -279,8 +279,7 @@ PipelineFixed.prototype.onData = function(data)
 
   if (LOG > 1) {
     console.log ("Received segment #" + recSegmentNo
-                 + ", rtt=" + rtt + "ms"
-                 + ", rto=" + recSeg.rto + "ms");
+                 + ", rtt=" + rtt + "ms");
   }
 
   // Do not sample RTT for retransmitted segments
@@ -309,6 +308,7 @@ PipelineFixed.prototype.onData = function(data)
     this.stats.nSegments = this.pipeline.numberOfSatisfiedSegments;
     try {
       this.pipeline.cancel();
+      this.printSummary();
       this.onComplete(new Blob(content, false));
     }
     catch (ex) {
@@ -370,4 +370,26 @@ PipelineFixed.prototype.onValidationFailed = function(data, reason)
   Pipeline.reportError(this.onError, Pipeline.ErrorCode.SEGMENT_VERIFICATION_FAILED,
                        "Segment verification failed for " + data.getName().toUri() +
                        " . Reason: " + reason);
+};
+
+PipelineFixed.prototype.printSummary = function()
+{
+  if (LOG < 2)
+    return;
+
+  var rttMsg = "";
+  if (this.rttEstimator.getMinRtt() === Number.MAX_VALUE ||
+      this.rttEstimator.getMaxRtt() === Number.NEGATIVE_INFINITY) {
+     rttMsg = "stats unavailable";
+   }
+   else {
+     rttMsg = "min/avg/max = " + this.rttEstimator.getMinRtt().toPrecision(3) + "/"
+                               + this.rttEstimator.getAvgRtt().toPrecision(3) + "/"
+                               + this.rttEstimator.getMaxRtt().toPrecision(3) + " ms";
+  }
+
+  console.log("Timeouts: " + this.stats.nTimeouts + " Nacks: " + this.stats.nNacks + "\n" +
+              "Retransmitted segments: " + this.stats.nRetransmitted + "\n" +
+              "RTT " + rttMsg + "\n" +
+              "Average jitter: " + this.rttEstimator.getAvgJitter().toPrecision(3) + " ms");
 };
