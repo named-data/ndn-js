@@ -102,7 +102,7 @@ DataFetcher.prototype.handleLifetimeExpiration = function(interest)
     newInterest.refreshNonce();
     this.interest = newInterest;
     if (LOG > 3)
-      console.log('handle timeout for interest ' + interest.getName());
+      console.log('handle lifetime expiration for interest ' + interest.getName());
     this.fetch();
   }
   else {

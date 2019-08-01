@@ -169,6 +169,8 @@ PipelineCubic.prototype.decreaseWindow = function()
 
 PipelineCubic.prototype.run = function()
 {
+  this.stats.pipelineStartTime = Date.now();
+
   // Schedule the next check after the predefined interval
   setTimeout(this.checkRto.bind(this), this.rtoCheckInterval);
 
@@ -419,6 +421,7 @@ PipelineCubic.prototype.onData = function(data)
     this.stats.avgRtt         = this.rttEstimator.getAvgRtt().toPrecision(3);
     this.stats.avgJitter      = this.rttEstimator.getAvgJitter().toPrecision(3);
     this.stats.nSegments      = this.pipeline.numberOfSatisfiedSegments;
+    this.stats.completionTime = Date.now() - this.stats.pipelineStartTime;
     try {
       this.cancel();
       this.printSummary();
@@ -627,8 +630,8 @@ PipelineCubic.prototype.printSummary = function()
    }
    else {
      rttMsg = "min/avg/max = " + this.rttEstimator.getMinRtt().toPrecision(3) + "/"
-                                + this.rttEstimator.getAvgRtt().toPrecision(3) + "/"
-                                + this.rttEstimator.getMaxRtt().toPrecision(3) + " ms";
+                               + this.rttEstimator.getAvgRtt().toPrecision(3) + "/"
+                               + this.rttEstimator.getMaxRtt().toPrecision(3) + " ms";
   }
 
   console.log("Timeouts: " + this.nTimeouts + " (caused " + this.nLossDecr + " window decreases)\n" +
@@ -637,5 +640,6 @@ PipelineCubic.prototype.printSummary = function()
               " (" + (this.nSent == 0 ? 0 : (this.nRetransmitted / this.nSent * 100))  + "%)" +
               ", skipped: " + this.nSkippedRetx + "\n" +
               "RTT " + rttMsg + "\n" +
-              "Average jitter: " + this.rttEstimator.getAvgJitter().toPrecision(3) + " ms");
+              "Average jitter: " + this.rttEstimator.getAvgJitter().toPrecision(3) + " ms\n" +
+              "Completion time: " + this.stats.completionTime + "ms");
 };
