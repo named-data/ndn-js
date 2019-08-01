@@ -1,5 +1,5 @@
-Interim changes since NDN-JS v0.18.0 (2019-07-09)
--------------------------------------------------
+NDN-JS v0.19.0 (2019-08-01)
+---------------------------
 
 Changes
 * https://redmine.named-data.net/issues/4807 Print a warning if the application
