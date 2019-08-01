@@ -114,6 +114,8 @@ exports.PipelineFixed = PipelineFixed;
 
 PipelineFixed.prototype.run = function()
 {
+  this.stats.pipelineStartTime = Date.now();
+
   var interest = this.pipeline.makeInterest(0);
   if (Number.isNaN(this.pipeline.versionNo) ) {
     interest.setMustBeFresh(true);
@@ -306,6 +308,7 @@ PipelineFixed.prototype.onData = function(data)
     this.stats.avgRtt    = this.rttEstimator.getAvgRtt().toPrecision(3),
     this.stats.avgJitter = this.rttEstimator.getAvgJitter().toPrecision(3),
     this.stats.nSegments = this.pipeline.numberOfSatisfiedSegments;
+    this.stats.completionTime = Date.now() - this.stats.pipelineStartTime;
     try {
       this.pipeline.cancel();
       this.printSummary();
@@ -391,5 +394,6 @@ PipelineFixed.prototype.printSummary = function()
   console.log("Timeouts: " + this.stats.nTimeouts + " Nacks: " + this.stats.nNacks + "\n" +
               "Retransmitted segments: " + this.stats.nRetransmitted + "\n" +
               "RTT " + rttMsg + "\n" +
-              "Average jitter: " + this.rttEstimator.getAvgJitter().toPrecision(3) + " ms");
+              "Average jitter: " + this.rttEstimator.getAvgJitter().toPrecision(3) + " ms\n" +
+              "Completion time: " + this.stats.completionTime + "ms");
 };
