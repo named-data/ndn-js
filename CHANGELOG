@@ -1,6 +1,9 @@
-Interim changes since NDN-JS v0.19.0 (2019-08-01)
+Interim changes since NDN-JS v0.19.0 (2019-11-25)
 -------------------------------------------------
 
+Changes
+* https://redmine.named-data.net/issues/5054 In Interest, changed the
+  MustBeFresh default value to false.
 * https://github.com/named-data/ndn-js/pull/77 In pipelines, added printSummary
   message (now includes completion time).
 
