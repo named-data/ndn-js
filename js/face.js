@@ -840,6 +840,7 @@ Face.prototype.nfdRegisterPrefix = function
   var onIsLocalResult = function(isLocal) {
     var commandInterest = new Interest();
     commandInterest.setCanBePrefix(true);
+    commandInterest.setMustBeFresh(true);
     if (isLocal) {
       commandInterest.setName(new Name("/localhost/nfd/rib/register"));
       // The interest is answered by the local host, so set a short timeout.

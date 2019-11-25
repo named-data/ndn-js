@@ -108,7 +108,7 @@ var Interest = function Interest
     this.exclude_ = new ChangeCounter(typeof exclude === 'object' && exclude instanceof Exclude ?
       new Exclude(exclude) : new Exclude());
     this.childSelector_ = childSelector;
-    this.mustBeFresh_ = true;
+    this.mustBeFresh_ = false;
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
     this.forwardingHint_ = new ChangeCounter(new DelegationSet());
     this.applicationParameters_ = new Blob();
@@ -348,7 +348,7 @@ Interest.prototype.getChildSelector = function()
 };
 
 /**
- * Get the must be fresh flag. If not specified, the default is true.
+ * Get the must be fresh flag. If not specified, the default is false.
  * @return {boolean} The must be fresh flag.
  */
 Interest.prototype.getMustBeFresh = function()
@@ -763,7 +763,7 @@ Interest.prototype.setChildSelector = function(childSelector)
 /**
  * Set the MustBeFresh flag.
  * @param {boolean} mustBeFresh True if the content must be fresh, otherwise
- * false. If you do not set this flag, the default value is true.
+ * false. If you do not set this flag, the default value is false.
  * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
