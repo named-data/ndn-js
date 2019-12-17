@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.19.0 (2019-11-25)
+Interim changes since NDN-JS v0.19.0 (2019-12-17)
 -------------------------------------------------
 
 Changes
@@ -6,6 +6,9 @@ Changes
   MustBeFresh default value to false.
 * https://github.com/named-data/ndn-js/pull/77 In pipelines, added printSummary
   message (now includes completion time).
+
+Bug fixes
+* In expressInterest, use the nonce in the Interest if provided.
 
 NDN-JS v0.19.0 (2019-08-01)
 ---------------------------

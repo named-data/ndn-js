@@ -399,9 +399,11 @@ Face.prototype.expressInterest = function
 
   var pendingInterestId = this.getNextEntryId();
 
-  // Set the nonce in our copy of the Interest so it is saved in the PIT.
-  interest.setNonce(Face.nonceTemplate_);
-  interest.refreshNonce();
+  if (interest.getNonce().size() === 0) {
+    // Set the nonce in our copy of the Interest so it is saved in the PIT.
+    interest.setNonce(Face.nonceTemplate_);
+    interest.refreshNonce();
+  }
 
   if (this.connectionInfo == null) {
     if (this.getConnectionInfo == null)
