@@ -98,7 +98,7 @@ TpmKeyHandleMemory.prototype.doDecryptPromise_ = function(cipherText, useSync)
  * A protected method to do the work of derivePublicKey().
  * @return {Blob} The public key encoding Blob.
  */
-TpmKeyHandle.prototype.doDerivePublicKey_ = function()
+TpmKeyHandleMemory.prototype.doDerivePublicKey_ = function()
 {
   try {
     return this.key_.derivePublicKey();
