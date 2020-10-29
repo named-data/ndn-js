@@ -20,6 +20,7 @@
 
 /** @ignore */
 var KeyType = require('../security-types').KeyType; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
