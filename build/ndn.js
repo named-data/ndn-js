@@ -34212,7 +34212,7 @@ TpmKeyHandleMemory.prototype.doDecryptPromise_ = function(cipherText, useSync)
  * A protected method to do the work of derivePublicKey().
  * @return {Blob} The public key encoding Blob.
  */
-TpmKeyHandle.prototype.doDerivePublicKey_ = function()
+TpmKeyHandleMemory.prototype.doDerivePublicKey_ = function()
 {
   try {
     return this.key_.derivePublicKey();
@@ -35125,6 +35125,7 @@ TpmPrivateKey.DES_EDE3_KEY_LENGTH = 24;
 
 /** @ignore */
 var KeyType = require('../security-types').KeyType; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
@@ -43228,7 +43229,7 @@ var Interest = function Interest
     this.exclude_ = new ChangeCounter(typeof exclude === 'object' && exclude instanceof Exclude ?
       new Exclude(exclude) : new Exclude());
     this.childSelector_ = childSelector;
-    this.mustBeFresh_ = true;
+    this.mustBeFresh_ = false;
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
     this.forwardingHint_ = new ChangeCounter(new DelegationSet());
     this.applicationParameters_ = new Blob();
@@ -43468,7 +43469,7 @@ Interest.prototype.getChildSelector = function()
 };
 
 /**
- * Get the must be fresh flag. If not specified, the default is true.
+ * Get the must be fresh flag. If not specified, the default is false.
  * @return {boolean} The must be fresh flag.
  */
 Interest.prototype.getMustBeFresh = function()
@@ -43883,7 +43884,7 @@ Interest.prototype.setChildSelector = function(childSelector)
 /**
  * Set the MustBeFresh flag.
  * @param {boolean} mustBeFresh True if the content must be fresh, otherwise
- * false. If you do not set this flag, the default value is true.
+ * false. If you do not set this flag, the default value is false.
  * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
@@ -45365,7 +45366,7 @@ NetworkNack.getFirstHeader = function(lpPacket)
   return null;
 };
 /**
- * Copyright (C) 2013-2019 Regents of the University of California.
+ * Copyright (C) 2021 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -45409,35 +45410,35 @@ var CongestionMark = require('../lp/congestion-mark.js').CongestionMark; /** @ig
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
- * A Tlv0_2WireFormat implements the WireFormat interface for encoding and
- * decoding with the NDN-TLV wire format, version 0.2.
+ * A Tlv0_3WireFormat implements the WireFormat interface for encoding and
+ * decoding with the NDN-TLV wire format, version 0.3.
  * @constructor
  */
-var Tlv0_2WireFormat = function Tlv0_2WireFormat()
+var Tlv0_3WireFormat = function Tlv0_3WireFormat()
 {
   // Inherit from WireFormat.
   WireFormat.call(this);
 };
 
-Tlv0_2WireFormat.prototype = new WireFormat();
-Tlv0_2WireFormat.prototype.name = "Tlv0_2WireFormat";
+Tlv0_3WireFormat.prototype = new WireFormat();
+Tlv0_3WireFormat.prototype.name = "Tlv0_3WireFormat";
 
-exports.Tlv0_2WireFormat = Tlv0_2WireFormat;
+exports.Tlv0_3WireFormat = Tlv0_3WireFormat;
 
 // Default object.
-Tlv0_2WireFormat.instance = null;
+Tlv0_3WireFormat.instance = null;
 
-Tlv0_2WireFormat.didCanBePrefixWarning_ = false;
+Tlv0_3WireFormat.didCanBePrefixWarning_ = false;
 
 /**
  * Encode name as an NDN-TLV Name and return the encoding.
  * @param {Name} name The Name to encode.
  * @return {Blobl} A Blob containing the encoding.
  */
-Tlv0_2WireFormat.prototype.encodeName = function(name)
+Tlv0_3WireFormat.prototype.encodeName = function(name)
 {
   var encoder = new TlvEncoder();
-  Tlv0_2WireFormat.encodeName(name, encoder);
+  Tlv0_3WireFormat.encodeName(name, encoder);
   return new Blob(encoder.getOutput(), false);
 };
 
@@ -45449,13 +45450,13 @@ Tlv0_2WireFormat.prototype.encodeName = function(name)
  * Blob values. If false, then Blob values share memory with the input, which
  * must remain unchanged while the Blob values are used. If omitted, use true.
  */
-Tlv0_2WireFormat.prototype.decodeName = function(name, input, copy)
+Tlv0_3WireFormat.prototype.decodeName = function(name, input, copy)
 {
   if (copy == null)
     copy = true;
 
   var decoder = new TlvDecoder(input);
-  Tlv0_2WireFormat.decodeName(name, decoder, copy);
+  Tlv0_3WireFormat.decodeName(name, decoder, copy);
 };
 
 /**
@@ -45470,87 +45471,15 @@ Tlv0_2WireFormat.prototype.decodeName = function(name, input, copy)
  * just before the final name component (which is assumed to be a signature for
  * a signed interest).
  */
-Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
+Tlv0_3WireFormat.prototype.encodeInterest = function(interest)
 {
-  if (!interest.didSetCanBePrefix_ && !Tlv0_2WireFormat.didCanBePrefixWarning_) {
+  if (!interest.didSetCanBePrefix_ && !Tlv0_3WireFormat.didCanBePrefixWarning_) {
     console.log
       ("WARNING: The default CanBePrefix will change. See Interest.setDefaultCanBePrefix() for details.");
-    Tlv0_2WireFormat.didCanBePrefixWarning_ = true;
+    Tlv0_3WireFormat.didCanBePrefixWarning_ = true;
   }
 
-  if (interest.hasApplicationParameters())
-    // The application has specified a format v0.3 field. As we transition to
-    // format v0.3, encode as format v0.3 even though the application default is
-    // Tlv0_2WireFormat.
-    return Tlv0_2WireFormat.encodeInterestV03_
-      (interest, signedPortionBeginOffset, signedPortionEndOffset);
-
-  var encoder = new TlvEncoder(256);
-  var saveLength = encoder.getLength();
-
-  // Encode backwards.
-  if (interest.getForwardingHint().size() > 0) {
-    if (interest.getSelectedDelegationIndex() != null)
-      throw new Error
-        ("An Interest may not have a selected delegation when encoding a forwarding hint");
-    if (interest.hasLink())
-      throw new Error
-        ("An Interest may not have a link object when encoding a forwarding hint");
-
-    var forwardingHintSaveLength = encoder.getLength();
-    Tlv0_2WireFormat.encodeDelegationSet_(interest.getForwardingHint(), encoder);
-    encoder.writeTypeAndLength(
-      Tlv.ForwardingHint, encoder.getLength() - forwardingHintSaveLength);
-  }
-
-  encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.SelectedDelegation, interest.getSelectedDelegationIndex());
-  var linkWireEncoding = interest.getLinkWireEncoding(this);
-  if (!linkWireEncoding.isNull())
-    // Encode the entire link as is.
-    encoder.writeBuffer(linkWireEncoding.buf());
-
-  encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
-
-  // Encode the Nonce as 4 bytes.
-  if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
-    // This is the most common case. Generate a nonce.
-    encoder.writeBlobTlv(Tlv.Nonce, Crypto.randomBytes(4));
-  else if (interest.getNonce().size() < 4) {
-    var nonce = Buffer(4);
-    // Copy existing nonce bytes.
-    interest.getNonce().buf().copy(nonce);
-
-    // Generate random bytes for remaining bytes in the nonce.
-    for (var i = interest.getNonce().size(); i < 4; ++i)
-      nonce[i] = Crypto.randomBytes(1)[0];
-
-    encoder.writeBlobTlv(Tlv.Nonce, nonce);
-  }
-  else if (interest.getNonce().size() == 4)
-    // Use the nonce as-is.
-    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf());
-  else
-    // Truncate.
-    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
-
-  Tlv0_2WireFormat.encodeSelectors(interest, encoder);
-  var tempOffsets = Tlv0_2WireFormat.encodeName(interest.getName(), encoder);
-  var signedPortionBeginOffsetFromBack =
-    encoder.getLength() - tempOffsets.signedPortionBeginOffset;
-  var signedPortionEndOffsetFromBack =
-    encoder.getLength() - tempOffsets.signedPortionEndOffset;
-
-  encoder.writeTypeAndLength(Tlv.Interest, encoder.getLength() - saveLength);
-  var signedPortionBeginOffset =
-    encoder.getLength() - signedPortionBeginOffsetFromBack;
-  var signedPortionEndOffset =
-    encoder.getLength() - signedPortionEndOffsetFromBack;
-
-  return { encoding: new Blob(encoder.getOutput(), false),
-           signedPortionBeginOffset: signedPortionBeginOffset,
-           signedPortionEndOffset: signedPortionEndOffset };
+  return Tlv0_3WireFormat.encodeInterestV03_(interest);
 };
 
 /**
@@ -45569,18 +45498,18 @@ Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
+Tlv0_3WireFormat.prototype.decodeInterest = function(interest, input, copy)
 {
   try {
-    return this.decodeInterestV02_(interest, input, copy);
-  } catch (exceptionV02) {
+    return Tlv0_3WireFormat.decodeInterestV03_(interest, input, copy);
+  } catch (exceptionV03) {
     try {
-      // Failed to decode as format v0.2. Try to decode as v0.3.
-      return Tlv0_2WireFormat.decodeInterestV03_(interest, input, copy);
+      // Failed to decode as format v0.3. Try to decode as v0.2.
+      return this.decodeInterestV02_(interest, input, copy);
     } catch (ex) {
-      // Ignore the exception decoding as format v0.3 and throw the exception
-      // from trying to decode as format as format v0.2.
-      throw exceptionV02;
+      // Ignore the exception decoding as format v0.2 and throw the exception
+      // from trying to decode as format as format v0.3.
+      throw exceptionV03;
     }
   }
 };
@@ -45588,7 +45517,7 @@ Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
 /**
  * Do the work of decodeInterest to decode strictly as format v0.2.
  */
-Tlv0_2WireFormat.prototype.decodeInterestV02_ = function(interest, input, copy)
+Tlv0_3WireFormat.prototype.decodeInterestV02_ = function(interest, input, copy)
 {
   if (copy == null)
     copy = true;
@@ -45596,9 +45525,9 @@ Tlv0_2WireFormat.prototype.decodeInterestV02_ = function(interest, input, copy)
   var decoder = new TlvDecoder(input);
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Interest);
-  var offsets = Tlv0_2WireFormat.decodeName(interest.getName(), decoder, copy);
+  var offsets = Tlv0_3WireFormat.decodeName(interest.getName(), decoder, copy);
   if (decoder.peekType(Tlv.Selectors, endOffset))
-    Tlv0_2WireFormat.decodeSelectors(interest, decoder, copy);
+    Tlv0_3WireFormat.decodeSelectors(interest, decoder, copy);
   else {
     // Set selectors to none.
     interest.setMinSuffixComponents(null);
@@ -45616,7 +45545,7 @@ Tlv0_2WireFormat.prototype.decodeInterestV02_ = function(interest, input, copy)
   if (decoder.peekType(Tlv.ForwardingHint, endOffset)) {
     var forwardingHintEndOffset = decoder.readNestedTlvsStart
       (Tlv.ForwardingHint);
-    Tlv0_2WireFormat.decodeDelegationSet_
+    Tlv0_3WireFormat.decodeDelegationSet_
       (interest.getForwardingHint(), forwardingHintEndOffset, decoder, copy);
     decoder.finishNestedTlvs(forwardingHintEndOffset);
   }
@@ -45658,7 +45587,7 @@ Tlv0_2WireFormat.prototype.decodeInterestV02_ = function(interest, input, copy)
  * signedPortionEndOffset is the offset in the encoding of the end of the
  * signed portion.
  */
-Tlv0_2WireFormat.prototype.encodeData = function(data)
+Tlv0_3WireFormat.prototype.encodeData = function(data)
 {
   var encoder = new TlvEncoder(1500);
   var saveLength = encoder.getLength();
@@ -45667,10 +45596,10 @@ Tlv0_2WireFormat.prototype.encodeData = function(data)
   encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature().buf());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
-  Tlv0_2WireFormat.encodeSignatureInfo_(data.getSignature(), encoder);
+  Tlv0_3WireFormat.encodeSignatureInfo_(data.getSignature(), encoder);
   encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
-  Tlv0_2WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
-  Tlv0_2WireFormat.encodeName(data.getName(), encoder);
+  Tlv0_3WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
+  Tlv0_3WireFormat.encodeName(data.getName(), encoder);
   var signedPortionBeginOffsetFromBack = encoder.getLength();
 
   encoder.writeTypeAndLength(Tlv.Data, encoder.getLength() - saveLength);
@@ -45697,7 +45626,7 @@ Tlv0_2WireFormat.prototype.encodeData = function(data)
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
  * of the end of the signed portion.
  */
-Tlv0_2WireFormat.prototype.decodeData = function(data, input, copy)
+Tlv0_3WireFormat.prototype.decodeData = function(data, input, copy)
 {
   if (copy == null)
     copy = true;
@@ -45707,13 +45636,13 @@ Tlv0_2WireFormat.prototype.decodeData = function(data, input, copy)
   var endOffset = decoder.readNestedTlvsStart(Tlv.Data);
   var signedPortionBeginOffset = decoder.getOffset();
 
-  Tlv0_2WireFormat.decodeName(data.getName(), decoder, copy);
+  Tlv0_3WireFormat.decodeName(data.getName(), decoder, copy);
   if (decoder.peekType(Tlv.MetaInfo, endOffset))
-    Tlv0_2WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder, copy);
+    Tlv0_3WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder, copy);
   else
     data.getMetaInfo().clear();
   data.setContent(new Blob(decoder.readOptionalBlobTlv(Tlv.Content, endOffset), copy));
-  Tlv0_2WireFormat.decodeSignatureInfo(data, decoder, copy);
+  Tlv0_3WireFormat.decodeSignatureInfo(data, decoder, copy);
 
   var signedPortionEndOffset = decoder.getOffset();
   data.getSignature().setSignature
@@ -45730,10 +45659,10 @@ Tlv0_2WireFormat.prototype.decodeData = function(data, input, copy)
  * encode.
  * @return {Blob} A Blob containing the encoding.
  */
-Tlv0_2WireFormat.prototype.encodeControlParameters = function(controlParameters)
+Tlv0_3WireFormat.prototype.encodeControlParameters = function(controlParameters)
 {
   var encoder = new TlvEncoder(256);
-  Tlv0_2WireFormat.encodeControlParameters(controlParameters, encoder);
+  Tlv0_3WireFormat.encodeControlParameters(controlParameters, encoder);
   return new Blob(encoder.getOutput(), false);
 };
 
@@ -45748,14 +45677,14 @@ Tlv0_2WireFormat.prototype.encodeControlParameters = function(controlParameters)
  * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws DecodingException For invalid encoding
  */
-Tlv0_2WireFormat.prototype.decodeControlParameters = function
+Tlv0_3WireFormat.prototype.decodeControlParameters = function
   (controlParameters, input, copy)
 {
   if (copy == null)
     copy = true;
 
   var decoder = new TlvDecoder(input);
-  Tlv0_2WireFormat.decodeControlParameters(controlParameters, decoder, copy);
+  Tlv0_3WireFormat.decodeControlParameters(controlParameters, decoder, copy);
 };
 
 /**
@@ -45764,7 +45693,7 @@ Tlv0_2WireFormat.prototype.decodeControlParameters = function
  * encode.
  * @return {Blob} A Blob containing the encoding.
  */
-Tlv0_2WireFormat.prototype.encodeControlResponse = function(controlResponse)
+Tlv0_3WireFormat.prototype.encodeControlResponse = function(controlResponse)
 {
   var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
@@ -45773,7 +45702,7 @@ Tlv0_2WireFormat.prototype.encodeControlResponse = function(controlResponse)
 
   // Encode the body.
   if (controlResponse.getBodyAsControlParameters() != null)
-    Tlv0_2WireFormat.encodeControlParameters
+    Tlv0_3WireFormat.encodeControlParameters
       (controlResponse.getBodyAsControlParameters(), encoder);
 
   encoder.writeBlobTlv
@@ -45798,7 +45727,7 @@ Tlv0_2WireFormat.prototype.encodeControlResponse = function(controlResponse)
  * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws DecodingException For invalid encoding
  */
-Tlv0_2WireFormat.prototype.decodeControlResponse = function
+Tlv0_3WireFormat.prototype.decodeControlResponse = function
   (controlResponse, input, copy)
 {
   if (copy == null)
@@ -45818,7 +45747,7 @@ Tlv0_2WireFormat.prototype.decodeControlResponse = function
   if (decoder.peekType(Tlv.ControlParameters_ControlParameters, endOffset)) {
     controlResponse.setBodyAsControlParameters(new ControlParameters());
     // Decode into the existing ControlParameters to avoid copying.
-    Tlv0_2WireFormat.decodeControlParameters
+    Tlv0_3WireFormat.decodeControlParameters
       (controlResponse.getBodyAsControlParameters(), decoder, copy);
   }
   else
@@ -45832,25 +45761,25 @@ Tlv0_2WireFormat.prototype.decodeControlResponse = function
  * @param {Signature} signature An object of a subclass of Signature to encode.
  * @return {Blob} A Blob containing the encoding.
  */
-Tlv0_2WireFormat.prototype.encodeSignatureInfo = function(signature)
+Tlv0_3WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
   var encoder = new TlvEncoder(256);
-  Tlv0_2WireFormat.encodeSignatureInfo_(signature, encoder);
+  Tlv0_3WireFormat.encodeSignatureInfo_(signature, encoder);
 
   return new Blob(encoder.getOutput(), false);
 };
 
 // SignatureHolder is used by decodeSignatureInfoAndValue.
-Tlv0_2WireFormat.SignatureHolder = function Tlv0_2WireFormatSignatureHolder()
+Tlv0_3WireFormat.SignatureHolder = function Tlv0_3WireFormatSignatureHolder()
 {
 };
 
-Tlv0_2WireFormat.SignatureHolder.prototype.setSignature = function(signature)
+Tlv0_3WireFormat.SignatureHolder.prototype.setSignature = function(signature)
 {
   this.signature = signature;
 };
 
-Tlv0_2WireFormat.SignatureHolder.prototype.getSignature = function()
+Tlv0_3WireFormat.SignatureHolder.prototype.getSignature = function()
 {
   return this.signature;
 };
@@ -45866,16 +45795,16 @@ Tlv0_2WireFormat.SignatureHolder.prototype.getSignature = function()
  * must remain unchanged while the Blob values are used. If omitted, use true.
  * @return {Signature} A new object which is a subclass of Signature.
  */
-Tlv0_2WireFormat.prototype.decodeSignatureInfoAndValue = function
+Tlv0_3WireFormat.prototype.decodeSignatureInfoAndValue = function
   (signatureInfo, signatureValue, copy)
 {
   if (copy == null)
     copy = true;
 
   // Use a SignatureHolder to imitate a Data object for decodeSignatureInfo.
-  var signatureHolder = new Tlv0_2WireFormat.SignatureHolder();
+  var signatureHolder = new Tlv0_3WireFormat.SignatureHolder();
   var decoder = new TlvDecoder(signatureInfo);
-  Tlv0_2WireFormat.decodeSignatureInfo(signatureHolder, decoder, copy);
+  Tlv0_3WireFormat.decodeSignatureInfo(signatureHolder, decoder, copy);
 
   decoder = new TlvDecoder(signatureValue);
   signatureHolder.getSignature().setSignature
@@ -45891,7 +45820,7 @@ Tlv0_2WireFormat.prototype.decodeSignatureInfoAndValue = function
  * signature value to encode.
  * @return {Blob} A Blob containing the encoding.
  */
-Tlv0_2WireFormat.prototype.encodeSignatureValue = function(signature)
+Tlv0_3WireFormat.prototype.encodeSignatureValue = function(signature)
 {
   var encoder = new TlvEncoder(256);
   encoder.writeBlobTlv(Tlv.SignatureValue, signature.getSignature().buf());
@@ -45907,7 +45836,7 @@ Tlv0_2WireFormat.prototype.encodeSignatureValue = function(signature)
  * Blob values. If false, then Blob values share memory with the input, which
  * must remain unchanged while the Blob values are used. If omitted, use true.
  */
-Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input, copy)
+Tlv0_3WireFormat.prototype.decodeLpPacket = function(lpPacket, input, copy)
 {
   if (copy == null)
     copy = true;
@@ -45994,10 +45923,10 @@ Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input, copy)
  * @param {DelegationSet} delegationSet The DelegationSet object to encode.
  * @return {Blob} A Blob containing the encoding.
  */
-Tlv0_2WireFormat.prototype.encodeDelegationSet = function(delegationSet)
+Tlv0_3WireFormat.prototype.encodeDelegationSet = function(delegationSet)
 {
   var encoder = new TlvEncoder(256);
-  Tlv0_2WireFormat.encodeDelegationSet_(delegationSet, encoder);
+  Tlv0_3WireFormat.encodeDelegationSet_(delegationSet, encoder);
 
   return new Blob(encoder.getOutput(), false);
 };
@@ -46015,14 +45944,14 @@ Tlv0_2WireFormat.prototype.encodeDelegationSet = function(delegationSet)
  * Blob values. If false, then Blob values share memory with the input, which
  * must remain unchanged while the Blob values are used. If omitted, use true.
  */
-Tlv0_2WireFormat.prototype.decodeDelegationSet = function
+Tlv0_3WireFormat.prototype.decodeDelegationSet = function
   (delegationSet, input, copy)
 {
   if (copy == null)
     copy = true;
 
   var decoder = new TlvDecoder(input);
-  Tlv0_2WireFormat.decodeDelegationSet_
+  Tlv0_3WireFormat.decodeDelegationSet_
     (delegationSet, input.length, decoder, copy);
 };
 
@@ -46032,7 +45961,7 @@ Tlv0_2WireFormat.prototype.decodeDelegationSet = function
  * encode.
  * @return {Blob} A Blob containing the encoding.
  */
-Tlv0_2WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
+Tlv0_3WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
 {
   var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
@@ -46045,7 +45974,7 @@ Tlv0_2WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
   // Assume the algorithmType value is the same as the TLV type.
   encoder.writeNonNegativeIntegerTlv
     (Tlv.Encrypt_EncryptionAlgorithm, encryptedContent.getAlgorithmType());
-  Tlv0_2WireFormat.encodeKeyLocator
+  Tlv0_3WireFormat.encodeKeyLocator
     (Tlv.KeyLocator, encryptedContent.getKeyLocator(), encoder);
 
   encoder.writeTypeAndLength
@@ -46064,7 +45993,7 @@ Tlv0_2WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
  * Blob values. If false, then Blob values share memory with the input, which
  * must remain unchanged while the Blob values are used. If omitted, use true.
  */
-Tlv0_2WireFormat.prototype.decodeEncryptedContent = function
+Tlv0_3WireFormat.prototype.decodeEncryptedContent = function
   (encryptedContent, input, copy)
 {
   if (copy == null)
@@ -46075,7 +46004,7 @@ Tlv0_2WireFormat.prototype.decodeEncryptedContent = function
     readNestedTlvsStart(Tlv.Encrypt_EncryptedContent);
 
   encryptedContent.clear();
-  Tlv0_2WireFormat.decodeKeyLocator
+  Tlv0_3WireFormat.decodeKeyLocator
     (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder, copy);
   encryptedContent.setAlgorithmType
     (decoder.readNonNegativeIntegerTlv(Tlv.Encrypt_EncryptionAlgorithm));
@@ -46095,14 +46024,14 @@ Tlv0_2WireFormat.prototype.decodeEncryptedContent = function
  * encode.
  * @return {Blob} A Blob containing the encoding.
  */
-Tlv0_2WireFormat.prototype.encodeEncryptedContentV2 = function(encryptedContent)
+Tlv0_3WireFormat.prototype.encodeEncryptedContentV2 = function(encryptedContent)
 {
   var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
 
   // Encode backwards.
   if (encryptedContent.getKeyLocator().getType() == KeyLocatorType.KEYNAME)
-    Tlv0_2WireFormat.encodeName
+    Tlv0_3WireFormat.encodeName
       (encryptedContent.getKeyLocator().getKeyName(), encoder);
   encoder.writeOptionalBlobTlv
     (Tlv.Encrypt_EncryptedPayloadKey, encryptedContent.getPayloadKey().buf());
@@ -46128,7 +46057,7 @@ Tlv0_2WireFormat.prototype.encodeEncryptedContentV2 = function(encryptedContent)
  * Blob values. If false, then Blob values share memory with the input, which
  * must remain unchanged while the Blob values are used. If omitted, use true.
  */
-Tlv0_2WireFormat.prototype.decodeEncryptedContentV2 = function
+Tlv0_3WireFormat.prototype.decodeEncryptedContentV2 = function
   (encryptedContent, input, copy)
 {
   if (copy == null)
@@ -46149,7 +46078,7 @@ Tlv0_2WireFormat.prototype.decodeEncryptedContentV2 = function
      (Tlv.Encrypt_EncryptedPayloadKey, endOffset), copy));
 
   if (decoder.peekType(Tlv.Name, endOffset)) {
-    Tlv0_2WireFormat.decodeName
+    Tlv0_3WireFormat.decodeName
       (encryptedContent.getKeyLocator().getKeyName(), decoder, copy);
     encryptedContent.getKeyLocator().setType(KeyLocatorType.KEYNAME);
   }
@@ -46158,15 +46087,15 @@ Tlv0_2WireFormat.prototype.decodeEncryptedContentV2 = function
 };
 
 /**
- * Get a singleton instance of a Tlv0_2WireFormat.  To always use the
+ * Get a singleton instance of a Tlv0_3WireFormat.  To always use the
  * preferred version NDN-TLV, you should use TlvWireFormat.get().
- * @return {Tlv0_2WireFormat} The singleton instance.
+ * @return {Tlv0_3WireFormat} The singleton instance.
  */
-Tlv0_2WireFormat.get = function()
+Tlv0_3WireFormat.get = function()
 {
-  if (Tlv0_2WireFormat.instance === null)
-    Tlv0_2WireFormat.instance = new Tlv0_2WireFormat();
-  return Tlv0_2WireFormat.instance;
+  if (Tlv0_3WireFormat.instance === null)
+    Tlv0_3WireFormat.instance = new Tlv0_3WireFormat();
+  return Tlv0_3WireFormat.instance;
 };
 
 /**
@@ -46175,7 +46104,7 @@ Tlv0_2WireFormat.get = function()
  * @param {Name.Component} component The name component to encode.
  * @param {TlvEncoder} encoder The encoder to receive the encoding.
  */
-Tlv0_2WireFormat.encodeNameComponent = function(component, encoder)
+Tlv0_3WireFormat.encodeNameComponent = function(component, encoder)
 {
   var type;
   if (component.getType() === ComponentType.OTHER_CODE)
@@ -46196,7 +46125,7 @@ Tlv0_2WireFormat.encodeNameComponent = function(component, encoder)
  * must remain unchanged while the Blob values are used. If omitted, use true.
  * @return {Name.Component} A new Name.Component.
  */
-Tlv0_2WireFormat.decodeNameComponent = function(decoder, copy)
+Tlv0_3WireFormat.decodeNameComponent = function(decoder, copy)
 {
   if (copy == null)
     copy = true;
@@ -46230,14 +46159,14 @@ Tlv0_2WireFormat.decodeNameComponent = function(decoder, copy)
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_2WireFormat.encodeName = function(name, encoder)
+Tlv0_3WireFormat.encodeName = function(name, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode the components backwards.
   var signedPortionEndOffsetFromBack;
   for (var i = name.size() - 1; i >= 0; --i) {
-    Tlv0_2WireFormat.encodeNameComponent(name.get(i), encoder);
+    Tlv0_3WireFormat.encodeNameComponent(name.get(i), encoder);
     if (i == name.size() - 1)
       signedPortionEndOffsetFromBack = encoder.getLength();
   }
@@ -46271,7 +46200,7 @@ Tlv0_2WireFormat.encodeName = function(name, encoder)
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_2WireFormat.decodeName = function(name, decoder, copy)
+Tlv0_3WireFormat.decodeName = function(name, decoder, copy)
 {
   name.clear();
 
@@ -46282,7 +46211,7 @@ Tlv0_2WireFormat.decodeName = function(name, decoder, copy)
 
   while (decoder.getOffset() < endOffset) {
     signedPortionEndOffset = decoder.getOffset();
-    name.append(Tlv0_2WireFormat.decodeNameComponent(decoder, copy));
+    name.append(Tlv0_3WireFormat.decodeNameComponent(decoder, copy));
   }
 
   decoder.finishNestedTlvs(endOffset);
@@ -46295,7 +46224,7 @@ Tlv0_2WireFormat.decodeName = function(name, decoder, copy)
  * Encode the interest selectors.  If no selectors are written, do not output a
  * Selectors TLV.
  */
-Tlv0_2WireFormat.encodeSelectors = function(interest, encoder)
+Tlv0_3WireFormat.encodeSelectors = function(interest, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -46305,10 +46234,10 @@ Tlv0_2WireFormat.encodeSelectors = function(interest, encoder)
   encoder.writeOptionalNonNegativeIntegerTlv(
     Tlv.ChildSelector, interest.getChildSelector());
   if (interest.getExclude().size() > 0)
-    Tlv0_2WireFormat.encodeExclude(interest.getExclude(), encoder);
+    Tlv0_3WireFormat.encodeExclude(interest.getExclude(), encoder);
 
   if (interest.getKeyLocator().getType() != null)
-    Tlv0_2WireFormat.encodeKeyLocator
+    Tlv0_3WireFormat.encodeKeyLocator
       (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), encoder);
 
   encoder.writeOptionalNonNegativeIntegerTlv(
@@ -46321,7 +46250,7 @@ Tlv0_2WireFormat.encodeSelectors = function(interest, encoder)
     encoder.writeTypeAndLength(Tlv.Selectors, encoder.getLength() - saveLength);
 };
 
-Tlv0_2WireFormat.decodeSelectors = function(interest, decoder, copy)
+Tlv0_3WireFormat.decodeSelectors = function(interest, decoder, copy)
 {
   if (copy == null)
     copy = true;
@@ -46334,13 +46263,13 @@ Tlv0_2WireFormat.decodeSelectors = function(interest, decoder, copy)
     (Tlv.MaxSuffixComponents, endOffset));
 
   if (decoder.peekType(Tlv.PublisherPublicKeyLocator, endOffset))
-    Tlv0_2WireFormat.decodeKeyLocator
+    Tlv0_3WireFormat.decodeKeyLocator
       (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), decoder, copy);
   else
     interest.getKeyLocator().clear();
 
   if (decoder.peekType(Tlv.Exclude, endOffset))
-    Tlv0_2WireFormat.decodeExclude(interest.getExclude(), decoder, copy);
+    Tlv0_3WireFormat.decodeExclude(interest.getExclude(), decoder, copy);
   else
     interest.getExclude().clear();
 
@@ -46351,7 +46280,7 @@ Tlv0_2WireFormat.decodeSelectors = function(interest, decoder, copy)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_2WireFormat.encodeExclude = function(exclude, encoder)
+Tlv0_3WireFormat.encodeExclude = function(exclude, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -46363,13 +46292,13 @@ Tlv0_2WireFormat.encodeExclude = function(exclude, encoder)
     if (entry == Exclude.ANY)
       encoder.writeTypeAndLength(Tlv.Any, 0);
     else
-      Tlv0_2WireFormat.encodeNameComponent(entry, encoder);
+      Tlv0_3WireFormat.encodeNameComponent(entry, encoder);
   }
 
   encoder.writeTypeAndLength(Tlv.Exclude, encoder.getLength() - saveLength);
 };
 
-Tlv0_2WireFormat.decodeExclude = function(exclude, decoder, copy)
+Tlv0_3WireFormat.decodeExclude = function(exclude, decoder, copy)
 {
   if (copy == null)
     copy = true;
@@ -46384,20 +46313,20 @@ Tlv0_2WireFormat.decodeExclude = function(exclude, decoder, copy)
       exclude.appendAny();
     }
     else
-      exclude.appendComponent(Tlv0_2WireFormat.decodeNameComponent(decoder, copy));
+      exclude.appendComponent(Tlv0_3WireFormat.decodeNameComponent(decoder, copy));
   }
 
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_2WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
+Tlv0_3WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode backwards.
   if (keyLocator.getType() != null) {
     if (keyLocator.getType() == KeyLocatorType.KEYNAME)
-      Tlv0_2WireFormat.encodeName(keyLocator.getKeyName(), encoder);
+      Tlv0_3WireFormat.encodeName(keyLocator.getKeyName(), encoder);
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
              keyLocator.getKeyData().size() > 0)
       encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData().buf());
@@ -46408,7 +46337,7 @@ Tlv0_2WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
   encoder.writeTypeAndLength(type, encoder.getLength() - saveLength);
 };
 
-Tlv0_2WireFormat.decodeKeyLocator = function
+Tlv0_3WireFormat.decodeKeyLocator = function
   (expectedType, keyLocator, decoder, copy)
 {
   if (copy == null)
@@ -46425,7 +46354,7 @@ Tlv0_2WireFormat.decodeKeyLocator = function
   if (decoder.peekType(Tlv.Name, endOffset)) {
     // KeyLocator is a Name.
     keyLocator.setType(KeyLocatorType.KEYNAME);
-    Tlv0_2WireFormat.decodeName(keyLocator.getKeyName(), decoder, copy);
+    Tlv0_3WireFormat.decodeName(keyLocator.getKeyName(), decoder, copy);
   }
   else if (decoder.peekType(Tlv.KeyLocatorDigest, endOffset)) {
     // KeyLocator is a KeyLocatorDigest.
@@ -46440,7 +46369,7 @@ Tlv0_2WireFormat.decodeKeyLocator = function
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_2WireFormat.encodeValidityPeriod_ = function(validityPeriod, encoder)
+Tlv0_3WireFormat.encodeValidityPeriod_ = function(validityPeriod, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -46454,7 +46383,7 @@ Tlv0_2WireFormat.encodeValidityPeriod_ = function(validityPeriod, encoder)
     (Tlv.ValidityPeriod_ValidityPeriod, encoder.getLength() - saveLength);
 };
 
-Tlv0_2WireFormat.decodeValidityPeriod_ = function(validityPeriod, decoder)
+Tlv0_3WireFormat.decodeValidityPeriod_ = function(validityPeriod, decoder)
 {
   var endOffset = decoder.readNestedTlvsStart(Tlv.ValidityPeriod_ValidityPeriod);
 
@@ -46479,7 +46408,7 @@ Tlv0_2WireFormat.decodeValidityPeriod_ = function(validityPeriod, decoder)
  * @param {Signature} signature An object of a subclass of Signature to encode.
  * @param {TlvEncoder} encoder The encoder.
  */
-Tlv0_2WireFormat.encodeSignatureInfo_ = function(signature, encoder)
+Tlv0_3WireFormat.encodeSignatureInfo_ = function(signature, encoder)
 {
   if (signature instanceof GenericSignature) {
     // Handle GenericSignature separately since it has the entire encoding.
@@ -46507,24 +46436,24 @@ Tlv0_2WireFormat.encodeSignatureInfo_ = function(signature, encoder)
   // Encode backwards.
   if (signature instanceof Sha256WithRsaSignature) {
     if (signature.getValidityPeriod().hasPeriod())
-      Tlv0_2WireFormat.encodeValidityPeriod_
+      Tlv0_3WireFormat.encodeValidityPeriod_
         (signature.getValidityPeriod(), encoder);
-    Tlv0_2WireFormat.encodeKeyLocator
+    Tlv0_3WireFormat.encodeKeyLocator
       (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
   }
   else if (signature instanceof Sha256WithEcdsaSignature) {
     if (signature.getValidityPeriod().hasPeriod())
-      Tlv0_2WireFormat.encodeValidityPeriod_
+      Tlv0_3WireFormat.encodeValidityPeriod_
         (signature.getValidityPeriod(), encoder);
-    Tlv0_2WireFormat.encodeKeyLocator
+    Tlv0_3WireFormat.encodeKeyLocator
       (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithEcdsa);
   }
   else if (signature instanceof HmacWithSha256Signature) {
-    Tlv0_2WireFormat.encodeKeyLocator
+    Tlv0_3WireFormat.encodeKeyLocator
       (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureHmacWithSha256);
@@ -46538,7 +46467,7 @@ Tlv0_2WireFormat.encodeSignatureInfo_ = function(signature, encoder)
   encoder.writeTypeAndLength(Tlv.SignatureInfo, encoder.getLength() - saveLength);
 };
 
-Tlv0_2WireFormat.decodeSignatureInfo = function(data, decoder, copy)
+Tlv0_3WireFormat.decodeSignatureInfo = function(data, decoder, copy)
 {
   if (copy == null)
     copy = true;
@@ -46552,25 +46481,25 @@ Tlv0_2WireFormat.decodeSignatureInfo = function(data, decoder, copy)
     // Modify data's signature object because if we create an object
     //   and set it, then data will have to copy all the fields.
     var signatureInfo = data.getSignature();
-    Tlv0_2WireFormat.decodeKeyLocator
+    Tlv0_3WireFormat.decodeKeyLocator
       (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder, copy);
     if (decoder.peekType(Tlv.ValidityPeriod_ValidityPeriod, endOffset))
-      Tlv0_2WireFormat.decodeValidityPeriod_
+      Tlv0_3WireFormat.decodeValidityPeriod_
         (signatureInfo.getValidityPeriod(), decoder);
   }
   else if (signatureType == Tlv.SignatureType_SignatureSha256WithEcdsa) {
     data.setSignature(new Sha256WithEcdsaSignature());
     var signatureInfo = data.getSignature();
-    Tlv0_2WireFormat.decodeKeyLocator
+    Tlv0_3WireFormat.decodeKeyLocator
       (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder, copy);
     if (decoder.peekType(Tlv.ValidityPeriod_ValidityPeriod, endOffset))
-      Tlv0_2WireFormat.decodeValidityPeriod_
+      Tlv0_3WireFormat.decodeValidityPeriod_
         (signatureInfo.getValidityPeriod(), decoder);
   }
   else if (signatureType == Tlv.SignatureType_SignatureHmacWithSha256) {
     data.setSignature(new HmacWithSha256Signature());
     var signatureInfo = data.getSignature();
-    Tlv0_2WireFormat.decodeKeyLocator
+    Tlv0_3WireFormat.decodeKeyLocator
       (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder, copy);
   }
   else if (signatureType == Tlv.SignatureType_DigestSha256)
@@ -46589,7 +46518,7 @@ Tlv0_2WireFormat.decodeSignatureInfo = function(data, decoder, copy)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_2WireFormat.encodeMetaInfo = function(metaInfo, encoder)
+Tlv0_3WireFormat.encodeMetaInfo = function(metaInfo, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -46598,7 +46527,7 @@ Tlv0_2WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.
     var finalBlockIdSaveLength = encoder.getLength();
-    Tlv0_2WireFormat.encodeNameComponent(metaInfo.getFinalBlockId(), encoder);
+    Tlv0_3WireFormat.encodeNameComponent(metaInfo.getFinalBlockId(), encoder);
     encoder.writeTypeAndLength
       (Tlv.FinalBlockId, encoder.getLength() - finalBlockIdSaveLength);
   }
@@ -46624,7 +46553,7 @@ Tlv0_2WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   encoder.writeTypeAndLength(Tlv.MetaInfo, encoder.getLength() - saveLength);
 };
 
-Tlv0_2WireFormat.decodeMetaInfo = function(metaInfo, decoder, copy)
+Tlv0_3WireFormat.decodeMetaInfo = function(metaInfo, decoder, copy)
 {
   if (copy == null)
     copy = true;
@@ -46651,7 +46580,7 @@ Tlv0_2WireFormat.decodeMetaInfo = function(metaInfo, decoder, copy)
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.FreshnessPeriod, endOffset));
   if (decoder.peekType(Tlv.FinalBlockId, endOffset)) {
     var finalBlockIdEndOffset = decoder.readNestedTlvsStart(Tlv.FinalBlockId);
-    metaInfo.setFinalBlockId(Tlv0_2WireFormat.decodeNameComponent(decoder, copy));
+    metaInfo.setFinalBlockId(Tlv0_3WireFormat.decodeNameComponent(decoder, copy));
     decoder.finishNestedTlvs(finalBlockIdEndOffset);
   }
   else
@@ -46660,7 +46589,7 @@ Tlv0_2WireFormat.decodeMetaInfo = function(metaInfo, decoder, copy)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_2WireFormat.encodeControlParameters = function(controlParameters, encoder)
+Tlv0_3WireFormat.encodeControlParameters = function(controlParameters, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -46671,7 +46600,7 @@ Tlv0_2WireFormat.encodeControlParameters = function(controlParameters, encoder)
 
   if (controlParameters.getStrategy().size() > 0){
     var strategySaveLength = encoder.getLength();
-    Tlv0_2WireFormat.encodeName(controlParameters.getStrategy(), encoder);
+    Tlv0_3WireFormat.encodeName(controlParameters.getStrategy(), encoder);
     encoder.writeTypeAndLength(Tlv.ControlParameters_Strategy,
       encoder.getLength() - strategySaveLength);
   }
@@ -46697,13 +46626,13 @@ Tlv0_2WireFormat.encodeControlParameters = function(controlParameters, encoder)
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
   if (controlParameters.getName() != null)
-    Tlv0_2WireFormat.encodeName(controlParameters.getName(), encoder);
+    Tlv0_3WireFormat.encodeName(controlParameters.getName(), encoder);
 
   encoder.writeTypeAndLength
     (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
 };
 
-Tlv0_2WireFormat.decodeControlParameters = function
+Tlv0_3WireFormat.decodeControlParameters = function
   (controlParameters, decoder, copy)
 {
   if (copy == null)
@@ -46716,7 +46645,7 @@ Tlv0_2WireFormat.decodeControlParameters = function
   // decode name
   if (decoder.peekType(Tlv.Name, endOffset)) {
     var name = new Name();
-    Tlv0_2WireFormat.decodeName(name, decoder, copy);
+    Tlv0_3WireFormat.decodeName(name, decoder, copy);
     controlParameters.setName(name);
   }
 
@@ -46765,7 +46694,7 @@ Tlv0_2WireFormat.decodeControlParameters = function
   // decode strategy
   if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
     var strategyEndOffset = decoder.readNestedTlvsStart(Tlv.ControlParameters_Strategy);
-    Tlv0_2WireFormat.decodeName(controlParameters.getStrategy(), decoder, copy);
+    Tlv0_3WireFormat.decodeName(controlParameters.getStrategy(), decoder, copy);
     decoder.finishNestedTlvs(strategyEndOffset);
   }
 
@@ -46785,13 +46714,13 @@ Tlv0_2WireFormat.decodeControlParameters = function
  * @param {DelegationSet} delegationSet The DelegationSet object to encode.
  * @param {TlvEncoder} encoder The TlvEncoder to receive the encoding.
  */
-Tlv0_2WireFormat.encodeDelegationSet_ = function(delegationSet, encoder)
+Tlv0_3WireFormat.encodeDelegationSet_ = function(delegationSet, encoder)
 {
   // Encode backwards.
   for (var i = delegationSet.size() - 1; i >= 0; --i) {
     var saveLength = encoder.getLength();
 
-    Tlv0_2WireFormat.encodeName(delegationSet.get(i).getName(), encoder);
+    Tlv0_3WireFormat.encodeName(delegationSet.get(i).getName(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.Link_Preference, delegationSet.get(i).getPreference());
 
@@ -46814,7 +46743,7 @@ Tlv0_2WireFormat.encodeDelegationSet_ = function(delegationSet, encoder)
  * values. If false, then Blob values share memory with the input, which must
  * remain unchanged while the Blob values are used.
  */
-Tlv0_2WireFormat.decodeDelegationSet_ = function
+Tlv0_3WireFormat.decodeDelegationSet_ = function
   (delegationSet, endOffset, decoder, copy)
 {
   delegationSet.clear();
@@ -46822,7 +46751,7 @@ Tlv0_2WireFormat.decodeDelegationSet_ = function
     decoder.readTypeAndLength(Tlv.Link_Delegation);
     var preference = decoder.readNonNegativeIntegerTlv(Tlv.Link_Preference);
     var name = new Name();
-    Tlv0_2WireFormat.decodeName(name, decoder, copy);
+    Tlv0_3WireFormat.decodeName(name, decoder, copy);
 
     // Add unsorted to preserve the order so that Interest selected delegation
     // index will work.
@@ -46842,7 +46771,7 @@ Tlv0_2WireFormat.decodeDelegationSet_ = function
  * just before the final name component (which is assumed to be a signature for
  * a signed interest).
  */
-Tlv0_2WireFormat.encodeInterestV03_ = function(interest)
+Tlv0_3WireFormat.encodeInterestV03_ = function(interest)
 {
   // TODO: Throw an exception if the interest speficies V02 fields.
 
@@ -46887,7 +46816,7 @@ Tlv0_2WireFormat.encodeInterestV03_ = function(interest)
         ("An Interest may not have a link object when encoding a forwarding hint");
 
     var forwardingHintSaveLength = encoder.getLength();
-    Tlv0_2WireFormat.encodeDelegationSet_(interest.getForwardingHint(), encoder);
+    Tlv0_3WireFormat.encodeDelegationSet_(interest.getForwardingHint(), encoder);
     encoder.writeTypeAndLength(
       Tlv.ForwardingHint, encoder.getLength() - forwardingHintSaveLength);
   }
@@ -46897,7 +46826,7 @@ Tlv0_2WireFormat.encodeInterestV03_ = function(interest)
   if (interest.getCanBePrefix())
     encoder.writeTypeAndLength(Tlv.CanBePrefix, 0);
 
-  var tempOffsets = Tlv0_2WireFormat.encodeName(interest.getName(), encoder);
+  var tempOffsets = Tlv0_3WireFormat.encodeName(interest.getName(), encoder);
   var signedPortionBeginOffsetFromBack =
     encoder.getLength() - tempOffsets.signedPortionBeginOffset;
   var signedPortionEndOffsetFromBack =
@@ -46932,7 +46861,7 @@ Tlv0_2WireFormat.encodeInterestV03_ = function(interest)
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_2WireFormat.decodeInterestV03_ = function(interest, input, copy)
+Tlv0_3WireFormat.decodeInterestV03_ = function(interest, input, copy)
 {
   if (copy == null)
     copy = true;
@@ -46940,7 +46869,7 @@ Tlv0_2WireFormat.decodeInterestV03_ = function(interest, input, copy)
   var decoder = new TlvDecoder(input);
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Interest);
-  var offsets = Tlv0_2WireFormat.decodeName(interest.getName(), decoder, copy);
+  var offsets = Tlv0_3WireFormat.decodeName(interest.getName(), decoder, copy);
 
   // In v0.2 semantics, this calls setMaxSuffixComponents.
   interest.setCanBePrefix(decoder.readBooleanTlv(Tlv.CanBePrefix, endOffset));
@@ -46950,7 +46879,7 @@ Tlv0_2WireFormat.decodeInterestV03_ = function(interest, input, copy)
   if (decoder.peekType(Tlv.ForwardingHint, endOffset)) {
     var forwardingHintEndOffset = decoder.readNestedTlvsStart
       (Tlv.ForwardingHint);
-    Tlv0_2WireFormat.decodeDelegationSet_
+    Tlv0_3WireFormat.decodeDelegationSet_
       (interest.getForwardingHint(), forwardingHintEndOffset, decoder, copy);
     decoder.finishNestedTlvs(forwardingHintEndOffset);
   }
@@ -46980,6 +46909,158 @@ Tlv0_2WireFormat.decodeInterestV03_ = function(interest, input, copy)
 
   decoder.finishNestedTlvs(endOffset);
   return offsets;
+};
+/**
+ * Copyright (C) 2013-2021 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Crypto = require('../crypto.js'); /** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var Tlv = require('./tlv/tlv.js').Tlv; /** @ignore */
+var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
+var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
+var Tlv0_3WireFormat = require('./tlv-0_3-wire-format.js').Tlv0_3WireFormat;
+
+/**
+ * A Tlv0_2WireFormat implements the WireFormat interface for encoding and
+ * decoding with the NDN-TLV wire format, version 0.2.
+ * @constructor
+ */
+var Tlv0_2WireFormat = function Tlv0_2WireFormat()
+{
+  // Inherit from Tlv0_3WireFormat.
+  Tlv0_3WireFormat.call(this);
+};
+
+Tlv0_2WireFormat.prototype = new Tlv0_3WireFormat();
+Tlv0_2WireFormat.prototype.name = "Tlv0_2WireFormat";
+
+exports.Tlv0_2WireFormat = Tlv0_2WireFormat;
+
+// Default object.
+Tlv0_2WireFormat.instance = null;
+
+/**
+ * Encode the interest using NDN-TLV and return a Buffer.
+ * @param {Interest} interest The Interest object to encode.
+ * @return {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
+ */
+Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
+{
+  if (!interest.didSetCanBePrefix_ && !Tlv0_3WireFormat.didCanBePrefixWarning_) {
+    console.log
+      ("WARNING: The default CanBePrefix will change. See Interest.setDefaultCanBePrefix() for details.");
+    Tlv0_3WireFormat.didCanBePrefixWarning_ = true;
+  }
+
+  if (interest.hasApplicationParameters())
+    // The application has specified a format v0.3 field. As we transition to
+    // format v0.3, encode as format v0.3 even though the application default is
+    // Tlv0_2WireFormat.
+    return Tlv0_3WireFormat.encodeInterestV03_
+      (interest, signedPortionBeginOffset, signedPortionEndOffset);
+
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  if (interest.getForwardingHint().size() > 0) {
+    if (interest.getSelectedDelegationIndex() != null)
+      throw new Error
+        ("An Interest may not have a selected delegation when encoding a forwarding hint");
+    if (interest.hasLink())
+      throw new Error
+        ("An Interest may not have a link object when encoding a forwarding hint");
+
+    var forwardingHintSaveLength = encoder.getLength();
+    Tlv0_3WireFormat.encodeDelegationSet_(interest.getForwardingHint(), encoder);
+    encoder.writeTypeAndLength(
+      Tlv.ForwardingHint, encoder.getLength() - forwardingHintSaveLength);
+  }
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.SelectedDelegation, interest.getSelectedDelegationIndex());
+  var linkWireEncoding = interest.getLinkWireEncoding(this);
+  if (!linkWireEncoding.isNull())
+    // Encode the entire link as is.
+    encoder.writeBuffer(linkWireEncoding.buf());
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
+
+  // Encode the Nonce as 4 bytes.
+  if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
+    // This is the most common case. Generate a nonce.
+    encoder.writeBlobTlv(Tlv.Nonce, Crypto.randomBytes(4));
+  else if (interest.getNonce().size() < 4) {
+    var nonce = Buffer(4);
+    // Copy existing nonce bytes.
+    interest.getNonce().buf().copy(nonce);
+
+    // Generate random bytes for remaining bytes in the nonce.
+    for (var i = interest.getNonce().size(); i < 4; ++i)
+      nonce[i] = Crypto.randomBytes(1)[0];
+
+    encoder.writeBlobTlv(Tlv.Nonce, nonce);
+  }
+  else if (interest.getNonce().size() == 4)
+    // Use the nonce as-is.
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf());
+  else
+    // Truncate.
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
+
+  Tlv0_3WireFormat.encodeSelectors(interest, encoder);
+  var tempOffsets = Tlv0_3WireFormat.encodeName(interest.getName(), encoder);
+  var signedPortionBeginOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionBeginOffset;
+  var signedPortionEndOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionEndOffset;
+
+  encoder.writeTypeAndLength(Tlv.Interest, encoder.getLength() - saveLength);
+  var signedPortionBeginOffset =
+    encoder.getLength() - signedPortionBeginOffsetFromBack;
+  var signedPortionEndOffset =
+    encoder.getLength() - signedPortionEndOffsetFromBack;
+
+  return { encoding: new Blob(encoder.getOutput(), false),
+           signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
+};
+
+/**
+ * Get a singleton instance of a Tlv0_2WireFormat.  To always use the
+ * preferred version NDN-TLV, you should use TlvWireFormat.get().
+ * @return {Tlv0_2WireFormat} The singleton instance.
+ */
+Tlv0_2WireFormat.get = function()
+{
+  if (Tlv0_2WireFormat.instance === null)
+    Tlv0_2WireFormat.instance = new Tlv0_2WireFormat();
+  return Tlv0_2WireFormat.instance;
 };
 /**
  * Copyright (C) 2013-2019 Regents of the University of California.
@@ -47109,7 +47190,7 @@ Tlv0_1WireFormat.get = function()
 
 /** @ignore */
 var WireFormat = require('./wire-format.js').WireFormat; /** @ignore */
-var Tlv0_2WireFormat = require('./tlv-0_2-wire-format.js').Tlv0_2WireFormat;
+var Tlv0_3WireFormat = require('./tlv-0_3-wire-format.js').Tlv0_3WireFormat;
 
 /**
  * A TlvWireFormat extends WireFormat to override its methods to
@@ -47118,11 +47199,11 @@ var Tlv0_2WireFormat = require('./tlv-0_2-wire-format.js').Tlv0_2WireFormat;
  */
 var TlvWireFormat = function TlvWireFormat()
 {
-  // Inherit from Tlv0_2WireFormat.
-  Tlv0_2WireFormat.call(this);
+  // Inherit from Tlv0_3WireFormat.
+  Tlv0_3WireFormat.call(this);
 };
 
-TlvWireFormat.prototype = new Tlv0_2WireFormat();
+TlvWireFormat.prototype = new Tlv0_3WireFormat();
 TlvWireFormat.prototype.name = "TlvWireFormat";
 
 exports.TlvWireFormat = TlvWireFormat;
@@ -56248,9 +56329,11 @@ Face.prototype.expressInterest = function
 
   var pendingInterestId = this.getNextEntryId();
 
-  // Set the nonce in our copy of the Interest so it is saved in the PIT.
-  interest.setNonce(Face.nonceTemplate_);
-  interest.refreshNonce();
+  if (interest.getNonce().size() === 0) {
+    // Set the nonce in our copy of the Interest so it is saved in the PIT.
+    interest.setNonce(Face.nonceTemplate_);
+    interest.refreshNonce();
+  }
 
   if (this.connectionInfo == null) {
     if (this.getConnectionInfo == null)
@@ -56689,6 +56772,7 @@ Face.prototype.nfdRegisterPrefix = function
   var onIsLocalResult = function(isLocal) {
     var commandInterest = new Interest();
     commandInterest.setCanBePrefix(true);
+    commandInterest.setMustBeFresh(true);
     if (isLocal) {
       commandInterest.setName(new Name("/localhost/nfd/rib/register"));
       // The interest is answered by the local host, so set a short timeout.
