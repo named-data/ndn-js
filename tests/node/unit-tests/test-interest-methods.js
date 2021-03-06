@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014-2019 Regents of the University of California.
+ * Copyright (C) 2014-2021 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From PyNDN unit-tests by Adeola Bannis.
  *
@@ -22,7 +22,6 @@
 var assert = require("assert");
 var Name = require('../../..').Name;
 var Interest = require('../../..').Interest;
-var Exclude = require('../../..').Exclude;
 var Data = require('../../..').Data;
 var KeyLocator = require('../../..').KeyLocator;
 var Sha256WithRsaSignature = require('../../..').Sha256WithRsaSignature;
@@ -250,21 +249,6 @@ describe('TestInterestDump', function() {
     assert.deepEqual(initialDump, redecodedDump, 'Re-decoded interest does not match original');
   });
 
-  it('RedecodeImplicitDigestExclude', function() {
-    // Check that we encode and decode correctly with an implicit digest exclude.
-    var interest = new Interest(new Name("/A"));
-    interest.getExclude().appendComponent(new Name("/sha256digest=" +
-      "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f").get(0));
-    var dump = dumpInterest(interest);
-
-    var encoding = interest.wireEncode();
-    var reDecodedInterest = new Interest();
-    reDecodedInterest.wireDecode(encoding);
-    var redecodedDump = dumpInterest(reDecodedInterest);
-    assert.ok(interestDumpsEqual(dump, redecodedDump),
-                                 'Re-decoded interest does not match original');
-  });
-
   it('CreateFresh', function() {
     var freshInterest = createFreshInterest();
     var freshDump = dumpInterest(freshInterest);
@@ -323,7 +307,7 @@ describe('TestInterestMethods', function() {
     assert.ok(!referenceInterest.getNonce().isNull());
     var interest = new Interest(referenceInterest);
     // Change a child object.
-    interest.getExclude().clear();
+    interest.setInterestLifetimeMilliseconds(1);
     assert.ok(interest.getNonce().isNull(), 'Interest should not have a nonce after changing fields');
   });
 
@@ -337,24 +321,6 @@ describe('TestInterestMethods', function() {
                  "The refreshed nonce should be the same size");
     assert.equal(interest.getNonce().equals(oldNonce), false,
                  "The refreshed nonce should be different");
-  });
-
-  it('ExcludeMatches', function() {
-    var exclude = new Exclude();
-    exclude.appendComponent(new Name("%00%02").get(0));
-    exclude.appendAny();
-    exclude.appendComponent(new Name("%00%20").get(0));
-
-    var component;
-    component = new Name("%00%01").get(0);
-    assert.ok(!exclude.matches(component),
-      component.toEscapedString() + " should not match " + exclude.toUri());
-    component = new Name("%00%0F").get(0);
-    assert.ok(exclude.matches(component),
-      component.toEscapedString() + " should match " + exclude.toUri());
-    component = new Name("%00%21").get(0);
-    assert.ok(!exclude.matches(component),
-      component.toEscapedString() + " should not match " + exclude.toUri());
   });
 
   it('VerifyDigestSha256', function() {
