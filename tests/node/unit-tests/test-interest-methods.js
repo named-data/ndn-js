@@ -34,6 +34,7 @@ var IdentityManager = require('../../..').IdentityManager;
 var SelfVerifyPolicyManager = require('../../..').SelfVerifyPolicyManager;
 var KeyChain = require('../../..').KeyChain;
 var InterestFilter = require('../../..').InterestFilter;
+var Tlv0_2WireFormat = require('../../..').Tlv0_2WireFormat;
 
 var codedInterest = new Buffer([
 0x05, 0x5C, // Interest
@@ -255,7 +256,7 @@ describe('TestInterestDump', function() {
     assert.ok(interestDumpsEqual(initialDump, freshDump), 'Fresh interest does not match original');
 
     var reDecodedFreshInterest = new Interest();
-    reDecodedFreshInterest.wireDecode(freshInterest.wireEncode());
+    reDecodedFreshInterest.wireDecode(freshInterest.wireEncode(Tlv0_2WireFormat.get()));
     var reDecodedFreshDump = dumpInterest(reDecodedFreshInterest);
 
     assert.ok(interestDumpsEqual(freshDump, reDecodedFreshDump), 'Redecoded fresh interest does not match original');
