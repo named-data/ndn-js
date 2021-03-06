@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2013-2019 Regents of the University of California.
+ * Copyright (C) 2013-2021 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -206,15 +206,15 @@ Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
 Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
 {
   try {
-    return this.decodeInterestV02_(interest, input, copy);
-  } catch (exceptionV02) {
+    return Tlv0_2WireFormat.decodeInterestV03_(interest, input, copy);
+  } catch (exceptionV03) {
     try {
-      // Failed to decode as format v0.2. Try to decode as v0.3.
-      return Tlv0_2WireFormat.decodeInterestV03_(interest, input, copy);
+      // Failed to decode as format v0.3. Try to decode as v0.2.
+      return this.decodeInterestV02_(interest, input, copy);
     } catch (ex) {
-      // Ignore the exception decoding as format v0.3 and throw the exception
-      // from trying to decode as format as format v0.2.
-      throw exceptionV02;
+      // Ignore the exception decoding as format v0.2 and throw the exception
+      // from trying to decode as format as format v0.3.
+      throw exceptionV03;
     }
   }
 };
