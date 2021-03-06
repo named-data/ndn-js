@@ -24,6 +24,7 @@ exports.NetworkNack = require('./js/network-nack.js').NetworkNack;
 exports.Link = require('./js/link.js').Link;
 exports.WireFormat = require('./js/encoding/wire-format.js').WireFormat;
 exports.TlvWireFormat = require('./js/encoding/tlv-wire-format.js').TlvWireFormat;
+exports.Tlv0_3WireFormat = require('./js/encoding/tlv-0_3-wire-format.js').Tlv0_3WireFormat;
 exports.Tlv0_2WireFormat = require('./js/encoding/tlv-0_2-wire-format.js').Tlv0_2WireFormat;
 exports.Tlv0_1_1WireFormat = require('./js/encoding/tlv-0_1_1-wire-format.js').Tlv0_1_1WireFormat;
 exports.Tlv0_1WireFormat = require('./js/encoding/tlv-0_1-wire-format.js').Tlv0_1WireFormat;

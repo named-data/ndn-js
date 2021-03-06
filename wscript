@@ -237,6 +237,7 @@ def build (bld):
                  "js/delegation-set.js",
                  "js/link.js",
                  "js/network-nack.js",
+                 "js/encoding/tlv-0_3-wire-format.js",
                  "js/encoding/tlv-0_2-wire-format.js",
                  "js/encoding/tlv-0_1_1-wire-format.js",
                  "js/encoding/tlv-0_1-wire-format.js",
